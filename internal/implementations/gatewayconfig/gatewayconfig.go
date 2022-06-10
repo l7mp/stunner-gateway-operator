@@ -3,9 +3,9 @@ package gatewayconfig
 import (
 	"github.com/go-logr/logr"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/config"
+	stunnergwv1alpha1 "github.com/l7mp/stunner-kubernetes-gateway/pkg/apis/gateway/v1alpha1"
+	"github.com/l7mp/stunner-kubernetes-gateway/pkg/sdk/v1alpha2"
 )
 
 type gatewayConfigImplementation struct {
@@ -22,7 +22,7 @@ func (impl *gatewayConfigImplementation) Logger() logr.Logger {
 	return impl.conf.Logger
 }
 
-func (impl *gatewayConfigImplementation) Upsert(gcfg *nginxgwv1alpha1.GatewayConfig) {
+func (impl *gatewayConfigImplementation) Upsert(gcfg *stunnergwv1alpha1.GatewayConfig) {
 	impl.Logger().Info("Processing GatewayConfig",
 		"name", gcfg.Name,
 	)

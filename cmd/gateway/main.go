@@ -7,12 +7,12 @@ import (
 	flag "github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/manager"
 )
 
 const (
-	domain string = "k8s-gateway.nginx.org"
+	domain string = "stunner.l7mp.io"
 )
 
 var (
@@ -40,10 +40,10 @@ func main() {
 
 	MustValidateArguments(
 		flag.CommandLine,
-		GatewayControllerParam(domain, "nginx-gateway" /* FIXME(f5yacobucci) dynamically set */),
+		GatewayControllerParam(domain, "stunner-gateway" /* FIXME(f5yacobucci) dynamically set */),
 	)
 
-	logger.Info("Starting NGINX Kubernetes Gateway",
+	logger.Info("Starting STUNner Kubernetes Gateway",
 		"version", version,
 		"commit", commit,
 		"date", date)

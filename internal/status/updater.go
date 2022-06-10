@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/state"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater

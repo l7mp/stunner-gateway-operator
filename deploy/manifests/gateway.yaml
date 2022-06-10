@@ -1,14 +1,14 @@
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: Gateway
 metadata:
-  name: gateway
-  namespace: nginx-gateway
-  labels:
-    domain: k8s-gateway.nginx.org
+  name: stunner-gateway
+  namespace: stunner
 spec:
-  gatewayClassName: nginx
+  gatewayClassName: stunner
   listeners:
-  - name: my-listener
-    hostname: example.com
-    port: 8080
-    protocol: HTTP
+  - name: udp
+    protocol: UDP
+    port: 3478
+  - name: tcp
+    protocol: TCP
+    port: 3478

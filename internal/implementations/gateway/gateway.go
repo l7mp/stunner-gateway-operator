@@ -4,8 +4,8 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/pkg/sdk/v1alpha2"
 )
 
 type gatewayImplementation struct {

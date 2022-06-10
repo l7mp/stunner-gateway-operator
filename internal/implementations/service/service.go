@@ -5,9 +5,9 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/events"
+	"github.com/l7mp/stunner-kubernetes-gateway/pkg/sdk/v1alpha2"
 )
 
 type serviceImplementation struct {

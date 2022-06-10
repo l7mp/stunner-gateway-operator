@@ -8,23 +8,23 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/file"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/runtime"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/state"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/status"
 )
 
 // EventLoop is the main event loop of the Gateway.
 type EventLoop struct {
-	conf            state.Configuration
-	serviceStore    state.ServiceStore
-	generator       config.Generator
-	eventCh         <-chan interface{}
-	logger          logr.Logger
-	statusUpdater   status.Updater
-	nginxFileMgr    file.Manager
-	nginxRuntimeMgr runtime.Manager
+	conf              state.Configuration
+	serviceStore      state.ServiceStore
+	generator         config.Generator
+	eventCh           <-chan interface{}
+	logger            logr.Logger
+	statusUpdater     status.Updater
+	stunnerFileMgr    file.Manager
+	stunnerRuntimeMgr runtime.Manager
 }
 
 // NewEventLoop creates a new EventLoop.
@@ -35,18 +35,18 @@ func NewEventLoop(
 	eventCh <-chan interface{},
 	statusUpdater status.Updater,
 	logger logr.Logger,
-	nginxFileMgr file.Manager,
-	nginxRuntimeMgr runtime.Manager,
+	stunnerFileMgr file.Manager,
+	stunnerRuntimeMgr runtime.Manager,
 ) *EventLoop {
 	return &EventLoop{
-		conf:            conf,
-		serviceStore:    serviceStore,
-		generator:       generator,
-		eventCh:         eventCh,
-		statusUpdater:   statusUpdater,
-		logger:          logger.WithName("eventLoop"),
-		nginxFileMgr:    nginxFileMgr,
-		nginxRuntimeMgr: nginxRuntimeMgr,
+		conf:              conf,
+		serviceStore:      serviceStore,
+		generator:         generator,
+		eventCh:           eventCh,
+		statusUpdater:     statusUpdater,
+		logger:            logger.WithName("eventLoop"),
+		stunnerFileMgr:    stunnerFileMgr,
+		stunnerRuntimeMgr: stunnerRuntimeMgr,
 	}
 }
 
@@ -144,13 +144,13 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 			el.logger.Info("Writing configuration",
 				"host", c.Host.Value)
 
-			err := el.nginxFileMgr.WriteServerConfig(c.Host.Value, cfg)
+			err := el.stunnerFileMgr.WriteServerConfig(c.Host.Value, cfg)
 			if err != nil {
 				el.logger.Error(err, "Failed to write configuration",
 					"host", c.Host.Value)
 			}
 		} else {
-			err := el.nginxFileMgr.DeleteServerConfig(c.Host.Value)
+			err := el.stunnerFileMgr.DeleteServerConfig(c.Host.Value)
 			if err != nil {
 				el.logger.Error(err, "Failed to delete configuration",
 					"host", c.Host.Value)
@@ -159,9 +159,9 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 	}
 
 	if len(changes) > 0 {
-		err := el.nginxRuntimeMgr.Reload(ctx)
+		err := el.stunnerRuntimeMgr.Reload(ctx)
 		if err != nil {
-			el.logger.Error(err, "Failed to reload NGINX")
+			el.logger.Error(err, "Failed to reload STUNner")
 		}
 	}
 

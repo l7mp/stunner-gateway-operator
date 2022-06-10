@@ -10,16 +10,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
-	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
-	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/events"
+	hr "github.com/l7mp/stunner-kubernetes-gateway/internal/implementations/httproute"
+	svc "github.com/l7mp/stunner-kubernetes-gateway/internal/implementations/service"
+	stnrcfg "github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/config"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/file"
+	stnrruntime "github.com/l7mp/stunner-kubernetes-gateway/internal/stunner/runtime"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/state"
+	"github.com/l7mp/stunner-kubernetes-gateway/internal/status"
+	"github.com/l7mp/stunner-kubernetes-gateway/pkg/sdk"
 )
 
 // clusterTimeout is a timeout for connections to the Kubernetes API
@@ -62,10 +62,10 @@ func Start(cfg config.Config) error {
 	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
 	serviceStore := state.NewServiceStore()
 	reporter := status.NewUpdater(mgr.GetClient(), cfg.Logger)
-	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
-	nginxFileMgr := file.NewManagerImpl()
-	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	eventLoop := events.NewEventLoop(conf, serviceStore, configGenerator, eventCh, reporter, cfg.Logger, nginxFileMgr, nginxRuntimeMgr)
+	configGenerator := stnrcfg.NewGeneratorImpl(serviceStore)
+	stunnerFileMgr := file.NewManagerImpl()
+	stunnerRuntimeMgr := stnrruntime.NewManagerImpl()
+	eventLoop := events.NewEventLoop(conf, serviceStore, configGenerator, eventCh, reporter, cfg.Logger, stunnerFileMgr, stunnerRuntimeMgr)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {

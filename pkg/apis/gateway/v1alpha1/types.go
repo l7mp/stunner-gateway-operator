@@ -17,21 +17,15 @@ type GatewayConfig struct {
 }
 
 type GatewayConfigSpec struct {
-	Worker *Worker `json:"worker,omitempty"`
-	HTTP   *HTTP   `json:"http,omitempty"`
-}
-
-type Worker struct {
-	Processes *int `json:"processes,omitempty"`
-}
-
-type HTTP struct {
-	AccessLogs []AccessLog `json:"accessLogs,omitempty"`
-}
-
-type AccessLog struct {
-	Format      string `json:"format"`
-	Destination string `json:"destination"`
+	Realm        string `json:"realm,omitempty"`
+	AuthType     string `json:"authType,omitempty"`
+	Username     string `json:"username,omitempty"`
+	Password     string `json:"password,omitempty"`
+	SharedSecret string `json:"sharedSecret,omitempty"`
+	AuthLifetime *int32 `json:"authLifetime,omitempty"`
+	Loglevel     string `json:"loglevel,omitempty"`
+	MinPort      int32  `json:"minPort,omitempty"`
+	MaxnPort     int32  `json:"maxPort,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -43,8 +43,7 @@ func (hrs httpRoutes) Keys() []string {
 }
 
 // Host is the primary configuration unit of the internal representation.
-// It corresponds to an NGINX server block with server_name Value;
-// See https://nginx.org/en/docs/http/ngx_http_core_module.html#server
+// It corresponds to an STUNer server block with server_name Value;
 type Host struct {
 	// Value is the host value (hostname).
 	Value string

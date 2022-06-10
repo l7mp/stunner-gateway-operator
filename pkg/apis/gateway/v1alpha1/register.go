@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway"
+	"github.com/l7mp/stunner-kubernetes-gateway/pkg/apis/gateway"
 )
 
 // SchemeGroupVersion is group version used to register these object.
