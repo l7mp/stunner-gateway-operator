@@ -1,0 +1,24 @@
+# permissions for end users to edit gatewayconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gatewayconfig-editor-role
+rules:
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
+  - gatewayconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
+  - gatewayconfigs/status
+  verbs:
+  - get

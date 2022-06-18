@@ -1,0 +1,19 @@
+domain: l7mp.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: stunner-gateway-operator
+repo: github.com/l7mp/stunner-gateway-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: l7mp.io
+  group: stunner
+  kind: GatewayConfig
+  path: github.com/l7mp/stunner-gateway-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"

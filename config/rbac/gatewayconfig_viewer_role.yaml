@@ -1,0 +1,20 @@
+# permissions for end users to view gatewayconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gatewayconfig-viewer-role
+rules:
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
+  - gatewayconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
+  - gatewayconfigs/status
+  verbs:
+  - get

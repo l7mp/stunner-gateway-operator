@@ -23,11 +23,11 @@ STUNner Kubernetes Gateway is currently under development and supports a subset 
 
 <!-- ## Build the image -->
 
-<!-- 1. Clone the repo and change into the `stunner-kubernetes-gateway` directory: -->
+<!-- 1. Clone the repo and change into the `stunner-gateway-operator` directory: -->
 
 <!--    ``` -->
-<!--    git clone https://github.com/l7mp/stunner-kubernetes-gateway.git -->
-<!--    cd stunner-kubernetes-gateway -->
+<!--    git clone https://github.com/l7mp/stunner-gateway-operator.git -->
+<!--    cd stunner-gateway-operator -->
 <!--    ``` -->
 
 <!-- 1. Build the image: -->
@@ -39,7 +39,7 @@ STUNner Kubernetes Gateway is currently under development and supports a subset 
 <!-- 1. Push the image to your container registry: -->
 
 <!--    ``` -->
-<!--    docker push stunner-kubernetes-gateway -->
+<!--    docker push stunner-gateway-operator -->
 <!--    ``` -->
 
 <!-- ## Deploy the STUNner Kubernetes Gateway -->

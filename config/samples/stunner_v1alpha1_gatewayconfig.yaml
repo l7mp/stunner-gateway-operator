@@ -1,0 +1,6 @@
+apiVersion: stunner.l7mp.io/v1alpha1
+kind: GatewayConfig
+metadata:
+  name: gatewayconfig-sample
+spec:
+  # TODO(user): Add fields here
