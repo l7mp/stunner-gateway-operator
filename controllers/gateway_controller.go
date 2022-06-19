@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	// "errors"
-	// "fmt"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,6 +72,9 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 	// trigger a config render for this namespace
 	e := event.NewEvent(event.EventTypeRender)
+	e.Origin = "Gateway"
+	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
+
 	r.eventCh <- e
 
 	return reconcile.Result{}, nil

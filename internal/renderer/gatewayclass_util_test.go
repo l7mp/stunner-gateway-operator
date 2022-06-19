@@ -167,11 +167,10 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusScheduled(gc, "dummy")
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, gc.Status.Conditions[0].Type,
-					string(gatewayv1alpha2.GatewayConditionScheduled),
-					"conditions sched")
-				assert.Equal(t, gc.Status.Conditions[0].ObservedGeneration,
-					int64(0), "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+					gc.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, int64(0),
+					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 			},
 		},
 		{
@@ -193,11 +192,10 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusScheduled(gc, "dummy")
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, gc.Status.Conditions[0].Type,
-					string(gatewayv1alpha2.GatewayConditionScheduled),
-					"conditions sched")
-				assert.Equal(t, gc.Status.Conditions[0].ObservedGeneration,
-					int64(1), "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+					gc.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, int64(1), gc.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
 			},
 		},
 		{
@@ -214,11 +212,10 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusReady(gc, "dummy")
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, gc.Status.Conditions[0].Type,
-					string(gatewayv1alpha2.GatewayConditionReady),
-					"conditions ready")
-				assert.Equal(t, gc.Status.Conditions[0].ObservedGeneration,
-					int64(0), "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+					gc.Status.Conditions[0].Type, "conditions ready")
+				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
 			},
 		},
 		{
@@ -242,16 +239,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				setGatewayClassStatusScheduled(gc, "dummy")
 				setGatewayClassStatusReady(gc, "dummy")
 				assert.Len(t, gc.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, gc.Status.Conditions[0].Type,
-					string(gatewayv1alpha2.GatewayConditionScheduled),
-					"conditions sched")
-				assert.Equal(t, gc.Status.Conditions[0].ObservedGeneration,
-					int64(1), "conditions gen")
-				assert.Equal(t, gc.Status.Conditions[1].Type,
-					string(gatewayv1alpha2.GatewayConditionReady),
-					"conditions ready")
-				assert.Equal(t, gc.Status.Conditions[0].ObservedGeneration,
-					int64(1), "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+					gc.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, int64(1),
+					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+					gc.Status.Conditions[1].Type, "conditions ready")
+				assert.Equal(t, int64(1),
+					gc.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
 			},
 		},
 	})

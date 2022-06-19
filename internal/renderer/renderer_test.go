@@ -32,23 +32,27 @@ func TestRenderE2E(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, gc.GetName(), "gatewayclass-ok")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
+					"gatewayclass name")
 
 				gwConf, err := r.getGatewayConfig4Class(gc)
 				assert.NoError(t, err, "gw-conf found")
-				assert.Equal(t, gwConf.GetName(), "gatewayconfig-ok", "gatewayconfig name")
+				assert.Equal(t, "gatewayconfig-ok", gwConf.GetName(),
+					"gatewayconfig name")
 
 				admin, err := r.renderAdmin(gwConf)
 				assert.NoError(t, err, "admin rendered")
-				assert.Equal(t, admin.LogLevel, "testloglevel", "log level")
-				assert.Equal(t, admin.Name, operator.DefaultStunnerdInstanceName, "stunnerd name")
+				assert.Equal(t, "testloglevel", admin.LogLevel, "log level")
+				assert.Equal(t, operator.DefaultStunnerdInstanceName,
+					admin.Name, "stunnerd name")
 
 				auth, err := r.renderAuth(gwConf)
 				assert.NoError(t, err, "auth rendered")
-				assert.Equal(t, auth.Type, stunnerconfv1alpha1.AuthTypePlainText.String(), "auth type")
-				assert.Equal(t, auth.Realm, "testrealm", "realm")
-				assert.Equal(t, auth.Credentials["username"], "testuser", "username")
-				assert.Equal(t, auth.Credentials["password"], "testpass", "password")
+				assert.Equal(t, stunnerconfv1alpha1.AuthTypePlainText.String(),
+					auth.Type, "auth type")
+				assert.Equal(t, "testrealm", auth.Realm, "realm")
+				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
+				assert.Equal(t, "testpass", auth.Credentials["password"], "password")
 			},
 		},
 	})

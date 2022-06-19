@@ -1,6 +1,8 @@
 package store
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -13,7 +15,7 @@ import (
 type Store interface {
 	// Get returns an object from the store
 	Get(nsName types.NamespacedName) client.Object
-	// Upsert adds the resource to the store and returns true if a real update happens
+	// Upsert adds the resource to the store and returns true if an actual update has happened
 	Upsert(object client.Object) bool
 	// Remove deletes an object from the store
 	Remove(nsName types.NamespacedName)
@@ -21,10 +23,8 @@ type Store interface {
 	Len() int
 	// Objects returns all stored objects
 	Objects() []client.Object
-	// GetResourceKey returns the key under which an object is stored
-	GetObjectKey(object client.Object) string
-	// GetNameFromKey converts a key into a namespaced object name
-	GetNameFromKey(key string) types.NamespacedName
+	// String returns a string with the keys of all stored objects
+	String() string
 }
 
 type storeImpl struct {
@@ -52,20 +52,20 @@ func (s *storeImpl) Get(nsName types.NamespacedName) client.Object {
 		return nil
 	}
 
-	s.log.V(4).Info("get", "key", nsName, "result", s.GetObjectKey(o))
+	s.log.V(4).Info("get", "key", nsName, "result", GetObjectKey(o))
 	return o
 }
 
 func (s *storeImpl) Upsert(new client.Object) bool {
-	s.log.V(3).Info("upsert", "key", s.GetObjectKey(new))
-	key := s.GetObjectKey(new)
+	s.log.V(3).Info("upsert", "key", GetObjectKey(new))
+	key := GetObjectKey(new)
 
 	s.lock.RLock()
 	old, found := s.objects[key]
 	s.lock.RUnlock()
 
 	if found && compareObjects(old, new) == true {
-		s.log.V(4).Info("upsert", "key", s.GetObjectKey(new), "status", "unchanged")
+		s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "unchanged")
 		return false
 	}
 
@@ -74,7 +74,7 @@ func (s *storeImpl) Upsert(new client.Object) bool {
 	defer s.lock.Unlock()
 	s.objects[key] = new
 
-	s.log.V(4).Info("upsert", "key", s.GetObjectKey(new), "status", "new/changed")
+	s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "new/changed")
 
 	return true
 }
@@ -106,4 +106,14 @@ func (s *storeImpl) Objects() []client.Object {
 	}
 
 	return ret
+}
+
+func (s *storeImpl) String() string {
+	os := s.Objects()
+	ret := []string{}
+	for _, o := range os {
+		ret = append(ret, GetObjectKey(o))
+	}
+	return fmt.Sprintf("store (%d objects): %s", len(os),
+		strings.Join(ret, ", "))
 }

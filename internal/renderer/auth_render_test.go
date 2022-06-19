@@ -45,9 +45,9 @@ func TestRenderAuthRender(t *testing.T) {
 
 				auth, err := r.renderAuth(gwConf)
 
-				assert.Equal(t, auth.Realm, "dummy", "realm")
-				assert.Equal(t, auth.Type, "longterm", "auth-type")
-				assert.Equal(t, auth.Credentials["secret"], "dummy", "secret")
+				assert.Equal(t, "dummy", auth.Realm, "realm")
+				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
 
 			},
 		},

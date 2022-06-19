@@ -12,7 +12,7 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
@@ -25,6 +25,7 @@ type listenerRoutePair struct {
 }
 
 func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewayv1alpha2.Gateway {
+	r.log.V(4).Info("getGateways4Class", "GatewayClass", store.GetObjectKey(gc))
 	gws := r.op.GetGateways()
 
 	ret := make([]*gatewayv1alpha2.Gateway, 0)
@@ -33,6 +34,9 @@ func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewa
 			ret = append(ret, g)
 		}
 	}
+
+	r.log.V(4).Info("getGateways4Class: ready", "GatewayClass", store.GetObjectKey(gc),
+		"gateways", len(ret))
 
 	return ret
 }
@@ -76,6 +80,7 @@ func setGatewayStatusScheduled(gw *gatewayv1alpha2.Gateway, cname string) {
 					Group: &group,
 					Kind:  gatewayv1alpha2.Kind("UDPRoute"),
 				}},
+				Conditions: []metav1.Condition{},
 			})
 	}
 
@@ -94,9 +99,9 @@ func setGatewayStatusReady(gw *gatewayv1alpha2.Gateway, cname string) {
 
 // listener status
 func getStatus4Listener(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) *gatewayv1alpha2.ListenerStatus {
-	for _, s := range gw.Status.Listeners {
-		if s.Name == l.Name {
-			return &s
+	for i := range gw.Status.Listeners {
+		if gw.Status.Listeners[i].Name == l.Name {
+			return &gw.Status.Listeners[i]
 		}
 	}
 	return nil

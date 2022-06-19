@@ -32,7 +32,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, gc.GetName(), "gatewayclass-ok")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewway class name")
 
 				_, err = r.getGatewayConfig4Class(gc)
 				assert.Error(t, err, "gw-conf found")
@@ -54,7 +54,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, gc.GetName(), "gatewayclass-ok")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewayclass name")
 
 				_, err = r.getGatewayConfig4Class(gc)
 				assert.Error(t, err, "gw-conf found")
@@ -92,7 +92,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, gc.GetName(), "gatewayclass-ok")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewayclass name")
 
 				_, err = r.getGatewayConfig4Class(gc)
 				assert.Error(t, err, "gw-conf found")

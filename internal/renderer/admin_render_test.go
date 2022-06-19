@@ -37,8 +37,8 @@ func TestRenderAdminRender(t *testing.T) {
 
 				admin, err := r.renderAdmin(gwConf)
 
-				assert.Equal(t, admin.Name, operator.DefaultStunnerdInstanceName, "name")
-				assert.Equal(t, admin.LogLevel, testLogLevel, "loglevel")
+				assert.Equal(t, operator.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, testLogLevel, admin.LogLevel, "loglevel")
 
 			},
 		},
@@ -62,8 +62,8 @@ func TestRenderAdminRender(t *testing.T) {
 
 				admin, err := r.renderAdmin(gwConf)
 
-				assert.Equal(t, admin.Name, operator.DefaultStunnerdInstanceName, "name")
-				assert.Equal(t, admin.LogLevel, stunnerconfv1alpha1.DefaultLogLevel, "loglevel")
+				assert.Equal(t, operator.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
 
 			},
 		},

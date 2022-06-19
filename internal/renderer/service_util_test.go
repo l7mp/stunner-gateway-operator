@@ -42,8 +42,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				addr, err := r.getPublicAddrs4Gateway(gw)
 				assert.NoError(t, err, "public addr found")
 				assert.NotNil(t, addr.Type, "public addr type non-empty")
-				assert.Equal(t, *addr.Type, gatewayv1alpha2.IPAddressType, "public addr type ok")
-				assert.Equal(t, addr.Value, "1.2.3.4", "public addr ok")
+				assert.Equal(t, gatewayv1alpha2.IPAddressType, *addr.Type, "public addr type ok")
+				assert.Equal(t, "1.2.3.4", addr.Value, "public addr ok")
 
 			},
 		},
@@ -99,7 +99,6 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				_, err = r.getPublicAddrs4Gateway(gw)
 				assert.Error(t, err, "public addr found")
-
 			},
 		},
 		{
@@ -186,9 +185,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				addr, err := r.getPublicAddrs4Gateway(gw)
 				assert.NoError(t, err, "public addr found")
 				assert.NotNil(t, addr.Type, "public addr type non-empty")
-				assert.Equal(t, *addr.Type, gatewayv1alpha2.IPAddressType, "public addr type ok")
-				// we should find the decond IP!
-				assert.Equal(t, addr.Value, "5.6.7.8", "public addr ok")
+				assert.Equal(t, gatewayv1alpha2.IPAddressType, *addr.Type, "public addr type ok")
+				assert.Equal(t, "5.6.7.8", addr.Value, "public addr ok")
 
 			},
 		},

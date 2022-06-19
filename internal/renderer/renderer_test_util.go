@@ -9,7 +9,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -17,6 +22,13 @@ import (
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
+
+// for debugging
+var testerLogLevel = zapcore.Level(-4)
+
+// info
+//var testerLogLevel = zapcore.DebugLevel
+//var testerLogLevel = zapcore.ErrorLevel
 
 var (
 	testNs            = gatewayv1alpha2.Namespace("testnamespace")
@@ -26,8 +38,9 @@ var (
 	testUsername      = "testuser"
 	testPassword      = "testpass"
 	testLogLevel      = "testloglevel"
-	testMinport       = int32(1)
+	testMinPort       = int32(1)
 	testMaxPort       = int32(2)
+	testSectionName   = gatewayv1alpha2.SectionName("gateway-1-listener-udp")
 )
 
 // GatewayClass
@@ -68,7 +81,7 @@ var testGwConfig = stunnerv1alpha1.GatewayConfig{
 		Username:      &testUsername,
 		Password:      &testPassword,
 		LogLevel:      &testLogLevel,
-		MinPort:       &testMinport,
+		MinPort:       &testMinPort,
 		MaxPort:       &testMaxPort,
 	},
 }
@@ -101,13 +114,30 @@ var testGw = gatewayv1alpha2.Gateway{
 	},
 }
 
+// UDPRoute
+var testUDPRoute = gatewayv1alpha2.UDPRoute{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "udproute-1",
+		Namespace: "testnamespace",
+	},
+	Spec: gatewayv1alpha2.UDPRouteSpec{
+		CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+			ParentRefs: []gatewayv1alpha2.ParentRef{{
+				Name:        "gateway-1",
+				SectionName: &testSectionName,
+			}},
+		},
+		Rules: []gatewayv1alpha2.UDPRouteRule{{}},
+	},
+}
+
 // Service
 var testSvc = corev1.Service{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			operator.GatewayAddressAnnotationKey: "gateway-1",
+			operator.GatewayAddressAnnotationKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{
@@ -127,32 +157,6 @@ var testSvc = corev1.Service{
 		}},
 }
 
-// var testSvc2 = corev1.Service{
-// 	ObjectMeta: metav1.ObjectMeta{
-// 		Namespace: "testnamespace",
-// 		Name:      "testservice-annoteted-but-wrong-proto-port",
-// 	},
-// 	Spec: corev1.ServiceSpec{
-// 		Type:     corev1.ServiceTypeLoadBalancer,
-// 		Selector: map[string]string{"app": "dummy"},
-// 		Ports: []corev1.ServicePort{
-
-// {
-// 	Name:     "tcp-ok",
-// 	Protocol: corev1.ProtocolUDP,
-// 	Port:     2,
-// },
-// 			{
-// 				Name:     "wrong-proto",
-// 				Protocol: corev1.ProtocolSCTP,
-// 				Port:     1,
-// 			},
-// 			{
-// 				Name:     "wrong-proto",
-// 				Protocol: corev1.ProtocolUDP,
-// 				Port:     1,
-// 			},
-
 ////////////////////////////
 type renderTestConfig struct {
 	name   string
@@ -167,9 +171,14 @@ type renderTestConfig struct {
 
 // start with default config and then reconcile with the given config
 func renderTester(t *testing.T, testConf []renderTestConfig) {
-	log := zap.New()
+	zc := zap.NewProductionConfig()
+	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
+	z, err := zc.Build()
+	assert.NoError(t, err, "logger created")
+	log := zapr.NewLogger(z)
 
-	for _, c := range testConf {
+	for i := range testConf {
+		c := testConf[i]
 		t.Run(c.name, func(t *testing.T) {
 			log.V(1).Info(fmt.Sprintf("-------------- Running test: %s -------------", c.name))
 
@@ -190,20 +199,21 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 
 			log.V(1).Info("preparing local storage")
 			op.SetupStore()
-			for _, o := range c.cls {
-				op.AddGatewayClass(&o)
+			for i := range c.cls {
+				op.AddGatewayClass(&c.cls[i])
 			}
-			for _, o := range c.cfs {
-				op.AddGatewayConfig(&o)
+			for i := range c.cfs {
+				op.AddGatewayConfig(&c.cfs[i])
 			}
-			for _, o := range c.gws {
-				op.AddGateway(&o)
+			for i := range c.gws {
+				// fsck you Go!!!!!!1
+				op.AddGateway(&c.gws[i])
 			}
-			for _, o := range c.rs {
-				op.AddUDPRoute(&o)
+			for i := range c.rs {
+				op.AddUDPRoute(&c.rs[i])
 			}
-			for _, o := range c.svcs {
-				op.AddService(&o)
+			for i := range c.svcs {
+				op.AddService(&c.svcs[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

@@ -14,11 +14,12 @@ import (
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
 func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
+	r.log.V(4).Info("getGatewayClass")
 	o := r.op
 
 	gcs, err := o.GetGatewayClasses()
@@ -66,6 +67,8 @@ func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 		return nil, fmt.Errorf("expecting ParametersRef to point to a GatewayConfig "+
 			"resource: %#v", *gc.Spec.ParametersRef)
 	}
+
+	r.log.V(4).Info("getGatewayClass", "result", store.GetObjectKey(gc))
 
 	return gc, nil
 }

@@ -45,14 +45,17 @@ func (a EventType) String() string {
 // Event defines an event sent to the operator
 type Event struct {
 	Type   EventType
-	Params map[string]string
+	Origin string
+	Reason string
+	// Params map[string]string
 }
 
 // NewEvent returns an empty event
 func NewEvent(t EventType) Event {
-	return Event{Type: t, Params: make(map[string]string)}
+	return Event{Type: t}
+	// return Event{Type: t, Params: make(map[string]string)}
 }
 
 func (e *Event) String() string {
-	return e.Type.String()
+	return fmt.Sprintf("%s: %s: %s", e.Type.String(), e.Origin, e.Reason)
 }

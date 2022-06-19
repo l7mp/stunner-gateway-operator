@@ -11,7 +11,7 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
@@ -32,48 +32,71 @@ type routeGatewayPair struct {
 // 		Kind:  Kind("UDPRoute"),
 // 	}}
 // }
-func (r *Renderer) getUDPRoutes4Gateway(gw *gatewayv1alpha2.Gateway) []*gatewayv1alpha2.UDPRoute {
+func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) []*gatewayv1alpha2.UDPRoute {
+	r.log.V(4).Info("getUDPRoutes4Listener", "Gateway", store.GetObjectKey(gw), "listener",
+		l.Name)
+
 	ret := make([]*gatewayv1alpha2.UDPRoute, 0)
 	rs := r.op.GetUDPRoutes()
 
-	for _, l := range gw.Spec.Listeners {
-		sectionName := l.Name
-		for _, r := range rs {
-			// FromNamespaces("Same")
-			if gw.GetNamespace() != r.GetNamespace() {
+	for i := range rs {
+		ro := rs[i]
+		r.log.V(4).Info("getUDPRoutes4Listener: considering route for listener", "Gateway",
+			store.GetObjectKey(gw), "listener", l.Name, "route",
+			store.GetObjectKey(ro))
+
+		// FromNamespaces("Same")
+		if gw.GetNamespace() != ro.GetNamespace() {
+			r.log.V(4).Info("getUDPRoutes4Listener: route namespace does not match "+
+				"gateway namespace", "Gateway", store.GetObjectKey(gw), "route",
+				store.GetObjectKey(ro))
+			continue
+		}
+
+		for j := range ro.Spec.CommonRouteSpec.ParentRefs {
+			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
+			if resolveParentRef(&p, gw, l) == false {
+				r.log.V(4).Info("getUDPRoutes4Listener: route rejected", "Gateway",
+					store.GetObjectKey(gw), "listener", l.Name, "route",
+					store.GetObjectKey(ro), "parentRef", p.Name)
+
 				continue
 			}
 
-			for _, p := range r.Spec.CommonRouteSpec.ParentRefs {
-				if p.Group != nil && *p.Group != gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group) {
-					continue
-				}
-				if p.Kind != nil && *p.Kind != "Gateway" {
-					continue
-				}
-				if p.Namespace != nil && *p.Namespace != gatewayv1alpha2.Namespace(gw.GetNamespace()) {
-					continue
-				}
-				if p.Name != gatewayv1alpha2.ObjectName(gw.GetName()) {
-					continue
-				}
-				if p.SectionName != nil && *p.SectionName != sectionName {
-					continue
-				}
+			r.log.V(4).Info("getUDPRoutes4Listener: route found", "Gateway",
+				store.GetObjectKey(gw), "listener", l.Name, "route",
+				store.GetObjectKey(ro))
 
-				// route made it this far: attach!
-				ret = append(ret, r)
-			}
+			// route made it this far: attach!
+			ret = append(ret, ro)
 		}
+
 	}
 
 	return ret
 }
 
-func (r *Renderer) removeRouteStatus() {
-	for _, r := range r.op.GetUDPRoutes() {
-		r.Status.Parents = []gatewayv1alpha2.RouteParentStatus{}
+func resolveParentRef(p *gatewayv1alpha2.ParentRef, gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) bool {
+	if p.Group != nil && *p.Group != gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group) {
+		return false
 	}
+	if p.Kind != nil && *p.Kind != "Gateway" {
+		return false
+	}
+	if p.Namespace != nil && *p.Namespace != gatewayv1alpha2.Namespace(gw.GetNamespace()) {
+		return false
+	}
+	if p.Name != gatewayv1alpha2.ObjectName(gw.GetName()) {
+		return false
+	}
+	if p.SectionName != nil && *p.SectionName != l.Name {
+		return false
+	}
+	return true
+}
+
+func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
+	ro.Status.Parents = []gatewayv1alpha2.RouteParentStatus{}
 }
 
 // func setRouteStatusAccepted {
