@@ -23,13 +23,13 @@ func TestRenderAuthRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "auth ok",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				*w.Spec.StunnerConfig = "dummy"
 				*w.Spec.Realm = "dummy"
 				*w.Spec.AuthType = "longterm"
@@ -53,13 +53,13 @@ func TestRenderAuthRender(t *testing.T) {
 		},
 		{
 			name: "wrong auth-type errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				*w.Spec.AuthType = "dummy"
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},
@@ -75,13 +75,13 @@ func TestRenderAuthRender(t *testing.T) {
 		},
 		{
 			name: "plaintext no-username errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				*w.Spec.AuthType = "paintext"
 				w.Spec.Username = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
@@ -98,13 +98,13 @@ func TestRenderAuthRender(t *testing.T) {
 		},
 		{
 			name: "plaintext no-password errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				*w.Spec.AuthType = "paintext"
 				w.Spec.Password = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
@@ -121,13 +121,13 @@ func TestRenderAuthRender(t *testing.T) {
 		},
 		{
 			name: "lonterm no-secret errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				*w.Spec.AuthType = "longterm"
 				w.Spec.SharedSecret = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}

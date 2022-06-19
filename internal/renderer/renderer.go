@@ -3,6 +3,7 @@ package renderer
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ import (
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -113,6 +114,8 @@ func (r *Renderer) Render(e event.Event) (*stunnerconfv1alpha1.StunnerConfig, er
 		return nil, err
 	}
 
+	// setStatusConditionScheduled(gc)
+
 	log.V(2).Info("obtaining GatewayConfig", "GatewayClass", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
 	if err != nil {
@@ -140,31 +143,33 @@ func (r *Renderer) Render(e event.Event) (*stunnerconfv1alpha1.StunnerConfig, er
 	log.V(2).Info("finding Gateways")
 
 	r.removeRouteStatus()
-	routes := []*gatewayv1alpha2.UDPRoute{}
+	acceptedRoutes := []routeGatewayPair{}
+
 	for _, gw := range r.getGateways4Class(gc) {
 		log.V(2).Info("obtaining config", "gateway", gw.GetName())
 
-		log.V(3).Info("setting status conditions", "gateway", gw.GetName(), "status",
-			"scheduled")
+		// this also re-inits listener statuses
 		setGatewayStatusScheduled(gw, r.op.GetControllerName())
 
 		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
-		addrs := r.getPublicAddrs4Gateway(gw)
-		pAddr := ""
-		if len(addrs) == 0 {
+		var ready bool
+		addr, err := r.getPublicAddrs4Gateway(gw)
+		if err != nil {
 			log.V(1).Info("cannot find public address", "gateway",
-				gw.GetName())
+				gw.GetName(), "error", err.Error())
+			ready = false
 		} else {
-			pAddr = addrs[0].Value
+			ready = true
 		}
 
 		for _, l := range gw.Spec.Listeners {
-			sectionName := l.Name
-
-			s := getStatus4Listener(gw, l.Name)
-			if s == nil {
-				s = initListenerStatus(sectionName)
-				gw.Status.Listeners = append(gw.Status.Listeners, *s)
+			proto := strings.ToUpper(string(l.Protocol))
+			if proto != "UDP" && proto != "TCP" {
+				log.Info("unsupported protocol", "gateway",
+					gw.GetName(), "listener", l.Name,
+					"protocol", proto)
+				setListenerStatus(gw, &l, false, ready, 0)
+				continue
 			}
 
 			minPort, maxPort :=
@@ -180,7 +185,7 @@ func (r *Renderer) Render(e event.Event) (*stunnerconfv1alpha1.StunnerConfig, er
 				Name:         string(l.Name),
 				Protocol:     string(l.Protocol),
 				Addr:         "$STUNNER_ADDR", // Addr will be filled in from the pod environment
-				PublicAddr:   pAddr,
+				PublicAddr:   addr.Value,
 				Port:         int(l.Port),
 				MinRelayPort: int(minPort),
 				MaxRelayPort: int(maxPort),
@@ -191,13 +196,15 @@ func (r *Renderer) Render(e event.Event) (*stunnerconfv1alpha1.StunnerConfig, er
 			rs := r.getUDPRoutes4Gateway(gw)
 			for _, r := range rs {
 				lc.Routes = append(lc.Routes, r.Name)
-
+				acceptedRoutes = append(acceptedRoutes, routeGatewayPair{
+					route:    r,
+					gateway:  gw,
+					listener: &l,
+				})
 			}
 
 			conf.Listeners = append(conf.Listeners, lc)
-
-			setListenerStatusResolved(gw, s, len(rs))
-			routes = append(routes, rs...)
+			setListenerStatus(gw, &l, true, ready, len(rs))
 		}
 
 		setGatewayStatusReady(gw, r.op.GetControllerName())

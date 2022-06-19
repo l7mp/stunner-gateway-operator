@@ -7,6 +7,7 @@ import (
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -36,47 +37,25 @@ func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewa
 	return ret
 }
 
-func isGatewayScheduled(gw *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gw.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionScheduled) &&
-			cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) &&
-			cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-func isGatewayReady(gw *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gw.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) &&
-			cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) &&
-			cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
 func pruneGatewayStatusConds(gw *gatewayv1alpha2.Gateway) *gatewayv1alpha2.Gateway {
 	if len(gw.Status.Conditions) >= maxGwayStatusConds {
 		gw.Status.Conditions =
 			gw.Status.Conditions[len(gw.Status.Conditions)-(maxGwayStatusConds-1):]
 	}
 
-	for _, s := range gw.Status.Listeners {
-		if len(s.Conditions) >= maxGwayStatusConds {
-			s.Conditions =
-				s.Conditions[len(s.Conditions)-(maxGwayStatusConds-1):]
-		}
-	}
+	// for _, s := range gw.Status.Listeners {
+	// 	if len(s.Conditions) >= maxGwayStatusConds {
+	// 		s.Conditions =
+	// 			s.Conditions[len(s.Conditions)-(maxGwayStatusConds-1):]
+	// 	}
+	// }
 
 	return gw
 }
 
 // gateway status
 func setGatewayStatusScheduled(gw *gatewayv1alpha2.Gateway, cname string) {
-	gw.Status.Conditions = append(gw.Status.Conditions, metav1.Condition{
+	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 		Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: gw.Generation,
@@ -84,10 +63,26 @@ func setGatewayStatusScheduled(gw *gatewayv1alpha2.Gateway, cname string) {
 		Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
 		Message:            fmt.Sprintf("gateway under processing by controller %q", cname),
 	})
+
+	// reinit listener statuses
+	gw.Status.Listeners = gw.Status.Listeners[:0]
+	group := gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group)
+
+	for _, l := range gw.Spec.Listeners {
+		gw.Status.Listeners = append(gw.Status.Listeners,
+			gatewayv1alpha2.ListenerStatus{
+				Name: l.Name,
+				SupportedKinds: []gatewayv1alpha2.RouteGroupKind{{
+					Group: &group,
+					Kind:  gatewayv1alpha2.Kind("UDPRoute"),
+				}},
+			})
+	}
+
 }
 
 func setGatewayStatusReady(gw *gatewayv1alpha2.Gateway, cname string) {
-	gw.Status.Conditions = append(gw.Status.Conditions, metav1.Condition{
+	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 		Type:               string(gatewayv1alpha2.GatewayConditionReady),
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: gw.Generation,
@@ -98,34 +93,82 @@ func setGatewayStatusReady(gw *gatewayv1alpha2.Gateway, cname string) {
 }
 
 // listener status
-func getStatus4Listener(gw *gatewayv1alpha2.Gateway, sectionName gatewayv1alpha2.SectionName) *gatewayv1alpha2.ListenerStatus {
+func getStatus4Listener(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) *gatewayv1alpha2.ListenerStatus {
 	for _, s := range gw.Status.Listeners {
-		if s.Name == sectionName {
+		if s.Name == l.Name {
 			return &s
 		}
 	}
 	return nil
 }
 
-func initListenerStatus(sectionName gatewayv1alpha2.SectionName) *gatewayv1alpha2.ListenerStatus {
-	group := gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group)
-	return &gatewayv1alpha2.ListenerStatus{
-		Name: sectionName,
-		SupportedKinds: []gatewayv1alpha2.RouteGroupKind{{
-			Group: &group,
-			Kind:  gatewayv1alpha2.Kind("UDPRoute"),
-		}},
+// sets "Detached" to true with reason "UnsupportedProtocol" or false, depending on "accepted"
+// sets ResolvedRefs to true
+// sets "Ready" to <ready> depending on "ready"
+func setListenerStatus(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener, accepted bool, ready bool, routes int) {
+	s := getStatus4Listener(gw, l)
+	if s == nil {
+		// should never happen
+		return
+	}
+
+	setListenerStatusDetached(gw, s, accepted)
+	setListenerStatusResolvedRefs(gw, s)
+	setListenerStatusReady(gw, s, ready)
+	s.AttachedRoutes = int32(routes)
+}
+
+func setListenerStatusDetached(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, accepted bool) {
+	if accepted == true {
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.ListenerReasonAttached),
+			Message:            "listener accepted",
+		})
+	} else {
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+			Message:            "unsupported protocol",
+		})
 	}
 }
 
-func setListenerStatusResolved(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, routes int) {
-	s.Conditions = append(s.Conditions, metav1.Condition{
+func setListenerStatusResolvedRefs(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus) {
+	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 		Type:               string(gatewayv1alpha2.ListenerConditionResolvedRefs),
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(gatewayv1alpha2.ListenerReasonResolvedRefs),
-		Message:            "listener processed",
+		Message:            "listener object references sucessfully resolved",
 	})
-	s.AttachedRoutes = int32(routes)
+}
+
+func setListenerStatusReady(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, ready bool) {
+	if ready == true {
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.ListenerConditionReady),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.ListenerReasonReady),
+			Message:            "public address found for gateway",
+		})
+	} else {
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.ListenerConditionReady),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.ListenerReasonPending),
+			Message:            "public address pending",
+		})
+	}
 }

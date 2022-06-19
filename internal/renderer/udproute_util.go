@@ -15,6 +15,12 @@ import (
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
+type routeGatewayPair struct {
+	route    *gatewayv1alpha2.UDPRoute
+	gateway  *gatewayv1alpha2.Gateway
+	listener *gatewayv1alpha2.Listener
+}
+
 // we implement the below AllowedRoutes policy:
 // AllowedRoutes{
 // 	Namespaces: &RouteNamespaces{{

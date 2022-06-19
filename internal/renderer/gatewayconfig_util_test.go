@@ -23,7 +23,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "no gatewayconfig errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
@@ -40,8 +40,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref namespace errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -62,8 +62,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref kind errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -79,8 +79,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref name errs",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},

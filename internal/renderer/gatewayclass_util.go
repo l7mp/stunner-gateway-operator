@@ -7,6 +7,8 @@ import (
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -66,4 +68,26 @@ func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 	}
 
 	return gc, nil
+}
+
+func setGatewayClassStatusScheduled(gc *gatewayv1alpha2.GatewayClass, cname string) {
+	meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
+		Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: gc.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
+		Message:            fmt.Sprintf("gatewayclass under processing by controller %q", cname),
+	})
+}
+
+func setGatewayClassStatusReady(gc *gatewayv1alpha2.GatewayClass, cname string) {
+	meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
+		Type:               string(gatewayv1alpha2.GatewayConditionReady),
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: gc.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+		Message:            fmt.Sprintf("gateway is now managed by controller %q", cname),
+	})
 }

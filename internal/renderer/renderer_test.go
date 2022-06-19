@@ -23,8 +23,8 @@ func TestRenderE2E(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},

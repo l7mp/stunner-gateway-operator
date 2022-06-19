@@ -31,11 +31,14 @@ var (
 )
 
 // GatewayClass
-var gwClass = gatewayv1alpha2.GatewayClass{
-	// ApiVersion: gatewayv1alpha2.GroupName,
-	// Kind:       "GatewayClass",
+var testGwClass = gatewayv1alpha2.GatewayClass{
+	// TypeMeta: metav1.TypeMeta{
+	// 	APIVersion: fmt.Sprintf("%s/%s", gatewayv1alpha2.GroupVersion.Group, gatewayv1alpha2.GroupVersion.Version),
+	// 	Kind:       "GatewaylClass",
+	// },
 	ObjectMeta: metav1.ObjectMeta{
-		Name: "gatewayclass-ok",
+		Name:      "gatewayclass-ok",
+		Namespace: "testnamespace",
 	},
 	Spec: gatewayv1alpha2.GatewayClassSpec{
 		ControllerName: gatewayv1alpha2.GatewayController(operator.DefaultControllerName),
@@ -46,13 +49,14 @@ var gwClass = gatewayv1alpha2.GatewayClass{
 			Namespace: &testNs,
 		},
 	},
-	Status: gatewayv1alpha2.GatewayClassStatus{},
 }
 
 // GatewayConfig
-var gwConfig = stunnerv1alpha1.GatewayConfig{
-	// ApiVersion: stunnerv1alpha1.GroupName,
-	// Kind:       "GatewayConfig",
+var testGwConfig = stunnerv1alpha1.GatewayConfig{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: fmt.Sprintf("%s/%s", stunnerv1alpha1.GroupVersion.Group, stunnerv1alpha1.GroupVersion.Version),
+		Kind:       "GatewaylClass",
+	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayconfig-ok",
 		Namespace: "testnamespace",
@@ -67,8 +71,87 @@ var gwConfig = stunnerv1alpha1.GatewayConfig{
 		MinPort:       &testMinport,
 		MaxPort:       &testMaxPort,
 	},
-	// Status: stunnerv1alpha1.GatewayConfigStatus{},
 }
+
+// Gateway
+var testGw = gatewayv1alpha2.Gateway{
+	// TypeMeta: metav1.TypeMeta{
+	// 	APIVersion: fmt.Sprintf("%s/%s", gatewayv1alpha2.GroupVersion.Group, gatewayv1alpha2.GroupVersion.Version),
+	// 	Kind:       "Gateway",
+	// },
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "gateway-1",
+		Namespace: "testnamespace",
+	},
+	Spec: gatewayv1alpha2.GatewaySpec{
+		GatewayClassName: "gatewayclass-ok",
+		Listeners: []gatewayv1alpha2.Listener{{
+			Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
+			Port:     gatewayv1alpha2.PortNumber(1),
+			Protocol: gatewayv1alpha2.ProtocolType("UDP"),
+		}, {
+			Name:     gatewayv1alpha2.SectionName("invalid"),
+			Port:     gatewayv1alpha2.PortNumber(3),
+			Protocol: gatewayv1alpha2.ProtocolType("dummy"),
+		}, {
+			Name:     gatewayv1alpha2.SectionName("gateway-1-listener-tcp"),
+			Port:     gatewayv1alpha2.PortNumber(2),
+			Protocol: gatewayv1alpha2.ProtocolType("TCP"),
+		}},
+	},
+}
+
+// Service
+var testSvc = corev1.Service{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testservice-ok",
+		Annotations: map[string]string{
+			operator.GatewayAddressAnnotationKey: "gateway-1",
+		},
+	},
+	Spec: corev1.ServiceSpec{
+		Type:     corev1.ServiceTypeLoadBalancer,
+		Selector: map[string]string{"app": "dummy"},
+		Ports: []corev1.ServicePort{
+			{
+				Name:     "udp-ok",
+				Protocol: corev1.ProtocolUDP,
+				Port:     1,
+			},
+		},
+	},
+	Status: corev1.ServiceStatus{
+		LoadBalancer: corev1.LoadBalancerStatus{
+			Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}, {IP: "5.6.7.8"}},
+		}},
+}
+
+// var testSvc2 = corev1.Service{
+// 	ObjectMeta: metav1.ObjectMeta{
+// 		Namespace: "testnamespace",
+// 		Name:      "testservice-annoteted-but-wrong-proto-port",
+// 	},
+// 	Spec: corev1.ServiceSpec{
+// 		Type:     corev1.ServiceTypeLoadBalancer,
+// 		Selector: map[string]string{"app": "dummy"},
+// 		Ports: []corev1.ServicePort{
+
+// {
+// 	Name:     "tcp-ok",
+// 	Protocol: corev1.ProtocolUDP,
+// 	Port:     2,
+// },
+// 			{
+// 				Name:     "wrong-proto",
+// 				Protocol: corev1.ProtocolSCTP,
+// 				Port:     1,
+// 			},
+// 			{
+// 				Name:     "wrong-proto",
+// 				Protocol: corev1.ProtocolUDP,
+// 				Port:     1,
+// 			},
 
 ////////////////////////////
 type renderTestConfig struct {

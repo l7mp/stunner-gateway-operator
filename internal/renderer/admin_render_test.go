@@ -23,8 +23,8 @@ func TestRenderAdminRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "admin ok",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -44,13 +44,13 @@ func TestRenderAdminRender(t *testing.T) {
 		},
 		{
 			name: "admin default ok",
-			cls:  []gatewayv1alpha2.GatewayClass{gwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{gwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := gwConfig.DeepCopy()
+				w := testGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},
