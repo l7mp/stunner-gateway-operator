@@ -112,4 +112,5 @@ APACHE License - see [LICENSE](/LICENSE) for full text.
 
 ## Acknowledgments
 
-Initially forked from the [NGINX Kubernetes Gateway](https://github.com/nginxinc/nginx-kubernetes-gateway).
+Inspired from the [NGINX Kubernetes Gateway](https://github.com/nginxinc/nginx-kubernetes-gateway)
+and the [Kong Gateway Operator](https://github.com/Kong/gateway-operator).
