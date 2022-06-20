@@ -10,10 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	// "github.com/go-logr/zapr"
+	// "go.uber.org/zap"
+	// "go.uber.org/zap/zapcore"
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// // "github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -26,7 +25,7 @@ import (
 // info
 // var testerLogLevel = zapcore.DebugLevel
 
-var testerLogLevel = zapcore.ErrorLevel
+// var testerLogLevel = zapcore.ErrorLevel
 
 var (
 	o1 = corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "s1"}}
@@ -43,14 +42,14 @@ func keys(os []client.Object) []string {
 }
 
 func TestStore(t *testing.T) {
-	zc := zap.NewProductionConfig()
-	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
-	z, err := zc.Build()
-	assert.NoError(t, err, "logger created")
-	log := zapr.NewLogger(z)
+	// zc := zap.NewProductionConfig()
+	// zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
+	// z, err := zc.Build()
+	// assert.NoError(t, err, "logger created")
+	// log := zapr.NewLogger(z)
 
 	// new
-	s := NewStore(log.WithName("store"))
+	s := NewStore() // log.WithName("store"))
 	assert.NotNil(t, s, "new")
 
 	// upsert

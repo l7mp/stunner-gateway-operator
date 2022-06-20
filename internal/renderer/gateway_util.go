@@ -47,13 +47,6 @@ func pruneGatewayStatusConds(gw *gatewayv1alpha2.Gateway) *gatewayv1alpha2.Gatew
 			gw.Status.Conditions[len(gw.Status.Conditions)-(maxGwayStatusConds-1):]
 	}
 
-	// for _, s := range gw.Status.Listeners {
-	// 	if len(s.Conditions) >= maxGwayStatusConds {
-	// 		s.Conditions =
-	// 			s.Conditions[len(s.Conditions)-(maxGwayStatusConds-1):]
-	// 	}
-	// }
-
 	return gw
 }
 

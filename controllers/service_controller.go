@@ -9,11 +9,18 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	// "sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	// ctrlevent "sigs.k8s.io/controller-runtime/pkg/event"
+	// "sigs.k8s.io/controller-runtime/pkg/handler" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	// "sigs.k8s.io/controller-runtime/pkg/source" // Required for Watching
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -42,6 +49,13 @@ func RegisterServiceController(mgr manager.Manager, store store.Store, ch chan e
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Service{}).
+		// watch only for services that expose our gateways (have a
+		// "GatewayAddressAnnotationKey" annotation)
+		WithEventFilter(predicate.NewPredicateFuncs(func(o client.Object) bool {
+			as := o.GetAnnotations()
+			_, found := as[config.GatewayAddressAnnotationKey]
+			return found
+		})).
 		Complete(r)
 }
 
@@ -68,7 +82,7 @@ func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	r.store.Upsert(&gc)
 
 	// trigger a config render for this namespace
-	e := event.NewEvent(event.EventTypeRender)
+	e := event.NewEventRender()
 	e.Origin = "Service"
 	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
 

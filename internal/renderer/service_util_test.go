@@ -12,8 +12,8 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -56,7 +56,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testSvc.DeepCopy()
-				delete(s1.ObjectMeta.Annotations, operator.GatewayAddressAnnotationKey)
+				delete(s1.ObjectMeta.Annotations, config.GatewayAddressAnnotationKey)
 				s1.ObjectMeta.Annotations["dummy"] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -84,7 +84,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testSvc.DeepCopy()
-				s1.ObjectMeta.Annotations[operator.GatewayAddressAnnotationKey] = "dummy"
+				s1.ObjectMeta.Annotations[config.GatewayAddressAnnotationKey] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {

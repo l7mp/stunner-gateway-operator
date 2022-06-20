@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -45,6 +46,8 @@ func RegisterGatewayController(mgr manager.Manager, store store.Store, ch chan e
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1alpha2.Gateway{}).
+		// don't care about status and metadata changes
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
@@ -71,7 +74,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	r.store.Upsert(&gc)
 
 	// trigger a config render for this namespace
-	e := event.NewEvent(event.EventTypeRender)
+	e := event.NewEventRender()
 	e.Origin = "Gateway"
 	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
 

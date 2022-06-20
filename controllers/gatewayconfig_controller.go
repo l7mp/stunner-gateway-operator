@@ -86,7 +86,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	r.store.Upsert(&gc)
 
 	// trigger a config render for this namespace
-	e := event.NewEvent(event.EventTypeRender)
+	e := event.NewEventRender()
 	e.Origin = "GatewayConfig"
 	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
 	r.eventCh <- e

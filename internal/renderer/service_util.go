@@ -13,8 +13,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -86,7 +87,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
-	v, found := as[operator.GatewayAddressAnnotationKey]
+	v, found := as[config.GatewayAddressAnnotationKey]
 	if found && v == namespacedName {
 		r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated foe gateway",
 			"Service", store.GetObjectKey(svc), "Gateway", store.GetObjectKey(gw))

@@ -17,7 +17,7 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -54,7 +54,7 @@ var testGwClass = gatewayv1alpha2.GatewayClass{
 		Namespace: "testnamespace",
 	},
 	Spec: gatewayv1alpha2.GatewayClassSpec{
-		ControllerName: gatewayv1alpha2.GatewayController(operator.DefaultControllerName),
+		ControllerName: gatewayv1alpha2.GatewayController(config.DefaultControllerName),
 		ParametersRef: &gatewayv1alpha2.ParametersReference{
 			Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
 			Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
@@ -117,7 +117,7 @@ var testGw = gatewayv1alpha2.Gateway{
 // UDPRoute
 var testUDPRoute = gatewayv1alpha2.UDPRoute{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "udproute-1",
+		Name:      "udproute-ok",
 		Namespace: "testnamespace",
 	},
 	Spec: gatewayv1alpha2.UDPRouteSpec{
@@ -127,7 +127,13 @@ var testUDPRoute = gatewayv1alpha2.UDPRoute{
 				SectionName: &testSectionName,
 			}},
 		},
-		Rules: []gatewayv1alpha2.UDPRouteRule{{}},
+		Rules: []gatewayv1alpha2.UDPRouteRule{{
+			BackendRefs: []gatewayv1alpha2.BackendRef{{
+				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+					Name: gatewayv1alpha2.ObjectName("testservice-ok"),
+				},
+			}},
+		}},
 	},
 }
 
@@ -137,7 +143,7 @@ var testSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			operator.GatewayAddressAnnotationKey: "testnamespace/gateway-1",
+			config.GatewayAddressAnnotationKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{
@@ -191,7 +197,7 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 
 			log.V(1).Info("setting up operator")
 			op := operator.NewOperator(operator.OperatorConfig{
-				ControllerName: operator.DefaultControllerName,
+				ControllerName: config.DefaultControllerName,
 				RenderCh:       r.GetRenderChannel(),
 				Logger:         log,
 			})

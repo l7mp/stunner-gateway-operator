@@ -23,34 +23,6 @@ import (
 func TestRenderGatewayUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
-			name: "gateway ok/routes ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
-			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-
-				gws := r.getGateways4Class(gc)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "gateway-1"),
-					store.GetObjectKey(gw), "gw name found")
-
-				ls := gw.Spec.Listeners
-				l := ls[0]
-
-				rs := r.getUDPRoutes4Listener(gw, &l)
-				assert.Len(t, rs, 1, "route found")
-				ro := rs[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "udproute-1"),
-					store.GetObjectKey(ro), "route name found")
-			},
-		},
-		{
 			name: "wrong gatewayclassname errs",
 			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},

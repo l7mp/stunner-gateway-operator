@@ -1,13 +1,15 @@
 package renderer
 
 import (
-	// "fmt"
+	"fmt"
 	// "github.com/go-logr/logr"
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
@@ -15,11 +17,11 @@ import (
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
-type routeGatewayPair struct {
-	route    *gatewayv1alpha2.UDPRoute
-	gateway  *gatewayv1alpha2.Gateway
-	listener *gatewayv1alpha2.Listener
-}
+// type routeGatewayPair struct {
+// 	route    *gatewayv1alpha2.UDPRoute
+// 	gateway  *gatewayv1alpha2.Gateway
+// 	listener *gatewayv1alpha2.Listener
+// }
 
 // we implement the below AllowedRoutes policy:
 // AllowedRoutes{
@@ -56,9 +58,9 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 		for j := range ro.Spec.CommonRouteSpec.ParentRefs {
 			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
 			if resolveParentRef(&p, gw, l) == false {
-				r.log.V(4).Info("getUDPRoutes4Listener: route rejected", "Gateway",
-					store.GetObjectKey(gw), "listener", l.Name, "route",
-					store.GetObjectKey(ro), "parentRef", p.Name)
+				r.log.V(4).Info("getUDPRoutes4Listener: route rejected for listener",
+					"Gateway", store.GetObjectKey(gw), "listener", l.Name,
+					"route", store.GetObjectKey(ro), "parentRef", p.Name)
 
 				continue
 			}
@@ -92,6 +94,7 @@ func resolveParentRef(p *gatewayv1alpha2.ParentRef, gw *gatewayv1alpha2.Gateway,
 	if p.SectionName != nil && *p.SectionName != l.Name {
 		return false
 	}
+
 	return true
 }
 
@@ -99,6 +102,74 @@ func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
 	ro.Status.Parents = []gatewayv1alpha2.RouteParentStatus{}
 }
 
-// func setRouteStatusAccepted {
+func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef) bool {
+	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
+		"parent", fmt.Sprintf("%#v", *p))
 
-// }
+	// find the corresponding gateway
+	ns := ro.GetNamespace()
+	if p.Namespace != nil {
+		ns = string(*p.Namespace)
+	}
+
+	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
+	gw := r.op.GetGateway(namespacedName)
+	if gw == nil {
+		r.log.V(4).Info("isParentAcceptingRoute: no gateway found for ParentRef", "route",
+			store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p))
+		return false
+	}
+
+	// is there a listener that accepts us?
+	for i := range gw.Spec.Listeners {
+		l := gw.Spec.Listeners[i]
+
+		if resolveParentRef(p, gw, &l) == true {
+			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener found for ParentRef",
+				"route", store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p),
+				"gateway", gw.GetName(), "listener", l.Name)
+
+			return true
+		}
+	}
+
+	r.log.V(4).Info("isParentAcceptingRoute result", "route", store.GetObjectKey(ro),
+		"parent", fmt.Sprintf("%#v", *p), "result", "rejected")
+
+	return false
+}
+
+func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, controllerName string, accepted bool) {
+	s := gatewayv1alpha2.RouteParentStatus{
+		ParentRef:      *p,
+		ControllerName: gatewayv1alpha2.GatewayController(controllerName),
+		Conditions:     []metav1.Condition{},
+	}
+
+	c := metav1.ConditionTrue
+	reason := "Accepted"
+	if accepted == false {
+		c = metav1.ConditionFalse
+		reason = "NoMatchingListenerHostname"
+	}
+
+	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+		Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
+		Status:             c,
+		ObservedGeneration: ro.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             reason,
+		Message:            "parent accepts the route",
+	})
+
+	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+		Type:               string(gatewayv1alpha2.ConditionRouteResolvedRefs),
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: ro.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ResolvedRefs",
+		Message:            "parent reference successfully resolved",
+	})
+
+	ro.Status.Parents = append(ro.Status.Parents, s)
+}

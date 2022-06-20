@@ -12,8 +12,8 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -43,7 +43,7 @@ func TestRenderE2E(t *testing.T) {
 				admin, err := r.renderAdmin(gwConf)
 				assert.NoError(t, err, "admin rendered")
 				assert.Equal(t, "testloglevel", admin.LogLevel, "log level")
-				assert.Equal(t, operator.DefaultStunnerdInstanceName,
+				assert.Equal(t, config.DefaultStunnerdInstanceName,
 					admin.Name, "stunnerd name")
 
 				auth, err := r.renderAuth(gwConf)

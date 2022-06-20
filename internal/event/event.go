@@ -15,11 +15,13 @@ type EventType int
 const (
 	// EventTypeRender indicates a request for operator to generate the STUNner configuration
 	EventTypeRender EventType = iota + 1
+	EventTypeUpdate
 	EventTypeUnknown
 )
 
 const (
-	eventTypeRenderStr = "render-configuration"
+	eventTypeRenderStr = "render-event"
+	eventTypeUpdateStr = "update-event"
 )
 
 // NewEventType parses an event type specification
@@ -27,6 +29,8 @@ func NewEventType(raw string) (EventType, error) {
 	switch raw {
 	case eventTypeRenderStr:
 		return EventTypeRender, nil
+	case eventTypeUpdateStr:
+		return EventTypeUpdate, nil
 	default:
 		return EventTypeUnknown, fmt.Errorf("unknown event type: %q", raw)
 	}
@@ -37,25 +41,15 @@ func (a EventType) String() string {
 	switch a {
 	case EventTypeRender:
 		return eventTypeRenderStr
+	case EventTypeUpdate:
+		return eventTypeUpdateStr
 	default:
 		return "<unknown>"
 	}
 }
 
 // Event defines an event sent to the operator
-type Event struct {
-	Type   EventType
-	Origin string
-	Reason string
-	// Params map[string]string
-}
-
-// NewEvent returns an empty event
-func NewEvent(t EventType) Event {
-	return Event{Type: t}
-	// return Event{Type: t, Params: make(map[string]string)}
-}
-
-func (e *Event) String() string {
-	return fmt.Sprintf("%s: %s: %s", e.Type.String(), e.Origin, e.Reason)
+type Event interface {
+	GetType() EventType
+	String() string
 }
