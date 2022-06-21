@@ -12,6 +12,7 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
@@ -23,7 +24,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "no gatewayconfig errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
@@ -40,8 +41,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref namespace errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -62,8 +63,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref kind errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -79,8 +80,8 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref name errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},

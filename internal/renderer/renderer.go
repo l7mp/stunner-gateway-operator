@@ -21,11 +21,11 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )

@@ -13,6 +13,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -24,8 +25,8 @@ func TestRenderAdminRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "admin ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -39,19 +40,19 @@ func TestRenderAdminRender(t *testing.T) {
 				admin, err := r.renderAdmin(gwConf)
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, testLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
 
 			},
 		},
 		{
 			name: "admin default ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
-				w := testGwConfig.DeepCopy()
+				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},

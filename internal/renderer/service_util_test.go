@@ -13,6 +13,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -23,11 +24,11 @@ func TestRenderServiceUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "public-ip ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -49,13 +50,13 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong annotation name errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testSvc.DeepCopy()
+				s1 := testutils.TestSvc.DeepCopy()
 				delete(s1.ObjectMeta.Annotations, config.GatewayAddressAnnotationKey)
 				s1.ObjectMeta.Annotations["dummy"] = "dummy"
 				c.svcs = []corev1.Service{*s1}
@@ -77,13 +78,13 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong annotation errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testSvc.DeepCopy()
+				s1 := testutils.TestSvc.DeepCopy()
 				s1.ObjectMeta.Annotations[config.GatewayAddressAnnotationKey] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -103,13 +104,13 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong proto errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testSvc.DeepCopy()
+				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -130,13 +131,13 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong port errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testSvc.DeepCopy()
+				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Port = 12
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -157,13 +158,13 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "multiple service-ports public-ip ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{testSvc},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testSvc.DeepCopy()
+				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
 				s1.Spec.Ports = append(s1.Spec.Ports, corev1.ServicePort{
 					Name:     "udp-ok",

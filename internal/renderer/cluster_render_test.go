@@ -12,6 +12,7 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
@@ -23,11 +24,11 @@ func TestRenderClusterRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "cluster ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := r.op.GetUDPRoutes()
@@ -51,13 +52,13 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no backend errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udp := testUDPRoute.DeepCopy()
+				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
 				udp.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{}
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
@@ -81,13 +82,13 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "wrong backend group ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udp := testUDPRoute.DeepCopy()
+				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
 				group := gatewayv1alpha2.Group("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Group = &group
@@ -112,13 +113,13 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "wrong backend kind ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udp := testUDPRoute.DeepCopy()
+				udp := testutils.TestUDPRoute.DeepCopy()
 				kind := gatewayv1alpha2.Kind("dummy")
 				udp.SetName("udproute-wrong")
 				udp.Spec.Rules[0].BackendRefs[0].Kind = &kind
@@ -143,13 +144,13 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "namespace ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udp := testUDPRoute.DeepCopy()
+				udp := testutils.TestUDPRoute.DeepCopy()
 				ns := gatewayv1alpha2.Namespace("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
@@ -176,13 +177,13 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "multiple backends ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udp := testUDPRoute.DeepCopy()
+				udp := testutils.TestUDPRoute.DeepCopy()
 				ns := gatewayv1alpha2.Namespace("dummy-ns")
 				udp.Spec.Rules[0].BackendRefs = make([]gatewayv1alpha2.BackendRef, 3)
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns

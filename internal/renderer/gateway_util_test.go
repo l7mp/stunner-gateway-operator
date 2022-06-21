@@ -14,6 +14,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -24,13 +25,13 @@ func TestRenderGatewayUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "wrong gatewayclassname errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				gw := testGw.DeepCopy()
+				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.GatewayClassName = "dummy"
 				c.gws = []gatewayv1alpha2.Gateway{*gw}
 			},
@@ -44,16 +45,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "multiple gateways ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				gw := testGw.DeepCopy()
+				gw := testutils.TestGw.DeepCopy()
 				gw.ObjectMeta.SetName("dummy")
 				gw.ObjectMeta.SetGeneration(4)
-				c.gws = []gatewayv1alpha2.Gateway{*gw, testGw}
+				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -62,19 +63,19 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(gc)
 				assert.Len(t, gws, 2, "gw found")
 
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "dummy"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "dummy"),
 					store.GetObjectKey(gws[0]), "gw 1 name found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
 					store.GetObjectKey(gws[1]), "gw 2 name found")
 			},
 		},
 		{
 			name: "gateway status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -83,7 +84,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(gc)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				setGatewayStatusScheduled(gw, "dummy")
@@ -101,13 +102,13 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway rescheduled/re-ready status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				gw := testGw.DeepCopy()
+				gw := testutils.TestGw.DeepCopy()
 				setGatewayStatusScheduled(gw, "dummy")
 				setGatewayStatusReady(gw, "dummy")
 				gw.ObjectMeta.SetGeneration(1)
@@ -120,7 +121,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(gc)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				setGatewayStatusScheduled(gw, "dummy")
@@ -138,16 +139,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "lisener status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				// u := testUDPRoute.DeepCopy()
+				// u := testutils.TestUDPRoute.DeepCopy()
 				// u.ObjectMeta.SetName("tcp")
 				// u.Spec.
-				// 	c.rs = []gatewayv1alpha2.UDPRoute{*u, testUDPRoute}
+				// 	c.rs = []gatewayv1alpha2.UDPRoute{*u, testutils.TestUDPRoute}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -160,7 +161,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
-					testNs, "gateway-1"), "gw name found")
+					testutils.TestNs, "gateway-1"), "gw name found")
 
 				rtype := gatewayv1alpha2.AddressType("IPAddress")
 				addr := gatewayv1alpha2.GatewayAddress{

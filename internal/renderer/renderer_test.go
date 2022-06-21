@@ -16,6 +16,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -26,8 +27,8 @@ func TestRenderE2E(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -60,11 +61,11 @@ func TestRenderE2E(t *testing.T) {
 		},
 		{
 			name: "E2E test OK",
-			cls:  []gatewayv1alpha2.GatewayClass{testGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testUDPRoute},
-			svcs: []corev1.Service{testSvc},
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				e := event.NewEventRender()
@@ -84,7 +85,7 @@ func TestRenderE2E(t *testing.T) {
 				o := cms[0]
 
 				// objectmeta
-				assert.Equal(t, o.GetName(), testStunnerConfig,
+				assert.Equal(t, o.GetName(), testutils.TestStunnerConfig,
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
@@ -108,22 +109,22 @@ func TestRenderE2E(t *testing.T) {
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
-				assert.Equal(t, testLogLevel, conf.Admin.LogLevel,
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 
-				assert.Equal(t, testRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
 				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
-				assert.Equal(t, testUsername, conf.Auth.Credentials["username"],
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
-				assert.Equal(t, testPassword, conf.Auth.Credentials["password"],
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
 					"password")
 
 				lc := conf.Listeners[0]
 				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
 
@@ -131,8 +132,8 @@ func TestRenderE2E(t *testing.T) {
 				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				rc := conf.Clusters[0]
