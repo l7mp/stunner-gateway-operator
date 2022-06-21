@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,8 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
+
+	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
@@ -239,13 +242,20 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 	}
 
 	// set the GatewayClass as an owner
-	if mgr := r.op.GetManager(); mgr != nil {
-		// we are running in the test harness: no manager!
-		if err := controllerutil.SetOwnerReference(gc, cm, mgr.GetScheme()); err != nil {
-			log.Error(err, "cannot set owner reference on object (ignoring)", "owner",
-				store.GetObjectKey(gc), "configmap", store.GetObjectKey(cm))
-		}
-	}
+	// if mgr := r.op.GetManager(); mgr != nil {
+	// 	// we are running in the test harness: no manager!
+	// 	if err := controllerutil.SetOwnerReference(gc, cm, mgr.GetScheme()); err != nil {
+	// 		log.Error(err, "cannot set owner reference on object (ignoring)", "owner",
+	// 			store.GetObjectKey(gc), "configmap", store.GetObjectKey(cm))
+	// 	}
+	// }
+
+	// do it without a scheme:
+	// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
+	kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
+	gvk := corev1.SchemeGroupVersion.WithKind(kind)
+	controllerRef := metav1.NewControllerRef(gc, gvk)
+	cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
 
 	u.ConfigMaps.Upsert(cm)
 
