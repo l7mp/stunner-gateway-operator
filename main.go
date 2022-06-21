@@ -33,6 +33,8 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
@@ -49,6 +51,9 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	// add the gateway-api sheme as well!
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
 }
 
 func main() {
