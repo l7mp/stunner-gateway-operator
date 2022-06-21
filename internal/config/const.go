@@ -24,4 +24,9 @@ const (
 
 	// DefaultStunnerdInstanceName specifies the name of the stunnerd instance managed by the operator
 	DefaultStunnerdInstanceName = "stunner-daemon"
+
+	// DefaultStunnerdConfigfileName defines the file name under which the generated configfile
+	// will appear in the filesystem of the stunnerd pods. This is also the key on the
+	// ConfigMap that maintains the stunnerd config
+	DefaultStunnerdConfigfileName = "stunnerd.conf"
 )

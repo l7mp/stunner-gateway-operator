@@ -7,6 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
@@ -18,6 +20,8 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -142,7 +146,6 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 
 	log.V(1).Info("finding Gateways")
 
-	// acceptedRoutes := []routeGatewayPair{}
 	for _, gw := range r.getGateways4Class(gc) {
 		log.V(2).Info("considering", "gateway", gw.GetName())
 
@@ -174,14 +177,6 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 				setListenerStatus(gw, &l, false, ready, 0)
 				continue
 			}
-
-			// for _, r := range rs {
-			// 	acceptedRoutes = append(acceptedRoutes, routeGatewayPair{
-			// 		route:    r,
-			// 		gateway:  gw,
-			// 		listener: &l,
-			// 	})
-			// }
 
 			conf.Listeners = append(conf.Listeners, *lc)
 			setListenerStatus(gw, &l, true, ready, len(rs))
@@ -243,6 +238,15 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		return err
 	}
 
+	// set the GatewayClass as an owner
+	if mgr := r.op.GetManager(); mgr != nil {
+		// we are running in the test harness: no manager!
+		if err := controllerutil.SetOwnerReference(gc, cm, mgr.GetScheme()); err != nil {
+			log.Error(err, "cannot set owner reference on object (ignoring)", "owner",
+				store.GetObjectKey(gc), "configmap", store.GetObjectKey(cm))
+		}
+	}
+
 	u.ConfigMaps.Upsert(cm)
 
 	return nil
@@ -257,12 +261,12 @@ func (r *Renderer) renderStunnerConf2ConfigMap(ns, name string, conf stunnerconf
 	immutable := true
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ns,
-			Namespace: name,
+			Name:      name,
+			Namespace: ns,
 		},
 		Immutable: &immutable,
 		Data: map[string]string{
-			"stunnerd.conf": string(sc),
+			config.DefaultStunnerdConfigfileName: string(sc),
 		},
 	}, nil
 }
