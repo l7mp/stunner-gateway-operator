@@ -24,11 +24,11 @@ import (
 )
 
 // for debugging
-var testerLogLevel = zapcore.Level(-4)
+//var testerLogLevel = zapcore.Level(-4)
 
 // info
 //var testerLogLevel = zapcore.DebugLevel
-//var testerLogLevel = zapcore.ErrorLevel
+var testerLogLevel = zapcore.ErrorLevel
 
 ////////////////////////////
 type renderTestConfig struct {
