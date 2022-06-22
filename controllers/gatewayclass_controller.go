@@ -78,15 +78,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, fmt.Errorf("invalid GatewayClass: %w", err)
 	}
 
-	// this is a singleton cluster-level resource
-	if old := r.store.Get(req.NamespacedName); old != nil {
-		if old.GetName() != req.Name {
-			log.Error(err, "Refusing to add object to singleton gatewawclass-store",
-				"old", old.GetName(), "new", req.Name)
-			return reconcile.Result{}, err
-		}
-	}
-
 	r.store.Upsert(&gc)
 
 	// we do not trigger a config rendering here, spec warns we should never reconcile gway
