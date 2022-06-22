@@ -103,10 +103,12 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 2, "route found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-ok"),
-					store.GetObjectKey(rs[0]), "route name found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-empty-namespace-correct-name"),
-					store.GetObjectKey(rs[1]), "route name found")
+				keys := []string{store.GetObjectKey(rs[0]), store.GetObjectKey(rs[1])}
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-ok"),
+					"route name found")
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s",
+					testutils.TestNs, "udproute-empty-namespace-correct-name"),
+					"route name found")
 			},
 		},
 		{
@@ -260,10 +262,12 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 
 				assert.Len(t, rs, 2, "route found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-ok"),
-					store.GetObjectKey(rs[0]), "route name found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-namespace-correct-name-1"),
-					store.GetObjectKey(rs[1]), "route name found")
+				keys := []string{store.GetObjectKey(rs[0]), store.GetObjectKey(rs[1])}
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-ok"),
+					"route name found")
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s",
+					testutils.TestNs, "udproute-namespace-correct-name-1"),
+					"route name found")
 
 				l = ls[1]
 				rs = r.getUDPRoutes4Listener(gw, &l)
