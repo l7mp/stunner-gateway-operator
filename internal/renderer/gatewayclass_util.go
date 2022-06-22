@@ -32,7 +32,8 @@ func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 	}
 
 	if len(gcs) > 1 {
-		return nil, fmt.Errorf("too many GatewayClass objects")
+		return nil, fmt.Errorf("too many GatewayClass objects %d: "+
+			"refusing to render STUNner configuration, ", len(gcs))
 	}
 
 	// play it safe
@@ -68,7 +69,7 @@ func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 			"resource: %#v", *gc.Spec.ParametersRef)
 	}
 
-	r.log.V(4).Info("getGatewayClass", "result", store.GetObjectKey(gc))
+	r.log.V(2).Info("getGatewayClass", "result", store.GetObjectKey(gc))
 
 	return gc, nil
 }
