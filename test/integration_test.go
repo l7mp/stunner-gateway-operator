@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package integration
 
 import (
 	"context"
 	// "reflect"
 	// "testing"
-	"time"
+	// "fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,17 +42,17 @@ import (
 
 var _ = Describe("E2E test", func() {
 
-	// Define utility constants for object names and testing timeouts/durations and intervals.
-	const (
-		timeout  = time.Second * 10
-		duration = time.Second * 10
-		interval = time.Millisecond * 250
-	)
 	Context("When creating API resources", func() {
+
 		It("Should successfully render a STUNner ConfigMap", func() {
 			By("By creating a minimal config")
 			// GatewayClass + GatewayConfig + Gateway is enough to render a STUNner conf
-			ctx := context.Background()
+
+			// fmt.Printf("%#v\n", k8sClient)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			setup(ctx, k8sClient)
 
 			Expect(k8sClient.Create(ctx, &testutils.TestGwClass)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, &testutils.TestGwConfig)).Should(Succeed())
@@ -75,6 +75,7 @@ var _ = Describe("E2E test", func() {
 			}, timeout, interval).Should(BeTrue())
 			// Let's make sure our Schedule string value was properly converted/handled.
 			Expect(createdConfigMap).NotTo(BeNil(), "STUNner config rendered")
+
 		})
 	})
 })
