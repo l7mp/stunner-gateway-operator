@@ -63,10 +63,13 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(gc)
 				assert.Len(t, gws, 2, "gw found")
 
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "dummy"),
-					store.GetObjectKey(gws[0]), "gw 1 name found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
-					store.GetObjectKey(gws[1]), "gw 2 name found")
+				keys := []string{store.GetObjectKey(gws[0]), store.GetObjectKey(gws[1])}
+				assert.Contains(t, keys,
+					fmt.Sprintf("%s/%s", testutils.TestNs, "dummy"),
+					"gw 1 name found")
+				assert.Contains(t, keys,
+					fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+					"gw 2 name found")
 			},
 		},
 		{
