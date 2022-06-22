@@ -18,16 +18,14 @@ import (
 
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
-
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-
 	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 type RendererConfig struct {
@@ -37,6 +35,7 @@ type RendererConfig struct {
 type Renderer struct {
 	ctx      context.Context
 	op       *operator.Operator
+	gen      int
 	renderCh chan event.Event
 	log      logr.Logger
 }
@@ -45,6 +44,7 @@ type Renderer struct {
 func NewRenderer(cfg RendererConfig) *Renderer {
 	return &Renderer{
 		renderCh: make(chan event.Event, 5),
+		gen:      0,
 		log:      cfg.Logger.WithName("renderer"),
 	}
 }
@@ -76,9 +76,10 @@ func (r *Renderer) Start(ctx context.Context) error {
 				u := event.NewEventUpdate()
 
 				// config is returned in the update event ConfigMap store
-				err := r.Render(e.(*event.EventRender), u)
+				ev := e.(*event.EventRender)
+				err := r.Render(ev, u)
 				if err != nil {
-					r.log.Error(err, "could not render STUNner configuration")
+					r.log.Error(err, "could not render STUNner configuration", "event", ev)
 					continue
 				}
 
@@ -107,7 +108,8 @@ func (r *Renderer) GetRenderChannel() chan event.Event {
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
 func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 	log := r.log
-	log.Info("rendering configuration", "event", e.String())
+	r.gen += 1
+	log.Info("rendering configuration", "generation", r.gen, "event", e.String())
 
 	// gw-config.StunnerConfig may override this
 	target := config.DefaultConfigMapName
@@ -149,7 +151,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 	conf.Auth = *auth
 
 	log.V(1).Info("finding Gateways")
-
+	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(gc) {
 		log.V(2).Info("considering", "gateway", gw.GetName())
 
@@ -160,8 +162,8 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		var ready bool
 		addr, err := r.getPublicAddrs4Gateway(gw)
 		if err != nil {
-			log.V(1).Info("cannot find public address", "gateway",
-				gw.GetName(), "error", err.Error())
+			log.Info("cannot find public address", "gateway", gw.GetName(), "error",
+				err.Error())
 			ready = false
 		} else {
 			ready = true
@@ -194,6 +196,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 	}
 
 	log.V(1).Info("processing UDPRoutes")
+	conf.Clusters = []stunnerconfv1alpha1.ClusterConfig{}
 	rs := r.op.GetUDPRoutes()
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())
@@ -232,7 +235,8 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 	// schedule for update
 	u.GatewayClasses.Upsert(gc)
 
-	log.Info("STUNner dataplane configuration ready", "conf", fmt.Sprintf("%#v", conf))
+	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "conf",
+		fmt.Sprintf("%#v", conf))
 
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
 
