@@ -56,7 +56,7 @@ func (r *Renderer) renderAuth(gwConf *stunnerv1alpha1.GatewayConfig) (*stunnerco
 		return nil, err
 	}
 
-	r.log.V(4).Info("renderAuth ready", "gateway-config", store.GetObjectKey(gwConf), "result",
+	r.log.V(2).Info("renderAuth ready", "gateway-config", store.GetObjectKey(gwConf), "result",
 		fmt.Sprintf("%#v", auth))
 
 	return &auth, nil

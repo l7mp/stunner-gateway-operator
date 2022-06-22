@@ -45,7 +45,7 @@ func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1
 		lc.Routes = append(lc.Routes, r.Name)
 	}
 
-	r.log.V(4).Info("renderListener ready", "Gateway", store.GetObjectKey(gw), "GatewayConfig",
+	r.log.V(2).Info("renderListener ready", "Gateway", store.GetObjectKey(gw), "GatewayConfig",
 		store.GetObjectKey(gwConf), "Listener", l.Name, "route number", len(rs), "result",
 		fmt.Sprintf("%#v", lc))
 

@@ -67,7 +67,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 		return nil, err
 	}
 
-	r.log.V(4).Info("renderCluster ready", "route", store.GetObjectKey(ro), "result",
+	r.log.V(2).Info("renderCluster ready", "route", store.GetObjectKey(ro), "result",
 		fmt.Sprintf("%#v", cluster))
 
 	return &cluster, nil

@@ -30,7 +30,7 @@ func (r *Renderer) renderAdmin(gwConf *stunnerv1alpha1.GatewayConfig) (*stunnerc
 		return nil, err
 	}
 
-	r.log.V(4).Info("renderAdmin ready", "gateway-config", store.GetObjectKey(gwConf), "result",
+	r.log.V(2).Info("renderAdmin ready", "gateway-config", store.GetObjectKey(gwConf), "result",
 		fmt.Sprintf("%#v", admin))
 
 	return &admin, nil
