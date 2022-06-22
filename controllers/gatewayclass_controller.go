@@ -47,7 +47,7 @@ func RegisterGatewayClassController(mgr manager.Manager, store store.Store, ctrl
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway-class", req.Name)
-	log.V(2).Info("Reconciling GatewayClass", "request", req)
+	log.V(1).Info("Reconciling GatewayClass", "request", req)
 
 	var gc gatewayv1alpha2.GatewayClass
 	found := true

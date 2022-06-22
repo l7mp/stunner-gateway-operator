@@ -61,7 +61,7 @@ func RegisterServiceController(mgr manager.Manager, store store.Store, ch chan e
 
 func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("service", req.Name)
-	log.V(2).Info("Reconciling Service", "request", req)
+	log.V(1).Info("Reconciling Service", "request", req)
 
 	var gc corev1.Service
 	found := true

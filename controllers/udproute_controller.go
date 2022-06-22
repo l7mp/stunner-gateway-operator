@@ -53,7 +53,7 @@ func RegisterUDPRouteController(mgr manager.Manager, store store.Store, ch chan 
 
 func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("udproute", req.Name)
-	log.V(2).Info("Reconciling UDPRoute", "request", req)
+	log.V(1).Info("Reconciling UDPRoute", "request", req)
 
 	var gc gatewayv1alpha2.UDPRoute
 	found := true

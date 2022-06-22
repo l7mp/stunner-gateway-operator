@@ -53,7 +53,7 @@ func RegisterGatewayController(mgr manager.Manager, store store.Store, ch chan e
 
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway", req.Name)
-	log.V(2).Info("Reconciling Gateway", "request", req)
+	log.V(1).Info("Reconciling Gateway", "request", req)
 
 	var gc gatewayv1alpha2.Gateway
 	found := true
