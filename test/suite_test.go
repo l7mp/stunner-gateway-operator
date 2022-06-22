@@ -27,10 +27,7 @@ import (
 
 	// "k8s.io/client-go/kubernetes/scheme"
 
-	// "github.com/go-logr/zapr"
-	// "go.uber.org/zap"
-	// "go.uber.org/zap/zapcore"
-
+	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -59,6 +56,7 @@ const (
 	timeout  = time.Second * 10
 	duration = time.Second * 10
 	interval = time.Millisecond * 250
+	loglevel = -2
 )
 
 var (
@@ -66,7 +64,22 @@ var (
 	k8sClient client.Client
 	testEnv   *envtest.Environment
 	scheme    *runtime.Scheme = runtime.NewScheme()
+	// zapCfg                    = zap.Config{
+	// 	Encoding:    "console",
+	// 	OutputPaths: []string{"stderr"},
+	// 	EncoderConfig: zapcore.EncoderConfig{
+	// 		MessageKey:  "message",
+	// 		TimeKey:     "time",
+	// 		EncodeTime:  zapcore.ISO8601TimeEncoder,
+	// 		LevelKey:    "level",
+	// 		EncodeLevel: zapcore.CapitalLevelEncoder,
+	// 	},
+	// }
 )
+
+func TimesampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format(time.RFC3339Nano))
+}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -77,7 +90,9 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(o *zap.Options) {
+		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
+	}, zap.Level(zapcore.Level(loglevel))))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -130,7 +145,7 @@ func setup(ctx context.Context, client client.Client) {
 	ctrl.SetLogger(logf.Log)
 
 	ctrl.Log.Info("setting up client manager")
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		Port:               9443,
@@ -174,5 +189,9 @@ func setup(ctx context.Context, client client.Client) {
 
 	// must be explicitly cancelled!
 	ctrl.Log.Info("starting manager")
-	go mgr.Start(ctx)
+	go func() {
+		defer GinkgoRecover()
+		err := mgr.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
 }

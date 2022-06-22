@@ -29,12 +29,12 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	// "k8s.io/client-go/kubernetes/scheme"
-	// runtime "k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -54,20 +54,44 @@ var _ = Describe("E2E test", func() {
 
 			setup(ctx, k8sClient)
 
+			ctrl.Log.Info("loading GatewayClass")
 			Expect(k8sClient.Create(ctx, &testutils.TestGwClass)).Should(Succeed())
+
+			ctrl.Log.Info("reading back GatewayClass")
+			lookupKey := types.NamespacedName{
+				Name:      testutils.TestGwClass.GetName(),
+				Namespace: testutils.TestGwClass.GetNamespace(),
+			}
+			gwClass := &gatewayv1alpha2.GatewayClass{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, gwClass)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(gwClass.GetName()).To(Equal(testutils.TestGwClass.GetName()),
+				"GatewayClass name")
+			Expect(gwClass.GetNamespace()).To(Equal(testutils.TestGwClass.GetNamespace()),
+				"GatewayClass namespace")
+
+			ctrl.Log.Info("loading GatewayConfig")
 			Expect(k8sClient.Create(ctx, &testutils.TestGwConfig)).Should(Succeed())
+			ctrl.Log.Info("loading Gateway")
 			Expect(k8sClient.Create(ctx, &testutils.TestGw)).Should(Succeed())
 
-			configMapLookupKey := types.NamespacedName{
-				Name:      config.DefaultConfigMapName,
+			lookupKey = types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
 				Namespace: string(testutils.TestNs),
 			}
 			createdConfigMap := &corev1.ConfigMap{}
 
 			// We'll need to retry getting this newly created ConfigMap, given that
 			// creation may not immediately happen.
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				err := k8sClient.Get(ctx, lookupKey, createdConfigMap)
 				if err != nil {
 					return false
 				}
