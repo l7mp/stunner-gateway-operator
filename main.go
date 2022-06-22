@@ -38,6 +38,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
+	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -49,11 +50,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-
-	// add the gateway-api sheme as well!
 	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
 }
 
 func main() {
@@ -76,6 +74,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	setupLog.Info("setting up Kubernetes controller manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -85,7 +84,7 @@ func main() {
 		LeaderElectionID:       "92062b70.l7mp.io",
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to set up Kubernetes controller manager")
 		os.Exit(1)
 	}
 
@@ -100,13 +99,21 @@ func main() {
 
 	setupLog.Info("setting up STUNner config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
-		Logger: ctrl.Log.WithName("renderer"),
+		Logger: ctrl.Log,
+	})
+
+	setupLog.Info("setting up updater client")
+	u := updater.NewUpdater(updater.UpdaterConfig{
+		Manager: mgr,
+		Logger:  ctrl.Log,
 	})
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
 		ControllerName: controllerName,
+		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
+		UpdaterCh:      u.GetUpdaterChannel(),
 		Logger:         ctrl.Log,
 	})
 
@@ -120,13 +127,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	setupLog.Info("starting updater thread")
+	err = u.Start(ctx)
+	if err != nil {
+		setupLog.Error(err, "problem running updater")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting operator thread")
 	if err := op.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running operator")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting Kubernetes controller manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

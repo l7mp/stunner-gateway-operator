@@ -45,12 +45,13 @@ type Renderer struct {
 func NewRenderer(cfg RendererConfig) *Renderer {
 	return &Renderer{
 		renderCh: make(chan event.Event, 5),
-		log:      cfg.Logger,
+		log:      cfg.Logger.WithName("renderer"),
 	}
 }
 
 func (r *Renderer) Start(ctx context.Context) error {
 	r.ctx = ctx
+	operatorCh := r.op.GetOperatorChannel()
 
 	// starting the renderer thread
 	go func() {
@@ -81,8 +82,8 @@ func (r *Renderer) Start(ctx context.Context) error {
 					continue
 				}
 
-				// send the update
-				r.renderCh <- u
+				// send the update back to the operator
+				operatorCh <- u
 
 			case <-ctx.Done():
 				return

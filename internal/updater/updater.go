@@ -35,9 +35,9 @@ type Updater struct {
 
 func NewUpdater(cfg UpdaterConfig) *Updater {
 	return &Updater{
-		updaterCh: make(chan event.Event, 5),
 		manager:   cfg.Manager,
-		log:       cfg.Logger,
+		updaterCh: make(chan event.Event, 5),
+		log:       cfg.Logger.WithName("updater"),
 	}
 }
 
@@ -71,6 +71,11 @@ func (u *Updater) Start(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+// GetUpdaterChannel returns the channel on which the updater listenens to update resuests
+func (u *Updater) GetUpdaterChannel() chan event.Event {
+	return u.updaterCh
 }
 
 func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
