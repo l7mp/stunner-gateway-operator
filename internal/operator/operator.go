@@ -7,15 +7,18 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
-	// corev1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
 	// ctlr "sigs.k8s.io/controller-runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -32,8 +35,8 @@ func init() {
 }
 
 type OperatorConfig struct {
-	ControllerName string
 	Manager        manager.Manager
+	ControllerName string
 	RenderCh       chan event.Event
 	UpdaterCh      chan event.Event
 	Logger         logr.Logger
@@ -42,12 +45,6 @@ type OperatorConfig struct {
 type Operator struct {
 	ctx                             context.Context
 	mgr                             manager.Manager
-	controllerName                  string
-	gatewayClassStore               store.Store
-	gatewayConfigStore              store.Store
-	gatewayStore                    store.Store
-	udpRouteStore                   store.Store
-	serviceStore                    store.Store
 	renderCh, operatorCh, updaterCh chan event.Event
 	manager                         manager.Manager
 	log, logger                     logr.Logger
@@ -55,13 +52,14 @@ type Operator struct {
 
 // NewOperator creates a new Operator
 func NewOperator(cfg OperatorConfig) *Operator {
+	config.ControllerName = cfg.ControllerName
+
 	return &Operator{
-		controllerName: cfg.ControllerName,
-		mgr:            cfg.Manager,
-		renderCh:       cfg.RenderCh,
-		operatorCh:     make(chan event.Event, 5),
-		updaterCh:      cfg.UpdaterCh,
-		logger:         cfg.Logger,
+		mgr:        cfg.Manager,
+		renderCh:   cfg.RenderCh,
+		operatorCh: make(chan event.Event, 5),
+		updaterCh:  cfg.UpdaterCh,
+		logger:     cfg.Logger,
 	}
 }
 
@@ -74,34 +72,33 @@ func (o *Operator) Start(ctx context.Context) error {
 		return fmt.Errorf("controller runtime manager uninitialized")
 	}
 
-	o.SetupStore()
-
-	log.V(3).Info("starting GatewayClass controller")
-	err := stunnerctrl.RegisterGatewayClassController(o.mgr, o.gatewayClassStore, o.controllerName)
+	log.V(3).Info("starting GatewayClass controller", "controller-name",
+		config.ControllerName)
+	err := stunnerctrl.RegisterGatewayClassController(o.mgr, o.operatorCh)
 	if err != nil {
 		return fmt.Errorf("cannot register gateway-class controller: %w", err)
 	}
 
 	log.V(3).Info("starting GatewayConfig controller")
-	err = stunnerctrl.RegisterGatewayConfigController(o.mgr, o.gatewayConfigStore, o.operatorCh)
+	err = stunnerctrl.RegisterGatewayConfigController(o.mgr, o.operatorCh)
 	if err != nil {
 		return fmt.Errorf("cannot register gatewayconfig controller: %w", err)
 	}
 
 	log.V(3).Info("starting Gateway controller")
-	err = stunnerctrl.RegisterGatewayController(o.mgr, o.gatewayStore, o.operatorCh)
+	err = stunnerctrl.RegisterGatewayController(o.mgr, o.operatorCh)
 	if err != nil {
 		return fmt.Errorf("cannot register gateway controller: %w", err)
 	}
 
 	log.V(3).Info("starting UDPRoute controller")
-	err = stunnerctrl.RegisterUDPRouteController(o.mgr, o.udpRouteStore, o.operatorCh)
+	err = stunnerctrl.RegisterUDPRouteController(o.mgr, o.operatorCh)
 	if err != nil {
 		return fmt.Errorf("cannot register udproute controller: %w", err)
 	}
 
 	log.V(3).Info("starting Service controller")
-	err = stunnerctrl.RegisterServiceController(o.mgr, o.serviceStore, o.operatorCh)
+	err = stunnerctrl.RegisterServiceController(o.mgr, o.operatorCh)
 	if err != nil {
 		return fmt.Errorf("cannot register service controller: %w", err)
 	}
@@ -109,14 +106,6 @@ func (o *Operator) Start(ctx context.Context) error {
 	go o.eventLoop(ctx)
 
 	return nil
-}
-
-func (o *Operator) SetupStore() {
-	o.gatewayClassStore = store.NewStore()  //o.logger.WithName("gateway-class-store"))
-	o.gatewayConfigStore = store.NewStore() //o.logger.WithName("gatewayconfig-store"))
-	o.gatewayStore = store.NewStore()       //o.logger.WithName("gateway-store"))
-	o.udpRouteStore = store.NewStore()      //o.logger.WithName("udproute-store"))
-	o.serviceStore = store.NewStore()       //o.logger.WithName("service-store"))
 }
 
 func (o *Operator) eventLoop(ctx context.Context) {
@@ -136,19 +125,64 @@ func (o *Operator) eventLoop(ctx context.Context) {
 	}
 }
 
-func (o *Operator) GetOperatorChannel() chan event.Event {
-	return o.operatorCh
-}
-
 // ProcessEvent dispatches an event to the corresponding renderer
 func (o *Operator) ProcessEvent(e event.Event) error {
 	switch e.GetType() {
-	case event.EventTypeRender:
-		// pass through to the renderer
-		o.renderCh <- e
 	case event.EventTypeUpdate:
 		// pass through to the updater
 		o.updaterCh <- e
+
+	case event.EventTypeUpsert:
+		// reflect!
+		e := e.(*event.EventUpsert)
+
+		switch e.Object.(type) {
+		case *gatewayv1alpha2.GatewayClass:
+			store.GatewayClasses.Upsert(e.Object)
+		case *stunnerv1alpha1.GatewayConfig:
+			store.GatewayConfigs.Upsert(e.Object)
+		case *gatewayv1alpha2.Gateway:
+			store.Gateways.Upsert(e.Object)
+		case *gatewayv1alpha2.UDPRoute:
+			store.UDPRoutes.Upsert(e.Object)
+		case *corev1.Service:
+			store.Services.Upsert(e.Object)
+		default:
+			return fmt.Errorf("could not process event %q for an unknown object of type %q",
+				e.String(), store.GetObjectKey(e.Object))
+		}
+
+		// trigger the render event
+		o.renderCh <- event.NewEventRender(store.GetObjectKey(e.Object), "upsert")
+
+	case event.EventTypeDelete:
+		// reflect!
+		e := e.(*event.EventDelete)
+
+		key := types.NamespacedName{
+			Namespace: e.Object.GetNamespace(),
+			Name:      e.Object.GetName(),
+		}
+
+		switch e.Object.(type) {
+		case *gatewayv1alpha2.GatewayClass:
+			store.GatewayClasses.Remove(key)
+		case *stunnerv1alpha1.GatewayConfig:
+			store.GatewayConfigs.Remove(key)
+		case *gatewayv1alpha2.Gateway:
+			store.Gateways.Remove(key)
+		case *gatewayv1alpha2.UDPRoute:
+			store.UDPRoutes.Remove(key)
+		case *corev1.Service:
+			store.Services.Remove(key)
+		default:
+			return fmt.Errorf("could not process event %q for an unknown object of type %q",
+				e.String(), key.String())
+		}
+
+		// trigger the render event
+		o.renderCh <- event.NewEventRender(store.GetObjectKey(e.Object), "delete")
+
 	}
 
 	return nil

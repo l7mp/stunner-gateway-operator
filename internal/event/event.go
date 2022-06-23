@@ -13,15 +13,18 @@ import (
 type EventType int
 
 const (
-	// EventTypeRender indicates a request for operator to generate the STUNner configuration
 	EventTypeRender EventType = iota + 1
+	EventTypeUpsert
+	EventTypeDelete
 	EventTypeUpdate
 	EventTypeUnknown
 )
 
 const (
-	eventTypeRenderStr = "render-event"
-	eventTypeUpdateStr = "update-event"
+	eventTypeRenderStr = "render"
+	eventTypeUpsertStr = "upsert"
+	eventTypeDeleteStr = "delete"
+	eventTypeUpdateStr = "update"
 )
 
 // NewEventType parses an event type specification
@@ -29,6 +32,10 @@ func NewEventType(raw string) (EventType, error) {
 	switch raw {
 	case eventTypeRenderStr:
 		return EventTypeRender, nil
+	case eventTypeUpsertStr:
+		return EventTypeUpsert, nil
+	case eventTypeDeleteStr:
+		return EventTypeDelete, nil
 	case eventTypeUpdateStr:
 		return EventTypeUpdate, nil
 	default:
@@ -41,6 +48,10 @@ func (a EventType) String() string {
 	switch a {
 	case EventTypeRender:
 		return eventTypeRenderStr
+	case EventTypeUpsert:
+		return eventTypeUpsertStr
+	case EventTypeDelete:
+		return eventTypeDeleteStr
 	case EventTypeUpdate:
 		return eventTypeUpdateStr
 	default:

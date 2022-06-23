@@ -17,8 +17,9 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -62,31 +63,31 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 				Logger: log.WithName("renderer"),
 			})
 
-			log.V(1).Info("setting up operator")
-			op := operator.NewOperator(operator.OperatorConfig{
-				ControllerName: config.DefaultControllerName,
-				RenderCh:       r.GetRenderChannel(),
-				Logger:         log,
-			})
-			r.SetOperator(op)
-
 			log.V(1).Info("preparing local storage")
-			op.SetupStore()
+
+			store.GatewayClasses.Flush()
 			for i := range c.cls {
-				op.AddGatewayClass(&c.cls[i])
+				store.GatewayClasses.Upsert(&c.cls[i])
 			}
+
+			store.GatewayConfigs.Flush()
 			for i := range c.cfs {
-				op.AddGatewayConfig(&c.cfs[i])
+				store.GatewayConfigs.Upsert(&c.cfs[i])
 			}
+
+			store.Gateways.Flush()
 			for i := range c.gws {
-				// fsck you Go!!!!!!1
-				op.AddGateway(&c.gws[i])
+				store.Gateways.Upsert(&c.gws[i])
 			}
+
+			store.UDPRoutes.Flush()
 			for i := range c.rs {
-				op.AddUDPRoute(&c.rs[i])
+				store.UDPRoutes.Upsert(&c.rs[i])
 			}
+
+			store.Services.Flush()
 			for i := range c.svcs {
-				op.AddService(&c.svcs[i])
+				store.Services.Upsert(&c.svcs[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

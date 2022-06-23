@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -46,15 +46,13 @@ import (
 type gatewayConfigReconciler struct {
 	client.Client
 	scheme  *runtime.Scheme
-	store   store.Store
 	eventCh chan event.Event
 }
 
-func RegisterGatewayConfigController(mgr manager.Manager, store store.Store, ch chan event.Event) error {
+func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event) error {
 	r := &gatewayConfigReconciler{
 		Client:  mgr.GetClient(),
 		scheme:  mgr.GetScheme(),
-		store:   store,
 		eventCh: ch,
 	}
 
@@ -65,7 +63,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, store store.Store, ch 
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway-config", req.Name)
-	log.V(1).Info("Reconciling GatewayConfig", "request", req)
+	log.Info("Reconciling GatewayConfig", "request", req)
 
 	var gc stunnerv1alpha1.GatewayConfig
 	found := true
@@ -80,16 +78,12 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	}
 
 	if !found {
-		r.store.Remove(req.NamespacedName)
+		// we don't use the "content" of gc, just the type!
+		r.eventCh <- event.NewEventDelete(&gc)
+		return reconcile.Result{}, nil
 	}
 
-	r.store.Upsert(&gc)
-
-	// trigger a config render for this namespace
-	e := event.NewEventRender()
-	e.Origin = "GatewayConfig"
-	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
-	r.eventCh <- e
+	r.eventCh <- event.NewEventUpsert(&gc)
 
 	return reconcile.Result{}, nil
 }

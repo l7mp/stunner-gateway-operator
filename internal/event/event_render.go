@@ -14,8 +14,8 @@ type EventRender struct {
 }
 
 // NewEvent returns an empty event
-func NewEventRender() *EventRender {
-	return &EventRender{Type: EventTypeRender}
+func NewEventRender(origin, reason string) *EventRender {
+	return &EventRender{Type: EventTypeRender, Origin: origin, Reason: reason}
 }
 
 func (e *EventRender) GetType() EventType {

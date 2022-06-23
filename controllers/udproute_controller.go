@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	// "errors"
-	"fmt"
+	// "fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +18,7 @@ import (
 	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -32,15 +32,13 @@ import (
 type udpRouteReconciler struct {
 	client.Client
 	scheme  *runtime.Scheme
-	store   store.Store
 	eventCh chan event.Event
 }
 
-func RegisterUDPRouteController(mgr manager.Manager, store store.Store, ch chan event.Event) error {
+func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event) error {
 	r := &udpRouteReconciler{
 		Client:  mgr.GetClient(),
 		scheme:  mgr.GetScheme(),
-		store:   store,
 		eventCh: ch,
 	}
 
@@ -53,7 +51,7 @@ func RegisterUDPRouteController(mgr manager.Manager, store store.Store, ch chan 
 
 func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("udproute", req.Name)
-	log.V(1).Info("Reconciling UDPRoute", "request", req)
+	log.Info("Reconciling UDPRoute", "request", req)
 
 	var gc gatewayv1alpha2.UDPRoute
 	found := true
@@ -68,17 +66,12 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	}
 
 	if !found {
-		r.store.Remove(req.NamespacedName)
+		// we don't use the "content" of gc, just the type!
+		r.eventCh <- event.NewEventDelete(&gc)
+		return reconcile.Result{}, nil
 	}
 
-	r.store.Upsert(&gc)
-
-	// trigger a config render for this namespace
-	e := event.NewEventRender()
-	e.Origin = "UDPRoute"
-	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
-
-	r.eventCh <- e
+	r.eventCh <- event.NewEventUpsert(&gc)
 
 	return reconcile.Result{}, nil
 }

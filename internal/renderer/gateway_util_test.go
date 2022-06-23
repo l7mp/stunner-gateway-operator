@@ -13,9 +13,9 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -172,7 +172,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					Value: "1.2.3.4",
 				}
 
-				setGatewayStatusScheduled(gw, r.op.GetControllerName())
+				setGatewayStatusScheduled(gw, config.ControllerName)
 				ready := true
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]
@@ -284,7 +284,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					d.Reason, "reason")
 
 				gw.Generation = 1
-				setGatewayStatusScheduled(gw, r.op.GetControllerName())
+				setGatewayStatusScheduled(gw, config.ControllerName)
 				ready = false
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]

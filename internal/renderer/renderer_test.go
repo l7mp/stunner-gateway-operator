@@ -68,10 +68,8 @@ func TestRenderE2E(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
-				e := event.NewEventRender()
+				e := event.NewEventRender("tester", "unit-test")
 				assert.NotNil(t, e, "render event create")
-				e.Origin = "tester"
-				e.Reason = "unit-test"
 
 				u := event.NewEventUpdate()
 				assert.NotNil(t, u, "update event create")

@@ -41,9 +41,7 @@ import (
 )
 
 var _ = Describe("E2E test", func() {
-
 	Context("When creating API resources", func() {
-
 		It("Should successfully render a STUNner ConfigMap", func() {
 			By("By creating a minimal config")
 			// GatewayClass + GatewayConfig + Gateway is enough to render a STUNner conf

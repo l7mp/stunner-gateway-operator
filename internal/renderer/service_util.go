@@ -22,7 +22,7 @@ import (
 func (r *Renderer) getPublicAddrs4Gateway(gw *gatewayv1alpha2.Gateway) (gatewayv1alpha2.GatewayAddress, error) {
 	r.log.V(4).Info("getPublicAddrs4Gateway", "Gateway", store.GetObjectKey(gw))
 
-	for _, svc := range r.op.GetServices() {
+	for _, svc := range store.Services.GetAll() {
 		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc))
 
 		if r.isServiceAnnotated4Gateway(svc, gw) {

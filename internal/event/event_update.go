@@ -20,9 +20,9 @@ type EventUpdate struct {
 func NewEventUpdate() *EventUpdate {
 	return &EventUpdate{
 		Type:           EventTypeUpdate,
-		GatewayClasses: store.NewStore(),
-		Gateways:       store.NewStore(),
-		UDPRoutes:      store.NewStore(),
+		GatewayClasses: store.NewGatewayClassStore(),
+		Gateways:       store.NewGatewayStore(),
+		UDPRoutes:      store.NewUDPRouteStore(),
 		ConfigMaps:     store.NewStore(),
 	}
 }

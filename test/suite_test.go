@@ -142,7 +142,7 @@ func setup(ctx context.Context, client client.Client) {
 	})).Should(Succeed())
 
 	// start the operator
-	ctrl.SetLogger(logf.Log)
+	ctrl.SetLogger(logf.Log.WithName("operator"))
 
 	ctrl.Log.Info("setting up client manager")
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -173,7 +173,7 @@ func setup(ctx context.Context, client client.Client) {
 		Logger:         ctrl.Log,
 	})
 
-	r.SetOperator(op)
+	r.SetOperatorChannel(op.GetOperatorChannel())
 
 	ctrl.Log.Info("starting renderer thread")
 	err = r.Start(ctx)

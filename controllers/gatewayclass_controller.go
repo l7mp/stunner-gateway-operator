@@ -16,7 +16,8 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
 // -----------------------------------------------------------------------------
@@ -27,17 +28,15 @@ import (
 
 type gatewayClassReconciler struct {
 	client.Client
-	scheme   *runtime.Scheme
-	store    store.Store
-	ctrlName string
+	scheme  *runtime.Scheme
+	eventCh chan event.Event
 }
 
-func RegisterGatewayClassController(mgr manager.Manager, store store.Store, ctrlName string) error {
+func RegisterGatewayClassController(mgr manager.Manager, ch chan event.Event) error {
 	r := &gatewayClassReconciler{
-		Client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		store:    store,
-		ctrlName: ctrlName,
+		Client:  mgr.GetClient(),
+		scheme:  mgr.GetScheme(),
+		eventCh: ch,
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -47,7 +46,7 @@ func RegisterGatewayClassController(mgr manager.Manager, store store.Store, ctrl
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway-class", req.Name)
-	log.V(1).Info("Reconciling GatewayClass", "request", req)
+	log.Info("Reconciling GatewayClass", "request", req)
 
 	var gc gatewayv1alpha2.GatewayClass
 	found := true
@@ -62,14 +61,9 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	}
 
 	// do we manage this gatewayclass?
-	if string(gc.Spec.ControllerName) != r.ctrlName {
-		log.V(2).Info("ignoring GatewayClass for an unknown controller", "controller-name",
-			string(gc.Spec.ControllerName), "expecting", r.ctrlName)
-		return reconcile.Result{}, nil
-	}
-
-	if !found {
-		r.store.Remove(req.NamespacedName)
+	if string(gc.Spec.ControllerName) != config.ControllerName {
+		log.V(1).Info("ignoring GatewayClass for an unknown controller", "controller-name",
+			string(gc.Spec.ControllerName), "expecting", config.ControllerName)
 		return reconcile.Result{}, nil
 	}
 
@@ -78,10 +72,13 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, fmt.Errorf("invalid GatewayClass: %w", err)
 	}
 
-	r.store.Upsert(&gc)
+	if !found {
+		// we don't use the "content" of gc, just the type!
+		r.eventCh <- event.NewEventDelete(&gc)
+		return reconcile.Result{}, nil
+	}
 
-	// we do not trigger a config rendering here, spec warns we should never reconcile gway
-	// classes
+	r.eventCh <- event.NewEventUpsert(&gc)
 
 	return reconcile.Result{}, nil
 }

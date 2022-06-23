@@ -120,7 +120,7 @@ func main() {
 		Logger:         ctrl.Log,
 	})
 
-	r.SetOperator(op)
+	r.SetOperatorChannel(op.GetOperatorChannel())
 
 	ctx := ctrl.SetupSignalHandler()
 

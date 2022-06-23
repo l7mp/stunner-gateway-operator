@@ -22,8 +22,8 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
 	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -33,11 +33,10 @@ type RendererConfig struct {
 }
 
 type Renderer struct {
-	ctx      context.Context
-	op       *operator.Operator
-	gen      int
-	renderCh chan event.Event
-	log      logr.Logger
+	ctx                  context.Context
+	gen                  int
+	renderCh, operatorCh chan event.Event
+	log                  logr.Logger
 }
 
 // NewRenderer creates a new Renderer
@@ -51,7 +50,6 @@ func NewRenderer(cfg RendererConfig) *Renderer {
 
 func (r *Renderer) Start(ctx context.Context) error {
 	r.ctx = ctx
-	operatorCh := r.op.GetOperatorChannel()
 
 	// starting the renderer thread
 	go func() {
@@ -60,12 +58,6 @@ func (r *Renderer) Start(ctx context.Context) error {
 		for {
 			select {
 			case e := <-r.renderCh:
-				if r.op == nil {
-					r.log.Info("renderer thread uninitialized: operator unset",
-						"event", e.String())
-					continue
-				}
-
 				if e.GetType() != event.EventTypeRender {
 					r.log.Info("renderer thread received unknown event",
 						"event", e.String())
@@ -84,7 +76,7 @@ func (r *Renderer) Start(ctx context.Context) error {
 				}
 
 				// send the update back to the operator
-				operatorCh <- u
+				r.operatorCh <- u
 
 			case <-ctx.Done():
 				return
@@ -95,14 +87,14 @@ func (r *Renderer) Start(ctx context.Context) error {
 	return nil
 }
 
-// SetOperator sets the operator associated with this renderer
-func (r *Renderer) SetOperator(op *operator.Operator) {
-	r.op = op
-}
-
 // GetRenderChannel returns the channel onn which the renderer listenens to rendering requests
 func (r *Renderer) GetRenderChannel() chan event.Event {
 	return r.renderCh
+}
+
+// SetOperatorChannel sets the channel on which the operator event dispatcher listens
+func (r *Renderer) SetOperatorChannel(ch chan event.Event) {
+	r.operatorCh = ch
 }
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
@@ -124,7 +116,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		return err
 	}
 
-	setGatewayClassStatusScheduled(gc, r.op.GetControllerName())
+	setGatewayClassStatusScheduled(gc, config.ControllerName)
 
 	log.V(1).Info("obtaining GatewayConfig", "GatewayClass", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
@@ -156,7 +148,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		log.V(2).Info("considering", "gateway", gw.GetName())
 
 		// this also re-inits listener statuses
-		setGatewayStatusScheduled(gw, r.op.GetControllerName())
+		setGatewayStatusScheduled(gw, config.ControllerName)
 
 		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
 		var ready bool
@@ -188,7 +180,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 			setListenerStatus(gw, &l, true, ready, len(rs))
 		}
 
-		setGatewayStatusReady(gw, r.op.GetControllerName())
+		setGatewayStatusReady(gw, config.ControllerName)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -197,7 +189,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 
 	log.V(1).Info("processing UDPRoutes")
 	conf.Clusters = []stunnerconfv1alpha1.ClusterConfig{}
-	rs := r.op.GetUDPRoutes()
+	rs := store.UDPRoutes.GetAll()
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())
 
@@ -212,7 +204,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 			// at least one parent accepts the route: render it!
 			renderRoute = renderRoute || accepted
 
-			setRouteConditionStatus(ro, &p, r.op.GetControllerName(), accepted)
+			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
 		}
 
 		if renderRoute == true {
@@ -231,7 +223,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		u.UDPRoutes.Upsert(ro)
 	}
 
-	setGatewayClassStatusReady(gc, r.op.GetControllerName())
+	setGatewayClassStatusReady(gc, config.ControllerName)
 	// schedule for update
 	u.GatewayClasses.Upsert(gc)
 
@@ -246,16 +238,7 @@ func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
 		return err
 	}
 
-	// set the GatewayClass as an owner
-	// if mgr := r.op.GetManager(); mgr != nil {
-	// 	// we are running in the test harness: no manager!
-	// 	if err := controllerutil.SetOwnerReference(gc, cm, mgr.GetScheme()); err != nil {
-	// 		log.Error(err, "cannot set owner reference on object (ignoring)", "owner",
-	// 			store.GetObjectKey(gc), "configmap", store.GetObjectKey(cm))
-	// 	}
-	// }
-
-	// do it without a scheme:
+	// set the GatewayClass as an owner without using the scheme:
 	// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
 	kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
 	gvk := corev1.SchemeGroupVersion.WithKind(kind)

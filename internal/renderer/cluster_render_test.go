@@ -12,9 +12,8 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	// "github.com/l7mp/stunner-gateway-operator/internal/event"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -31,7 +30,7 @@ func TestRenderClusterRender(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 
 				ro := rs[0]
@@ -64,7 +63,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
@@ -95,7 +94,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
@@ -126,7 +125,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
@@ -156,7 +155,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 
 				ro := rs[0]
@@ -194,7 +193,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
-				rs := r.op.GetUDPRoutes()
+				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
 
 				rc, err := r.renderCluster(rs[0])

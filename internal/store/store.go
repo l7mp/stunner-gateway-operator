@@ -5,11 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	// "github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 type Store interface {
@@ -23,6 +20,8 @@ type Store interface {
 	Len() int
 	// Objects returns all stored objects
 	Objects() []client.Object
+	// Flush empties the store
+	Flush()
 	// String returns a string with the keys of all stored objects
 	String() string
 }
@@ -105,6 +104,14 @@ func (s *storeImpl) Objects() []client.Object {
 	}
 
 	return ret
+}
+
+func (s *storeImpl) Flush() {
+	os := s.Objects()
+	for _, o := range os {
+		n := types.NamespacedName{Namespace: o.GetNamespace(), Name: o.GetName()}
+		s.Remove(n)
+	}
 }
 
 func (s *storeImpl) String() string {

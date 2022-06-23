@@ -84,8 +84,7 @@ func (u *Updater) GetUpdaterChannel() chan event.Event {
 
 func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	u.gen += 1
-	u.log.V(1).Info("ProcessUpdate: processing update event", "generation", u.gen, "update",
-		e.String())
+	u.log.Info("processing update event", "generation", u.gen, "update", e.String())
 
 	client := u.manager.GetClient()
 
@@ -144,13 +143,8 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 			store.GetObjectKey(cm), err)
 	}
 
-	u.log.V(2).Info("all objects successfully reconciled", "generation", u.gen, "configmap",
+	u.log.V(1).Info("all objects successfully updated", "generation", u.gen, "configmap",
 		op)
-
-	// err := client.Update(u.ctx, cm); err != nil {
-	// 	return fmt.Errorf("cannot update ConfigMap %q: %w",
-	// 		store.GetObjectKey(cm), err)
-	// }
 
 	return nil
 }

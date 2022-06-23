@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	// "errors"
-	"fmt"
+	// "fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,6 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,15 +34,13 @@ import (
 type serviceReconciler struct {
 	client.Client
 	scheme  *runtime.Scheme
-	store   store.Store
 	eventCh chan event.Event
 }
 
-func RegisterServiceController(mgr manager.Manager, store store.Store, ch chan event.Event) error {
+func RegisterServiceController(mgr manager.Manager, ch chan event.Event) error {
 	r := &serviceReconciler{
 		Client:  mgr.GetClient(),
 		scheme:  mgr.GetScheme(),
-		store:   store,
 		eventCh: ch,
 	}
 
@@ -61,7 +58,7 @@ func RegisterServiceController(mgr manager.Manager, store store.Store, ch chan e
 
 func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("service", req.Name)
-	log.V(1).Info("Reconciling Service", "request", req)
+	log.Info("Reconciling Service", "request", req)
 
 	var gc corev1.Service
 	found := true
@@ -76,17 +73,12 @@ func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	}
 
 	if !found {
-		r.store.Remove(req.NamespacedName)
+		// we don't use the "content" of gc, just the type!
+		r.eventCh <- event.NewEventDelete(&gc)
+		return reconcile.Result{}, nil
 	}
 
-	r.store.Upsert(&gc)
-
-	// trigger a config render for this namespace
-	e := event.NewEventRender()
-	e.Origin = "Service"
-	e.Reason = fmt.Sprintf("update on %q", req.NamespacedName)
-
-	r.eventCh <- e
+	r.eventCh <- event.NewEventUpsert(&gc)
 
 	return reconcile.Result{}, nil
 }

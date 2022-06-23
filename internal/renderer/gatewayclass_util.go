@@ -14,18 +14,15 @@ import (
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 	r.log.V(4).Info("getGatewayClass")
-	o := r.op
 
-	gcs, err := o.GetGatewayClasses()
-	if err != nil {
-		return nil, err
-	}
+	gcs := store.GatewayClasses.GetAll()
 
 	if len(gcs) == 0 {
 		return nil, fmt.Errorf("no GatewayClass found")
@@ -38,9 +35,9 @@ func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 
 	// play it safe
 	gc := gcs[0]
-	if string(gc.Spec.ControllerName) != o.GetControllerName() {
+	if string(gc.Spec.ControllerName) != config.ControllerName {
 		return nil, fmt.Errorf("invalid gateway: unknown controller controller-name %q, "+
-			"expecting %q", string(gc.Spec.ControllerName), o.GetControllerName())
+			"expecting %q", string(gc.Spec.ControllerName), config.ControllerName)
 	}
 
 	// this should already be validated but play it safe

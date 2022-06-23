@@ -34,7 +34,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 		l.Name)
 
 	ret := make([]*gatewayv1alpha2.UDPRoute, 0)
-	rs := r.op.GetUDPRoutes()
+	rs := store.UDPRoutes.GetAll()
 
 	for i := range rs {
 		ro := rs[i]
@@ -108,7 +108,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	}
 
 	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
-	gw := r.op.GetGateway(namespacedName)
+	gw := store.Gateways.GetObject(namespacedName)
 	if gw == nil {
 		r.log.V(4).Info("isParentAcceptingRoute: no gateway found for ParentRef", "route",
 			store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p))

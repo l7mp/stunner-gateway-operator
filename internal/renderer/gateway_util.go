@@ -12,8 +12,8 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 )
 
 // maxConds is the maximum number of conditions that can be stored at one in a Gateway object
@@ -26,10 +26,10 @@ type listenerRoutePair struct {
 
 func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewayv1alpha2.Gateway {
 	r.log.V(4).Info("getGateways4Class", "GatewayClass", store.GetObjectKey(gc))
-	gws := r.op.GetGateways()
 
-	ret := make([]*gatewayv1alpha2.Gateway, 0)
-	for _, g := range gws {
+	ret := []*gatewayv1alpha2.Gateway{}
+
+	for _, g := range store.Gateways.GetAll() {
 		if string(g.Spec.GatewayClassName) == gc.GetName() {
 			ret = append(ret, g)
 		}
