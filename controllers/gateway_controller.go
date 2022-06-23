@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -51,7 +51,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event) error {
 
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway", req.Name)
-	log.Info("Reconciling Gateway", "request", req)
+	log.Info("Reconciling Gateway")
 
 	var gc gatewayv1alpha2.Gateway
 	found := true

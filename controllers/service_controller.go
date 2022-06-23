@@ -10,15 +10,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	// "sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
+	// "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	// ctrlevent "sigs.k8s.io/controller-runtime/pkg/event"
-	// "sigs.k8s.io/controller-runtime/pkg/handler" // Required for Watching
+	// "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	// "sigs.k8s.io/controller-runtime/pkg/source" // Required for Watching
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -58,7 +57,7 @@ func RegisterServiceController(mgr manager.Manager, ch chan event.Event) error {
 
 func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("service", req.Name)
-	log.Info("Reconciling Service", "request", req)
+	log.Info("Reconciling Service")
 
 	var gc corev1.Service
 	found := true

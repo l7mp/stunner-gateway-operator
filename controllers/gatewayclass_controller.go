@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -41,12 +42,13 @@ func RegisterGatewayClassController(mgr manager.Manager, ch chan event.Event) er
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1alpha2.GatewayClass{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway-class", req.Name)
-	log.Info("Reconciling GatewayClass", "request", req)
+	log.Info("Reconciling GatewayClass")
 
 	var gc gatewayv1alpha2.GatewayClass
 	found := true

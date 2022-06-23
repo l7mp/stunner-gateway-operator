@@ -2,28 +2,27 @@ package renderer
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"reflect"
+	// "fmt"
+	// "reflect"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
+	// corev1 "k8s.io/api/core/v1"
 
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
 	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -65,18 +64,9 @@ func (r *Renderer) Start(ctx context.Context) error {
 				}
 
 				// prepare a new update event Render will populate
-				u := event.NewEventUpdate()
-
 				// config is returned in the update event ConfigMap store
 				ev := e.(*event.EventRender)
-				err := r.Render(ev, u)
-				if err != nil {
-					r.log.Error(err, "could not render STUNner configuration", "event", ev)
-					continue
-				}
-
-				// send the update back to the operator
-				r.operatorCh <- u
+				r.Render(ev)
 
 			case <-ctx.Done():
 				return
@@ -95,176 +85,4 @@ func (r *Renderer) GetRenderChannel() chan event.Event {
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens
 func (r *Renderer) SetOperatorChannel(ch chan event.Event) {
 	r.operatorCh = ch
-}
-
-// Render generates and sets a STUNner daemon configuration from the Gateway API running-config
-func (r *Renderer) Render(e *event.EventRender, u *event.EventUpdate) error {
-	log := r.log
-	r.gen += 1
-	log.Info("rendering configuration", "generation", r.gen, "event", e.String())
-
-	// gw-config.StunnerConfig may override this
-	target := config.DefaultConfigMapName
-
-	conf := stunnerconfv1alpha1.StunnerConfig{
-		ApiVersion: stunnerconfv1alpha1.ApiVersion,
-	}
-
-	log.V(1).Info("obtaining GatewayClass")
-	gc, err := r.getGatewayClass()
-	if err != nil {
-		return err
-	}
-
-	setGatewayClassStatusScheduled(gc, config.ControllerName)
-
-	log.V(1).Info("obtaining GatewayConfig", "GatewayClass", gc.GetName())
-	gwConf, err := r.getGatewayConfig4Class(gc)
-	if err != nil {
-		return err
-	}
-
-	if gwConf.Spec.StunnerConfig != nil {
-		target = *gwConf.Spec.StunnerConfig
-	}
-
-	log.V(1).Info("rendering admin config")
-	admin, err := r.renderAdmin(gwConf)
-	if err != nil {
-		return err
-	}
-	conf.Admin = *admin
-
-	log.V(1).Info("rendering auth config")
-	auth, err := r.renderAuth(gwConf)
-	if err != nil {
-		return err
-	}
-	conf.Auth = *auth
-
-	log.V(1).Info("finding Gateways")
-	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
-	for _, gw := range r.getGateways4Class(gc) {
-		log.V(2).Info("considering", "gateway", gw.GetName())
-
-		// this also re-inits listener statuses
-		setGatewayStatusScheduled(gw, config.ControllerName)
-
-		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
-		var ready bool
-		addr, err := r.getPublicAddrs4Gateway(gw)
-		if err != nil {
-			log.Info("cannot find public address", "gateway", gw.GetName(), "error",
-				err.Error())
-			ready = false
-		} else {
-			ready = true
-		}
-
-		for j := range gw.Spec.Listeners {
-			l := gw.Spec.Listeners[j]
-			log.V(3).Info("obtaining routes", "gateway", gw.GetName(), "listener",
-				l.Name)
-			rs := r.getUDPRoutes4Listener(gw, &l)
-
-			lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
-			if err != nil {
-				log.Info("error rendering configuration for listener", "gateway",
-					gw.GetName(), "listener", l.Name, "error", err.Error())
-
-				setListenerStatus(gw, &l, false, ready, 0)
-				continue
-			}
-
-			conf.Listeners = append(conf.Listeners, *lc)
-			setListenerStatus(gw, &l, true, ready, len(rs))
-		}
-
-		setGatewayStatusReady(gw, config.ControllerName)
-		gw = pruneGatewayStatusConds(gw)
-
-		// schedule for update
-		u.Gateways.Upsert(gw)
-	}
-
-	log.V(1).Info("processing UDPRoutes")
-	conf.Clusters = []stunnerconfv1alpha1.ClusterConfig{}
-	rs := store.UDPRoutes.GetAll()
-	for _, ro := range rs {
-		log.V(2).Info("considering", "route", ro.GetName())
-
-		renderRoute := false
-		initRouteStatus(ro)
-
-		for i := range ro.Spec.ParentRefs {
-			p := ro.Spec.ParentRefs[i]
-
-			accepted := r.isParentAcceptingRoute(ro, &p)
-
-			// at least one parent accepts the route: render it!
-			renderRoute = renderRoute || accepted
-
-			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
-		}
-
-		if renderRoute == true {
-			rc, err := r.renderCluster(ro)
-			if err != nil {
-				log.Info("error rendering configuration for route", "route",
-					ro.GetName(), "error", err.Error())
-
-				continue
-			}
-
-			conf.Clusters = append(conf.Clusters, *rc)
-		}
-
-		// schedule for update
-		u.UDPRoutes.Upsert(ro)
-	}
-
-	setGatewayClassStatusReady(gc, config.ControllerName)
-	// schedule for update
-	u.GatewayClasses.Upsert(gc)
-
-	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "conf",
-		fmt.Sprintf("%#v", conf))
-
-	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
-
-	// schedule for update
-	cm, err := r.renderStunnerConf2ConfigMap(gwConf.GetNamespace(), target, conf)
-	if err != nil {
-		return err
-	}
-
-	// set the GatewayClass as an owner without using the scheme:
-	// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
-	kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
-	gvk := corev1.SchemeGroupVersion.WithKind(kind)
-	controllerRef := metav1.NewControllerRef(gc, gvk)
-	cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
-
-	u.ConfigMaps.Upsert(cm)
-
-	return nil
-}
-
-func (r *Renderer) renderStunnerConf2ConfigMap(ns, name string, conf stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
-	sc, err := json.Marshal(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	immutable := true
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Immutable: &immutable,
-		Data: map[string]string{
-			config.DefaultStunnerdConfigfileName: string(sc),
-		},
-	}, nil
 }

@@ -13,6 +13,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -79,15 +80,28 @@ func setGatewayStatusScheduled(gw *gatewayv1alpha2.Gateway, cname string) {
 
 }
 
-func setGatewayStatusReady(gw *gatewayv1alpha2.Gateway, cname string) {
-	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.GatewayConditionReady),
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: gw.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             string(gatewayv1alpha2.GatewayReasonReady),
-		Message:            fmt.Sprintf("gateway processed by controller %q", cname),
-	})
+func setGatewayStatusReady(gw *gatewayv1alpha2.Gateway, err error) {
+	if err == nil {
+		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+			Message: fmt.Sprintf("gateway successfully processed by controller %q",
+				config.ControllerName),
+		})
+	} else {
+		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
+			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+			Message: fmt.Sprintf("error processing gateway by controller %q: %s",
+				config.ControllerName, err.Error()),
+		})
+	}
 }
 
 // listener status

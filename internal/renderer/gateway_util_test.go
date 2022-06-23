@@ -2,6 +2,7 @@ package renderer
 
 import (
 	// "context"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -91,7 +92,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					store.GetObjectKey(gw), "gw name found")
 
 				setGatewayStatusScheduled(gw, "dummy")
-				setGatewayStatusReady(gw, "dummy")
+				setGatewayStatusReady(gw, errors.New("dummy"))
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
 				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
 					gw.Status.Conditions[0].Type, "conditions sched")
@@ -113,7 +114,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				setGatewayStatusScheduled(gw, "dummy")
-				setGatewayStatusReady(gw, "dummy")
+				setGatewayStatusReady(gw, errors.New("dummy"))
 				gw.ObjectMeta.SetGeneration(1)
 				c.gws = []gatewayv1alpha2.Gateway{*gw}
 			},
@@ -128,7 +129,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					store.GetObjectKey(gw), "gw name found")
 
 				setGatewayStatusScheduled(gw, "dummy")
-				setGatewayStatusReady(gw, "dummy")
+				setGatewayStatusReady(gw, errors.New("dummy"))
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
 				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
 					gw.Status.Conditions[0].Type, "conditions sched")

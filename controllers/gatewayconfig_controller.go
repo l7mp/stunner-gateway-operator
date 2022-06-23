@@ -63,7 +63,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event) e
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := log.FromContext(ctx).WithValues("gateway-config", req.Name)
-	log.Info("Reconciling GatewayConfig", "request", req)
+	log.Info("Reconciling GatewayConfig")
 
 	var gc stunnerv1alpha1.GatewayConfig
 	found := true

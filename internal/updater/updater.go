@@ -118,33 +118,34 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 		}
 	}
 
-	cms := e.ConfigMaps.Objects()
-	if len(cms) != 1 {
-		return fmt.Errorf("invalid number (%d) of STUNner ConfigMaps to update, "+
-			"should be 1", len(cms))
+	// there should never be more than one configmap but anyway
+	for _, cm := range e.ConfigMaps.Objects() {
+
+		// if len(cms) != 1 {
+		// 	return fmt.Errorf("invalid number (%d) of STUNner ConfigMaps to update, "+
+		// 		"should be 1", len(cms))
+		// }
+
+		u.log.V(2).Info("updating STUNner ConfigMap", "resource",
+			store.GetObjectKey(cm))
+
+		cmCurrent := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Name:      cm.GetName(),
+			Namespace: cm.GetNamespace(),
+		}}
+
+		op, err := controllerutil.CreateOrUpdate(u.ctx, client, cmCurrent, func() error {
+			cmCurrent = cm.(*corev1.ConfigMap)
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("cannot create-or-update STUNner ConfigMap %q: %w",
+				store.GetObjectKey(cm), err)
+		}
+
+		u.log.V(1).Info("configmap updated", "generation", u.gen, "operation", op)
 	}
-
-	cm := cms[0]
-	u.log.V(2).Info("updating STUNner ConfigMap", "resource",
-		store.GetObjectKey(cm))
-
-	cmCurrent := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-		Name:      cm.GetName(),
-		Namespace: cm.GetNamespace(),
-	}}
-
-	op, err := controllerutil.CreateOrUpdate(u.ctx, client, cmCurrent, func() error {
-		cmCurrent = cm.(*corev1.ConfigMap)
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("cannot create-or-update STUNner ConfigMap %q: %w",
-			store.GetObjectKey(cm), err)
-	}
-
-	u.log.V(1).Info("all objects successfully updated", "generation", u.gen, "configmap",
-		op)
 
 	return nil
 }

@@ -3,27 +3,28 @@ package renderer
 import (
 	// "context"
 	"encoding/json"
-	// "fmt"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
-func TestRenderE2E(t *testing.T) {
+func TestRenderPipeline(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
@@ -68,13 +69,15 @@ func TestRenderE2E(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
-				e := event.NewEventRender("tester", "unit-test")
-				assert.NotNil(t, e, "render event create")
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
+					"gatewayclass name")
 
 				u := event.NewEventUpdate()
 				assert.NotNil(t, u, "update event create")
 
-				err := r.Render(e, u)
+				err = r.renderGatewayClass(gc, u)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -142,6 +145,84 @@ func TestRenderE2E(t *testing.T) {
 					rc.Endpoints[0], "backend-ref")
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+			},
+		},
+		{
+			name: "E2E invalidation OK",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
+					"gatewayclass name")
+
+				u := event.NewEventUpdate()
+				assert.NotNil(t, u, "update event create")
+
+				r.invalidateGatewayClass(gc, u, errors.New("dummy"))
+
+				// configmap
+				cms := u.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+				o := cms[0]
+
+				// objectmeta
+				assert.Equal(t, o.GetName(), testutils.TestStunnerConfig,
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(),
+					"testnamespace", "configmap namespace")
+
+				cm, ok := o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, found := cm.Data[config.DefaultStunnerdConfigfileName]
+				assert.True(t, found, "configmap data: stunnerd.conf found")
+				assert.Equal(t, "", conf, "configmap data: stunnerd.conf empty")
+
+				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				//statuses
+				setGatewayClassStatusScheduled(gc)
+				assert.Len(t, gc.Status.Conditions, 2, "conditions num")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+					gc.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, metav1.ConditionTrue,
+					gc.Status.Conditions[0].Status, "status sched")
+				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
+
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+					gc.Status.Conditions[1].Type, "conditions ready")
+				assert.Equal(t, metav1.ConditionFalse,
+					gc.Status.Conditions[1].Status, "status ready")
+				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
+
+				gws := u.Gateways.Objects()
+				assert.Len(t, gws, 1, "gateway num")
+				gw, found := gws[0].(*gatewayv1alpha2.Gateway)
+				assert.True(t, found, "gateway found")
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+					store.GetObjectKey(gw), "gw name found")
+
+				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+					gw.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, metav1.ConditionTrue,
+					gw.Status.Conditions[0].Status, "status ready")
+				assert.Equal(t, int64(0),
+					gw.Status.Conditions[0].ObservedGeneration, "conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+					gw.Status.Conditions[1].Type, "conditions ready")
+				assert.Equal(t, metav1.ConditionFalse,
+					gw.Status.Conditions[1].Status, "status ready")
+				assert.Equal(t, int64(0),
+					gw.Status.Conditions[1].ObservedGeneration, "conditions gen")
 			},
 		},
 	})
