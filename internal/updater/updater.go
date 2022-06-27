@@ -3,24 +3,25 @@ package updater
 // updater uploads client updates
 import (
 	"context"
-	"fmt"
+	// "fmt"
+	// "reflect"
 
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	// corev1 "k8s.io/api/core/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	// corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 type UpdaterConfig struct {
@@ -86,65 +87,33 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	u.gen += 1
 	u.log.Info("processing update event", "generation", u.gen, "update", e.String())
 
-	client := u.manager.GetClient()
-
 	for _, gc := range e.GatewayClasses.Objects() {
-		u.log.V(2).Info("updating gateway classes", "resource",
-			store.GetObjectKey(gc))
-
-		if err := client.Update(u.ctx, gc); err != nil {
-			return fmt.Errorf("cannot update gatewayclass %q: %w",
-				store.GetObjectKey(gc), err)
+		if _, err := u.updateGatewayClass(gc); err != nil {
+			u.log.Error(err, "cannot update gateway-class")
+			continue
 		}
 	}
 
 	for _, gw := range e.Gateways.Objects() {
-		u.log.V(2).Info("updating gateways", "resource",
-			store.GetObjectKey(gw))
-
-		if err := client.Update(u.ctx, gw); err != nil {
-			return fmt.Errorf("cannot update gateway %q: %w",
-				store.GetObjectKey(gw), err)
+		if _, err := u.updateGateway(gw); err != nil {
+			u.log.Error(err, "cannot update gateway")
+			continue
 		}
 	}
 
 	for _, ro := range e.UDPRoutes.Objects() {
-		u.log.V(2).Info("updating gateway classes", "resource",
-			store.GetObjectKey(ro))
-
-		if err := client.Update(u.ctx, ro); err != nil {
-			return fmt.Errorf("cannot update UDP route %q: %w",
-				store.GetObjectKey(ro), err)
+		if _, err := u.updateUDPRoute(ro); err != nil {
+			u.log.Error(err, "cannot update UDP route")
+			continue
 		}
 	}
 
 	// there should never be more than one configmap but anyway
 	for _, cm := range e.ConfigMaps.Objects() {
-
-		// if len(cms) != 1 {
-		// 	return fmt.Errorf("invalid number (%d) of STUNner ConfigMaps to update, "+
-		// 		"should be 1", len(cms))
-		// }
-
-		u.log.V(2).Info("updating STUNner ConfigMap", "resource",
-			store.GetObjectKey(cm))
-
-		cmCurrent := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-			Name:      cm.GetName(),
-			Namespace: cm.GetNamespace(),
-		}}
-
-		op, err := controllerutil.CreateOrUpdate(u.ctx, client, cmCurrent, func() error {
-			cmCurrent = cm.(*corev1.ConfigMap)
-			return nil
-		})
-
-		if err != nil {
-			return fmt.Errorf("cannot create-or-update STUNner ConfigMap %q: %w",
-				store.GetObjectKey(cm), err)
+		if _, err := u.updateConfigMap(cm); err != nil {
+			u.log.Error(err, "cannot update STUNner configuration")
+			continue
 		}
-
-		u.log.V(1).Info("configmap updated", "generation", u.gen, "operation", op)
 	}
 
 	return nil
