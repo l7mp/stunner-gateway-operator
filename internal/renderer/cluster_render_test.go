@@ -36,7 +36,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p)
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
 				assert.True(t, accepted, "route accepted")
 
 				rc, err := r.renderCluster(ro)
@@ -47,6 +47,28 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.testnamespace.svc.cluster.local",
 					rc.Endpoints[0], "backend-ref")
+			},
+		},
+		{
+			name: "linking to a foreign gateway errs",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.GatewayClassName = gatewayv1alpha2.ObjectName("dummy")
+				c.gws = []gatewayv1alpha2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+				ro := rs[0]
+				p := ro.Spec.ParentRefs[0]
+
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.False(t, accepted, "route accepted")
 			},
 		},
 		{
@@ -68,7 +90,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p)
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
 				assert.True(t, accepted, "route accepted")
 
 				rc, err := r.renderCluster(ro)
@@ -99,7 +121,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p)
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
 				assert.True(t, accepted, "route accepted")
 
 				rc, err := r.renderCluster(ro)
@@ -130,7 +152,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p)
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
 				assert.True(t, accepted, "route accepted")
 
 				rc, err := r.renderCluster(ro)
@@ -161,7 +183,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p)
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
 				assert.True(t, accepted, "route accepted")
 
 				rc, err := r.renderCluster(ro)

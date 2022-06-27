@@ -47,10 +47,10 @@ func (r *Renderer) Render(e *event.EventRender) {
 			names = append(names, fmt.Sprintf("%q", store.GetObjectKey(gc)))
 		}
 
-		log.Info("multiple GatewayClass found %s: this is most probably UNINTENED -"+
-			"the operator will attempt to render a configuration for all gateway-clases but there "+
+		log.Info("multiple gateway-class objects found %s: this is most probably UNINTENED - "+
+			"the operator will attempt to render a configuration for each gateway-class but there "+
 			"is no guarantee that this will not result in an error - this mode is UNSUPPORTED, "+
-			"if unsure, remove one of the gateway-classes!", strings.Join(names, ", "))
+			"if unsure, remove one of the gateway-class objects!", strings.Join(names, ", "))
 	}
 
 	// render each GatewayClass: hopefully they won's step on each other's throat: we cannot
@@ -169,7 +169,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
 
-			accepted := r.isParentAcceptingRoute(ro, &p)
+			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// at least one parent accepts the route: render it!
 			renderRoute = renderRoute || accepted
@@ -279,7 +279,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
-			accepted := r.isParentAcceptingRoute(ro, &p)
+			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
 		}
 
@@ -293,17 +293,17 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 		cm, err := r.renderConfigMap(gwConf.GetNamespace(), target, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target", target)
-			invalidateConf = false
-		} else {
-			// set the GatewayClass as an owner without using the scheme:
-			// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
-			kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
-			gvk := corev1.SchemeGroupVersion.WithKind(kind)
-			controllerRef := metav1.NewControllerRef(gc, gvk)
-			cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
-
-			u.ConfigMaps.Upsert(cm)
+			return
 		}
+
+		// set the GatewayClass as an owner without using the scheme:
+		// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
+		kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
+		gvk := corev1.SchemeGroupVersion.WithKind(kind)
+		controllerRef := metav1.NewControllerRef(gc, gvk)
+		cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
+
+		u.ConfigMaps.Upsert(cm)
 	}
 }
 

@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -10,8 +9,6 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
