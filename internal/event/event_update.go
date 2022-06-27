@@ -10,9 +10,9 @@ import (
 
 type EventUpdate struct {
 	Type           EventType
-	GatewayClasses store.Store
-	Gateways       store.Store
-	UDPRoutes      store.Store
+	GatewayClasses *store.GatewayClassStore
+	Gateways       *store.GatewayStore
+	UDPRoutes      *store.UDPRouteStore
 	ConfigMaps     store.Store
 }
 
