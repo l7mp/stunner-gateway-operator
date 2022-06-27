@@ -49,26 +49,26 @@ func (r *Renderer) validateGatewayClass(gc *gatewayv1alpha2.GatewayClass) error 
 	// this should already be validated but play it safe
 	ref := gc.Spec.ParametersRef
 	if ref == nil {
-		return fmt.Errorf("empty ParametersRef in GatewayClassSpec: %#v", gc.Spec)
+		return fmt.Errorf("empty ParametersRef in gateway-class spec: %#v", gc.Spec)
 	}
 
 	if ref.Group != gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group) {
-		return fmt.Errorf("invalid Group in GatewayClassSpec: %#v",
+		return fmt.Errorf("invalid Group in gateway-class spec: %#v",
 			*gc.Spec.ParametersRef)
 	}
 
 	if ref.Name == "" {
-		return fmt.Errorf("empty name in GatewayClassSpec: %#v",
+		return fmt.Errorf("empty name in gateway-class spec: %#v",
 			*gc.Spec.ParametersRef)
 	}
 
 	if ref.Namespace == nil || (ref.Namespace != nil && *ref.Namespace == "") {
-		return fmt.Errorf("empty namespace in GatewayClassSpec: %#v",
+		return fmt.Errorf("empty namespace in gateway-class spec: %#v",
 			*gc.Spec.ParametersRef)
 	}
 
 	if ref.Kind != gatewayv1alpha2.Kind("GatewayConfig") {
-		return fmt.Errorf("expecting ParametersRef to point to a GatewayConfig "+
+		return fmt.Errorf("expecting ParametersRef to point to a gateway-config "+
 			"resource: %#v", *gc.Spec.ParametersRef)
 	}
 
@@ -118,7 +118,7 @@ func setGatewayClassStatusReady(gc *gatewayv1alpha2.GatewayClass, err error) {
 func (r *Renderer) getGatewayClass() (*gatewayv1alpha2.GatewayClass, error) {
 	gcs := store.GatewayClasses.GetAll()
 	if len(gcs) == 0 {
-		return nil, fmt.Errorf("no GatewayClass found")
+		return nil, fmt.Errorf("no gateway-class found")
 	}
 
 	gc := gcs[0]

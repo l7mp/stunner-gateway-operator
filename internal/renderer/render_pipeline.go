@@ -33,11 +33,11 @@ func (r *Renderer) Render(e *event.EventRender) {
 	r.gen += 1
 	log.Info("rendering configuration", "generation", r.gen, "event", e.String())
 
-	log.V(1).Info("obtaining GatewayClasses")
+	log.V(1).Info("obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
 
 	if len(gcs) == 0 {
-		log.Info("no GatewayClass found", "event", e.String())
+		log.Info("no gateway-class objects found", "event", e.String())
 		return
 	}
 
@@ -88,7 +88,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 
 	setGatewayClassStatusReady(gc, nil)
 
-	log.V(1).Info("obtaining GatewayConfig", "GatewayClass", gc.GetName())
+	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	}
 	conf.Auth = *auth
 
-	log.V(1).Info("finding Gateways")
+	log.V(1).Info("finding gateway objects")
 	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(gc) {
 		log.V(2).Info("considering", "gateway", gw.GetName())
@@ -235,15 +235,15 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	setGatewayClassStatusReady(gc, reason)
 	u.GatewayClasses.Upsert(gc)
 
-	log.V(1).Info("obtaining GatewayConfig", "GatewayClass", gc.GetName())
+	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
 	if err != nil {
 		// this is the killer case: we have most probably lost our gatewayconfig and we
 		// don't know which stunner config to invalidate; for now warn, later eliminate
 		// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
 		// started using them
-		log.Info("cannot find the GatewayConfig: active STUNNer may remain stale",
-			"GatewayClass", gc.GetName())
+		log.Info("cannot find the gateway-config: active STUNNer configuration may remain stale",
+			"gateway-class", gc.GetName())
 		invalidateConf = false
 	} else {
 		if gwConf.Spec.StunnerConfig != nil {
@@ -251,7 +251,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 		}
 	}
 
-	log.V(1).Info("finding Gateways")
+	log.V(1).Info("finding gateway objects")
 	for _, gw := range r.getGateways4Class(gc) {
 		log.V(2).Info("considering", "gateway", gw.GetName())
 

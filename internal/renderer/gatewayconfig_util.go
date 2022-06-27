@@ -17,7 +17,7 @@ import (
 )
 
 func (r *Renderer) getGatewayConfig4Class(gc *gatewayv1alpha2.GatewayClass) (*stunnerv1alpha1.GatewayConfig, error) {
-	r.log.V(4).Info("getGatewayConfig4Class", "GatewayClass", store.GetObjectKey(gc))
+	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(gc))
 
 	// ref already checked
 	ref := gc.Spec.ParametersRef
@@ -29,11 +29,11 @@ func (r *Renderer) getGatewayConfig4Class(gc *gatewayv1alpha2.GatewayClass) (*st
 
 	gwConf := store.GatewayConfigs.GetObject(gwConfName)
 	if gwConf == nil {
-		return nil, fmt.Errorf("cannot find GatewayConfig for GatewayClass with name: %#v",
+		return nil, fmt.Errorf("cannot find gateway-config for gateway-class with name: %#v",
 			gwConfName)
 	}
 
-	r.log.V(4).Info("getGatewayConfig4Class", "GatewayClass", store.GetObjectKey(gc), "result",
+	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(gc), "result",
 		store.GetObjectKey(gwConf))
 
 	return gwConf, nil

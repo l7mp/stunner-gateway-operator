@@ -20,7 +20,7 @@ import (
 )
 
 func (r *Renderer) getPublicAddrs4Gateway(gw *gatewayv1alpha2.Gateway) (gatewayv1alpha2.GatewayAddress, error) {
-	r.log.V(4).Info("getPublicAddrs4Gateway", "Gateway", store.GetObjectKey(gw))
+	r.log.V(4).Info("getPublicAddrs4Gateway", "gateway", store.GetObjectKey(gw))
 
 	for _, svc := range store.Services.GetAll() {
 		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc))
@@ -57,7 +57,7 @@ func (r *Renderer) getPublicAddrs4Gateway(gw *gatewayv1alpha2.Gateway) (gatewayv
 			t := gatewayv1alpha2.AddressType("IPAddress")
 			if i < len(svc.Status.LoadBalancer.Ingress) {
 				r.log.V(4).Info("getPublicAddrs4Gateway: found public IP",
-					"Gateway", store.GetObjectKey(gw), "result",
+					"gateway", store.GetObjectKey(gw), "result",
 					svc.Status.LoadBalancer.Ingress[i].IP)
 
 				return gatewayv1alpha2.GatewayAddress{
@@ -67,7 +67,7 @@ func (r *Renderer) getPublicAddrs4Gateway(gw *gatewayv1alpha2.Gateway) (gatewayv
 			}
 			// fallback to the first addr we find
 			r.log.V(4).Info("getPublicAddrs4Gateway: found public IP (fallback)",
-				"Gateway", store.GetObjectKey(gw), "result",
+				"gateway", store.GetObjectKey(gw), "result",
 				svc.Status.LoadBalancer.Ingress[0].IP)
 
 			return gatewayv1alpha2.GatewayAddress{
@@ -83,14 +83,14 @@ func (r *Renderer) getPublicAddrs4Gateway(gw *gatewayv1alpha2.Gateway) (gatewayv
 // we need the namespaced name!
 func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) bool {
 	r.log.V(4).Info("isServiceAnnotated4Gateway", "Service", store.GetObjectKey(svc),
-		"Gateway", store.GetObjectKey(gw))
+		"gateway", store.GetObjectKey(gw))
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
 	v, found := as[config.GatewayAddressAnnotationKey]
 	if found && v == namespacedName {
 		r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated foe gateway",
-			"Service", store.GetObjectKey(svc), "Gateway", store.GetObjectKey(gw))
+			"Service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
 		return true
 	}
 

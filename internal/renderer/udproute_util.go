@@ -30,7 +30,7 @@ import (
 // 	}}
 // }
 func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) []*gatewayv1alpha2.UDPRoute {
-	r.log.V(4).Info("getUDPRoutes4Listener", "Gateway", store.GetObjectKey(gw), "listener",
+	r.log.V(4).Info("getUDPRoutes4Listener", "gateway", store.GetObjectKey(gw), "listener",
 		l.Name)
 
 	ret := make([]*gatewayv1alpha2.UDPRoute, 0)
@@ -38,14 +38,14 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 
 	for i := range rs {
 		ro := rs[i]
-		r.log.V(4).Info("getUDPRoutes4Listener: considering route for listener", "Gateway",
+		r.log.V(4).Info("getUDPRoutes4Listener: considering route for listener", "gateway",
 			store.GetObjectKey(gw), "listener", l.Name, "route",
 			store.GetObjectKey(ro))
 
 		// FromNamespaces("Same")
 		if gw.GetNamespace() != ro.GetNamespace() {
 			r.log.V(4).Info("getUDPRoutes4Listener: route namespace does not match "+
-				"gateway namespace", "Gateway", store.GetObjectKey(gw), "route",
+				"gateway namespace", "gateway", store.GetObjectKey(gw), "route",
 				store.GetObjectKey(ro))
 			continue
 		}
@@ -54,13 +54,13 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
 			if resolveParentRef(&p, gw, l) == false {
 				r.log.V(4).Info("getUDPRoutes4Listener: route rejected for listener",
-					"Gateway", store.GetObjectKey(gw), "listener", l.Name,
+					"gateway", store.GetObjectKey(gw), "listener", l.Name,
 					"route", store.GetObjectKey(ro), "parentRef", p.Name)
 
 				continue
 			}
 
-			r.log.V(4).Info("getUDPRoutes4Listener: route found", "Gateway",
+			r.log.V(4).Info("getUDPRoutes4Listener: route found", "gateway",
 				store.GetObjectKey(gw), "listener", l.Name, "route",
 				store.GetObjectKey(ro))
 
@@ -97,7 +97,7 @@ func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
 	ro.Status.Parents = []gatewayv1alpha2.RouteParentStatus{}
 }
 
-func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef) bool {
+func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, className string) bool {
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 		"parent", fmt.Sprintf("%#v", *p))
 
@@ -110,8 +110,18 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
 	gw := store.Gateways.GetObject(namespacedName)
 	if gw == nil {
-		r.log.V(4).Info("isParentAcceptingRoute: no gateway found for ParentRef", "route",
+		r.log.V(4).Info("no gateway found for ParentRef", "route",
 			store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p))
+		return false
+	}
+
+	// does the parent belong to the class we are processing: we don't want to generate routes
+	// for gateways that link to other classes
+	if gw.Spec.GatewayClassName != gatewayv1alpha2.ObjectName(className) {
+		r.log.V(4).Info("route links to a gateway that is being managed by another "+
+			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
+			fmt.Sprintf("%#v", *p), "linked-gateway-class", gw.Spec.GatewayClassName,
+			"current-gateway-class", className)
 		return false
 	}
 

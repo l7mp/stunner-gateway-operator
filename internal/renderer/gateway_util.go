@@ -26,7 +26,7 @@ type listenerRoutePair struct {
 }
 
 func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewayv1alpha2.Gateway {
-	r.log.V(4).Info("getGateways4Class", "GatewayClass", store.GetObjectKey(gc))
+	r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(gc))
 
 	ret := []*gatewayv1alpha2.Gateway{}
 
@@ -36,7 +36,7 @@ func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewa
 		}
 	}
 
-	r.log.V(4).Info("getGateways4Class: ready", "GatewayClass", store.GetObjectKey(gc),
+	r.log.V(4).Info("getGateways4Class: ready", "gateway-class", store.GetObjectKey(gc),
 		"gateways", len(ret))
 
 	return ret

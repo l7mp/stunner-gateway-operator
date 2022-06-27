@@ -138,7 +138,6 @@ func TestRenderListenerRender(t *testing.T) {
 				conf.Spec.MinPort = nil
 				conf.Spec.MaxPort = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*conf}
-
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
