@@ -18,13 +18,15 @@ package integration
 
 import (
 	"context"
+	// "time"
 	// "reflect"
 	// "testing"
-	// "fmt"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+
 	// v1 "k8s.io/api/core/v1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,72 +34,182 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+
+	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-var _ = Describe("E2E test", func() {
-	Context("When creating API resources", func() {
-		It("Should successfully render a STUNner ConfigMap", func() {
-			By("By creating a minimal config")
-			// GatewayClass + GatewayConfig + Gateway is enough to render a STUNner conf
+// make sure we use fmt
+var _ = fmt.Sprintf("whatever: %d", 1)
 
-			// fmt.Printf("%#v\n", k8sClient)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+// GatewayClass + GatewayConfig + Gateway should be enough to render a valid STUNner conf
+var _ = Describe("Minimal-test", func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	// ctx := context.TODO()
+	conf := &stunnerconfv1alpha1.StunnerConfig{}
 
+	Context("When creating a minimal set of API resources", func() {
+
+		It("should bootstrap the operator runtime successfully", func() {
 			setup(ctx, k8sClient)
+		})
 
+		It("should load the minimal config", func() {
 			ctrl.Log.Info("loading GatewayClass")
 			Expect(k8sClient.Create(ctx, &testutils.TestGwClass)).Should(Succeed())
-
-			ctrl.Log.Info("reading back GatewayClass")
-			lookupKey := types.NamespacedName{
-				Name:      testutils.TestGwClass.GetName(),
-				Namespace: testutils.TestGwClass.GetNamespace(),
-			}
-			gwClass := &gatewayv1alpha2.GatewayClass{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, gwClass)
-				if err != nil {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-			Expect(gwClass.GetName()).To(Equal(testutils.TestGwClass.GetName()),
-				"GatewayClass name")
-			Expect(gwClass.GetNamespace()).To(Equal(testutils.TestGwClass.GetNamespace()),
-				"GatewayClass namespace")
-
 			ctrl.Log.Info("loading GatewayConfig")
 			Expect(k8sClient.Create(ctx, &testutils.TestGwConfig)).Should(Succeed())
 			ctrl.Log.Info("loading Gateway")
 			Expect(k8sClient.Create(ctx, &testutils.TestGw)).Should(Succeed())
+		})
 
-			lookupKey = types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
-				Namespace: string(testutils.TestNs),
+		It("Should successfully load a gateway-config", func() {
+
+			ctrl.Log.Info("reading back gateway-config")
+			lookupKey := types.NamespacedName{
+				Name:      testutils.TestGwConfig.GetName(),
+				Namespace: testutils.TestGwConfig.GetNamespace(),
 			}
-			createdConfigMap := &corev1.ConfigMap{}
-
-			// We'll need to retry getting this newly created ConfigMap, given that
-			// creation may not immediately happen.
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
+			gwConfig := &stunnerv1alpha1.GatewayConfig{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, createdConfigMap)
+				err := k8sClient.Get(ctx, lookupKey, gwConfig)
 				if err != nil {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-			// Let's make sure our Schedule string value was properly converted/handled.
-			Expect(createdConfigMap).NotTo(BeNil(), "STUNner config rendered")
+			Expect(gwConfig.GetName()).To(Equal(testutils.TestGwConfig.GetName()),
+				"GatewayClass name")
+			Expect(gwConfig.GetNamespace()).To(Equal(testutils.TestGwConfig.GetNamespace()),
+				"GatewayClass namespace")
+		})
+
+		It("Should successfully render a STUNner ConfigMap", func() {
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				return true
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 
 		})
+
+		It("Should yield a ConfigMap that can be successfully unpacked", func() {
+
+			// retry, but also try to unpack inside Eventually
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				_, err = testutils.UnpackConfigMap(cm)
+				if err == nil {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
+
+		})
+
+		It("Should yield a STUNner config with exactly 2 listeners", func() {
+
+			// retry, but also try to unpack inside Eventually
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := testutils.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				// conf should have valid listener confs
+				if len(c.Listeners) == 2 {
+					conf = &c
+					return true
+				}
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+		})
+
+		It("Should yield a STUNner config with correct params", func() {
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+
+			l = conf.Listeners[1]
+			if l.Name != "gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+		})
+
+		It("Should let the controller shut down", func() {
+			cancel()
+		})
+
 	})
 })
