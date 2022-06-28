@@ -88,21 +88,21 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	u.log.Info("processing update event", "generation", u.gen, "update", e.String())
 
 	for _, gc := range e.GatewayClasses.Objects() {
-		if _, err := u.updateGatewayClass(gc); err != nil {
+		if err := u.updateGatewayClass(gc); err != nil {
 			u.log.Error(err, "cannot update gateway-class")
 			continue
 		}
 	}
 
 	for _, gw := range e.Gateways.Objects() {
-		if _, err := u.updateGateway(gw); err != nil {
+		if err := u.updateGateway(gw); err != nil {
 			u.log.Error(err, "cannot update gateway")
 			continue
 		}
 	}
 
 	for _, ro := range e.UDPRoutes.Objects() {
-		if _, err := u.updateUDPRoute(ro); err != nil {
+		if err := u.updateUDPRoute(ro); err != nil {
 			u.log.Error(err, "cannot update UDP route")
 			continue
 		}
@@ -110,8 +110,8 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	// there should never be more than one configmap but anyway
 	for _, cm := range e.ConfigMaps.Objects() {
-		if _, err := u.updateConfigMap(cm); err != nil {
-			u.log.Error(err, "cannot update STUNner configuration")
+		if op, err := u.updateConfigMap(cm); err != nil {
+			u.log.Error(err, "cannot update STUNner configuration", "operation", op)
 			continue
 		}
 	}
