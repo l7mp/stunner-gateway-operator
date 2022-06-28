@@ -66,8 +66,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	}
 
 	if !found {
-		// we don't use the "content" of gc, just the type!
-		r.eventCh <- event.NewEventDelete(&gc)
+		r.eventCh <- event.NewEventDelete(event.EventKindUDPRoute, req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

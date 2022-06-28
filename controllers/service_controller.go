@@ -72,8 +72,7 @@ func (r *serviceReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	}
 
 	if !found {
-		// we don't use the "content" of gc, just the type!
-		r.eventCh <- event.NewEventDelete(&gc)
+		r.eventCh <- event.NewEventDelete(event.EventKindService, req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

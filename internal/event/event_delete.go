@@ -3,18 +3,49 @@ package event
 import (
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/types"
+	// "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type EventDelete struct {
-	Type   EventType
-	Object client.Object
-	// Params map[string]string
+// EventType specifies the Kind of an object under deletion
+type EventKind int
+
+const (
+	EventKindGatewayClass EventKind = iota + 1
+	EventKindGatewayConfig
+	EventKindGateway
+	EventKindUDPRoute
+	EventKindService
+	EventKindUnknown
+)
+
+// String returns a string representation for an event
+func (a EventKind) String() string {
+	switch a {
+	case EventKindGatewayClass:
+		return "GatewayClass"
+	case EventKindGatewayConfig:
+		return "GatewayConfig"
+	case EventKindGateway:
+		return "EventKindGateway"
+	case EventKindUDPRoute:
+		return "UDPRoute"
+	case EventKindService:
+		return "Service"
+	default:
+		return "<unknown>"
+	}
 }
 
-// NewEventDelelet returns an Delete event
-func NewEventDelete(o client.Object) *EventDelete {
-	return &EventDelete{Type: EventTypeUpsert, Object: o}
+type EventDelete struct {
+	Type EventType
+	Kind EventKind
+	Key  types.NamespacedName
+}
+
+// NewEventDelete returns a Delete event
+func NewEventDelete(kind EventKind, key types.NamespacedName) *EventDelete {
+	return &EventDelete{Type: EventTypeDelete, Kind: kind, Key: key}
 }
 
 func (e *EventDelete) GetType() EventType {
@@ -22,6 +53,5 @@ func (e *EventDelete) GetType() EventType {
 }
 
 func (e *EventDelete) String() string {
-	return fmt.Sprintf("%s: %s/%s", e.Type.String(),
-		e.Object.GetName(), e.Object.GetNamespace())
+	return fmt.Sprintf("%s: %s of type %s", e.Type.String(), e.Key, e.Kind.String())
 }

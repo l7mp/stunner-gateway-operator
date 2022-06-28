@@ -9,7 +9,7 @@ import (
 	// // gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
-// EventType species the type of an event sent to the operator
+// EventType specifies the type of an event sent to the operator
 type EventType int
 
 const (
@@ -43,7 +43,7 @@ func NewEventType(raw string) (EventType, error) {
 	}
 }
 
-// String returns a string representation for the evententication mechanism
+// String returns a string representation for an event
 func (a EventType) String() string {
 	switch a {
 	case EventTypeRender:
@@ -59,7 +59,7 @@ func (a EventType) String() string {
 	}
 }
 
-// Event defines an event sent to the operator
+// Event defines an event sent to/from the operator
 type Event interface {
 	GetType() EventType
 	String() string

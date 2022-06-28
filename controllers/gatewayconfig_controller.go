@@ -78,8 +78,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	}
 
 	if !found {
-		// we don't use the "content" of gc, just the type!
-		r.eventCh <- event.NewEventDelete(&gc)
+		r.eventCh <- event.NewEventDelete(event.EventKindGatewayConfig, req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

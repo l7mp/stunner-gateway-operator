@@ -136,6 +136,13 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 		// reflect!
 		e := e.(*event.EventUpsert)
 
+		key := types.NamespacedName{
+			Namespace: e.Object.GetNamespace(),
+			Name:      e.Object.GetName(),
+		}
+
+		o.log.V(1).Info("processing event", "event", e.String(), "object", key.String())
+
 		switch e.Object.(type) {
 		case *gatewayv1alpha2.GatewayClass:
 			store.GatewayClasses.Upsert(e.Object)
@@ -148,40 +155,37 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 		case *corev1.Service:
 			store.Services.Upsert(e.Object)
 		default:
-			return fmt.Errorf("could not process event %q for an unknown object of type %q",
-				e.String(), store.GetObjectKey(e.Object))
+			return fmt.Errorf("could not process event %q for an unknown object %q",
+				e.String(), key.String())
 		}
 
 		// trigger the render event
-		o.renderCh <- event.NewEventRender(store.GetObjectKey(e.Object), "upsert")
+		o.renderCh <- event.NewEventRender(fmt.Sprintf("upserton %s", key.String()))
 
 	case event.EventTypeDelete:
 		// reflect!
 		e := e.(*event.EventDelete)
 
-		key := types.NamespacedName{
-			Namespace: e.Object.GetNamespace(),
-			Name:      e.Object.GetName(),
-		}
+		o.log.V(1).Info("processing event", "event", e.String())
 
-		switch e.Object.(type) {
-		case *gatewayv1alpha2.GatewayClass:
-			store.GatewayClasses.Remove(key)
-		case *stunnerv1alpha1.GatewayConfig:
-			store.GatewayConfigs.Remove(key)
-		case *gatewayv1alpha2.Gateway:
-			store.Gateways.Remove(key)
-		case *gatewayv1alpha2.UDPRoute:
-			store.UDPRoutes.Remove(key)
-		case *corev1.Service:
-			store.Services.Remove(key)
+		switch e.Kind {
+		case event.EventKindGatewayClass:
+			store.GatewayClasses.Remove(e.Key)
+		case event.EventKindGatewayConfig:
+			store.GatewayConfigs.Remove(e.Key)
+		case event.EventKindGateway:
+			store.Gateways.Remove(e.Key)
+		case event.EventKindUDPRoute:
+			store.UDPRoutes.Remove(e.Key)
+		case event.EventKindService:
+			store.Services.Remove(e.Key)
 		default:
-			return fmt.Errorf("could not process event %q for an unknown object of type %q",
-				e.String(), key.String())
+			return fmt.Errorf("could not process event %q for an unknown object %q",
+				e.String(), e.Key.String())
 		}
 
 		// trigger the render event
-		o.renderCh <- event.NewEventRender(store.GetObjectKey(e.Object), "delete")
+		o.renderCh <- event.NewEventRender(fmt.Sprintf("delete on %s", e.Key.String()))
 
 	}
 
