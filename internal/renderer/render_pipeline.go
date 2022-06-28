@@ -77,8 +77,6 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	log := r.log
 	log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
 
-	setGatewayClassStatusScheduled(gc)
-
 	// gw-config.StunnerConfig may override this
 	target := config.DefaultConfigMapName
 
@@ -86,13 +84,14 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		ApiVersion: stunnerconfv1alpha1.ApiVersion,
 	}
 
-	setGatewayClassStatusReady(gc, nil)
-
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
 	if err != nil {
+		setGatewayClassStatusAccepted(gc, err)
 		return err
 	}
+
+	setGatewayClassStatusAccepted(gc, nil)
 
 	if gwConf.Spec.StunnerConfig != nil {
 		target = *gwConf.Spec.StunnerConfig
@@ -193,7 +192,6 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		u.UDPRoutes.Upsert(ro)
 	}
 
-	setGatewayClassStatusReady(gc, nil)
 	// schedule for update
 	u.GatewayClasses.Upsert(gc)
 
@@ -225,15 +223,10 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	log := r.log
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
-
-	setGatewayClassStatusScheduled(gc)
 	invalidateConf := true
 
 	// gw-config.StunnerConfig may override this
 	target := config.DefaultConfigMapName
-
-	setGatewayClassStatusReady(gc, reason)
-	u.GatewayClasses.Upsert(gc)
 
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(gc)
@@ -250,6 +243,9 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 			target = *gwConf.Spec.StunnerConfig
 		}
 	}
+
+	setGatewayClassStatusAccepted(gc, err)
+	u.GatewayClasses.Upsert(gc)
 
 	log.V(1).Info("finding gateway objects")
 	for _, gw := range r.getGateways4Class(gc) {

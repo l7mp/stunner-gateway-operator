@@ -177,21 +177,16 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				//statuses
-				setGatewayClassStatusScheduled(gc)
-				assert.Len(t, gc.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
-					gc.Status.Conditions[0].Type, "conditions sched")
+				setGatewayClassStatusAccepted(gc, nil)
+				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
-					gc.Status.Conditions[0].Status, "status sched")
-				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
-
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
-					gc.Status.Conditions[1].Type, "conditions ready")
-				assert.Equal(t, metav1.ConditionFalse,
-					gc.Status.Conditions[1].Status, "status ready")
-				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
+					gc.Status.Conditions[0].Status, "conditions status")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+					gc.Status.Conditions[0].Type, "conditions reason")
+				assert.Equal(t, int64(0),
+					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
 				gws := u.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")

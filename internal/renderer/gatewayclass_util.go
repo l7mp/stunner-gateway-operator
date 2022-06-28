@@ -78,37 +78,61 @@ func (r *Renderer) validateGatewayClass(gc *gatewayv1alpha2.GatewayClass) error 
 	return nil
 }
 
-func setGatewayClassStatusScheduled(gc *gatewayv1alpha2.GatewayClass) {
-	meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: gc.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
-		Message: fmt.Sprintf("gatewayclass under processing by controller %q",
-			config.ControllerName),
-	})
-}
+// func setGatewayClassStatusScheduled(gc *gatewayv1alpha2.GatewayClass) {
+// 	meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
+// 		Type:               string(gatewayv1alpha2.GatewayConditionScheduled),
+// 		Status:             metav1.ConditionTrue,
+// 		ObservedGeneration: gc.Generation,
+// 		LastTransitionTime: metav1.Now(),
+// 		Reason:             string(gatewayv1alpha2.GatewayReasonScheduled),
+// 		Message: fmt.Sprintf("gatewayclass under processing by controller %q",
+// 			config.ControllerName),
+// 	})
+// }
 
-func setGatewayClassStatusReady(gc *gatewayv1alpha2.GatewayClass, err error) {
+// func setGatewayClassStatusReady(gc *gatewayv1alpha2.GatewayClass, err error) {
+// 	if err == nil {
+// 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
+// 			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+// 			Status:             metav1.ConditionTrue,
+// 			ObservedGeneration: gc.Generation,
+// 			LastTransitionTime: metav1.Now(),
+// 			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+// 			Message: fmt.Sprintf("gatewayclass is now managed by controller %q",
+// 				config.ControllerName),
+// 		})
+// 	} else {
+// 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
+// 			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+// 			Status:             metav1.ConditionFalse,
+// 			ObservedGeneration: gc.Generation,
+// 			LastTransitionTime: metav1.Now(),
+// 			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
+// 			Message: fmt.Sprintf("controller %q failed to pick up controller: %s",
+// 				config.ControllerName, err.Error()),
+// 		})
+// 	}
+// }
+
+func setGatewayClassStatusAccepted(gc *gatewayv1alpha2.GatewayClass, err error) {
 	if err == nil {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+			Type:               string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
-			Message: fmt.Sprintf("gatewayclass is now managed by controller %q",
+			Reason:             string(gatewayv1alpha2.GatewayClassReasonAccepted),
+			Message: fmt.Sprintf("gateway-class is now managed by controller %q",
 				config.ControllerName),
 		})
 	} else {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionReady),
+			Type:               string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
-			Message: fmt.Sprintf("controller %q failed to pick up controller: %s",
+			Reason:             string(gatewayv1alpha2.GatewayClassReasonInvalidParameters),
+			Message: fmt.Sprintf("controller %q failed to pick up gateway-class: %s",
 				config.ControllerName, err.Error()),
 		})
 	}

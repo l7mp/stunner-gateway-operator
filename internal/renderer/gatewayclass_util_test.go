@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -156,7 +156,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "condition status: scheduled",
+			name: "condition status: accepted",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
@@ -167,10 +167,14 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 
-				setGatewayClassStatusScheduled(gc)
+				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
-					gc.Status.Conditions[0].Type, "conditions sched")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+					gc.Status.Conditions[0].Type, "conditions accepted")
+				assert.Equal(t, metav1.ConditionTrue,
+					gc.Status.Conditions[0].Status, "conditions status")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 			},
@@ -184,7 +188,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
-				setGatewayClassStatusScheduled(cls2)
+				setGatewayClassStatusAccepted(cls2, nil)
 				cls2.ObjectMeta.SetGeneration(1)
 				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
 			},
@@ -192,16 +196,20 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 
-				setGatewayClassStatusScheduled(gc)
+				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
-					gc.Status.Conditions[0].Type, "conditions sched")
-				assert.Equal(t, int64(1), gc.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+					gc.Status.Conditions[0].Type, "conditions accepted")
+				assert.Equal(t, metav1.ConditionTrue,
+					gc.Status.Conditions[0].Status, "conditions status")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+					gc.Status.Conditions[0].Reason, "conditions reason")
+				assert.Equal(t, int64(1),
+					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 			},
 		},
 		{
-			name: "condition status: ready",
+			name: "condition status: invalid-params",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
@@ -212,44 +220,16 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 
-				setGatewayClassStatusReady(gc, errors.New("dummy"))
+				setGatewayClassStatusAccepted(gc, errors.New("dummy"))
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
-					gc.Status.Conditions[0].Type, "conditions ready")
-				assert.Equal(t, int64(0), gc.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
-			},
-		},
-		{
-			name: "condition status: re-scheduled and ready",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
-			svcs: []corev1.Service{},
-			prep: func(c *renderTestConfig) {
-				cls2 := testutils.TestGwClass.DeepCopy()
-				setGatewayClassStatusScheduled(cls2)
-				setGatewayClassStatusReady(cls2, errors.New("dummy"))
-				cls2.ObjectMeta.SetGeneration(1)
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
-			},
-			tester: func(t *testing.T, r *Renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-
-				setGatewayClassStatusScheduled(gc)
-				setGatewayClassStatusReady(gc, errors.New("dummy"))
-				assert.Len(t, gc.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
-					gc.Status.Conditions[0].Type, "conditions sched")
-				assert.Equal(t, int64(1),
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+					gc.Status.Conditions[0].Type, "conditions accepted")
+				assert.Equal(t, metav1.ConditionFalse,
+					gc.Status.Conditions[0].Status, "conditions status")
+				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonInvalidParameters),
+					gc.Status.Conditions[0].Reason, "conditions reason")
+				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
-					gc.Status.Conditions[1].Type, "conditions ready")
-				assert.Equal(t, int64(1),
-					gc.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
 			},
 		},
 	})

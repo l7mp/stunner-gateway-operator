@@ -221,7 +221,6 @@ func TestRenderGatewayUtil(t *testing.T) {
 					d.Reason, "reason")
 
 				// listeners[1]: detached
-				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 					string(gatewayv1alpha2.ListenerConditionDetached))
 				assert.NotNil(t, d, "detached found")
@@ -253,7 +252,6 @@ func TestRenderGatewayUtil(t *testing.T) {
 					d.Reason, "reason")
 
 				// listeners[2]: ok
-				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 					string(gatewayv1alpha2.ListenerConditionDetached))
 				assert.NotNil(t, d, "detached found")
