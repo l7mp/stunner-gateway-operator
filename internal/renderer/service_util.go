@@ -89,8 +89,8 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
 	v, found := as[config.GatewayAddressAnnotationKey]
 	if found && v == namespacedName {
-		r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated foe gateway",
-			"Service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
+		r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
+			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
 		return true
 	}
 
