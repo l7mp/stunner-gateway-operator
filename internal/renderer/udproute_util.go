@@ -145,8 +145,32 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 }
 
 func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, controllerName string, accepted bool) {
+	// ns := gatewayv1alpha2.Namespace(ro.GetNamespace())
+	// gr := gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group)
+	// kind := gatewayv1alpha2.Kind("Gateway")
+
+	pRef := gatewayv1alpha2.ParentRef{
+		Name: p.Name,
+	}
+
+	if p.Group != nil && *p.Group != gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group) {
+		pRef.Group = p.Group
+	}
+
+	if p.Kind != nil && *p.Kind != "Gateway" {
+		pRef.Kind = p.Kind
+	}
+
+	if p.Namespace != nil && *p.Namespace != gatewayv1alpha2.Namespace(ro.GetNamespace()) {
+		pRef.Namespace = p.Namespace
+	}
+
+	if p.SectionName != nil {
+		pRef.SectionName = p.SectionName
+	}
+
 	s := gatewayv1alpha2.RouteParentStatus{
-		ParentRef:      *p,
+		ParentRef:      pRef,
 		ControllerName: gatewayv1alpha2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{},
 	}

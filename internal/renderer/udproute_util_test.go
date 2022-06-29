@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -278,6 +279,117 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "udproute-namespace-correct-name-2"),
 					store.GetObjectKey(rs[0]), "route name found")
+			},
+		},
+		{
+			name: "routes status ok",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+
+				gws := r.getGateways4Class(gc)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+
+				ls := gw.Spec.Listeners
+				l := ls[0]
+
+				rs := r.getUDPRoutes4Listener(gw, &l)
+				assert.Len(t, rs, 1, "route found")
+				ro := rs[0]
+
+				initRouteStatus(ro)
+				p := ro.Spec.ParentRefs[0]
+				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
+				setRouteConditionStatus(ro, &p, config.ControllerName, true)
+
+				assert.Len(t, ro.Status.Parents, 1, "parent status len")
+				parentStatus := ro.Status.Parents[0]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
+
+				assert.Equal(t, gatewayv1alpha2.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d := meta.FindStatusCondition(parentStatus.Conditions,
+					string(gatewayv1alpha2.ConditionRouteAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "Accepted", d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
+			},
+		},
+		{
+			name: "invalid routes status errs",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				udp1 := testutils.TestUDPRoute.DeepCopy()
+				udp1.SetName("udproute-wrong-listener-name")
+				sn := gatewayv1alpha2.SectionName("dummy")
+				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
+				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
+				c.rs = []gatewayv1alpha2.UDPRoute{*udp1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route found")
+				ro := rs[0]
+
+				initRouteStatus(ro)
+				p := ro.Spec.ParentRefs[0]
+				assert.False(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
+				setRouteConditionStatus(ro, &p, config.ControllerName, false)
+
+				assert.Len(t, ro.Status.Parents, 1, "parent status len")
+				parentStatus := ro.Status.Parents[0]
+
+				assert.Equal(t, p, parentStatus.ParentRef, "status parent ref")
+
+				d := meta.FindStatusCondition(parentStatus.Conditions,
+					string(gatewayv1alpha2.ConditionRouteAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "NoMatchingListenerHostname", d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 			},
 		},
 	})
