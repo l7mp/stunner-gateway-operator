@@ -80,7 +80,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.ConfigMaps.Objects()
+				cms := u.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -157,7 +157,7 @@ func TestRenderPipeline(t *testing.T) {
 				r.invalidateGatewayClass(gc, u, errors.New("dummy"))
 
 				// configmap
-				cms := u.ConfigMaps.Objects()
+				cms := u.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -188,7 +188,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
-				gws := u.Gateways.Objects()
+				gws := u.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
 				gw, found := gws[0].(*gatewayv1alpha2.Gateway)
 				assert.True(t, found, "gateway found")
@@ -264,7 +264,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.ConfigMaps.Objects()
+				cms := u.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o := cms[0]
@@ -338,7 +338,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms = u.ConfigMaps.Objects()
+				cms = u.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o = cms[0]

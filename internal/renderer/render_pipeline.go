@@ -153,7 +153,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		u.Gateways.Upsert(gw)
+		u.UpsertQueue.Gateways.Upsert(gw)
 	}
 
 	log.V(1).Info("processing UDPRoutes")
@@ -189,11 +189,11 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		}
 
 		// schedule for update
-		u.UDPRoutes.Upsert(ro)
+		u.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
 	// schedule for update
-	u.GatewayClasses.Upsert(gc)
+	u.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "conf",
 		fmt.Sprintf("%#v", conf))
@@ -213,7 +213,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	controllerRef := metav1.NewControllerRef(gc, gvk)
 	cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
 
-	u.ConfigMaps.Upsert(cm)
+	u.UpsertQueue.ConfigMaps.Upsert(cm)
 
 	return nil
 }
@@ -245,7 +245,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	}
 
 	setGatewayClassStatusAccepted(gc, err)
-	u.GatewayClasses.Upsert(gc)
+	u.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.V(1).Info("finding gateway objects")
 	for _, gw := range r.getGateways4Class(gc) {
@@ -263,7 +263,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		u.Gateways.Upsert(gw)
+		u.UpsertQueue.Gateways.Upsert(gw)
 	}
 
 	log.V(1).Info("processing UDPRoutes")
@@ -279,7 +279,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
 		}
 
-		u.UDPRoutes.Upsert(ro)
+		u.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
@@ -299,7 +299,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 		controllerRef := metav1.NewControllerRef(gc, gvk)
 		cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
 
-		u.ConfigMaps.Upsert(cm)
+		u.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
 }
 

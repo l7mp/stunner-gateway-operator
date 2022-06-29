@@ -18,20 +18,13 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (u *Updater) updateGatewayClass(o client.Object) error {
-	u.log.V(2).Info("updating gateway class", "resource",
-		store.GetObjectKey(o))
-
-	gc, ok := o.(*gatewayv1alpha2.GatewayClass)
-	if ok == false {
-		return fmt.Errorf("internal error: cannot cast object %q to gateway-class",
-			store.GetObjectKey(o))
-	}
+func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass) error {
+	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc))
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
@@ -56,14 +49,8 @@ func (u *Updater) updateGatewayClass(o client.Object) error {
 	return nil
 }
 
-func (u *Updater) updateGateway(o client.Object) error {
-	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(o))
-
-	gw, ok := o.(*gatewayv1alpha2.Gateway)
-	if ok == false {
-		return fmt.Errorf("internal error: cannot cast %q object to gateway",
-			store.GetObjectKey(o))
-	}
+func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway) error {
+	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw))
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
@@ -87,14 +74,8 @@ func (u *Updater) updateGateway(o client.Object) error {
 	return nil
 }
 
-func (u *Updater) updateUDPRoute(o client.Object) error {
-	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(o))
-
-	ro, ok := o.(*gatewayv1alpha2.UDPRoute)
-	if ok == false {
-		return fmt.Errorf("internal error: cannot cast object %q to UDP route",
-			store.GetObjectKey(o))
-	}
+func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute) error {
+	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro))
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -118,18 +99,43 @@ func (u *Updater) updateUDPRoute(o client.Object) error {
 	return nil
 }
 
-func (u *Updater) updateConfigMap(o client.Object) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("updating config-map", "resource", store.GetObjectKey(o))
-
-	cm, ok := o.(*corev1.ConfigMap)
-	if ok == false {
-		return ctrlutil.OperationResultNone,
-			fmt.Errorf("internal error: cannot cast object %q to config-map",
-				store.GetObjectKey(o))
-	}
+func (u *Updater) upsertService(svc *corev1.Service) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert service", "resource", store.GetObjectKey(svc))
 
 	client := u.manager.GetClient()
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      svc.GetName(),
+		Namespace: svc.GetNamespace(),
+	}}
 
+	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
+		// upsert: ownerrefs, our own annotation, and the spec
+		as := svc.GetAnnotations()
+		if name, found := as[config.GatewayAddressAnnotationKey]; found != false {
+			metav1.SetMetaDataAnnotation(&current.ObjectMeta,
+				config.GatewayAddressAnnotationKey, name)
+		}
+		current.SetOwnerReferences(svc.GetOwnerReferences())
+		svc.Spec.DeepCopyInto(&current.Spec)
+
+		return nil
+	})
+
+	if err != nil {
+		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert service %q: %w",
+			store.GetObjectKey(svc), err)
+	}
+
+	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "result",
+		fmt.Sprintf("%+v", current))
+
+	return op, nil
+}
+
+func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert config-map", "resource", store.GetObjectKey(cm))
+
+	client := u.manager.GetClient()
 	current := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
 		Name:      cm.GetName(),
 		Namespace: cm.GetNamespace(),
@@ -152,12 +158,16 @@ func (u *Updater) updateConfigMap(o client.Object) (ctrlutil.OperationResult, er
 	})
 
 	if err != nil {
-		return ctrlutil.OperationResultNone, fmt.Errorf("cannot update STUNNer config-map %q: %w",
+		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert config-map %q: %w",
 			store.GetObjectKey(cm), err)
 	}
 
-	u.log.V(1).Info("STUNner config-map  updated", "resource", store.GetObjectKey(cm), "result",
+	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "result",
 		fmt.Sprintf("%+v", current))
 
 	return op, nil
+}
+
+func (u *Updater) deleteObject(o client.Object) error {
+	return u.manager.GetClient().Delete(u.ctx, o)
 }

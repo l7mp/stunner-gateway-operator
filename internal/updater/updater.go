@@ -87,31 +87,76 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	u.gen += 1
 	u.log.Info("processing update event", "generation", u.gen, "update", e.String())
 
-	for _, gc := range e.GatewayClasses.Objects() {
+	// run the upsert queue
+	q := e.UpsertQueue
+	for _, gc := range q.GatewayClasses.GetAll() {
 		if err := u.updateGatewayClass(gc); err != nil {
 			u.log.Error(err, "cannot update gateway-class")
 			continue
 		}
 	}
 
-	for _, gw := range e.Gateways.Objects() {
+	for _, gw := range q.Gateways.GetAll() {
 		if err := u.updateGateway(gw); err != nil {
 			u.log.Error(err, "cannot update gateway")
 			continue
 		}
 	}
 
-	for _, ro := range e.UDPRoutes.Objects() {
+	for _, ro := range q.UDPRoutes.GetAll() {
 		if err := u.updateUDPRoute(ro); err != nil {
 			u.log.Error(err, "cannot update UDP route")
 			continue
 		}
 	}
 
-	// there should never be more than one configmap but anyway
-	for _, cm := range e.ConfigMaps.Objects() {
-		if op, err := u.updateConfigMap(cm); err != nil {
-			u.log.Error(err, "cannot update STUNner configuration", "operation", op)
+	for _, svc := range q.Services.GetAll() {
+		if op, err := u.upsertService(svc); err != nil {
+			u.log.Error(err, "cannot update service", "operation", op)
+			continue
+		}
+	}
+
+	for _, cm := range q.ConfigMaps.GetAll() {
+		if op, err := u.upsertConfigMap(cm); err != nil {
+			u.log.Error(err, "cannot upsert config-map", "operation", op)
+			continue
+		}
+	}
+
+	// run the delete queue
+	q = e.DeleteQueue
+	for _, gc := range q.GatewayClasses.Objects() {
+		if err := u.deleteObject(gc); err != nil {
+			u.log.Error(err, "cannot delete gateway-class")
+			continue
+		}
+	}
+
+	for _, gw := range q.Gateways.Objects() {
+		if err := u.deleteObject(gw); err != nil {
+			u.log.Error(err, "cannot delete gateway")
+			continue
+		}
+	}
+
+	for _, ro := range q.UDPRoutes.Objects() {
+		if err := u.deleteObject(ro); err != nil {
+			u.log.Error(err, "cannot delete UDP route")
+			continue
+		}
+	}
+
+	for _, svc := range q.Services.Objects() {
+		if err := u.deleteObject(svc); err != nil {
+			u.log.Error(err, "cannot delete service")
+			continue
+		}
+	}
+
+	for _, cm := range q.ConfigMaps.Objects() {
+		if err := u.deleteObject(cm); err != nil {
+			u.log.Error(err, "cannot delete config-map")
 			continue
 		}
 	}

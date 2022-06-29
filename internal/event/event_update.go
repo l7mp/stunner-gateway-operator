@@ -7,23 +7,38 @@ import (
 )
 
 // render event
-
-type EventUpdate struct {
-	Type           EventType
+type UpdateConf struct {
 	GatewayClasses *store.GatewayClassStore
 	Gateways       *store.GatewayStore
 	UDPRoutes      *store.UDPRouteStore
-	ConfigMaps     store.Store
+	Services       *store.ServiceStore
+	ConfigMaps     *store.ConfigMapStore
+}
+
+type EventUpdate struct {
+	Type        EventType
+	UpsertQueue UpdateConf
+	DeleteQueue UpdateConf
 }
 
 // NewEvent returns an empty event
 func NewEventUpdate() *EventUpdate {
 	return &EventUpdate{
-		Type:           EventTypeUpdate,
-		GatewayClasses: store.NewGatewayClassStore(),
-		Gateways:       store.NewGatewayStore(),
-		UDPRoutes:      store.NewUDPRouteStore(),
-		ConfigMaps:     store.NewStore(),
+		Type: EventTypeUpdate,
+		UpsertQueue: UpdateConf{
+			GatewayClasses: store.NewGatewayClassStore(),
+			Gateways:       store.NewGatewayStore(),
+			UDPRoutes:      store.NewUDPRouteStore(),
+			ConfigMaps:     store.NewConfigMapStore(),
+			Services:       store.NewServiceStore(),
+		},
+		DeleteQueue: UpdateConf{
+			GatewayClasses: store.NewGatewayClassStore(),
+			Gateways:       store.NewGatewayStore(),
+			UDPRoutes:      store.NewUDPRouteStore(),
+			Services:       store.NewServiceStore(),
+			ConfigMaps:     store.NewConfigMapStore(),
+		},
 	}
 }
 
@@ -32,7 +47,10 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s: #gway-classes: %d, #gways: %d, #udp-routes: %d, #configmaps: %d",
-		e.Type.String(), e.GatewayClasses.Len(), e.Gateways.Len(), e.UDPRoutes.Len(),
-		e.ConfigMaps.Len())
+	return fmt.Sprintf("%s: upsert-queue: %d gway-clss, %d gway, %d route, %d svcs: %d confmaps / "+
+		"delete-queue: %d gway-clss, %d gway, %d route, %d svcs: %d confmaps",
+		e.Type.String(), e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
+		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
+		e.DeleteQueue.GatewayClasses.Len(), e.DeleteQueue.Gateways.Len(),
+		e.DeleteQueue.UDPRoutes.Len(), e.DeleteQueue.Services.Len(), e.DeleteQueue.ConfigMaps.Len())
 }
