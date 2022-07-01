@@ -146,6 +146,36 @@ var TestSvc = corev1.Service{
 	},
 	Status: corev1.ServiceStatus{
 		LoadBalancer: corev1.LoadBalancerStatus{
-			Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}, {IP: "5.6.7.8"}},
+			Ingress: []corev1.LoadBalancerIngress{{
+				IP: "1.2.3.4",
+				Ports: []corev1.PortStatus{{
+					Port:     1,
+					Protocol: corev1.ProtocolUDP,
+				}},
+			}, {
+				IP: "5.6.7.8",
+				Ports: []corev1.PortStatus{{
+					Port:     2,
+					Protocol: corev1.ProtocolTCP,
+				}},
+			}},
 		}},
+}
+
+// Node
+var TestNode = corev1.Node{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testnode-ok",
+	},
+	Spec: corev1.NodeSpec{},
+	Status: corev1.NodeStatus{
+		Addresses: []corev1.NodeAddress{{
+			Type:    corev1.NodeInternalIP,
+			Address: "255.255.255.255",
+		}, {
+			Type:    corev1.NodeExternalIP,
+			Address: "1.2.3.4",
+		}},
+	},
 }
