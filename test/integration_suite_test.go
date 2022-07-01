@@ -18,6 +18,8 @@ package integration
 
 import (
 	"context"
+	// "fmt"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -39,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	// logf "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -52,12 +55,17 @@ import (
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
+func init() {
+	os.Setenv("ACK_GINKGO_DEPRECATIONS", "1.16.5")
+}
+
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
 	timeout  = time.Second * 10
 	duration = time.Second * 10
 	interval = time.Millisecond * 250
-	loglevel = -4
+	// loglevel = -4
+	loglevel = -1
 )
 
 var (
@@ -203,3 +211,53 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+// inplace object rewriters
+
+type UDPRouteMutator func(current *gatewayv1alpha2.UDPRoute)
+
+func recreateOrUpdateUDPRoute(f UDPRouteMutator) {
+	current := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+		Name:      testUDPRoute.GetName(),
+		Namespace: testUDPRoute.GetNamespace(),
+	}}
+
+	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+		testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
+		f(current)
+		return nil
+	})
+	Expect(err).Should(Succeed())
+}
+
+type GatewayMutator func(current *gatewayv1alpha2.Gateway)
+
+func recreateOrUpdateGateway(f GatewayMutator) {
+	current := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
+		Name:      testGw.GetName(),
+		Namespace: testGw.GetNamespace(),
+	}}
+
+	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+		testutils.TestGw.Spec.DeepCopyInto(&current.Spec)
+		f(current)
+		return nil
+	})
+	Expect(err).Should(Succeed())
+}
+
+type GatewayConfigMutator func(current *stunnerv1alpha1.GatewayConfig)
+
+func recreateOrUpdateGatewayConfig(f GatewayConfigMutator) {
+	current := &stunnerv1alpha1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+		Name:      testGwConfig.GetName(),
+		Namespace: testGwConfig.GetNamespace(),
+	}}
+
+	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+		testutils.TestGwConfig.Spec.DeepCopyInto(&current.Spec)
+		f(current)
+		return nil
+	})
+	Expect(err).Should(Succeed())
+}
