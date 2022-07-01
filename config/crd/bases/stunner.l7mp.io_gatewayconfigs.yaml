@@ -99,7 +99,7 @@ spec:
                 maxLength: 64
                 pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                 type: string
-              username:
+              userName:
                 description: Username defines the `username` credential for "plaintext"
                   authentication.
                 pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$

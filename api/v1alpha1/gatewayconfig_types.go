@@ -53,7 +53,7 @@ type GatewayConfigSpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
-	Username *string `json:"username,omitempty"`
+	Username *string `json:"userName,omitempty"`
 
 	// Password defines the `password` credential for "plaintext" authentication.
 	//

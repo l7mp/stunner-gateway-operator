@@ -25,7 +25,7 @@ import (
 // NodeReconciler - RBAC Permissions
 // -----------------------------------------------------------------------------
 
-// +kubebuilder:rbac:groups=,resources=nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 
 type nodeReconciler struct {
 	client.Client
