@@ -29,4 +29,12 @@ const (
 	// will appear in the filesystem of the stunnerd pods. This is also the key on the
 	// ConfigMap that maintains the stunnerd config
 	DefaultStunnerdConfigfileName = "stunnerd.conf"
+
+	// DefaultStunnerDeploymentLabel defines the label used to mark the stunnerd deployment
+	// FIXME make this configurable
+	DefaultStunnerDeploymentLabel = "app"
+
+	// DefaultStunnerDeploymentValue defines the label value used to mark the stunnerd deployment
+	// FIXME make this configurable
+	DefaultStunnerDeploymentValue = "stunner"
 )
