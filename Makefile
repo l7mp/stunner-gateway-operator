@@ -29,7 +29,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # l7mp.io/stunner-gateway-operator-bundle:$VERSION and l7mp.io/stunner-gateway-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= l7mp.io/stunner-gateway-operator
+# IMAGE_TAG_BASE ?= l7mp.io/stunner-gateway-operator
+IMAGE_TAG_BASE ?= l7mp/stunner-gateway-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -47,7 +48,8 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+# IMG ?= controller:latest
+IMG ?= $(IMAGE_TAG_BASE)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -131,25 +133,25 @@ docker-push: ## Push docker image with the manager.
 .PHONY: podman-build
 podman-build: test ## Build docker image with the manager.
 	sudo podman build -t ${IMG} .
-
+	   
 .PHONY: podman-push
 podman-push: ## Push docker image with the manager.
-	podman push ${IMG}
-
+	sudo podman push ${IMG}
+	   
 ##@ Deployment
-
+	   
 ifndef ignore-not-found
   ignore-not-found = false
-endif
-
+endif	   
+	   
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
+	   
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
+	   
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
