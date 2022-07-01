@@ -47,8 +47,8 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s: upsert-queue: %d gway-clss, %d gway, %d route, %d svcs: %d confmaps / "+
-		"delete-queue: %d gway-clss, %d gway, %d route, %d svcs: %d confmaps",
+	return fmt.Sprintf("%s: upsert-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d / "+
+		"delete-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d",
 		e.Type.String(), e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
 		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
 		e.DeleteQueue.GatewayClasses.Len(), e.DeleteQueue.Gateways.Len(),

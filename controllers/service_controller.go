@@ -27,6 +27,8 @@ import (
 // ServiceReconciler - RBAC Permissions
 // -----------------------------------------------------------------------------
 
+// // // need this to learn the node IP
+// // //+kubebuilder:rbac:groups=,resources=nodes,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get
 

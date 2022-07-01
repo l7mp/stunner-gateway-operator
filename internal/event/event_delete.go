@@ -16,6 +16,7 @@ const (
 	EventKindGateway
 	EventKindUDPRoute
 	EventKindService
+	EventKindNode
 	EventKindUnknown
 )
 
@@ -32,6 +33,8 @@ func (a EventKind) String() string {
 		return "UDPRoute"
 	case EventKindService:
 		return "Service"
+	case EventKindNode:
+		return "Node"
 	default:
 		return "<unknown>"
 	}

@@ -103,6 +103,12 @@ func (o *Operator) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot register service controller: %w", err)
 	}
 
+	log.V(3).Info("starting Node controller")
+	err = stunnerctrl.RegisterNodeController(o.mgr, o.operatorCh)
+	if err != nil {
+		return fmt.Errorf("cannot register node controller: %w", err)
+	}
+
 	go o.eventLoop(ctx)
 
 	return nil
@@ -154,13 +160,15 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 			store.UDPRoutes.Upsert(e.Object)
 		case *corev1.Service:
 			store.Services.Upsert(e.Object)
+		case *corev1.Node:
+			store.Nodes.Upsert(e.Object)
 		default:
 			return fmt.Errorf("could not process event %q for an unknown object %q",
 				e.String(), key.String())
 		}
 
 		// trigger the render event
-		o.renderCh <- event.NewEventRender(fmt.Sprintf("upserton %s", key.String()))
+		o.renderCh <- event.NewEventRender(fmt.Sprintf("upsert on %s", key.String()))
 
 	case event.EventTypeDelete:
 		// reflect!
