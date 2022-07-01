@@ -1,19 +1,18 @@
 package renderer
 
 import (
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// ctlr "sigs.k8s.io/controller-runtime"
+	// "sigs.k8s.io/controller-runtime/pkg/client"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
+	// corev1 "k8s.io/api/core/v1"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -121,10 +120,32 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 
 		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
 		var ready bool
-		addr, err := r.getPublicAddrs4Gateway(gw)
+		ap, err := r.getPublicAddrPort4Gateway(gw)
 		if err != nil {
-			log.Info("cannot find public address", "gateway", gw.GetName(), "error",
-				err.Error())
+			// error means our own managed LoadBalancer service is not found: create it!
+			if s := createLbService4Gateway(gw); s != nil {
+				log.Info("creating public service to expose gateway", "service",
+					store.GetObjectKey(s), "gateway", gw.GetName(), "reason",
+					err.Error())
+
+				if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
+					r.log.Error(err, "cannot set owner reference", "owner",
+						store.GetObjectKey(gw), "reference",
+						store.GetObjectKey(s))
+				}
+
+				u.UpsertQueue.Services.Upsert(s)
+			}
+		}
+
+		if ap == nil {
+			log.V(1).Info("cannot find public address", "gateway", gw.GetName())
+			ready = false
+		} else if ap.addr == "" {
+			log.Info("public service found but no ExternalIP is available for service: " +
+				"this is most probably caused by a fallback to a NodePort access service " +
+				"that does not have a public IP address. NodePorts are not supported, " +
+				"please enableLoadBalancer services")
 			ready = false
 		} else {
 			ready = true
@@ -136,7 +157,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 				l.Name)
 			rs := r.getUDPRoutes4Listener(gw, &l)
 
-			lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
+			lc, err := r.renderListener(gw, gwConf, &l, rs, ap)
 			if err != nil {
 				log.Info("error rendering configuration for listener", "gateway",
 					gw.GetName(), "listener", l.Name, "error", err.Error())
@@ -201,17 +222,17 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
 
 	// schedule for update
-	cm, err := r.renderConfigMap(gwConf.GetNamespace(), target, &conf)
+	cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, &conf)
 	if err != nil {
 		return err
 	}
 
-	// set the GatewayClass as an owner without using the scheme:
-	// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
-	kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
-	gvk := corev1.SchemeGroupVersion.WithKind(kind)
-	controllerRef := metav1.NewControllerRef(gc, gvk)
-	cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
+	if err := controllerutil.SetOwnerReference(gc, cm, r.scheme); err != nil {
+		log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
+			"reference", store.GetObjectKey(cm))
+	}
+
+	// fmt.Printf("%#v\n", cm)
 
 	u.UpsertQueue.ConfigMaps.Upsert(cm)
 
@@ -286,44 +307,17 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 
 	// schedule for update
 	if invalidateConf == true {
-		cm, err := r.renderConfigMap(gwConf.GetNamespace(), target, nil)
+		cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target", target)
 			return
 		}
 
-		// set the GatewayClass as an owner without using the scheme:
-		// https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
-		kind := reflect.TypeOf(corev1.ConfigMap{}).Name()
-		gvk := corev1.SchemeGroupVersion.WithKind(kind)
-		controllerRef := metav1.NewControllerRef(gc, gvk)
-		cm.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
+		if err := controllerutil.SetOwnerReference(gc, cm, r.scheme); err != nil {
+			log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
+				"reference", store.GetObjectKey(cm))
+		}
 
 		u.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
-}
-
-func (r *Renderer) renderConfigMap(ns, name string, conf *stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
-	s := ""
-
-	if conf != nil {
-		sc, err := json.Marshal(*conf)
-		if err != nil {
-			return nil, err
-		} else {
-			s = string(sc)
-		}
-	}
-
-	immutable := true
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Immutable: &immutable,
-		Data: map[string]string{
-			config.DefaultStunnerdConfigfileName: s,
-		},
-	}, nil
 }

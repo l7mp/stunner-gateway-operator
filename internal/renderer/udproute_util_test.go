@@ -387,7 +387,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.NotNil(t, d, "resolved-refs found")
 				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteResolvedRefs), d.Type,
 					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 			},

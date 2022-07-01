@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -31,7 +34,16 @@ import (
 //var testerLogLevel = zapcore.DebugLevel
 var testerLogLevel = zapcore.ErrorLevel
 
-////////////////////////////
+var (
+	scheme = runtime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
+}
+
 type renderTestConfig struct {
 	name   string
 	cls    []gatewayv1alpha2.GatewayClass
@@ -39,6 +51,7 @@ type renderTestConfig struct {
 	gws    []gatewayv1alpha2.Gateway
 	rs     []gatewayv1alpha2.UDPRoute
 	svcs   []corev1.Service
+	nodes  []corev1.Node
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -60,6 +73,7 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 
 			log.V(1).Info("setting up config renderer")
 			r := NewRenderer(RendererConfig{
+				Scheme: scheme,
 				Logger: log.WithName("renderer"),
 			})
 
@@ -88,6 +102,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Services.Flush()
 			for i := range c.svcs {
 				store.Services.Upsert(&c.svcs[i])
+			}
+
+			store.Nodes.Flush()
+			for i := range c.nodes {
+				store.Nodes.Upsert(&c.nodes[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

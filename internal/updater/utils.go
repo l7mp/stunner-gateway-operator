@@ -109,7 +109,7 @@ func (u *Updater) upsertService(svc *corev1.Service) (ctrlutil.OperationResult, 
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// upsert: ownerrefs, our own annotation, and the spec
+		// upsert: owner-refs, our own annotation, and the spec
 		as := svc.GetAnnotations()
 		if name, found := as[config.GatewayAddressAnnotationKey]; found != false {
 			metav1.SetMetaDataAnnotation(&current.ObjectMeta,

@@ -52,10 +52,13 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 
 		for j := range ro.Spec.CommonRouteSpec.ParentRefs {
 			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
-			if resolveParentRef(&p, gw, l) == false {
-				r.log.V(4).Info("getUDPRoutes4Listener: route rejected for listener",
+
+			found, reason := resolveParentRef(&p, gw, l)
+			if found == false {
+				r.log.V(4).Info("getUDPRoutes4Listener: parent rejected for listener",
 					"gateway", store.GetObjectKey(gw), "listener", l.Name,
-					"route", store.GetObjectKey(ro), "parentRef", p.Name)
+					"route", store.GetObjectKey(ro), "parent", dumpParentRef(&p),
+					"reason", reason)
 
 				continue
 			}
@@ -73,24 +76,29 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 	return ret
 }
 
-func resolveParentRef(p *gatewayv1alpha2.ParentRef, gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) bool {
+func resolveParentRef(p *gatewayv1alpha2.ParentRef, gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) (bool, string) {
 	if p.Group != nil && *p.Group != gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group) {
-		return false
+		return false, fmt.Sprintf("parent group %q does not match gateway group %q",
+			string(*p.Group), gatewayv1alpha2.GroupVersion.Group)
 	}
 	if p.Kind != nil && *p.Kind != "Gateway" {
-		return false
+		return false, fmt.Sprintf("parent kind %q does not match gateway kind %q",
+			string(*p.Kind), "Gateway")
 	}
 	if p.Namespace != nil && *p.Namespace != gatewayv1alpha2.Namespace(gw.GetNamespace()) {
-		return false
+		return false, fmt.Sprintf("parent namespace %q does not match gateway namespace %q",
+			string(*p.Namespace), gw.GetNamespace())
 	}
 	if p.Name != gatewayv1alpha2.ObjectName(gw.GetName()) {
-		return false
+		return false, fmt.Sprintf("parent name %q does not match gateway name %q",
+			string(p.Name), gw.GetName())
 	}
 	if p.SectionName != nil && *p.SectionName != l.Name {
-		return false
+		return false, fmt.Sprintf("parent SectionName %q does not match listener name %q",
+			string(*p.SectionName), l.Name)
 	}
 
-	return true
+	return true, ""
 }
 
 func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
@@ -99,7 +107,7 @@ func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
 
 func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, className string) bool {
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
-		"parent", fmt.Sprintf("%#v", *p))
+		"parent", dumpParentRef(p))
 
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
@@ -110,8 +118,8 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
 	gw := store.Gateways.GetObject(namespacedName)
 	if gw == nil {
-		r.log.V(4).Info("no gateway found for ParentRef", "route",
-			store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p))
+		r.log.V(4).Info("no gateway found for Parent", "route",
+			store.GetObjectKey(ro), "parent", dumpParentRef(p))
 		return false
 	}
 
@@ -129,9 +137,10 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	for i := range gw.Spec.Listeners {
 		l := gw.Spec.Listeners[i]
 
-		if resolveParentRef(p, gw, &l) == true {
-			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener found for ParentRef",
-				"route", store.GetObjectKey(ro), "parent", fmt.Sprintf("%#v", *p),
+		found, _ := resolveParentRef(p, gw, &l)
+		if found == true {
+			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener found for parent",
+				"route", store.GetObjectKey(ro), "parent", dumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name)
 
 			return true
@@ -193,7 +202,7 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 		Type:               string(gatewayv1alpha2.ConditionRouteResolvedRefs),
-		Status:             metav1.ConditionTrue,
+		Status:             c,
 		ObservedGeneration: ro.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             "ResolvedRefs",
@@ -201,4 +210,26 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 	})
 
 	ro.Status.Parents = append(ro.Status.Parents, s)
+}
+
+func dumpParentRef(p *gatewayv1alpha2.ParentRef) string {
+	g, k, ns, sn := "<NIL>", "<NIL>", "<NIL>", "<NIL>"
+	if p.Group != nil {
+		g = string(*p.Group)
+	}
+
+	if p.Kind != nil {
+		k = string(*p.Kind)
+	}
+
+	if p.Namespace != nil {
+		ns = string(*p.Namespace)
+	}
+
+	if p.SectionName != nil {
+		sn = string(*p.SectionName)
+	}
+
+	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s, SectionName: %s}",
+		g, k, ns, p.Name, sn)
 }

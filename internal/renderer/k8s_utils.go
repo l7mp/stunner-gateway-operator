@@ -2,36 +2,39 @@ package renderer
 
 import (
 	"encoding/json"
-	"reflect"
+	// "fmt"
+	// "reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	// "sigs.k8s.io/controller-runtime/pkg/client"
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 )
 
-// set owner ref without using the scheme:
-func setOwner(owner, object client.Object) {
-	kind := reflect.TypeOf(owner).Name()
-	gvk := corev1.SchemeGroupVersion.WithKind(kind)
-	ref := metav1.OwnerReference{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		UID:        owner.GetUID(),
-		Name:       owner.GetName(),
-	}
+// // set owner ref without using the scheme:
+// func setOwner2GatewayConfig(gc, object client.Object) {
+// 	gvk := stunnerv1alpha1.GroupVersion.WithKind("GatewayConfig")
+// 	ref := metav1.OwnerReference{
+// 		APIVersion: gvk.GroupVersion().String(),
+// 		Kind:       gvk.Kind,
+// 		UID:        gc.GetUID(),
+// 		Name:       gc.GetName(),
+// 	}
 
-	owners := object.GetOwnerReferences()
-	if idx := indexOwnerRef(owners, ref); idx == -1 {
-		owners = append(owners, ref)
-	} else {
-		owners[idx] = ref
-	}
-	object.SetOwnerReferences(owners)
-}
+// 	owners := object.GetOwnerReferences()
+// 	if idx := indexOwnerRef(owners, ref); idx == -1 {
+// 		owners = append(owners, ref)
+// 	} else {
+// 		owners[idx] = ref
+// 	}
+// 	object.SetOwnerReferences(owners)
+// }
 
 func indexOwnerRef(ownerReferences []metav1.OwnerReference, ref metav1.OwnerReference) int {
 	for index, r := range ownerReferences {
@@ -42,7 +45,7 @@ func indexOwnerRef(ownerReferences []metav1.OwnerReference, ref metav1.OwnerRefe
 	return -1
 }
 
-func (r *Renderer) renderConfigMap(ns, name string, conf *stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
+func (r *Renderer) write2ConfigMap(ns, name string, conf *stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
 	s := ""
 
 	if conf != nil {
@@ -55,6 +58,7 @@ func (r *Renderer) renderConfigMap(ns, name string, conf *stunnerconfv1alpha1.St
 	}
 
 	immutable := true
+
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

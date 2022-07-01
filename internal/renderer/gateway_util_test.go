@@ -167,16 +167,15 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
 					testutils.TestNs, "gateway-1"), "gw name found")
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "1.2.3.4",
-				}
-
 				setGatewayStatusScheduled(gw, config.ControllerName)
 				ready := true
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]
+					addr := &addrPort{
+						addr: "1.2.3.4",
+						port: 1234,
+					}
+
 					_, err := r.renderListener(gw, gwConf, &l,
 						[]*gatewayv1alpha2.UDPRoute{}, addr)
 
@@ -287,6 +286,11 @@ func TestRenderGatewayUtil(t *testing.T) {
 				ready = false
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]
+					addr := &addrPort{
+						addr: "1.2.3.4",
+						port: 1234,
+					}
+
 					_, err := r.renderListener(gw, gwConf, &l,
 						[]*gatewayv1alpha2.UDPRoute{}, addr)
 

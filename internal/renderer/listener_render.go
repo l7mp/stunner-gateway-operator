@@ -13,10 +13,10 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1alpha1.GatewayConfig, l *gatewayv1alpha2.Listener, rs []*gatewayv1alpha2.UDPRoute, addr gatewayv1alpha2.GatewayAddress) (*stunnerconfv1alpha1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1alpha1.GatewayConfig, l *gatewayv1alpha2.Listener, rs []*gatewayv1alpha2.UDPRoute, ap *addrPort) (*stunnerconfv1alpha1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr",
-		addr)
+		fmt.Sprintf("%#v", ap))
 
 	proto := strings.ToUpper(string(l.Protocol))
 	if proto != "UDP" && proto != "TCP" {
@@ -32,12 +32,19 @@ func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1
 		maxPort = int(*gwConf.Spec.MaxPort)
 	}
 
+	a, p := "", 0
+	if ap != nil {
+		a = ap.addr
+		p = ap.port
+	}
+
 	lc := stunnerconfv1alpha1.ListenerConfig{
 		Name:         string(l.Name),
 		Protocol:     string(l.Protocol),
 		Addr:         "$STUNNER_ADDR", // Addr will be filled in from the pod environment
-		PublicAddr:   addr.Value,
 		Port:         int(l.Port),
+		PublicAddr:   a,
+		PublicPort:   p,
 		MinRelayPort: minPort,
 		MaxRelayPort: maxPort,
 	}

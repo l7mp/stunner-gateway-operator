@@ -46,16 +46,16 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "1.2.3.4",
+				addr := &addrPort{
+					addr: "1.2.3.4",
+					port: 1234,
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 			},
@@ -81,12 +81,10 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[1]
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "1.2.3.4",
+				addr := &addrPort{
+					addr: "1.2.3.4",
+					port: 1234,
 				}
-
 				_, err = r.renderListener(gw, gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
 				assert.Error(t, err, "render fails")
 			},
@@ -112,16 +110,16 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[2]
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "5.6.7.8",
+				addr := &addrPort{
+					addr: "5.6.7.8",
+					port: 4321,
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 4321, lc.PublicPort, "public-port")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 			},
@@ -155,16 +153,16 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "1.2.3.4",
+				addr := &addrPort{
+					addr: "5.6.7.8",
+					port: 4321,
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
-				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 4321, lc.PublicPort, "public-port")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultMinRelayPort,
 					lc.MinRelayPort, "min-port")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultMaxRelayPort,
@@ -199,10 +197,9 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				rtype := gatewayv1alpha2.AddressType("IPAddress")
-				addr := gatewayv1alpha2.GatewayAddress{
-					Type:  &rtype,
-					Value: "1.2.3.4",
+				addr := &addrPort{
+					addr: "5.6.7.8",
+					port: 4321,
 				}
 
 				_, err = r.renderListener(gw, gwConf, &l, rs, addr)
