@@ -8,11 +8,35 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes/status
+  verbs:
+  - get
 - apiGroups:
   - ""
   resources:
@@ -38,6 +62,20 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
