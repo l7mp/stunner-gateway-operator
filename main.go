@@ -102,6 +102,7 @@ func main() {
 
 	setupLog.Info("setting up STUNner config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
+		Scheme: scheme,
 		Logger: ctrl.Log,
 	})
 

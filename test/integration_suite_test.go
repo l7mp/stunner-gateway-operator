@@ -145,6 +145,7 @@ var _ = BeforeSuite(func() {
 
 	setupLog.Info("setting up STUNner config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
+		Scheme: scheme,
 		Logger: ctrl.Log,
 	})
 	Expect(r).NotTo(BeNil())
