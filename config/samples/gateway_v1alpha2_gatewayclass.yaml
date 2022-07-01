@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GatewayClass
+metadata:
+  name: gatewayclass-sample
+  namespace: stunner
+spec:
+  controllerName: "stunner.l7mp.io/gateway-operator"
+  parametersRef:
+    group: "stunner.l7mp.io"
+    kind: GatewayConfig
+    name: gatewayclass-sample
+    namespace: stunner
+  description: |
+    STUNner is a WebRTC ingress gateway controller for Kubernetes, visit github.com/l7mp/stunner
+    for more info.
+      
