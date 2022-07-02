@@ -214,9 +214,11 @@ func createLbService4Gateway(gw *gatewayv1alpha2.Gateway) *corev1.Service {
 	}
 
 	// forward the first requsted address to Kubernetes
-	if len(gw.Spec.Addresses) > 0 && gw.Spec.Addresses[0].Type == nil ||
-		(gw.Spec.Addresses[0].Type != nil || *gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {
-		svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
+	if len(gw.Spec.Addresses) > 0 {
+		if gw.Spec.Addresses[0].Type == nil ||
+			(gw.Spec.Addresses[0].Type != nil && *gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {
+			svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
+		}
 	}
 
 	return svc
