@@ -227,7 +227,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		return err
 	}
 
-	if err := controllerutil.SetOwnerReference(gc, cm, r.scheme); err != nil {
+	if err := controllerutil.SetOwnerReference(gwConf, cm, r.scheme); err != nil {
 		log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
 			"reference", store.GetObjectKey(cm))
 	}
@@ -313,7 +313,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 			return
 		}
 
-		if err := controllerutil.SetOwnerReference(gc, cm, r.scheme); err != nil {
+		if err := controllerutil.SetOwnerReference(gwConf, cm, r.scheme); err != nil {
 			log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
 				"reference", store.GetObjectKey(cm))
 		}
