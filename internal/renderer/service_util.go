@@ -42,16 +42,19 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 
 		if isServiceAnnotated4Gateway(svc, gw) {
 			ap, lb, own := getPublicAddrPort4Svc(svc, gw)
-
 			if ap == nil {
 				continue
 			}
+
+			r.log.V(4).Info("service: ready", "svc", store.GetObjectKey(svc),
+				"load-balancer", lb, "own", own, "address-port",
+				fmt.Sprintf("%s:%d", ap.addr, ap.port))
 
 			if lb == true {
 				// prepend!
 				aps = append([]addrPort{*ap}, aps...)
 			} else {
-				// prepend!
+				// append
 				aps = append(aps, *ap)
 			}
 
@@ -128,11 +131,11 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*a
 				addr: getFirstNodeAddr(),
 				port: int(svcPort.NodePort),
 			}
-			return ap, own, false
+			return ap, false, own
 		}
 	}
 
-	return nil, false, own
+	return nil, own, false
 }
 
 // first matching listener-proto-port and service-proto-port pair
@@ -170,17 +173,29 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 		}
 	}
 
+	// some load-balancer controllers do not include a status.Ingress[x].Ports
+	// substatus: we fall back to the first load-balancer IP we find and use
+	// the port from the service-port as a port
+	if len(st.Ingress) > 0 {
+		return &addrPort{
+			addr: st.Ingress[0].IP,
+			port: int(port),
+		}
+	}
+
 	return nil
 }
 
 // taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
 func isOwner(owner, owned metav1.Object, kind string) bool {
 	for _, ownerRef := range owned.GetOwnerReferences() {
+
 		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
 			ownerRef.Kind == kind {
 			return true
 		}
 	}
+
 	return false
 }
 
