@@ -19,29 +19,29 @@ Kubernetes Gateway is currently under development and supports a subset of the G
 Before you can build and run the STUNner Kubernetes Gateway, make sure you have the following software installed on your machine:
 - [git](https://git-scm.com/)
 - [GNU Make](https://www.gnu.org/software/software.html)
-- [Docker](https://www.docker.com/) v18.09+
+- [Docker](https://www.docker.com/) or [podman](https://podman.io)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
 ## Build the image
 
 1. Clone the repo and change into the `stunner-gateway-operator` directory:
 
-``` console
+   ``` console
    git clone https://github.com/l7mp/stunner-gateway-operator.git
    cd stunner-gateway-operator
-```
+   ```
 
-1. Build the image with [podman](https://podman.io) (required `sudo`):
- 
-``` console
-IMG=<my-image> make podman-build
-```
+1. Build the image, either with Docker of [podman](https://podman.io) (requires `sudo`):
+
+   ``` console
+   IMG=<my-image> make podman-build
+   ```
 
 1. Push the image to your container registry:
 
-``` console
-IMG=<my-image> make podman-push
-```
+   ``` console
+   IMG=<my-image> make podman-push
+   ```
 
 ## Deploy the operator
 
@@ -90,7 +90,7 @@ stunner-gateway-operator-controller-manager-65dbf8fb4-hjrjr   2/2     Running   
 <!-- ``` -->
 
 <!-- Lookup the public IP of the load balancer: -->
-   
+
 <!-- ``` -->
 <!-- kubectl get svc stunner-gateway -n stunner-gateway -->
 <!-- ```  -->
@@ -99,7 +99,7 @@ stunner-gateway-operator-controller-manager-65dbf8fb4-hjrjr   2/2     Running   
 
 The STUNner operator (partially) implements the official Kubernetes [Gateway
 API](https://gateway-api.sigs.k8s.io), which allows you to interact with STUNner using the
-convenience of `kubectl` and declarative YAML configurations. 
+convenience of `kubectl` and declarative YAML configurations.
 
 Below we configure a minimal STUNner gateway setup that exposes the STUN/TURN service of the
 STUNner gateway over UDP:3478 and TCP:3478.
@@ -122,17 +122,17 @@ helm install stunner stunner/stunner --set stunner.namespace=stunner
 1. Create a
    [GatewayClass](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass). This
    will serve as the root level configuration for your STUNner deployment:
-   
+
 ``` console
 cd stunner-gateway-operator
-kubectl apply -f config/samples/gateway_v1alpha2_gatewayclass.yaml 
+kubectl apply -f config/samples/gateway_v1alpha2_gatewayclass.yaml
 ```
 
 1. Now, we have to specify some important configuration for STUNner, by loading a `GatewayConfig`
    custom resource into Kubernetes. Make sure to use the `stunner` namespace we have just created;
    this will be the target namespace where the operator will render the running STUNner data-plane
-   configuration. 
-   
+   configuration.
+
    Make sure to customize the authentication mode and credentials used for STUNner; consult the
    [STUNner authentication guide](https://github.com/l7mp/stunner/blob/main/doc/AUTH.md) to
    understand how to set the `authType` parameter and the credentials below:
@@ -209,8 +209,8 @@ EOF
 
 1. Check the result: the operator should have rendered a valid and up to date STUNner configuration
    in the ConfigMap you specified in the above GatewayConfig (called `stunnerd-configmap` in our
-   example), in the same namespace where the root GatewayConfig lives. 
-   
+   example), in the same namespace where the root GatewayConfig lives.
+
 ```console
 kubectl get cm -n stunner stunnerd-configmap -o yaml
 apiVersion: v1
@@ -228,7 +228,7 @@ retvari@weber:/export/l7mp/stunner-gateway-operator$ kubectl get cm -n stunner s
    switches the STUNner daemon into watch mode: the daemon will get notified by Kubernetes whenever
    the operator renders a new configuration (e.g., when a Gateway or a UDPRoute changes) so that it
    can reconcile the most up-to-date configuration.
-   
+
 ```console
 kubectl apply -f - <<EOF
 apiVersion: apps/v1
@@ -271,9 +271,9 @@ EOF
    Kubernetes services. The corresponding public IP and port for each listener can be learned from
    the External IP field for the service; for instance, in the below example Kubernetes assigned
    the IP-pot pair 34.118.16.31:3478 for the UDP listener
-   
+
 ```console
-kubectl get svc -n stunner 
+kubectl get svc -n stunner
 NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)          AGE
 stunner-gateway-gateway-sample-svc   LoadBalancer   10.120.5.177   34.118.16.31   3478:31273/UDP   58m
 udp-echo                             ClusterIP      10.120.0.28    <none>         9001/UDP         32m
@@ -301,11 +301,11 @@ go run cmd/turncat/main.go --log=all:DEBUG udp://127.0.0.1:9000 \
 
 1. And finally open a local `socat` and send anything to the UDP echo server: you should see it
    echoing the same input back:
-   
+
 ```console
 echo "Hello STUNner" | socat - udp:localhost:9000
 ```
-   
+
 ## Help
 
 STUNner development is coordinated in Discord, send
