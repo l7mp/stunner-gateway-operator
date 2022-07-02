@@ -8,9 +8,8 @@ spec:
   parametersRef:
     group: "stunner.l7mp.io"
     kind: GatewayConfig
-    name: gatewayclass-sample
+    name: gatewayconfig-sample
     namespace: stunner
   description: |
-    STUNner is a WebRTC ingress gateway controller for Kubernetes, visit github.com/l7mp/stunner
-    for more info.
+    STUNner is a WebRTC ingress gateway for Kubernetes
       
