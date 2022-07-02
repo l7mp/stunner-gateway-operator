@@ -158,6 +158,40 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "no service-port stats ok",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.Status = corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{
+							IP: "1.2.3.4",
+						}},
+					}}
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+				_, err = r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(gc)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				addr, err := r.getPublicAddrPort4Gateway(gw)
+				assert.Error(t, err, "owner ref not found")
+				assert.NotNil(t, addr, "public addr-port found")
+				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
+				assert.Equal(t, 1, addr.port, "public port ok")
+			},
+		},
+		{
 			name: "multiple service-ports public-ip ok",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},

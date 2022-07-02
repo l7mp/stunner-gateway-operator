@@ -28,7 +28,7 @@ import (
 )
 
 // for debugging
-// var testerLogLevel = zapcore.Level(-4)
+//var testerLogLevel = zapcore.Level(-4)
 
 // info
 //var testerLogLevel = zapcore.DebugLevel
