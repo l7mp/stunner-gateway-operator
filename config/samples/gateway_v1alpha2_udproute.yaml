@@ -9,3 +9,7 @@ spec:
       sectionName: sample-listener-udp
     - name: gateway-sample
       sectionName: sample-listener-tcp
+  rules:
+    - backendRefs:
+        - name: udp-echo
+          namespace: stunner
