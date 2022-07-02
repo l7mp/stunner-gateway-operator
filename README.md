@@ -151,9 +151,9 @@ STUNner gateway over the standard TURN port UDP:3478.
    ```
 
 1. Then, create a target service that you will expose through STUNner to your clients.  For
-   instance, if you could let your clients to connect to your WebRTC media servers via STUNner (a
-   fairly probable setup for STUNner). For simplicity, below we use the simple UDP echo server from
-   the [STUNner UDP tunnel demo](https://github.com/l7mp/stunner/blob/main/examples/simple-tunnel):
+   instance, you could let your clients to connect to your WebRTC media servers (a fairly probable
+   setup for STUNner!). For simplicity, below we use the simple UDP echo server from the [STUNner
+   UDP tunnel demo](https://github.com/l7mp/stunner/blob/main/examples/simple-tunnel):
 
    ``` console
    kubectl create deployment -n stunner udp-echo --image=l7mp/net-debug:latest
@@ -197,18 +197,19 @@ STUNner gateway over the standard TURN port UDP:3478.
      namespace: stunner
    data:
      stunnerd.conf: '{"version":"v1alpha1","admin":{"name":"stunner-daemon","loglevel":"all:INFO"},"auth":{"type":"plaintext","realm":"stunner.l7mp.io","credentials":{"password":"pass-1","username":"user-1"}},"listeners":[{"name":"sample-listener-udp","protocol":"UDP","public_address":"34.116.153.23","public_port":31273,"address":"$STUNNER_ADDR","port":3478,"min_relay_port":32768,"max_relay_port":65535,"routes":["udproute-sample"]},{"name":"sample-listener-tcp","protocol":"TCP","public_address":"34.116.153.23","public_port":31273,"address":"$STUNNER_ADDR","port":3478,"min_relay_port":32768,"max_relay_port":65535,"routes":["udproute-sample"]}],"clusters":[{"name":"udproute-sample","type":"STRICT_DNS","endpoints":["udp-echo.stunner.svc.cluster.local"]}]}'
-   retvari@weber:/export/l7mp/stunner-gateway-operator$ kubectl get cm -n stunner stunnerd-configmap -o yaml
    ```
 
 ## Restart the STUNner daemon
 
-Next, we restart the STUNner pod to pick up the configuration rendered by the operator.
+Next, we restart the STUNner pod to pick up the configuration rendered by the operator. This is
+achieved by mapping the configuration rendered by the operator in the above ConfigMap into the
+STUNner pods via a configmap volume, so that the STUNner daemons can read up the new
+configuration. 
 
-1. Map the configuration rendered by the operator in the above ConfigMap into the STUNner pods, so
-   that the STUNner daemons can read the new configuration. The `-w` command line argument below
-   switches the STUNner daemon into watch mode: the daemon will get notified by Kubernetes whenever
-   the operator renders a new configuration into the ConfigMap (e.g., when a Gateway or a UDPRoute
-   changes) so that it can reconcile the most up-to-date configuration.
+1. Restart the STUNner data-plane. The `-w` command line argument below switches the STUNner daemon
+   into watch mode: the daemon will get notified by Kubernetes whenever the operator renders a new
+   configuration into the ConfigMap (e.g., when a Gateway or a UDPRoute changes) so that it can
+   reconcile the most up-to-date configuration.
 
    ```console
    kubectl apply -f - <<EOF
