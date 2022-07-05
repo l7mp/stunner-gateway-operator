@@ -329,10 +329,11 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
 1. In order for clients to be able to connect to our UDP echo service, they need to know the public
    IP address and port associated with the Gateway we have created above. In order to simplify
    this, the STUNner gateway operator automatically exposes all Gateways in standard Kubernetes
-   LoadBalancer services over a publicly available IP address and port. The corresponding public IP
-   and port for each listener can be learned from the External IP field for the service; for
-   instance, in the below example Kubernetes assigned the IP-pot pair 34.118.16.31:3478 for the UDP
-   listener
+   LoadBalancer services over a publicly available IP address and port. The name of the service is
+   using the template `stunner-gateway-<YOUR_GATEWAY_NAME>-svc` and it will always be created in
+   the same namespace as the Gateway. The corresponding public IP and port for each listener can be
+   learned from the External IP field for the service; for instance, in the below example
+   Kubernetes assigned the IP-pot pair 34.118.16.31:3478 for the UDP listener
 
    ```console
    kubectl get svc -n stunner
@@ -342,8 +343,13 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
    ```
 
    Observe how the `udp-echo` service does not have an externally reachable IP/port; the only way
-   to reach this service from the Internet via STUNner over STUN/TURN. You can now easily
-   substitute the UDP echo service with your WebRTC service.
+   to reach this service from the Internet is via STUNner over STUN/TURN. You can now easily
+   substitute the UDP echo service with your WebRTC service and imagine how STUNner would work in
+   your media plane.
+
+   Note that, for convenience, the operator readily includes the public IP and port for each
+   STUNner listener in the STUNner configuration file it creates (under the keys `public_address`
+   and `public_port`).
 
 1. Memoize the IP addresses and ports to be used to reach the UDP echo server behind STUNner:
 
@@ -366,7 +372,7 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
    ```
 
 1. And finally open a local `socat` and send anything to the UDP echo server: you should see it
-   echoing the same input back:
+   echoing back a nice greeting:
 
    ```console
    echo "Hello STUNner" | socat - udp:localhost:9000
@@ -377,7 +383,7 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
 
 Suppose your clients report that they cannot reach your fancy UDP echo service exposed via the
 public STUNner UDP Gateway due to, say, an overly restrictive enterprise firewall/NAT. No problem
-for STUNner: we can easily add a TCP listener to STUNner that will accept connections over the port
+for STUNner: we can easily set up a new TCP Gateway that will accept connections over the port
 TCP:3478 and route the client connection requests received on this listener to the same UDP echo
 service. Note that STUNner will conveniently handle the TCP bytestream received over the TCP
 listener and convert into a message-stream as expected by the UDP echo service.
@@ -439,7 +445,7 @@ listener and convert into a message-stream as expected by the UDP echo service.
 ## Connect to the TCP Gateway
 
 Once we added the TCP Gateway and modified the `udp-echo` Route to attach to both the UDP and the
-TCP Gateways, STUNner is ready to accept client connections over TCP as well. Let's check this
+TCP Gateway, STUNner is ready to accept client connections over TCP as well. Let's check this!
 
 1. Memoize the IP addresses and ports to be used to reach the TCP Gateway:
 
