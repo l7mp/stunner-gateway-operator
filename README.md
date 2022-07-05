@@ -282,7 +282,7 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
    The data under the key `stunnerd.conf` is the STUNner configuration rendered by the
    operator. Pretty-printing the JSON content will look something like the below:
 
-   ```json
+   ```javascript
    {
      "version": "v1alpha1",
      "admin": {
