@@ -11,5 +11,4 @@ spec:
     name: gatewayconfig-sample
     namespace: stunner
   description: |
-    STUNner is a WebRTC ingress gateway for Kubernetes
-      
+    STUNner is a WebRTC ingress gateway for Kubernetes  

@@ -38,7 +38,8 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 	aps := []addrPort{}
 
 	for _, svc := range store.Services.GetAll() {
-		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc))
+		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc), "status",
+			fmt.Sprintf("%#v", svc.Status))
 
 		if isServiceAnnotated4Gateway(svc, gw) {
 			ap, lb, own := getPublicAddrPort4Svc(svc, gw)
@@ -113,8 +114,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*a
 	}
 
 	i, found := getServicePort(gw, svc)
-
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+	if found && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		lbStatus := svc.Status.LoadBalancer
 
 		// we take the first ingress address assigned by the ingress controller
@@ -135,7 +135,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*a
 		}
 	}
 
-	return nil, own, false
+	return nil, false, own
 }
 
 // first matching listener-proto-port and service-proto-port pair
@@ -155,7 +155,7 @@ func getServicePort(gw *gatewayv1alpha2.Gateway, svc *corev1.Service) (int, bool
 func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatus, spIndex int) *addrPort {
 	// spIndex must point to a valid service-port
 	if len(svc.Spec.Ports) == 0 || spIndex >= len(svc.Spec.Ports) {
-		// fmt.Printf("INTERNAL ERROR: invalid service-port index\n")
+		fmt.Printf("getLBAddrPort4ServicePort: INTERNAL ERROR: invalid service-port index\n")
 		return nil
 	}
 
@@ -173,9 +173,9 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 		}
 	}
 
-	// some load-balancer controllers do not include a status.Ingress[x].Ports
-	// substatus: we fall back to the first load-balancer IP we find and use
-	// the port from the service-port as a port
+	// some load-balancer controllers do not include a status.Ingress[x].Ports substatus: we
+	// fall back to the first load-balancer IP we find and use the port from the service-port
+	// as a port
 	if len(st.Ingress) > 0 {
 		return &addrPort{
 			addr: st.Ingress[0].IP,
@@ -221,7 +221,7 @@ func createLbService4Gateway(gw *gatewayv1alpha2.Gateway) *corev1.Service {
 			Ports: []corev1.ServicePort{
 				{
 					Name:     fmt.Sprintf("stunner-gateway-%s-udp-port", gw.GetName()),
-					Protocol: corev1.ProtocolUDP,
+					Protocol: corev1.Protocol(gw.Spec.Listeners[0].Protocol),
 					Port:     int32(gw.Spec.Listeners[0].Port),
 				},
 			},
