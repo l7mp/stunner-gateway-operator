@@ -277,12 +277,12 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
      namespace: stunner
    data:
      stunnerd.conf: '{"version":"v1alpha1","admin":{"name":"stunner-daemon","loglevel":"all:INFO"},"auth":{"type":"plaintext","realm":"stunner.l7mp.io","credentials":{"password":"pass-1","username":"user-1"}},"listeners":[{"name":"udp-listener","protocol":"UDP","public_address":"34.116.220.190","public_port":3478,"address":"$STUNNER_ADDR","port":3478,"min_relay_port":32768,"max_relay_port":65535,"routes":["udp-echo"]}],"clusters":[{"name":"udp-echo","type":"STRICT_DNS","endpoints":["udp-echo.stunner.svc.cluster.local"]}]}'
-  ```
+   ```
 
    The data under the key `stunnerd.conf` is the STUNner configuration rendered by the
    operator. Pretty-printing the JSON content will look something like the below:
 
-   ```javascript
+   ```yaml
    {
      "version": "v1alpha1",
      "admin": {
