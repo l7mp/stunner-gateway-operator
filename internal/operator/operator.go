@@ -126,6 +126,7 @@ func (o *Operator) eventLoop(ctx context.Context) {
 			}
 
 		case <-ctx.Done():
+			// FIXME revert gateway-class status to "Waiting..."
 			return
 		}
 	}
