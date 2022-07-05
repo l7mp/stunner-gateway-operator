@@ -1,23 +1,23 @@
-# STUNner Kubernetes Gateway
+# STUNner Kubernetes Gateway Operator
 
 *UNDER CONSTRUCTION*
 
-STUNner Kubernetes Gateway is an open-source implementation of the [Gateway
+The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Gateway
 API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data
 plane. The goal is to implement the part of the core Gateway APIs -- `Gateway`, `GatewayClass`, and
-`UDPRoute` objects -- necessary to configure a STUNner WebRTC ingress gateway via the Kubernetes
-control plane. The STUNner Kubernetes Gateway is currently under development and supports a subset
-of the Gateway API.
+`UDPRoute` objects -- necessary to fully configure the STUNner WebRTC ingress gateway via the
+Kubernetes control plane. The STUNner Kubernetes Gateway Operator is currently under development
+and supports a subset of the Gateway API.
 
 > Warning: This project is in active development (pre-alpha feature state), consider this before
 > deploying it in a production environment.  All APIs, SDKs, and packages are subject to change.
 
-# Run the STUNner Kubernetes Gateway
+# Run the STUNner Kubernetes Gateway Operator
 
 ## Prerequisites
 
-Before you can build and run the STUNner Kubernetes Gateway, make sure you have the following
-software installed on your machine:
+Before you can build and run the STUNner Kubernetes Gateway Operator, make sure you have the
+following software installed on your machine:
 - [git](https://git-scm.com/)
 - [GNU Make](https://www.gnu.org/software/software.html)
 - [Docker](https://www.docker.com/) or [podman](https://podman.io)
@@ -118,7 +118,9 @@ the [STUNner documentation](https://github.com/l7mp/stunner/blob/main/doc/README
 
 ## Deploy the operator
 
-You can deploy STUNner Kubernetes Gateway on an existing Kubernetes 1.22+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster.
+You can deploy the STUNner Kubernetes Gateway Operator on an existing Kubernetes 1.22+ cluster. The
+following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/)
+cluster.
 
 1. Install the Kubernetes Gateway CRDs from the official source (these are not part of the STUNner
    distribution). The operator targets version 0.4.3 of the Gateway `v1alpha2` API:
@@ -127,14 +129,14 @@ You can deploy STUNner Kubernetes Gateway on an existing Kubernetes 1.22+ cluste
    kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.3"
    ```
 
-1. Deploy the STUNner Kubernetes Gateway:
+1. Deploy the STUNner Kubernetes Gateway Operator:
 
    ``` console
    make install
    make deploy
    ```
 
-1. Confirm the STUNner Kubernetes Gateway is running in `stunner-gateway` namespace:
+1. Confirm the operator is running in `stunner-gateway` namespace:
 
    ``` console
    kubectl get pods -n stunner-gateway-operator-system
