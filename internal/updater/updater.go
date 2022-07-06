@@ -39,7 +39,7 @@ type Updater struct {
 func NewUpdater(cfg UpdaterConfig) *Updater {
 	return &Updater{
 		manager:   cfg.Manager,
-		updaterCh: make(chan event.Event, 5),
+		updaterCh: make(chan event.Event, 10),
 		log:       cfg.Logger.WithName("updater"),
 	}
 }

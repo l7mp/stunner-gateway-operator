@@ -45,7 +45,7 @@ type Renderer struct {
 func NewRenderer(cfg RendererConfig) *Renderer {
 	return &Renderer{
 		scheme:   cfg.Scheme,
-		renderCh: make(chan event.Event, 5),
+		renderCh: make(chan event.Event, 10),
 		gen:      0,
 		log:      cfg.Logger.WithName("renderer"),
 	}

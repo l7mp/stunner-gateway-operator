@@ -57,7 +57,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 	return &Operator{
 		mgr:        cfg.Manager,
 		renderCh:   cfg.RenderCh,
-		operatorCh: make(chan event.Event, 5),
+		operatorCh: make(chan event.Event, 10),
 		updaterCh:  cfg.UpdaterCh,
 		logger:     cfg.Logger,
 	}
