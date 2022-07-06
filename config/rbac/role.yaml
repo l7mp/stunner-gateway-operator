@@ -34,12 +34,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - endpoints/status
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
   - nodes
   verbs:
   - get
