@@ -4,8 +4,8 @@
 
 The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Gateway
 API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data
-plane. The goal is to implement the part of the core Gateway APIs -- `Gateway`, `GatewayClass`, and
-`UDPRoute` objects -- necessary to fully configure the STUNner WebRTC ingress gateway via the
+plane. The goal is to implement the part of the core Gateway APIs -- Gateway, GatewayClass, and
+UDPRoute objects -- necessary to fully configure the STUNner WebRTC ingress gateway via the
 Kubernetes control plane. The STUNner Kubernetes Gateway Operator is currently under development
 and supports a subset of the Gateway API.
 
@@ -45,7 +45,7 @@ the [STUNner documentation](https://github.com/l7mp/stunner/blob/main/doc/README
 
 1. Restart STUNner to pick up the configuration that will be rendered by the operator (to be
    configured next). The operator will be in charge of watching the Gateway API resources created
-   by the user in the Kubernetes control plane (i.e., via `kubectl` applying various YAMLs) and
+   by the user in the Kubernetes control plane (i.e., via kubectl-applying various YAMLs) and
    creating a configuration file for the STUNner data-plane pods into a ConfigMap. This config-map
    is then mapped into the filesystem of the STUNner pods as a configmap volume, so that the
    STUNner daemons can reconcile the new configuration according to the policies specified by the
