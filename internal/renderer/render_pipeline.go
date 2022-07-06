@@ -57,7 +57,7 @@ func (r *Renderer) Render(e *event.EventRender) {
 	// pipeline to render into the same configmap, but at least we can prevent race conditions
 	// by serializing update requests on the updaterChannel
 	for _, gc := range gcs {
-		u := event.NewEventUpdate()
+		u := event.NewEventUpdate(r.gen)
 
 		if err := r.renderGatewayClass(gc, u); err != nil {
 			// an irreparable error happened, invalidate the config and set all related

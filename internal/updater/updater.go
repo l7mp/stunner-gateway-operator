@@ -32,7 +32,6 @@ type UpdaterConfig struct {
 type Updater struct {
 	ctx       context.Context
 	manager   manager.Manager
-	gen       int
 	updaterCh chan event.Event
 	log       logr.Logger
 }
@@ -40,7 +39,6 @@ type Updater struct {
 func NewUpdater(cfg UpdaterConfig) *Updater {
 	return &Updater{
 		manager:   cfg.Manager,
-		gen:       0,
 		updaterCh: make(chan event.Event, 5),
 		log:       cfg.Logger.WithName("updater"),
 	}
@@ -84,41 +82,41 @@ func (u *Updater) GetUpdaterChannel() chan event.Event {
 }
 
 func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
-	u.gen += 1
-	u.log.Info("processing update event", "generation", u.gen, "update", e.String())
+	gen := e.Generation
+	u.log.Info("processing update event", "generation", gen, "update", e.String())
 
 	// run the upsert queue
 	q := e.UpsertQueue
 	for _, gc := range q.GatewayClasses.GetAll() {
-		if err := u.updateGatewayClass(gc); err != nil {
+		if err := u.updateGatewayClass(gc, gen); err != nil {
 			u.log.Error(err, "cannot update gateway-class")
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.GetAll() {
-		if err := u.updateGateway(gw); err != nil {
+		if err := u.updateGateway(gw, gen); err != nil {
 			u.log.Error(err, "cannot update gateway")
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.GetAll() {
-		if err := u.updateUDPRoute(ro); err != nil {
+		if err := u.updateUDPRoute(ro, gen); err != nil {
 			u.log.Error(err, "cannot update UDP route")
 			continue
 		}
 	}
 
 	for _, svc := range q.Services.GetAll() {
-		if op, err := u.upsertService(svc); err != nil {
+		if op, err := u.upsertService(svc, gen); err != nil {
 			u.log.Error(err, "cannot update service", "operation", op)
 			continue
 		}
 	}
 
 	for _, cm := range q.ConfigMaps.GetAll() {
-		if op, err := u.upsertConfigMap(cm); err != nil {
+		if op, err := u.upsertConfigMap(cm, gen); err != nil {
 			u.log.Error(err, "cannot upsert config-map", "operation", op)
 			continue
 		}
@@ -127,35 +125,35 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	// run the delete queue
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
-		if err := u.deleteObject(gc); err != nil {
+		if err := u.deleteObject(gc, gen); err != nil {
 			u.log.Error(err, "cannot delete gateway-class")
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.Objects() {
-		if err := u.deleteObject(gw); err != nil {
+		if err := u.deleteObject(gw, gen); err != nil {
 			u.log.Error(err, "cannot delete gateway")
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.Objects() {
-		if err := u.deleteObject(ro); err != nil {
+		if err := u.deleteObject(ro, gen); err != nil {
 			u.log.Error(err, "cannot delete UDP route")
 			continue
 		}
 	}
 
 	for _, svc := range q.Services.Objects() {
-		if err := u.deleteObject(svc); err != nil {
+		if err := u.deleteObject(svc, gen); err != nil {
 			u.log.Error(err, "cannot delete service")
 			continue
 		}
 	}
 
 	for _, cm := range q.ConfigMaps.Objects() {
-		if err := u.deleteObject(cm); err != nil {
+		if err := u.deleteObject(cm, gen); err != nil {
 			u.log.Error(err, "cannot delete config-map")
 			continue
 		}

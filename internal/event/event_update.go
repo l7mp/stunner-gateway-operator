@@ -19,10 +19,11 @@ type EventUpdate struct {
 	Type        EventType
 	UpsertQueue UpdateConf
 	DeleteQueue UpdateConf
+	Generation  int
 }
 
 // NewEvent returns an empty event
-func NewEventUpdate() *EventUpdate {
+func NewEventUpdate(generation int) *EventUpdate {
 	return &EventUpdate{
 		Type: EventTypeUpdate,
 		UpsertQueue: UpdateConf{
@@ -39,6 +40,7 @@ func NewEventUpdate() *EventUpdate {
 			Services:       store.NewServiceStore(),
 			ConfigMaps:     store.NewConfigMapStore(),
 		},
+		Generation: generation,
 	}
 }
 
@@ -47,9 +49,9 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s: upsert-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d / "+
-		"delete-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d",
-		e.Type.String(), e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
+	return fmt.Sprintf("%s (gen: %d): upsert-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d / "+
+		"delete-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d", e.Type.String(),
+		e.Generation, e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
 		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
 		e.DeleteQueue.GatewayClasses.Len(), e.DeleteQueue.Gateways.Len(),
 		e.DeleteQueue.UDPRoutes.Len(), e.DeleteQueue.Services.Len(), e.DeleteQueue.ConfigMaps.Len())

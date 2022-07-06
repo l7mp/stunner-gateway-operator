@@ -76,7 +76,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate()
+				u := event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err = r.renderGatewayClass(gc, u)
@@ -160,7 +160,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate()
+				u := event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err = r.renderGatewayClass(gc, u)
@@ -243,7 +243,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate()
+				u := event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				r.invalidateGatewayClass(gc, u, errors.New("dummy"))
@@ -351,7 +351,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate()
+				u := event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err := r.renderGatewayClass(gc, u)
@@ -425,7 +425,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				u = event.NewEventUpdate()
+				u = event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err = r.renderGatewayClass(gc, u)
@@ -540,7 +540,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate()
+				u := event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err := r.renderGatewayClass(gc, u)
@@ -616,7 +616,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				u = event.NewEventUpdate()
+				u = event.NewEventUpdate(0)
 				assert.NotNil(t, u, "update event create")
 
 				err = r.renderGatewayClass(gc, u)

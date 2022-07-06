@@ -23,8 +23,9 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass) error {
-	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc))
+func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass, gen int) error {
+	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc), "generation",
+		gen)
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
@@ -43,14 +44,15 @@ func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass) error {
 		return err
 	}
 
-	u.log.V(1).Info("gateway-class updated", "resource", store.GetObjectKey(gc), "result",
-		current)
+	u.log.V(1).Info("gateway-class updated", "resource", store.GetObjectKey(gc), "generation",
+		gen, "result", current)
 
 	return nil
 }
 
-func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway) error {
-	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw))
+func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway, gen int) error {
+	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw), "generation",
+		gen)
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
@@ -68,14 +70,15 @@ func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway) error {
 		return err
 	}
 
-	u.log.V(1).Info("gateway updated", "resource", store.GetObjectKey(gw), "result",
-		current)
+	u.log.V(1).Info("gateway updated", "resource", store.GetObjectKey(gw), "generation", gen,
+		"result", current)
 
 	return nil
 }
 
-func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute) error {
-	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro))
+func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute, gen int) error {
+	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro), "generation",
+		gen)
 
 	cli := u.manager.GetClient()
 	current := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -93,14 +96,14 @@ func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute) error {
 		return err
 	}
 
-	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "result",
-		current)
+	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "generation",
+		gen, "result", current)
 
 	return nil
 }
 
-func (u *Updater) upsertService(svc *corev1.Service) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("upsert service", "resource", store.GetObjectKey(svc))
+func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert service", "resource", store.GetObjectKey(svc), "generation", gen)
 
 	client := u.manager.GetClient()
 	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -126,14 +129,15 @@ func (u *Updater) upsertService(svc *corev1.Service) (ctrlutil.OperationResult, 
 			store.GetObjectKey(svc), err)
 	}
 
-	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "result",
-		fmt.Sprintf("%+v", current))
+	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "generation",
+		gen, "result", fmt.Sprintf("%+v", current))
 
 	return op, nil
 }
 
-func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("upsert config-map", "resource", store.GetObjectKey(cm))
+func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert config-map", "resource", store.GetObjectKey(cm), "generation",
+		gen)
 
 	client := u.manager.GetClient()
 	current := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
@@ -162,12 +166,14 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap) (ctrlutil.OperationResul
 			store.GetObjectKey(cm), err)
 	}
 
-	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "result",
-		fmt.Sprintf("%+v", current))
+	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "generation",
+		gen, "result", fmt.Sprintf("%+v", current))
 
 	return op, nil
 }
 
-func (u *Updater) deleteObject(o client.Object) error {
+func (u *Updater) deleteObject(o client.Object, gen int) error {
+	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
+
 	return u.manager.GetClient().Delete(u.ctx, o)
 }
