@@ -37,4 +37,7 @@ const (
 	// DefaultStunnerDeploymentValue defines the label value used to mark the stunnerd deployment
 	// FIXME make this configurable
 	DefaultStunnerDeploymentValue = "stunner"
+
+	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints
+	DefaultEnableEndpointDiscovery = true
 )

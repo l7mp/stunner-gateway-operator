@@ -179,3 +179,26 @@ var TestNode = corev1.Node{
 		}},
 	},
 }
+
+// Endpoints for the TestSvc
+var TestEndpoint = corev1.Endpoints{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testservice-ok", // must be the same as the service!
+	},
+	Subsets: []corev1.EndpointSubset{{
+		Addresses: []corev1.EndpointAddress{{
+			IP: "1.2.3.4",
+		}, {
+			IP: "1.2.3.5",
+		}},
+		NotReadyAddresses: []corev1.EndpointAddress{{
+			IP: "1.2.3.6",
+		}},
+		Ports: []corev1.EndpointPort{},
+	}, {
+		Addresses: []corev1.EndpointAddress{{
+			IP: "1.2.3.7",
+		}},
+	}},
+}

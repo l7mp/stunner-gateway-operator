@@ -3,18 +3,21 @@ package renderer
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/types"
 	// corev1 "k8s.io/api/core/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // FIXME handle endpoint discovery for non-headless services
 func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1alpha1.ClusterConfig, error) {
 	r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
-	// track down the backendref and turn it into a FQDN for STUNner strict-dns clusters
+	// track down the backendref
 	rs := ro.Spec.Rules
 	if len(rs) == 0 {
 		return nil, fmt.Errorf("no rules found in route %q", store.GetObjectKey(ro))
@@ -25,7 +28,9 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 			"considering only the first one", len(rs), store.GetObjectKey(ro))
 	}
 
-	fqdns := []string{}
+	eps := []string{}
+
+	ctype := stunnerconfv1alpha1.ClusterTypeStatic
 	for _, b := range rs[0].BackendRefs {
 
 		// core.v1 has empty Group
@@ -47,19 +52,41 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 			ns = string(*b.Namespace)
 		}
 
-		fqdn := fmt.Sprintf("%s.%s.svc.cluster.local", string(b.Name), ns)
+		ep := []string{}
+		if config.EnableEndpointDiscovery == true {
+			ctype = stunnerconfv1alpha1.ClusterTypeStatic
+			n := types.NamespacedName{
+				Namespace: ns,
+				Name:      string(b.Name),
+			}
 
-		r.log.V(3).Info("renderCluster: adding FQDN to endpoint list",
-			"route", store.GetObjectKey(ro), "fqdn", fqdn)
+			svc := store.Services.GetObject(n)
+			if svc == nil {
+				continue
+			}
 
-		fqdns = append(fqdns, fqdn)
+			r.log.V(4).Info("renderCluster: found backend service", "route",
+				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "svc",
+				store.GetObjectKey(svc))
+
+			ep = getEndpointAddrs(svc, false)
+		} else {
+			// fall back to strict DNS and hope for the best
+			ctype = stunnerconfv1alpha1.ClusterTypeStrictDNS
+			ep = append(ep, fmt.Sprintf("%s.%s.svc.cluster.local", string(b.Name), ns))
+		}
+
+		r.log.V(3).Info("renderCluster: adding Endpoints to endpoint list", "route",
+			store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "cluster-type",
+			ctype.String(), "endpoints", ep)
+
+		eps = append(eps, ep...)
 	}
 
-	ctype := stunnerconfv1alpha1.ClusterTypeStrictDNS
 	cluster := stunnerconfv1alpha1.ClusterConfig{
 		Name:      ro.Name,
 		Type:      ctype.String(),
-		Endpoints: fqdns,
+		Endpoints: eps,
 	}
 
 	// validate so that defaults get filled in

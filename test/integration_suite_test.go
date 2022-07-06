@@ -88,7 +88,7 @@ var (
 	// }
 )
 
-func TimesampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(time.RFC3339Nano))
 }
 

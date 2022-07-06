@@ -56,6 +56,7 @@ var (
 	testGw       = testutils.TestGw.DeepCopy()
 	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
 	testSvc      = testutils.TestSvc.DeepCopy()
+	testEndpoint = testutils.TestEndpoint.DeepCopy()
 	_            = fmt.Sprintf("whatever: %d", 1)
 )
 
@@ -64,10 +65,14 @@ var _ = Describe("Integration test:", func() {
 	// fmt.Printf("%#v\n", testUDPRoute)
 	// fmt.Printf("%#v\n", testSvc)
 
-	Context("When creating a minimal set of API resources", func() {
+	// WITHOUT EDS
+	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
+			// switch EDS off
+			config.EnableEndpointDiscovery = false
+
 			ctrl.Log.Info("loading GatewayClass")
 			// fmt.Printf("%#v\n", testGwClass)
 			Expect(k8sClient.Create(ctx, testGwClass)).Should(Succeed())
@@ -611,7 +616,7 @@ var _ = Describe("Integration test:", func() {
 		})
 	})
 
-	Context("When re-loading the gateway and the route resources", func() {
+	Context("When re-loading the gateway and the route resources (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should render a valid STUNner config", func() {
@@ -826,7 +831,7 @@ var _ = Describe("Integration test:", func() {
 		})
 	})
 
-	Context("When changing a route parentref to the TCP listener", func() {
+	Context("When changing a route parentref to the TCP listener (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 		sn := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
 
@@ -1045,7 +1050,7 @@ var _ = Describe("Integration test:", func() {
 		})
 	})
 
-	Context("The controller should dynamically render a new valid STUNner config when", func() {
+	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
@@ -1471,26 +1476,48 @@ var _ = Describe("Integration test:", func() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 
 			Expect(conf.Listeners).To(HaveLen(4))
-			l := conf.Listeners[0]
+			l := stunnerconfv1alpha1.ListenerConfig{}
+
+			for _, _l := range conf.Listeners {
+				if _l.Name == "gateway-1-listener-udp" {
+					l = _l
+					break
+				}
+			}
 			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Routes).To(HaveLen(2))
 			Expect(l.Routes).Should(ContainElement("udproute-ok"))
 			Expect(l.Routes).Should(ContainElement("route-2"))
 
-			l = conf.Listeners[1]
+			for _, _l := range conf.Listeners {
+				if _l.Name == "gateway-1-listener-tcp" {
+					l = _l
+					break
+				}
+			}
 			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Routes).To(HaveLen(0))
 
-			l = conf.Listeners[2]
+			for _, _l := range conf.Listeners {
+				if _l.Name == "gateway-2-udp" {
+					l = _l
+					break
+				}
+			}
 			Expect(l.Name).Should(Equal("gateway-2-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1234))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes).Should(ContainElement("route-2"))
 
-			l = conf.Listeners[3]
+			for _, _l := range conf.Listeners {
+				if _l.Name == "gateway-2-tcp" {
+					l = _l
+					break
+				}
+			}
 			Expect(l.Name).Should(Equal("gateway-2-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(4321))
@@ -1518,6 +1545,395 @@ var _ = Describe("Integration test:", func() {
 			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("dummy.testnamespace.svc.cluster.local"))
 			Expect(c.Endpoints).Should(ContainElement("dummy-2.testnamespace.svc.cluster.local"))
+		})
+
+		It("should survive a full cleanup", func() {
+			ctrl.Log.Info("deleting Gateway")
+			Expect(k8sClient.Delete(ctx, testGw)).Should(Succeed())
+
+			ctrl.Log.Info("deleting UDPRoute")
+			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
+
+			ctrl.Log.Info("deleting gateway-2")
+			gw := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: testutils.TestGw.GetNamespace(),
+			}}
+			Expect(k8sClient.Delete(ctx, gw)).Should(Succeed())
+
+			ctrl.Log.Info("deleting route-3")
+			ro := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+				Name:      "route-2",
+				Namespace: testUDPRoute.GetNamespace(),
+			}}
+			Expect(k8sClient.Delete(ctx, ro)).Should(Succeed())
+
+			// restore
+			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+		})
+	})
+
+	// WITH EDS
+	Context("When creating a minimal set of API resources (EDS ENABLED)", func() {
+		conf := &stunnerconfv1alpha1.StunnerConfig{}
+
+		It("should survive loading a minimal config", func() {
+			// switch EDS off
+			config.EnableEndpointDiscovery = true
+
+			recreateOrUpdateGateway(func(current *gatewayv1alpha2.Gateway) {})
+			recreateOrUpdateUDPRoute(func(current *gatewayv1alpha2.UDPRoute) {})
+
+			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := testutils.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 2 && len(c.Clusters) == 1 {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should re-render STUNner config with one cluster", func() {
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).Should(BeEmpty())
+
+			Expect(conf.Clusters).To(HaveLen(1))
+
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
+		It("should set the Route status", func() {
+			ro := &gatewayv1alpha2.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				ro)).Should(Succeed())
+
+			Expect(ro.Status.Parents).To(HaveLen(1))
+			ps := ro.Status.Parents[0]
+
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gatewayv1alpha2.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gatewayv1alpha2.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gatewayv1alpha2.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gatewayv1alpha2.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController("gatewayclass-ok")))
+
+			// Expect(ps.ParentRef.Group).To(BeNil())
+			// Expect(ps.ParentRef.Kind).To(BeNil())
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gatewayv1alpha2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
+
+			s := meta.FindStatusCondition(ps.Conditions,
+				string(gatewayv1alpha2.ConditionRouteAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+		})
+	})
+
+	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", func() {
+		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		sn := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
+
+		It("should render a valid STUNner config", func() {
+			ctrl.Log.Info("re-loading UDPRoute")
+
+			recreateOrUpdateUDPRoute(func(current *gatewayv1alpha2.UDPRoute) {
+				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", lookupKey)
+			Eventually(func() bool {
+				cm := &corev1.ConfigMap{}
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := testutils.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				if len(c.Listeners[1].Routes) == 1 {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+		})
+
+		It("should update the route for the listeners", func() {
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			// fmt.Printf("1-%#v\n", conf)
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(0))
+
+			l = conf.Listeners[1]
+			if l.Name != "gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
+		It("should reset status on all resources", func() {
+			gw := &gatewayv1alpha2.Gateway{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
+				gw)).Should(Succeed())
+			Expect(gw.Status.Conditions).To(HaveLen(2))
+
+			s := meta.FindStatusCondition(gw.Status.Conditions,
+				string(gatewayv1alpha2.GatewayConditionScheduled))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.GatewayConditionScheduled)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gatewayv1alpha2.GatewayConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.GatewayConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// listeners: no public gateway address so Ready status is False
+			Expect(gw.Status.Listeners).To(HaveLen(3))
+
+			// listener[0]: OK
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gatewayv1alpha2.ListenerConditionDetached))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionDetached)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonAttached)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gatewayv1alpha2.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonPending)))
+
+			// listeners[1]: detached
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gatewayv1alpha2.ListenerConditionDetached))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionDetached)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gatewayv1alpha2.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonPending)))
+
+			// listeners[2]: ok
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gatewayv1alpha2.ListenerConditionDetached))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionDetached)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonAttached)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gatewayv1alpha2.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gatewayv1alpha2.ListenerReasonPending)))
+
+			ro := &gatewayv1alpha2.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				ro)).Should(Succeed())
+
+			Expect(ro.Status.Parents).To(HaveLen(1))
+			ps := ro.Status.Parents[0]
+
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gatewayv1alpha2.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gatewayv1alpha2.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gatewayv1alpha2.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gatewayv1alpha2.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController("gatewayclass-ok")))
+
+			// Expect(ps.ParentRef.Group).To(BeNil())
+			// Expect(ps.ParentRef.Kind).To(BeNil())
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gatewayv1alpha2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(sn)))
+			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gatewayv1alpha2.ConditionRouteAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// Expect(k8sClient).To(BeNil())
+		})
+
+		It("should survive a full cleanup", func() {
+			ctrl.Log.Info("deleting GatewayClass")
+			Expect(k8sClient.Delete(ctx, testGwClass)).Should(Succeed())
+
+			ctrl.Log.Info("deleting GatewayConfig")
+			Expect(k8sClient.Delete(ctx, testGwConfig)).Should(Succeed())
+
+			ctrl.Log.Info("deleting Gateway")
+			Expect(k8sClient.Delete(ctx, testGw)).Should(Succeed())
+
+			ctrl.Log.Info("deleting UDPRoute")
+			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
+
+			ctrl.Log.Info("deleting Service")
+			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
+
+			// restore
+			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
 		})
 	})
 })

@@ -233,3 +233,21 @@ func dumpParentRef(p *gatewayv1alpha2.ParentRef) string {
 	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s, SectionName: %s}",
 		g, k, ns, p.Name, sn)
 }
+
+func dumpBackendRef(b *gatewayv1alpha2.BackendRef) string {
+	g, k, ns := "<NIL>", "<NIL>", "<NIL>"
+	if b.Group != nil {
+		g = string(*b.Group)
+	}
+
+	if b.Kind != nil {
+		k = string(*b.Kind)
+	}
+
+	if b.Namespace != nil {
+		ns = string(*b.Namespace)
+	}
+
+	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s}",
+		g, k, ns, b.Name)
+}

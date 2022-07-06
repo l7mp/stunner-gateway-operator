@@ -27,10 +27,7 @@ import (
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-// for debugging
 //var testerLogLevel = zapcore.Level(-4)
-
-// info
 //var testerLogLevel = zapcore.DebugLevel
 var testerLogLevel = zapcore.ErrorLevel
 
@@ -52,6 +49,7 @@ type renderTestConfig struct {
 	rs     []gatewayv1alpha2.UDPRoute
 	svcs   []corev1.Service
 	nodes  []corev1.Node
+	eps    []corev1.Endpoints
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -107,6 +105,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Nodes.Flush()
 			for i := range c.nodes {
 				store.Nodes.Upsert(&c.nodes[i])
+			}
+
+			store.Endpoints.Flush()
+			for i := range c.eps {
+				store.Endpoints.Upsert(&c.eps[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

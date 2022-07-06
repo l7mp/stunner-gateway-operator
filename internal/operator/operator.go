@@ -109,6 +109,14 @@ func (o *Operator) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot register node controller: %w", err)
 	}
 
+	if config.EnableEndpointDiscovery == true {
+		log.V(3).Info("starting Endpoint controller")
+		err = stunnerctrl.RegisterEndpointController(o.mgr, o.operatorCh)
+		if err != nil {
+			return fmt.Errorf("cannot register endpoint controller: %w", err)
+		}
+	}
+
 	go o.eventLoop(ctx)
 
 	return nil
@@ -163,6 +171,8 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 			store.Services.Upsert(e.Object)
 		case *corev1.Node:
 			store.Nodes.Upsert(e.Object)
+		case *corev1.Endpoints:
+			store.Endpoints.Upsert(e.Object)
 		default:
 			return fmt.Errorf("could not process event %q for an unknown object %q",
 				e.String(), key.String())
@@ -188,6 +198,10 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 			store.UDPRoutes.Remove(e.Key)
 		case event.EventKindService:
 			store.Services.Remove(e.Key)
+		case event.EventKindNode:
+			store.Nodes.Remove(e.Key)
+		case event.EventKindEndpoint:
+			store.Endpoints.Remove(e.Key)
 		default:
 			return fmt.Errorf("could not process event %q for an unknown object %q",
 				e.String(), e.Key.String())
@@ -195,7 +209,6 @@ func (o *Operator) ProcessEvent(e event.Event) error {
 
 		// trigger the render event
 		o.renderCh <- event.NewEventRender(fmt.Sprintf("delete on %s", e.Key.String()))
-
 	}
 
 	return nil
