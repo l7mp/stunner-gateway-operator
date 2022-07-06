@@ -25,7 +25,6 @@ import (
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch
-//+kubebuilder:rbac:groups=core,resources=endpoints/status,verbs=get
 
 type endpointReconciler struct {
 	client.Client
@@ -42,7 +41,8 @@ func RegisterEndpointController(mgr manager.Manager, ch chan event.Event) error 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Endpoints{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		// WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Complete(r)
 }
 

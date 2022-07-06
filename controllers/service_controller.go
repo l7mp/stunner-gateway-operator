@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
@@ -47,13 +47,14 @@ func RegisterServiceController(mgr manager.Manager, ch chan event.Event) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Service{}).
-		// watch only for services that expose our gateways (have a
-		// "GatewayAddressAnnotationKey" annotation)
-		WithEventFilter(predicate.NewPredicateFuncs(func(o client.Object) bool {
-			as := o.GetAnnotations()
-			_, found := as[config.GatewayAddressAnnotationKey]
-			return found
-		})).
+		// // watch only for services that expose our gateways (have a
+		// // "GatewayAddressAnnotationKey" annotation)
+		// WithEventFilter(predicate.NewPredicateFuncs(func(o client.Object) bool {
+		// 	as := o.GetAnnotations()
+		// 	_, found := as[config.GatewayAddressAnnotationKey]
+		// 	return found
+		// })).
+		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Complete(r)
 }
 

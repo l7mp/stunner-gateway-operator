@@ -16,6 +16,7 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -43,6 +44,7 @@ func RegisterNodeController(mgr manager.Manager, ch chan event.Event) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
+		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Complete(r)
 }
 
