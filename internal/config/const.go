@@ -39,6 +39,5 @@ const (
 	DefaultStunnerDeploymentValue = "stunner"
 
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints
-	// DefaultEnableEndpointDiscovery = false
 	DefaultEnableEndpointDiscovery = true
 )

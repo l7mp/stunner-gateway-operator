@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -59,6 +60,7 @@ func main() {
 	var controllerName string
 	var metricsAddr string
 	var enableLeaderElection bool
+	var enableEDS bool
 	var probeAddr string
 	flag.StringVar(&controllerName, "controller-name", config.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
@@ -67,6 +69,8 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableEDS, "endpoint-discovery", config.DefaultEnableEndpointDiscovery,
+		fmt.Sprintf("Enable endpoint discovery, default: %t.", config.DefaultEnableEndpointDiscovery))
 	opts := zap.Options{
 		Development: true,
 	}
@@ -76,6 +80,9 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
 	}))
+
+	setupLog.Info("endpoint discovery enabled: %t", enableEDS)
+	config.EnableEndpointDiscovery = enableEDS
 
 	setupLog.Info("setting up Kubernetes controller manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
