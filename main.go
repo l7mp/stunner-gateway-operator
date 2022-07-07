@@ -81,7 +81,7 @@ func main() {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
 	}))
 
-	setupLog.Info("endpoint discovery enabled: %t", enableEDS)
+	setupLog.Info("endpoint discovery", "state", enableEDS)
 	config.EnableEndpointDiscovery = enableEDS
 
 	setupLog.Info("setting up Kubernetes controller manager")

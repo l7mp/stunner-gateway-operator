@@ -12,8 +12,11 @@ import (
 type Store interface {
 	// Get returns an object from the store
 	Get(nsName types.NamespacedName) client.Object
-	// Upsert adds the resource to the store and returns true if an actual update has happened
-	Upsert(object client.Object) bool
+	// UpsertIfChanged adds the resource to the store and returns true if an actual update has
+	// happened
+	UpsertIfChanged(object client.Object) bool
+	// Upsert adds the resource to the store
+	Upsert(object client.Object)
 	// Remove deletes an object from the store
 	Remove(nsName types.NamespacedName)
 	// Len returns the number of objects in the store
@@ -54,7 +57,7 @@ func (s *storeImpl) Get(nsName types.NamespacedName) client.Object {
 	return o
 }
 
-func (s *storeImpl) Upsert(new client.Object) bool {
+func (s *storeImpl) UpsertIfChanged(new client.Object) bool {
 	// s.log.V(3).Info("upsert", "key", GetObjectKey(new))
 	key := GetObjectKey(new)
 
@@ -67,14 +70,23 @@ func (s *storeImpl) Upsert(new client.Object) bool {
 		return false
 	}
 
+	s.Upsert(new)
+
+	// s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "new/changed")
+
+	return true
+}
+
+func (s *storeImpl) Upsert(new client.Object) {
+	// s.log.V(3).Info("upsert", "key", GetObjectKey(new))
+	key := GetObjectKey(new)
+
 	// lock for writing
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.objects[key] = new
 
-	// s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "new/changed")
-
-	return true
+	// s.log.V(4).Info("upsert", "key", GetObjectKey(new))
 }
 
 func (s *storeImpl) Remove(nsName types.NamespacedName) {

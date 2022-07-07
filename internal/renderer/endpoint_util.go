@@ -18,14 +18,14 @@ func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) []string {
 	}
 
 	// allow clients to reach nonready addresses: they have already gone through ICE
-	// negotiation so they may have a better idea on endpoint-readynesss than Kubernetes
+	// negotiation so they may have a better idea on endpoint-readyness than Kubernetes
 	for _, s := range ep.Subsets {
 		for _, a := range s.Addresses {
 			if a.IP != "" {
 				ret = append(ret, a.IP)
 			}
 		}
-		if suppressNotReady != true {
+		if suppressNotReady == false {
 			for _, a := range s.NotReadyAddresses {
 				if a.IP != "" {
 					ret = append(ret, a.IP)

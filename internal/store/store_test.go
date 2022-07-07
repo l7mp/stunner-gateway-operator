@@ -53,7 +53,7 @@ func TestStore(t *testing.T) {
 	assert.NotNil(t, s, "new")
 
 	// upsert
-	found := s.Upsert(&o1)
+	found := s.UpsertIfChanged(&o1)
 	assert.True(t, found, "upsert")
 	assert.Equal(t, 1, s.Len(), "len")
 
@@ -68,7 +68,7 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, "default/s1", GetObjectKey(o), "get content")
 
 	// re-upsert
-	found = s.Upsert(&o1)
+	found = s.UpsertIfChanged(&o1)
 	assert.False(t, found, "re-upsert")
 	assert.Equal(t, 1, s.Len(), "re-len")
 
@@ -83,7 +83,7 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, "default/s1", GetObjectKey(o), "re-get content")
 
 	// upsert 2
-	found = s.Upsert(&o2)
+	found = s.UpsertIfChanged(&o2)
 	assert.True(t, found, "upsert 2")
 	assert.Equal(t, 2, s.Len(), "len 2")
 
@@ -101,7 +101,7 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, "default/s2", GetObjectKey(o), "get content 2: s2")
 
 	// re-upsert
-	found = s.Upsert(&o1)
+	found = s.UpsertIfChanged(&o1)
 	assert.False(t, found, "re-upsert 2")
 	assert.Equal(t, 2, s.Len(), "re-len 2")
 
@@ -145,7 +145,7 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, "default/s1", GetObjectKey(o), "get content")
 
 	// re-upsert
-	found = s.Upsert(&o1)
+	found = s.UpsertIfChanged(&o1)
 	assert.False(t, found, "re-upsert")
 	assert.Equal(t, 1, s.Len(), "re-len")
 
@@ -160,13 +160,13 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, "default/s1", GetObjectKey(o), "re-get content")
 
 	// upsert 3
-	found = s.Upsert(&o2)
+	found = s.UpsertIfChanged(&o2)
 	assert.True(t, found, "upsert 3")
 	assert.Equal(t, 2, s.Len(), "len 3")
-	found = s.Upsert(&o3)
+	found = s.UpsertIfChanged(&o3)
 	assert.True(t, found, "upsert 3")
 	assert.Equal(t, 3, s.Len(), "len 3")
-	found = s.Upsert(&o3)
+	found = s.UpsertIfChanged(&o3)
 	assert.False(t, found, "upsert 3")
 	assert.Equal(t, 3, s.Len(), "len 3")
 

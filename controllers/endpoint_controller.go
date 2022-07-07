@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	// "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlevent "sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -32,6 +32,15 @@ type endpointReconciler struct {
 	eventCh chan event.Event
 }
 
+// filter updates unless the endpoint address list has changed
+func endpointsChangedPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e ctrlevent.UpdateEvent) bool {
+			return endpointNum(e.ObjectOld) != endpointNum(e.ObjectNew)
+		},
+	}
+}
+
 func RegisterEndpointController(mgr manager.Manager, ch chan event.Event) error {
 	r := &endpointReconciler{
 		Client:  mgr.GetClient(),
@@ -41,8 +50,7 @@ func RegisterEndpointController(mgr manager.Manager, ch chan event.Event) error 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Endpoints{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		// WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
+		WithEventFilter(endpointsChangedPredicate()).
 		Complete(r)
 }
 
@@ -67,7 +75,23 @@ func (r *endpointReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 		return reconcile.Result{}, nil
 	}
 
+	log.V(1).Info("Endpoint upsert", "endpoint-num", endpointNum(&gc))
+
 	r.eventCh <- event.NewEventUpsert(&gc)
 
 	return reconcile.Result{}, nil
+}
+
+func endpointNum(o client.Object) int {
+	e, ok := o.(*corev1.Endpoints)
+	if !ok {
+		return 0
+	}
+
+	ret := 0
+	for _, s := range e.Subsets {
+		ret += len(s.Addresses) + len(s.NotReadyAddresses)
+	}
+
+	return ret
 }

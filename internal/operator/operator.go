@@ -158,12 +158,17 @@ func (o *Operator) eventLoop(ctx context.Context) {
 
 				// render request in progress: do nothing
 				if throttling {
+					o.log.V(4).Info("rendering request throttled", "event",
+						e.String())
 					continue
 				}
 
 				// request a new rendering round
 				throttling = true
 				throttler.Reset(throttleTimeout)
+
+				o.log.V(4).Info("initiating new rendering request", "event",
+					e.String())
 
 			case event.EventTypeDelete:
 				e := e.(*event.EventDelete)
@@ -181,6 +186,8 @@ func (o *Operator) eventLoop(ctx context.Context) {
 
 				// render request in progress: do nothing
 				if throttling {
+					o.log.V(4).Info("rendering request throttled", "event",
+						e.String())
 					continue
 				}
 
@@ -188,14 +195,18 @@ func (o *Operator) eventLoop(ctx context.Context) {
 				throttling = true
 				throttler.Reset(throttleTimeout)
 
+				o.log.V(4).Info("initiating new rendering request", "event",
+					e.String())
+
 			default:
 				o.log.Info("internal error: unknown event %#v", e)
 				continue
 			}
 
 		case <-throttler.C:
-			throttling = false
 			o.renderCh <- event.NewEventRender()
+			throttling = false
+			throttler.Stop()
 
 		case <-ctx.Done():
 			// FIXME revert gateway-class status to "Waiting..."

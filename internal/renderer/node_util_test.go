@@ -66,8 +66,7 @@ func TestRenderNodeUtil(t *testing.T) {
 				n1 := testutils.TestNode.DeepCopy()
 				// remove the external address
 				n1.Status.Addresses = []corev1.NodeAddress{}
-				n2 := testutils.TestNode.DeepCopy()
-				c.nodes = []corev1.Node{*n1, *n2}
+				c.nodes = []corev1.Node{*n1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				addr := getFirstNodeAddr()
