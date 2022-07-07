@@ -60,16 +60,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 				Name:      string(b.Name),
 			}
 
-			svc := store.Services.GetObject(n)
-			if svc == nil {
-				continue
-			}
-
-			r.log.V(4).Info("renderCluster: found backend service", "route",
-				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "svc",
-				store.GetObjectKey(svc))
-
-			ep = getEndpointAddrs(svc, false)
+			ep = getEndpointAddrs(n, false)
 		} else {
 			// fall back to strict DNS and hope for the best
 			ctype = stunnerconfv1alpha1.ClusterTypeStrictDNS

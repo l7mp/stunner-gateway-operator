@@ -3,20 +3,14 @@ package renderer
 import (
 	// "fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // find the list of endpoint IP addresses associated with a service
-func getEndpointAddrs(svc *corev1.Service, suppressNotReady bool) []string {
+func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) []string {
 	ret := []string{}
-
-	n := types.NamespacedName{
-		Namespace: svc.GetNamespace(),
-		Name:      svc.GetName(),
-	}
 
 	ep := store.Endpoints.GetObject(n)
 	if ep == nil {

@@ -41,8 +41,8 @@ func RegisterEndpointController(mgr manager.Manager, ch chan event.Event) error 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Endpoints{}).
-		// WithEventFilter(predicate.GenerationChangedPredicate{}).
-		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		// WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Complete(r)
 }
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -31,7 +32,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 				assert.NotEmpty(t, svcs, "svcs exist")
 				assert.Len(t, svcs, 1, "svcs len ok")
 
-				addrs := getEndpointAddrs(svcs[0], false)
+				n := types.NamespacedName{
+					Namespace: svcs[0].GetNamespace(),
+					Name:      svcs[0].GetName(),
+				}
+				addrs := getEndpointAddrs(n, false)
+
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
 				assert.Len(t, addrs, 4, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
@@ -50,7 +56,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 				assert.NotEmpty(t, svcs, "svcs exist")
 				assert.Len(t, svcs, 1, "svcs len ok")
 
-				addrs := getEndpointAddrs(svcs[0], true)
+				n := types.NamespacedName{
+					Namespace: svcs[0].GetNamespace(),
+					Name:      svcs[0].GetName(),
+				}
+				addrs := getEndpointAddrs(n, true)
+
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
 				assert.Len(t, addrs, 3, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
@@ -72,7 +83,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 				assert.NotEmpty(t, svcs, "svcs exist")
 				assert.Len(t, svcs, 1, "svcs len ok")
 
-				addrs := getEndpointAddrs(svcs[0], true)
+				n := types.NamespacedName{
+					Namespace: svcs[0].GetNamespace(),
+					Name:      svcs[0].GetName(),
+				}
+				addrs := getEndpointAddrs(n, false)
+
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},
@@ -90,7 +106,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 				assert.NotEmpty(t, svcs, "svcs exist")
 				assert.Len(t, svcs, 1, "svcs len ok")
 
-				addrs := getEndpointAddrs(svcs[0], true)
+				n := types.NamespacedName{
+					Namespace: svcs[0].GetNamespace(),
+					Name:      svcs[0].GetName(),
+				}
+				addrs := getEndpointAddrs(n, false)
+
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},
@@ -108,11 +129,17 @@ func TestRenderEndpointUtil(t *testing.T) {
 				assert.NotEmpty(t, svcs, "svcs exist")
 				assert.Len(t, svcs, 1, "svcs len ok")
 
-				addrs := getEndpointAddrs(svcs[0], true)
+				n := types.NamespacedName{
+					Namespace: svcs[0].GetNamespace(),
+					Name:      svcs[0].GetName(),
+				}
+				addrs := getEndpointAddrs(n, false)
+
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
-				assert.Len(t, addrs, 3, "endpoint addrs len ok")
+				assert.Len(t, addrs, 4, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
 				assert.Contains(t, addrs, "1.2.3.5", "addr-2 ok")
+				assert.Contains(t, addrs, "1.2.3.6", "addr-3 ok")
 				assert.Contains(t, addrs, "1.2.3.7", "addr-4 ok")
 			},
 		},
