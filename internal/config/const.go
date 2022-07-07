@@ -1,9 +1,5 @@
 package config
 
-// -----------------------------------------------------------------------------
-// Gateway - Consts
-// -----------------------------------------------------------------------------
-
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
@@ -40,4 +36,8 @@ const (
 
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints
 	DefaultEnableEndpointDiscovery = true
+
+	// DefaultEnableRenderThrottling makes is possible for the operator to queue up rendering
+	// requests and collapsed them into a single request to decrease operator churn
+	DefaultEnableRenderThrottling = true
 )

@@ -164,6 +164,9 @@ var _ = BeforeSuite(func() {
 		Logger:  ctrl.Log,
 	})
 
+	// make rendering fast!
+	config.EnableRenderThrottling = false
+
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
 		ControllerName: config.DefaultControllerName,

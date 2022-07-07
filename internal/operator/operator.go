@@ -24,7 +24,11 @@ import (
 )
 
 // clusterTimeout is a timeout for connections to the Kubernetes API
-const clusterTimeout = 10 * time.Second
+const (
+	clusterTimeout    = 10 * time.Second
+	channelBufferSize = 200
+	throttleTimeout   = 250 * time.Millisecond
+)
 
 var scheme = runtime.NewScheme()
 
@@ -57,7 +61,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 	return &Operator{
 		mgr:        cfg.Manager,
 		renderCh:   cfg.RenderCh,
-		operatorCh: make(chan event.Event, 10),
+		operatorCh: make(chan event.Event, channelBufferSize),
 		updaterCh:  cfg.UpdaterCh,
 		logger:     cfg.Logger,
 	}
@@ -125,13 +129,73 @@ func (o *Operator) Start(ctx context.Context) error {
 func (o *Operator) eventLoop(ctx context.Context) {
 	defer close(o.operatorCh)
 
+	throttler := time.NewTicker(throttleTimeout)
+	throttler.Stop()
+	throttling := false
+
 	for {
 		select {
+
 		case e := <-o.operatorCh:
-			if err := o.ProcessEvent(e); err != nil {
-				o.log.Error(err, "could not process controller event",
-					"event", e.String())
+			switch e.GetType() {
+			case event.EventTypeUpdate:
+				// pass through to the updater
+				o.updaterCh <- e
+
+			case event.EventTypeUpsert:
+				e := e.(*event.EventUpsert)
+				if err := o.ProcessUpsertEvent(e); err != nil {
+					o.log.Error(err, "could not process upsert event",
+						"event", e.String())
+					continue
+				}
+
+				if config.EnableRenderThrottling == false {
+					// fire immediately
+					o.renderCh <- event.NewEventRender()
+					continue
+				}
+
+				// render request in progress: do nothing
+				if throttling {
+					continue
+				}
+
+				// request a new rendering round
+				throttling = true
+				throttler.Reset(throttleTimeout)
+
+			case event.EventTypeDelete:
+				e := e.(*event.EventDelete)
+				if err := o.ProcessDeleteEvent(e); err != nil {
+					o.log.Error(err, "could not process delete event",
+						"event", e.String())
+					continue
+				}
+
+				if config.EnableRenderThrottling == false {
+					// fire immediately
+					o.renderCh <- event.NewEventRender()
+					continue
+				}
+
+				// render request in progress: do nothing
+				if throttling {
+					continue
+				}
+
+				// request a new rendering round
+				throttling = true
+				throttler.Reset(throttleTimeout)
+
+			default:
+				o.log.Info("internal error: unknown event %#v", e)
+				continue
 			}
+
+		case <-throttler.C:
+			throttling = false
+			o.renderCh <- event.NewEventRender()
 
 		case <-ctx.Done():
 			// FIXME revert gateway-class status to "Waiting..."
@@ -140,75 +204,60 @@ func (o *Operator) eventLoop(ctx context.Context) {
 	}
 }
 
-// ProcessEvent dispatches an event to the corresponding renderer
-func (o *Operator) ProcessEvent(e event.Event) error {
-	switch e.GetType() {
-	case event.EventTypeUpdate:
-		// pass through to the updater
-		o.updaterCh <- e
+// ProcessUpsertEvent dispatches an event to the corresponding renderer
+func (o *Operator) ProcessUpsertEvent(e *event.EventUpsert) error {
+	key := types.NamespacedName{
+		Namespace: e.Object.GetNamespace(),
+		Name:      e.Object.GetName(),
+	}
 
-	case event.EventTypeUpsert:
-		// reflect!
-		e := e.(*event.EventUpsert)
+	o.log.V(1).Info("processing upsert event", "event", e.String(), "object", key.String())
 
-		key := types.NamespacedName{
-			Namespace: e.Object.GetNamespace(),
-			Name:      e.Object.GetName(),
-		}
+	switch e.Object.(type) {
+	case *gatewayv1alpha2.GatewayClass:
+		store.GatewayClasses.Upsert(e.Object)
+	case *stunnerv1alpha1.GatewayConfig:
+		store.GatewayConfigs.Upsert(e.Object)
+	case *gatewayv1alpha2.Gateway:
+		store.Gateways.Upsert(e.Object)
+	case *gatewayv1alpha2.UDPRoute:
+		store.UDPRoutes.Upsert(e.Object)
+	case *corev1.Service:
+		store.Services.Upsert(e.Object)
+	case *corev1.Node:
+		store.Nodes.Upsert(e.Object)
+	case *corev1.Endpoints:
+		store.Endpoints.Upsert(e.Object)
+	default:
+		return fmt.Errorf("could not process event %q for an unknown object %q",
+			e.String(), key.String())
+	}
 
-		o.log.V(1).Info("processing event", "event", e.String(), "object", key.String())
+	return nil
+}
 
-		switch e.Object.(type) {
-		case *gatewayv1alpha2.GatewayClass:
-			store.GatewayClasses.Upsert(e.Object)
-		case *stunnerv1alpha1.GatewayConfig:
-			store.GatewayConfigs.Upsert(e.Object)
-		case *gatewayv1alpha2.Gateway:
-			store.Gateways.Upsert(e.Object)
-		case *gatewayv1alpha2.UDPRoute:
-			store.UDPRoutes.Upsert(e.Object)
-		case *corev1.Service:
-			store.Services.Upsert(e.Object)
-		case *corev1.Node:
-			store.Nodes.Upsert(e.Object)
-		case *corev1.Endpoints:
-			store.Endpoints.Upsert(e.Object)
-		default:
-			return fmt.Errorf("could not process event %q for an unknown object %q",
-				e.String(), key.String())
-		}
+// ProcessDeleteEvent dispatches an event to the corresponding renderer
+func (o *Operator) ProcessDeleteEvent(e *event.EventDelete) error {
+	o.log.V(1).Info("processing delete event", "event", e.String())
 
-		// trigger the render event
-		o.renderCh <- event.NewEventRender(fmt.Sprintf("upsert on %s", key.String()))
-
-	case event.EventTypeDelete:
-		// reflect!
-		e := e.(*event.EventDelete)
-
-		o.log.V(1).Info("processing event", "event", e.String())
-
-		switch e.Kind {
-		case event.EventKindGatewayClass:
-			store.GatewayClasses.Remove(e.Key)
-		case event.EventKindGatewayConfig:
-			store.GatewayConfigs.Remove(e.Key)
-		case event.EventKindGateway:
-			store.Gateways.Remove(e.Key)
-		case event.EventKindUDPRoute:
-			store.UDPRoutes.Remove(e.Key)
-		case event.EventKindService:
-			store.Services.Remove(e.Key)
-		case event.EventKindNode:
-			store.Nodes.Remove(e.Key)
-		case event.EventKindEndpoint:
-			store.Endpoints.Remove(e.Key)
-		default:
-			return fmt.Errorf("could not process event %q for an unknown object %q",
-				e.String(), e.Key.String())
-		}
-
-		// trigger the render event
-		o.renderCh <- event.NewEventRender(fmt.Sprintf("delete on %s", e.Key.String()))
+	switch e.Kind {
+	case event.EventKindGatewayClass:
+		store.GatewayClasses.Remove(e.Key)
+	case event.EventKindGatewayConfig:
+		store.GatewayConfigs.Remove(e.Key)
+	case event.EventKindGateway:
+		store.Gateways.Remove(e.Key)
+	case event.EventKindUDPRoute:
+		store.UDPRoutes.Remove(e.Key)
+	case event.EventKindService:
+		store.Services.Remove(e.Key)
+	case event.EventKindNode:
+		store.Nodes.Remove(e.Key)
+	case event.EventKindEndpoint:
+		store.Endpoints.Remove(e.Key)
+	default:
+		return fmt.Errorf("could not process event %q for an unknown object %q",
+			e.String(), e.Key.String())
 	}
 
 	return nil
