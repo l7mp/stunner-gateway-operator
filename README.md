@@ -75,7 +75,7 @@ the [STUNner documentation](https://github.com/l7mp/stunner/blob/main/doc/README
        spec:
          containers:
            - command: ["stunnerd"]
-             args: ["-v", "-w", "-c", "/etc/stunnerd/stunnerd.conf"]
+             args: ["-w", "-c", "/etc/stunnerd/stunnerd.conf"]
              image: l7mp/stunnerd:latest
              imagePullPolicy: Always
              name: stunnerd
@@ -479,7 +479,11 @@ TCP Gateway, STUNner is ready to accept client connections over TCP as well. Let
 # Caveats
 
 * The operator omits the Port in UDPRoutes and the PortNumber in BackendObjectReferences and
-  ParentReferences.
+  ParentReferences. This is because our target services typically span WebRTC media server pools
+  and these may spawn a UDP/SRTP listener for essentially any arbitrary port. Eventually we would
+  need to implement a CustomUDPRoute CRD that would allow the user to specify a port range (just
+  like NetworkPolicies), until then the operator silently ignores ports on routes, services and
+  endpoints.
 * The operator actively reconciles the changes in the GatewayClass resource; e.g., if the
   ParametersRef changes then we take this into account (this is not recommended in the spec to
   [limit the blast radius of a mistaken config update](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClassSpec)
