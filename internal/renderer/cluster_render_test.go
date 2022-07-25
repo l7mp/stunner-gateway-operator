@@ -89,6 +89,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -101,6 +102,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -128,6 +130,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -138,6 +141,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -166,6 +170,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -176,6 +181,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -204,6 +210,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -214,6 +221,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -242,6 +250,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -254,6 +263,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -281,6 +291,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(rs[0])
 				assert.NoError(t, err, "render cluster")
@@ -299,10 +310,54 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
-			name: "eds - cluster ok",
+			name: "eds - cluster with clusterIP relaying switched off",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				ro := rs[0]
+				p := ro.Spec.ParentRefs[0]
+
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, accepted, "route accepted")
+
+				// switch EDS off
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = false
+
+				rc, err := r.renderCluster(ro)
+				assert.NoError(t, err, "render cluster")
+
+				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+
+				// restore
+				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "eds - cluster with no ClusterIP ok",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
@@ -322,6 +377,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -336,6 +392,94 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "eds - cluster with ClusterIP ok",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				ro := rs[0]
+				p := ro.Spec.ParentRefs[0]
+
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, accepted, "route accepted")
+
+				// switch EDS off
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				rc, err := r.renderCluster(ro)
+				assert.NoError(t, err, "render cluster")
+
+				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.Contains(t, rc.Endpoints, "4.3.2.1", "cluster-ip")
+
+				// restore
+				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "eds - cluster with headless setvie OK",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "None"
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				ro := rs[0]
+				p := ro.Spec.ParentRefs[0]
+
+				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, accepted, "route accepted")
+
+				// switch EDS off
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				rc, err := r.renderCluster(ro)
+				assert.NoError(t, err, "render cluster")
+
+				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+
+				// restore
+				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -363,6 +507,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -373,6 +518,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -401,6 +547,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -411,6 +558,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -439,6 +587,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -449,6 +598,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -485,6 +635,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
@@ -499,6 +650,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -553,6 +705,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// switch EDS off
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(rs[0])
 				assert.NoError(t, err, "render cluster")
@@ -568,6 +721,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 	})

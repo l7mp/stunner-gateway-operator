@@ -41,7 +41,7 @@ import (
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -72,6 +72,7 @@ var _ = Describe("Integration test:", func() {
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
 			config.EnableEndpointDiscovery = false
+			config.EnableRelayToClusterIP = false
 
 			ctrl.Log.Info("loading GatewayClass")
 			// fmt.Printf("%#v\n", testGwClass)
@@ -1570,16 +1571,18 @@ var _ = Describe("Integration test:", func() {
 
 			// restore
 			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 		})
 	})
 
-	// WITH EDS
-	Context("When creating a minimal set of API resources (EDS ENABLED)", func() {
+	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
 			config.EnableEndpointDiscovery = true
+			config.EnableRelayToClusterIP = false
 
 			recreateOrUpdateGateway(func(current *gatewayv1alpha2.Gateway) {})
 			recreateOrUpdateUDPRoute(func(current *gatewayv1alpha2.UDPRoute) {})
@@ -1692,6 +1695,95 @@ var _ = Describe("Integration test:", func() {
 			Expect(s.Type).Should(
 				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// restoure
+			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+		})
+	})
+
+	// WITH EDS and RELAY-CLUSTER-IP
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED)", func() {
+		conf := &stunnerconfv1alpha1.StunnerConfig{}
+
+		It("should survive loading a minimal config", func() {
+			// switch EDS off
+			config.EnableEndpointDiscovery = true
+			config.EnableRelayToClusterIP = true
+
+			// need to trigger a re-render: delete the invalid Gateway listener
+			ctrl.Log.Info("re-loading Gateway with 1 valid listener")
+			recreateOrUpdateGateway(func(current *gatewayv1alpha2.Gateway) {
+				current.Spec.Listeners = []gatewayv1alpha2.Listener{
+					current.Spec.Listeners[0], current.Spec.Listeners[1]}
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := testutils.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 1 && len(c.Clusters) == 1 &&
+					c.Clusters[0].Type == "STATIC" &&
+					len(c.Clusters[0].Endpoints) == 5 {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should re-render STUNner config with one cluster with the Cluster-IP", func() {
+			Expect(conf.Listeners).To(HaveLen(1))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+
+			svc := store.Services.GetObject(types.NamespacedName{
+				Namespace: "testnamespace", Name: "testservice-ok"})
+			Expect(c.Endpoints).Should(ContainElement(svc.Spec.ClusterIP))
+
+			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 		})
 	})
 
@@ -1700,8 +1792,10 @@ var _ = Describe("Integration test:", func() {
 		sn := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {
-			ctrl.Log.Info("re-loading UDPRoute")
+			ctrl.Log.Info("re-loading Gateway with 2 valid listeners")
+			recreateOrUpdateGateway(func(current *gatewayv1alpha2.Gateway) {})
 
+			ctrl.Log.Info("re-loading UDPRoute")
 			recreateOrUpdateUDPRoute(func(current *gatewayv1alpha2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
@@ -1774,11 +1868,15 @@ var _ = Describe("Integration test:", func() {
 
 			Expect(c.Name).Should(Equal("udproute-ok"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+
+			svc := store.Services.GetObject(types.NamespacedName{
+				Namespace: "testnamespace", Name: "testservice-ok"})
+			Expect(c.Endpoints).Should(ContainElement(svc.Spec.ClusterIP))
 		})
 
 		It("should reset status on all resources", func() {

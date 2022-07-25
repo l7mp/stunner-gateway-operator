@@ -113,7 +113,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	log.V(1).Info("finding gateway objects")
 	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(gc) {
-		log.V(2).Info("considering", "gateway", gw.GetName())
+		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
 		setGatewayStatusScheduled(gw, config.ControllerName)
@@ -144,8 +144,8 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		} else if ap.addr == "" {
 			log.Info("public service found but no ExternalIP is available for service: " +
 				"this is most probably caused by a fallback to a NodePort access service " +
-				"that does not have a public IP address. NodePorts are not supported, " +
-				"please enableLoadBalancer services")
+				"but no nodes seem to be having a valid external IP address. Hint: " +
+				"enable LoadBalancer services in Kubernetes")
 			ready = false
 		} else {
 			ready = true
@@ -270,7 +270,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 
 	log.V(1).Info("finding gateway objects")
 	for _, gw := range r.getGateways4Class(gc) {
-		log.V(2).Info("considering", "gateway", gw.GetName())
+		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
 		setGatewayStatusScheduled(gw, config.ControllerName)

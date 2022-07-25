@@ -53,14 +53,20 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 		}
 
 		ep := []string{}
-		if config.EnableEndpointDiscovery == true {
+		if config.EnableEndpointDiscovery == true || config.EnableRelayToClusterIP == true {
 			ctype = stunnerconfv1alpha1.ClusterTypeStatic
 			n := types.NamespacedName{
 				Namespace: ns,
 				Name:      string(b.Name),
 			}
 
-			ep = getEndpointAddrs(n, false)
+			if config.EnableEndpointDiscovery == true {
+				ep = append(ep, getEndpointAddrs(n, false)...)
+			}
+
+			if config.EnableRelayToClusterIP == true {
+				ep = append(ep, getClusterIP(n)...)
+			}
 		} else {
 			// fall back to strict DNS and hope for the best
 			ctype = stunnerconfv1alpha1.ClusterTypeStrictDNS
