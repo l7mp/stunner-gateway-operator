@@ -37,6 +37,10 @@ const (
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints
 	DefaultEnableEndpointDiscovery = true
 
+	// EnableRelayToClusterIP allows clients to create transport relay connections to the
+	// ClusterIP of a service. This is useful for hiding the pod IPs behind the ClusterIP.
+	DefaultEnableRelayToClusterIP = true
+
 	// DefaultEnableRenderThrottling makes is possible for the operator to queue up rendering
 	// requests and collapsed them into a single request to decrease operator churn
 	DefaultEnableRenderThrottling = true

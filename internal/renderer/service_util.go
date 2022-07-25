@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	// "github.com/go-logr/logr"
 	// apiv1 "k8s.io/api/core/v1"
@@ -237,4 +238,18 @@ func createLbService4Gateway(gw *gatewayv1alpha2.Gateway) *corev1.Service {
 	}
 
 	return svc
+}
+
+// find the ClusterIP associated with a service
+func getClusterIP(n types.NamespacedName) []string {
+	ret := []string{}
+
+	s := store.Services.GetObject(n)
+	if s == nil || s.Spec.ClusterIP == "" || s.Spec.ClusterIP == "None" {
+		return ret
+	}
+
+	ret = append(ret, s.Spec.ClusterIP)
+
+	return ret
 }

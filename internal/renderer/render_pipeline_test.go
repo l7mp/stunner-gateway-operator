@@ -70,6 +70,7 @@ func TestRenderPipeline(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
@@ -141,19 +142,25 @@ func TestRenderPipeline(t *testing.T) {
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
-			name: "EDS - E2E test",
+			name: "EDS without relay-to-cluster-IP - E2E test",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			prep: func(c *renderTestConfig) {},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
+			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = false
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
@@ -227,6 +234,100 @@ func TestRenderPipeline(t *testing.T) {
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "EDS with relay-to-cluster-IP - E2E test",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
+					"gatewayclass name")
+
+				u := event.NewEventUpdate(0)
+				assert.NotNil(t, u, "update event create")
+
+				err = r.renderGatewayClass(gc, u)
+				assert.NoError(t, err, "render success")
+
+				// configmap
+				cms := u.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+				o := cms[0]
+
+				// objectmeta
+				assert.Equal(t, o.GetName(), testutils.TestStunnerConfig,
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(),
+					"testnamespace", "configmap namespace")
+
+				cm, ok := o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, err := testutils.UnpackConfigMap(cm)
+				assert.NoError(t, err, "configmap stunner-config unmarschal")
+
+				assert.Equal(t, config.DefaultStunnerdInstanceName,
+					conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc := conf.Listeners[0]
+				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc := conf.Clusters[0]
+				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.Contains(t, rc.Endpoints, "4.3.2.1", "cluster-ip")
+
+				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// restore EDS
+				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -311,6 +412,7 @@ func TestRenderPipeline(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
 
 				// a new gatewayclass that specifies a different gateway-config
 				gc := testutils.TestGwClass.DeepCopy()
@@ -336,6 +438,10 @@ func TestRenderPipeline(t *testing.T) {
 				gw.Spec.GatewayClassName =
 					gatewayv1alpha2.ObjectName("dummy-gateway-class")
 				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gcs := r.getGatewayClasses()
@@ -488,10 +594,11 @@ func TestRenderPipeline(t *testing.T) {
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
-			name: "EDS - E2E rendering for multiple gateway-classes",
+			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
@@ -523,9 +630,14 @@ func TestRenderPipeline(t *testing.T) {
 				gw.Spec.GatewayClassName =
 					gatewayv1alpha2.ObjectName("dummy-gateway-class")
 				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = false
 
 				gcs := r.getGatewayClasses()
 				assert.Len(t, gcs, 2, "gw-classes found")
@@ -679,6 +791,205 @@ func TestRenderPipeline(t *testing.T) {
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "EDS with relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				// a new gatewayclass that specifies a different gateway-config
+				gc := testutils.TestGwClass.DeepCopy()
+				gc.SetName("dummy-gateway-class")
+				gc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
+					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
+					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
+					Name:      "dummy-gateway-config",
+					Namespace: &testutils.TestNs,
+				}
+				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *gc}
+
+				// the new gateway-config that renders into a different stunner configmap
+				conf := testutils.TestGwConfig.DeepCopy()
+				conf.SetName("dummy-gateway-config")
+				target := "dummy-stunner-config"
+				conf.Spec.StunnerConfig = &target
+				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *conf}
+
+				// and a new gateway whose controller-name is the new gatewayclass
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetName("dummy-gateway")
+				gw.Spec.GatewayClassName =
+					gatewayv1alpha2.ObjectName("dummy-gateway-class")
+				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				gcs := r.getGatewayClasses()
+				assert.Len(t, gcs, 2, "gw-classes found")
+
+				// original config
+				gc := gcs[0]
+				// we can never know the order...
+				if gc.GetName() == "dummy-gateway-class" {
+					gc = gcs[1]
+				}
+
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
+					"gatewayclass name")
+
+				u := event.NewEventUpdate(0)
+				assert.NotNil(t, u, "update event create")
+
+				err := r.renderGatewayClass(gc, u)
+				assert.NoError(t, err, "render success")
+
+				// configmap
+				cms := u.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+
+				o := cms[0]
+
+				// objectmeta
+				assert.Equal(t, o.GetName(), testutils.TestStunnerConfig,
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(),
+					"testnamespace", "configmap namespace")
+
+				cm, ok := o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, err := testutils.UnpackConfigMap(cm)
+				assert.NoError(t, err, "configmap stunner-config unmarschal")
+
+				assert.Equal(t, config.DefaultStunnerdInstanceName,
+					conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc := conf.Listeners[0]
+				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc := conf.Clusters[0]
+				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.Contains(t, rc.Endpoints, "4.3.2.1", "cluster-ip")
+
+				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// config for the modified gateway-class
+				gc = gcs[1]
+				// we can never know the order...
+				if gc.GetName() != "dummy-gateway-class" {
+					gc = gcs[0]
+				}
+
+				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
+					"gatewayclass name")
+
+				u = event.NewEventUpdate(0)
+				assert.NotNil(t, u, "update event create")
+
+				err = r.renderGatewayClass(gc, u)
+				assert.NoError(t, err, "render success")
+
+				// configmap
+				cms = u.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+
+				o = cms[0]
+
+				// objectmeta
+				assert.Equal(t, o.GetName(), "dummy-stunner-config",
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(),
+					"testnamespace", "configmap namespace")
+
+				cm, ok = o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, err = testutils.UnpackConfigMap(cm)
+				assert.NoError(t, err, "configmap stunner-config unmarschal")
+
+				assert.Equal(t, config.DefaultStunnerdInstanceName,
+					conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc = conf.Listeners[0]
+				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				// the service links to the original gateway, our gateway does not
+				// have linkage, so public addr should be empty
+				assert.Equal(t, "", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				// the route links to the original gateway, our gateway does not
+				// have a linkage from any routes
+				assert.Len(t, conf.Clusters, 0, "cluster num")
+
+				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// restore EDS
+				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
 	})
