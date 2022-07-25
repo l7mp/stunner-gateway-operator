@@ -2,10 +2,10 @@
 
 *UNDER CONSTRUCTION*
 
-The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Gateway
+The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Kubernetes Gateway
 API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data
-plane. The goal is to implement the part of the core Gateway APIs -- Gateway, GatewayClass, and
-UDPRoute objects -- necessary to fully configure the STUNner WebRTC ingress gateway via the
+plane. The goal is to implement the part of the core Gateway API -- Gateway, GatewayClass, and
+UDPRoute resources -- necessary to fully configure the STUNner WebRTC ingress gateway via the
 Kubernetes control plane. The STUNner Kubernetes Gateway Operator is currently under development
 and supports a subset of the Gateway API.
 
@@ -181,7 +181,6 @@ standard STUN/TURN service, over the conventional TURN port UDP:3478.
    kind: GatewayClass
    metadata:
      name: stunner-gatewayclass
-     namespace: stunner
    spec:
      controllerName: "stunner.l7mp.io/gateway-operator"
      parametersRef:
