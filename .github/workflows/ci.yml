@@ -2,72 +2,14 @@ name: Continuous Integration
 
 on:
   push:
-    branches:
-      - 'main'
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-    paths-ignore:
-      - '**.md'
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - reopened
-      - synchronize
-    paths-ignore:
-      - '**.md'
+      - '*'
 
 defaults:
   run:
     shell: bash
 
-env:
-  DOCKER_BUILDKIT: 1
-  GOLANGCI_TIMEOUT: 10m0s
-
 jobs:
-
-  vars:
-    name: Get variables
-    runs-on: ubuntu-20.04
-    outputs:
-      sha: ${{ steps.vars.outputs.sha }}
-      go_version: ${{ steps.vars.outputs.go_version }}
-      git_tag: ${{ steps.vars.outputs.git_tag }}
-      version: ${{ steps.vars.outputs.version }}
-      date: ${{ steps.vars.outputs.date }}
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Output Variables
-        id: vars
-        run: |
-          echo "::set-output name=sha::$(echo ${GITHUB_SHA} | cut -c1-7)"
-          echo "::set-output name=go_version::$(grep "go 1." go.mod | cut -d " " -f 2)"
-          echo "::set-output name=git_tag::$(echo ${GITHUB_REF/refs\/tags\//} | tr -d v)"
-          echo "::set-output name=version::$(grep "VERSION = " Makefile | cut -d " " -f 3)"
-          echo "::set-output name=date::$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-20.04
-    needs: vars
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Setup Golang Environment
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ needs.vars.outputs.go_version }}
-      - name: Lint Code
-        uses: golangci/golangci-lint-action@v3.1.0
-        with:
-          args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
 
   unit-tests:
     name: Unit Tests
@@ -79,81 +21,79 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ needs.vars.outputs.go_version }}
+          go-version: 1.17
       - name: Run Tests
-        run: make unit-test
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: cover-${{ needs.vars.outputs.sha }}.html
-          path: ${{ github.workspace }}/cover.html
-        if: always()
+        run: make test
 
-  binary:
-    name: Build Binary
-    runs-on: ubuntu-20.04
-    needs: [vars, lint]
+  push_to_registry:
+    name: Push docker image to DockerHub
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Setup Golang Environment
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ needs.vars.outputs.go_version }}
-      - name: Build Binary
-        run: make build
-      - name: Cache Artifacts
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/build/.out/gateway
-          key: stunner-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
+      - uses: actions/checkout@v3
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+      - name: Get the version
+        id: vars
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF:11})
+      - name: Build the tagged Docker image
+        run: docker build . --file Dockerfile --tag l7mp/stunner-gateway-operator:${{steps.vars.outputs.tag}}
+      - name: Push the tagged Docker image
+        run: docker push l7mp/stunner-gateway-operator:${{steps.vars.outputs.tag}}
+      - name: Build the latest Docker image
+        run: docker build . --file Dockerfile --tag l7mp/stunner-gateway-operator:latest
+      - name: Push the latest Docker image
+        run: docker push l7mp/stunner-gateway-operator:latest
 
-  build:
-    name: Build Image
-    runs-on: ubuntu-20.04
-    needs: [vars, binary]
+  push_chart:
+    name: Push charts to the web
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: stunner checkout
         uses: actions/checkout@v3
-      - name: Fetch Cached Artifacts
-        uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/build/.out/gateway
-          key: stunner-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
-      - name: Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Build Image Debian
-        uses: docker/build-push-action@v2
+          path: stunner-gateway-operator
+          ref: main
+          repository: l7mp/stunner-gateway-operator
+      - name: Get the version
+        id: vars
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF:11})
+      - name: l7mp.io checkout
+        uses: actions/checkout@v3
         with:
-          file: build/Dockerfile
-          context: '.'
-          target: local
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: l7mp/stunner-kubernetes-gateway:${{ needs.vars.outputs.sha }}
-          build-args: |
-            VERSION=${{ needs.vars.outputs.version }}
-            GIT_COMMIT=${{ needs.vars.outputs.sha }}
-            DATE=${{ needs.vars.outputs.date }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.2.3
-        continue-on-error: true
+          token: ${{ secrets.WEB_PAT_TOKEN }}
+          path: l7mp.io
+          ref: master
+          repository: l7mp/l7mp.io
+      - name: stunner-helm checkout
+        uses: actions/checkout@v3
         with:
-          image-ref: l7mp/stunner-kubernetes-gateway:${{ needs.vars.outputs.sha }}
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
-          output: 'trivy-results-stunner-kubernetes-gateway.sarif'
-          ignore-unfixed: 'true'
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v1
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-results-stunner-kubernetes-gateway.sarif'
-      - name: Upload Scan Results
-        uses: actions/upload-artifact@v3
-        continue-on-error: true
-        with:
-          name: 'trivy-results-stunner-kubernetes-gateway.sarif'
-          path: 'trivy-results-stunner-kubernetes-gateway.sarif'
-        if: always()
+          token: ${{ secrets.WEB_PAT_TOKEN }}
+          path: stunner-helm
+          ref: main
+          repository: l7mp/stunner-helm
+      - name: Set git config
+        run: |
+          git config --global user.email "l7mp.info@gmail.com"
+          git config --global user.name "BotL7mp"
+      - name: Build helm charts
+        run: |
+          cd stunner-helm/helm
+          sed -ri 's/^(\s*)(version\s*:\s*.*\s*$)/\1version: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/Chart.yaml
+          sed -ri 's/^(\s*)(appVersion\s*:\s*.*\s*$)/\1appVersion: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/Chart.yaml
+          sed -ri 's/^(\s*)(        tag\s*:\s*.*\s*$)/\1        tag: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/values.yaml
+          helm package *
+      - name: Update l7mp.io
+        run: |
+          cp stunner-helm/helm/*.tgz l7mp.io/stunner
+          helm repo index l7mp.io/stunner/ --url https://l7mp.io/stunner
+          cd l7mp.io
+          git add .
+          git commit -m "Update helm charts from l7mp/stunner-gateway-operator" -m "(triggered by the 'Helm release' github action.)"
+          git push origin master
+      - name: Update stunner
+        run: |
+          cd stunner-helm
+          rm helm/*.tgz
+          git add .
+          git commit -m "Update helm chart from l7mp/stunner-gateway-operator" -m "(triggered by the 'Helm release' github action.)"
+          git push origin main
