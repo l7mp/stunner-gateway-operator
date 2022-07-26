@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Release
 
 on:
   push:
@@ -14,7 +14,6 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-20.04
-    needs: vars
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
