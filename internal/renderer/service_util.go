@@ -42,7 +42,10 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc), "status",
 			fmt.Sprintf("%#v", svc.Status))
 
-		if isServiceAnnotated4Gateway(svc, gw) {
+		if r.isServiceAnnotated4Gateway(svc, gw) {
+			r.log.V(4).Info("service is annotated for gateway", "svc",
+				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
+
 			ap, lb, own := getPublicAddrPort4Svc(svc, gw)
 			if ap == nil {
 				continue
@@ -61,6 +64,10 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 			}
 
 			if own {
+				r.log.V(4).Info("public service found", "svc",
+					store.GetObjectKey(svc), "gateway",
+					store.GetObjectKey(svc))
+
 				// we have found the best candidate
 				ownSvcFound = true
 				break
@@ -87,9 +94,10 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 }
 
 // we need the namespaced name!
-func isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) bool {
-	// r.log.V(4).Info("isServiceAnnotated4Gateway", "Service", store.GetObjectKey(svc),
-	// 	"gateway", store.GetObjectKey(gw))
+func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) bool {
+	r.log.V(4).Info("isServiceAnnotated4Gateway", "service", store.GetObjectKey(svc),
+		"gateway", store.GetObjectKey(gw), "annotations", fmt.Sprintf("%#v",
+			svc.GetAnnotations()))
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())

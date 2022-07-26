@@ -130,7 +130,7 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}
 
 	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "generation",
-		gen, "result", fmt.Sprintf("%+v", current))
+		gen, "result", current)
 
 	return op, nil
 }
@@ -167,7 +167,7 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	}
 
 	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "generation",
-		gen, "result", fmt.Sprintf("%+v", current))
+		gen, "result", current)
 
 	return op, nil
 }

@@ -124,15 +124,15 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		if err != nil {
 			// error means our own managed LoadBalancer service is not found: create it!
 			if s := createLbService4Gateway(gw); s != nil {
-				log.Info("creating public service to expose gateway", "service",
-					store.GetObjectKey(s), "gateway", gw.GetName(), "reason",
-					err.Error())
-
 				if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
 					r.log.Error(err, "cannot set owner reference", "owner",
 						store.GetObjectKey(gw), "reference",
 						store.GetObjectKey(s))
 				}
+
+				log.Info("creating public service for gateway", "name",
+					store.GetObjectKey(s), "gateway", gw.GetName(), "reason",
+					err.Error(), "service", fmt.Sprintf("%#v", s))
 
 				u.UpsertQueue.Services.Upsert(s)
 			}
