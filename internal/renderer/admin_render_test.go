@@ -37,6 +37,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "gw-conf found")
 
 				admin, err := r.renderAdmin(gwConf)
+				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
@@ -62,6 +63,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "gw-conf found")
 
 				admin, err := r.renderAdmin(gwConf)
+				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")

@@ -36,14 +36,14 @@ import (
 // 	object.SetOwnerReferences(owners)
 // }
 
-func indexOwnerRef(ownerReferences []metav1.OwnerReference, ref metav1.OwnerReference) int {
-	for index, r := range ownerReferences {
-		if r.Kind == ref.Kind && r.Name == ref.Name {
-			return index
-		}
-	}
-	return -1
-}
+// func indexOwnerRef(ownerReferences []metav1.OwnerReference, ref metav1.OwnerReference) int {
+// 	for index, r := range ownerReferences {
+// 		if r.Kind == ref.Kind && r.Name == ref.Name {
+// 			return index
+// 		}
+// 	}
+// 	return -1
+// }
 
 func (r *Renderer) write2ConfigMap(ns, name string, conf *stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
 	s := ""

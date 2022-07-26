@@ -53,18 +53,18 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 		}
 
 		ep := []string{}
-		if config.EnableEndpointDiscovery == true || config.EnableRelayToClusterIP == true {
+		if config.EnableEndpointDiscovery || config.EnableRelayToClusterIP {
 			ctype = stunnerconfv1alpha1.ClusterTypeStatic
 			n := types.NamespacedName{
 				Namespace: ns,
 				Name:      string(b.Name),
 			}
 
-			if config.EnableEndpointDiscovery == true {
+			if config.EnableEndpointDiscovery {
 				ep = append(ep, getEndpointAddrs(n, false)...)
 			}
 
-			if config.EnableRelayToClusterIP == true {
+			if config.EnableRelayToClusterIP {
 				ep = append(ep, getClusterIP(n)...)
 			}
 		} else {

@@ -54,7 +54,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
 
 			found, reason := resolveParentRef(&p, gw, l)
-			if found == false {
+			if !found {
 				r.log.V(4).Info("getUDPRoutes4Listener: parent rejected for listener",
 					"gateway", store.GetObjectKey(gw), "listener", l.Name,
 					"route", store.GetObjectKey(ro), "parent", dumpParentRef(&p),
@@ -138,7 +138,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 		l := gw.Spec.Listeners[i]
 
 		found, _ := resolveParentRef(p, gw, &l)
-		if found == true {
+		if found {
 			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener found for parent",
 				"route", store.GetObjectKey(ro), "parent", dumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name)
@@ -186,7 +186,7 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 
 	c := metav1.ConditionTrue
 	reason := "Accepted"
-	if accepted == false {
+	if !accepted {
 		c = metav1.ConditionFalse
 		reason = "NoMatchingListenerHostname"
 	}

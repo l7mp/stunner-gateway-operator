@@ -21,7 +21,7 @@ func UnpackConfigMap(cm *corev1.ConfigMap) (stunnerconfv1alpha1.StunnerConfig, e
 	conf := stunnerconfv1alpha1.StunnerConfig{}
 
 	jsonConf, found := cm.Data[config.DefaultStunnerdConfigfileName]
-	if found == false {
+	if !found {
 		return conf, fmt.Errorf("error unpacking configmap data: %s not found",
 			config.DefaultStunnerdConfigfileName)
 	}

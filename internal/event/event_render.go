@@ -1,8 +1,8 @@
 package event
 
-import (
-	"fmt"
-)
+// import (
+// "fmt"
+// )
 
 // render event
 
@@ -22,5 +22,5 @@ func (e *EventRender) GetType() EventType {
 }
 
 func (e *EventRender) String() string {
-	return fmt.Sprintf("%s", e.Type.String())
+	return e.Type.String()
 }

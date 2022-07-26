@@ -65,7 +65,7 @@ func (s *storeImpl) UpsertIfChanged(new client.Object) bool {
 	old, found := s.objects[key]
 	s.lock.RUnlock()
 
-	if found && compareObjects(old, new) == true {
+	if found && compareObjects(old, new) {
 		// s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "unchanged")
 		return false
 	}

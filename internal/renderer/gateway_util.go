@@ -20,11 +20,6 @@ import (
 // maxConds is the maximum number of conditions that can be stored at one in a Gateway object
 const maxGwayStatusConds = 8
 
-type listenerRoutePair struct {
-	listener *gatewayv1alpha2.Listener
-	route    *gatewayv1alpha2.UDPRoute
-}
-
 func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewayv1alpha2.Gateway {
 	r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(gc))
 
@@ -131,7 +126,7 @@ func setListenerStatus(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener,
 }
 
 func setListenerStatusDetached(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, accepted bool) {
-	if accepted == true {
+	if accepted {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 			Type:               string(gatewayv1alpha2.ListenerConditionDetached),
 			Status:             metav1.ConditionFalse,
@@ -164,7 +159,7 @@ func setListenerStatusResolvedRefs(gw *gatewayv1alpha2.Gateway, s *gatewayv1alph
 }
 
 func setListenerStatusReady(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, ready bool) {
-	if ready == true {
+	if ready {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 			Type:               string(gatewayv1alpha2.ListenerConditionReady),
 			Status:             metav1.ConditionTrue,

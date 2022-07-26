@@ -25,7 +25,7 @@ func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) []string {
 				ret = append(ret, a.IP)
 			}
 		}
-		if suppressNotReady == false {
+		if suppressNotReady {
 			for _, a := range s.NotReadyAddresses {
 				if a.IP != "" {
 					ret = append(ret, a.IP)

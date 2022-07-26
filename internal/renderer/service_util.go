@@ -52,7 +52,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 				"load-balancer", lb, "own", own, "address-port",
 				fmt.Sprintf("%s:%d", ap.addr, ap.port))
 
-			if lb == true {
+			if lb {
 				// prepend!
 				aps = append([]addrPort{*ap}, aps...)
 			} else {
@@ -60,7 +60,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 				aps = append(aps, *ap)
 			}
 
-			if own == true {
+			if own {
 				// we have found the best candidate
 				ownSvcFound = true
 				break
@@ -69,7 +69,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 	}
 
 	var err error
-	if ownSvcFound == false {
+	if !ownSvcFound {
 		err = errors.New("load-balancer service not found for gateway: owner-ref missing")
 	}
 
@@ -143,7 +143,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*a
 func getServicePort(gw *gatewayv1alpha2.Gateway, svc *corev1.Service) (int, bool) {
 	for _, l := range gw.Spec.Listeners {
 		for i, s := range svc.Spec.Ports {
-			if strings.ToLower(string(l.Protocol)) == strings.ToLower(string(s.Protocol)) &&
+			if strings.EqualFold(string(l.Protocol), string(s.Protocol)) &&
 				int32(l.Port) == s.Port {
 				return i, true
 			}

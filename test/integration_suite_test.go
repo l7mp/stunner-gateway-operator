@@ -61,8 +61,8 @@ func init() {
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	timeout  = time.Second * 10
-	duration = time.Second * 10
+	timeout = time.Second * 10
+	// duration = time.Second * 10
 	interval = time.Millisecond * 250
 	// loglevel = -4
 	loglevel = -1
@@ -217,21 +217,21 @@ var _ = AfterSuite(func() {
 
 // inplace object rewriters
 
-type ServiceMutator func(current *corev1.Service)
+// type ServiceMutator func(current *corev1.Service)
 
-func recreateOrUpdateService(f ServiceMutator) {
-	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name:      testSvc.GetName(),
-		Namespace: testSvc.GetNamespace(),
-	}}
+// func recreateOrUpdateService(f ServiceMutator) {
+// 	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+// 		Name:      testSvc.GetName(),
+// 		Namespace: testSvc.GetNamespace(),
+// 	}}
 
-	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
-		testutils.TestSvc.Spec.DeepCopyInto(&current.Spec)
-		f(current)
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
+// 	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+// 		testutils.TestSvc.Spec.DeepCopyInto(&current.Spec)
+// 		f(current)
+// 		return nil
+// 	})
+// 	Expect(err).Should(Succeed())
+// }
 
 type UDPRouteMutator func(current *gatewayv1alpha2.UDPRoute)
 

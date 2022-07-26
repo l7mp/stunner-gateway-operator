@@ -52,6 +52,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
+				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
@@ -116,6 +117,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
+				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
@@ -159,6 +161,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}
 
 				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
+				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")

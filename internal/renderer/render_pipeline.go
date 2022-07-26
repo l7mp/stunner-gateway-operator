@@ -197,7 +197,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
 		}
 
-		if renderRoute == true {
+		if renderRoute {
 			rc, err := r.renderCluster(ro)
 			if err != nil {
 				log.Info("error rendering configuration for route", "route",
@@ -306,7 +306,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
 
 	// schedule for update
-	if invalidateConf == true {
+	if invalidateConf {
 		cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target", target)

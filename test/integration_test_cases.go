@@ -94,10 +94,7 @@ var _ = Describe("Integration test:", func() {
 			gwConfig := &stunnerv1alpha1.GatewayConfig{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, gwConfig)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(gwConfig.GetName()).To(Equal(testutils.TestGwConfig.GetName()),
 				"GatewayClass name")
@@ -117,12 +114,7 @@ var _ = Describe("Integration test:", func() {
 				lookupKey)
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				return true
-
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
@@ -147,11 +139,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				_, err = testutils.UnpackConfigMap(cm)
-				if err == nil {
-					return true
-				}
-
-				return false
+				return err == nil
 
 			}, timeout, interval).Should(BeTrue())
 

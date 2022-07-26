@@ -309,7 +309,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					Name:      testutils.TestSvc.GetName(),
 				}
 				svc := store.Services.GetObject(s)
-				controllerutil.SetOwnerReference(gw, svc, r.scheme)
+				assert.NoError(t, controllerutil.SetOwnerReference(gw, svc, r.scheme), "set-owner")
 				store.Services.Upsert(svc)
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)

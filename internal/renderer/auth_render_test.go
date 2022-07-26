@@ -36,6 +36,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "gw-conf found")
 
 				auth, err := r.renderAuth(gwConf)
+				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
 				assert.Equal(t, "plaintext", auth.Type, "auth-type")
@@ -68,6 +69,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "gw-conf found")
 
 				auth, err := r.renderAuth(gwConf)
+				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, "dummy", auth.Realm, "realm")
 				assert.Equal(t, "longterm", auth.Type, "auth-type")

@@ -25,7 +25,6 @@ import (
 
 // clusterTimeout is a timeout for connections to the Kubernetes API
 const (
-	clusterTimeout    = 10 * time.Second
 	channelBufferSize = 200
 	throttleTimeout   = 250 * time.Millisecond
 )
@@ -113,7 +112,7 @@ func (o *Operator) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot register node controller: %w", err)
 	}
 
-	if config.EnableEndpointDiscovery == true {
+	if config.EnableEndpointDiscovery {
 		log.V(3).Info("starting Endpoint controller")
 		err = stunnerctrl.RegisterEndpointController(o.mgr, o.operatorCh)
 		if err != nil {
@@ -150,7 +149,7 @@ func (o *Operator) eventLoop(ctx context.Context) {
 					continue
 				}
 
-				if config.EnableRenderThrottling == false {
+				if !config.EnableRenderThrottling {
 					// fire immediately
 					o.renderCh <- event.NewEventRender()
 					continue
@@ -178,7 +177,7 @@ func (o *Operator) eventLoop(ctx context.Context) {
 					continue
 				}
 
-				if config.EnableRenderThrottling == false {
+				if !config.EnableRenderThrottling {
 					// fire immediately
 					o.renderCh <- event.NewEventRender()
 					continue
