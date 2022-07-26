@@ -1561,6 +1561,34 @@ var _ = Describe("Integration test:", func() {
 			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 		})
+
+		It("should render an empty config", func() {
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := testutils.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 0 && len(c.Clusters) == 0 {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
