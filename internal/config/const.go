@@ -38,7 +38,7 @@ const (
 	DefaultEnableEndpointDiscovery = true
 
 	// EnableRelayToClusterIP allows clients to create transport relay connections to the
-	// ClusterIP of a service. This is useful for hiding the pod IPs behind the ClusterIP.
+	// ClusterIP of a service.
 	DefaultEnableRelayToClusterIP = true
 
 	// DefaultEnableRenderThrottling makes is possible for the operator to queue up rendering
