@@ -10,6 +10,8 @@ and supports a subset of the Gateway API.
 > Warning: This project is in active development (pre-alpha feature state), consider this before
 > deploying it in a production environment.  All APIs, SDKs, and packages are subject to change.
 
+## Documentation
+
 Full [documentation](https://github.com/l7mp/stunner/doc/README.md) can be found in the main
 STUNner [GitHub repo](https://github.com/l7mp/stunner).
 
@@ -476,7 +478,7 @@ STUNner [GitHub repo](https://github.com/l7mp/stunner).
 <!--    Greetings from STUNner! -->
 <!--    ``` -->
 
-# Caveats
+## Caveats
 
 * The operator omits the Port in UDPRoutes and the PortNumber in BackendObjectReferences and
   ParentReferences. This is because our target services typically span WebRTC media server pools
@@ -497,19 +499,19 @@ STUNner [GitHub repo](https://github.com/l7mp/stunner).
   this case is not handled.
 * The operator does not invalidate the GatewayClass status on exit.
 
-# Help
+## Help
 
 STUNner development is coordinated in Discord, send
 [us](https://github.com/l7mp/stunner/blob/main/AUTHORS) an email to ask an invitation.
 
-# License
+## License
 
 Copyright 2021-2022 by its authors. Some rights reserved. See
 [AUTHORS](https://github.com/l7mp/stunner/blob/main/AUTHORS).
 
 APACHE License - see [LICENSE](/LICENSE) for full text.
 
-# Acknowledgments
+## Acknowledgments
 
 Inspired from the [NGINX Kubernetes Gateway](https://github.com/nginxinc/nginx-kubernetes-gateway)
 and the [Kong Gateway Operator](https://github.com/Kong/gateway-operator).
