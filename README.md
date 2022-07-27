@@ -1,7 +1,5 @@
 # STUNner Kubernetes Gateway Operator
 
-*UNDER CONSTRUCTION*
-
 The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Kubernetes Gateway
 API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data
 plane. The goal is to implement the part of the core Gateway API -- Gateway, GatewayClass, and
