@@ -10,8 +10,8 @@ and supports a subset of the Gateway API.
 > Warning: This project is in active development (pre-alpha feature state), consider this before
 > deploying it in a production environment.  All APIs, SDKs, and packages are subject to change.
 
-Full [documentation](https://github.com/l7mp/stunner/doc/README.md can be found in the main STUNner
-[GitHub repo](https://github.com/l7mp/stunner).
+Full [documentation](https://github.com/l7mp/stunner/doc/README.md) can be found in the main
+STUNner [GitHub repo](https://github.com/l7mp/stunner).
 
 <!-- # Run the STUNner Kubernetes Gateway Operator -->
 
