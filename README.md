@@ -12,7 +12,7 @@ and supports a subset of the Gateway API.
 
 ## Documentation
 
-Full [documentation](https://github.com/l7mp/stunner/doc/README.md) can be found in the main
+Full [documentation](https://github.com/l7mp/stunner/blob/main/README.md) can be found in the main
 STUNner [GitHub repo](https://github.com/l7mp/stunner).
 
 <!-- # Run the STUNner Kubernetes Gateway Operator -->
