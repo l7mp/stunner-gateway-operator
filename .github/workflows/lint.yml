@@ -6,6 +6,8 @@ on:
       - '*'
     paths-ignore:
       - '**.md'
+    tags-ignore:
+      - '*'
 
 jobs:
   lint:
