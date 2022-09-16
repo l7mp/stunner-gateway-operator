@@ -46,10 +46,10 @@ func (r *Renderer) Render(e *event.EventRender) {
 			names = append(names, fmt.Sprintf("%q", store.GetObjectKey(gc)))
 		}
 
-		log.Info("multiple gateway-class objects found %s: this is most probably UNINTENED - "+
+		log.Info("multiple gateway-class objects found: this is most probably UNINTENED - "+
 			"the operator will attempt to render a configuration for each gateway-class but there "+
-			"is no guarantee that this will not result in an error - this mode is UNSUPPORTED, "+
-			"if unsure, remove one of the gateway-class objects!", strings.Join(names, ", "))
+			"is no guarantee that this will work - this mode is UNSUPPORTED, "+
+			"if unsure, remove one of the gateway-class objects", "names", strings.Join(names, ", "))
 	}
 
 	// render each GatewayClass: hopefully they won's step on each other's throat: we cannot
