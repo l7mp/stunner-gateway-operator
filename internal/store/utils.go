@@ -15,7 +15,7 @@ func GetObjectKey(object client.Object) string {
 	return n.String()
 }
 
-//FIXME this is not safe against K8s changing the namespace-name separator
+// FIXME this is not safe against K8s changing the namespace-name separator
 func GetNameFromKey(key string) types.NamespacedName {
 	// s.log.V(5).Info("GetNameFromKey", "key", key)
 

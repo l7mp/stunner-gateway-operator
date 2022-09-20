@@ -19,16 +19,17 @@ import (
 )
 
 // we implement the below AllowedRoutes policy:
-// AllowedRoutes{
-// 	Namespaces: &RouteNamespaces{{
-// 		From: &FromNamespaces("Same")
-// 		Selector: nil
-// 	}},
-// 	Kinds: []RouteGroupKind{{
-// 		Group: Group("gateway.networking.k8s.io"),
-// 		Kind:  Kind("UDPRoute"),
-// 	}}
-// }
+//
+//	AllowedRoutes{
+//		Namespaces: &RouteNamespaces{{
+//			From: &FromNamespaces("Same")
+//			Selector: nil
+//		}},
+//		Kinds: []RouteGroupKind{{
+//			Group: Group("gateway.networking.k8s.io"),
+//			Kind:  Kind("UDPRoute"),
+//		}}
+//	}
 func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) []*gatewayv1alpha2.UDPRoute {
 	r.log.V(4).Info("getUDPRoutes4Listener", "gateway", store.GetObjectKey(gw), "listener",
 		l.Name)

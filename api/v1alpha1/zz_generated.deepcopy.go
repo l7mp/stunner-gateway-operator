@@ -96,6 +96,11 @@ func (in *GatewayConfigSpec) DeepCopyInto(out *GatewayConfigSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.MetricsEndpoint != nil {
+		in, out := &in.MetricsEndpoint, &out.MetricsEndpoint
+		*out = new(string)
+		**out = **in
+	}
 	if in.AuthType != nil {
 		in, out := &in.AuthType, &out.AuthType
 		*out = new(string)

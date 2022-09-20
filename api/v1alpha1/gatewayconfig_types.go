@@ -42,6 +42,11 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:default:="stunner.l7mp.io"
 	Realm *string `json:"realm,omitempty"`
 
+	// MetricsEndpoint holds the the URL to the metric server (Prometheus)
+	//
+	// +optional
+	MetricsEndpoint *string `json:"metricsEndpoint,omitempty"`
+
 	// AuthType is the type of the STUN/TURN authentication mechanism.
 	//
 	// +optional

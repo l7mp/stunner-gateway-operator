@@ -97,7 +97,7 @@ func (s *storeImpl) Remove(nsName types.NamespacedName) {
 	delete(s.objects, nsName.String())
 }
 
-//FIXME is length(map) atomic in Go? play it safe...
+// FIXME is length(map) atomic in Go? play it safe...
 func (s *storeImpl) Len() int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
