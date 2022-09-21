@@ -41,6 +41,7 @@ func TestRenderAdminRender(t *testing.T) {
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, testutils.TestMetricsEndpoint, admin.MetricsEndpoint, "metrics_endpoint")
 
 			},
 		},
@@ -54,6 +55,7 @@ func TestRenderAdminRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
+				w.Spec.MetricsEndpoint = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -67,6 +69,35 @@ func TestRenderAdminRender(t *testing.T) {
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, "", admin.MetricsEndpoint, "metrics_endpoint")
+
+			},
+		},
+		{
+			name: "admin metricsendpoint ok",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LogLevel = nil
+				*w.Spec.MetricsEndpoint = "http://0.0.0.0:8080/metrics"
+				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-conf found")
+
+				admin, err := r.renderAdmin(gwConf)
+				assert.NoError(t, err, "renderAdmin")
+
+				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, "http://0.0.0.0:8080/metrics", admin.MetricsEndpoint, "Metrics_endpoint")
 
 			},
 		},
