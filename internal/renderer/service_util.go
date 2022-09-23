@@ -66,7 +66,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 			if own {
 				r.log.V(4).Info("public service found", "svc",
 					store.GetObjectKey(svc), "gateway",
-					store.GetObjectKey(svc))
+					store.GetObjectKey(gw))
 
 				// we have found the best candidate
 				ownSvcFound = true

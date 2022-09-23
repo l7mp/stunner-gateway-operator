@@ -30,8 +30,8 @@ func NewEventUpdate(generation int) *EventUpdate {
 			GatewayClasses: store.NewGatewayClassStore(),
 			Gateways:       store.NewGatewayStore(),
 			UDPRoutes:      store.NewUDPRouteStore(),
-			ConfigMaps:     store.NewConfigMapStore(),
 			Services:       store.NewServiceStore(),
+			ConfigMaps:     store.NewConfigMapStore(),
 		},
 		DeleteQueue: UpdateConf{
 			GatewayClasses: store.NewGatewayClassStore(),

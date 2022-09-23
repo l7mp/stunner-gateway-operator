@@ -49,13 +49,6 @@ spec:
           spec:
             description: GatewayConfigSpec defines the desired state of GatewayConfig
             properties:
-              annotations:
-                additionalProperties:
-                  type: string
-                description: LoadBalancerServiceAnnotations is a list of annotations
-                  that will go into the LoadBalancer services created automatically
-                  by the operator to wrap Gateways
-                type: object
               authLifetime:
                 description: AuthLifetime defines the lifetime of "longterm" authentication
                   credentials in seconds.
@@ -67,6 +60,13 @@ spec:
                   mechanism.
                 pattern: ^plaintext|longterm$
                 type: string
+              loadBalancerServiceAnnotations:
+                additionalProperties:
+                  type: string
+                description: LoadBalancerServiceAnnotations is a list of annotations
+                  that will go into the LoadBalancer services created automatically
+                  by the operator to wrap Gateways
+                type: object
               loglevel:
                 description: LogLevel specifies the default loglevel for the STUNner
                   daemon

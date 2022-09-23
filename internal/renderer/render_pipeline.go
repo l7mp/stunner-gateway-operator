@@ -136,23 +136,10 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 		var ready bool
 		ap, err := r.getPublicAddrPort4Gateway(gw)
 		if err != nil {
-			// error means our own managed LoadBalancer service is not found: create it!
-			if s := createLbService4Gateway(c, gw); s != nil {
-				if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
-					r.log.Error(err, "cannot set owner reference", "owner",
-						store.GetObjectKey(gw), "reference",
-						store.GetObjectKey(s))
-				}
-
-				log.Info("creating public service for gateway", "name",
-					store.GetObjectKey(s), "gateway", gw.GetName(), "reason",
-					err.Error(), "service", fmt.Sprintf("%#v", s))
-
-				c.update.UpsertQueue.Services.Upsert(s)
-			}
-		}
-
-		if ap == nil {
+			log.V(1).Info("cannot find public address", "gateway", gw.GetName(),
+				"error", err.Error())
+			ready = false
+		} else if ap == nil {
 			log.V(1).Info("cannot find public address", "gateway", gw.GetName())
 			ready = false
 		} else if ap.addr == "" {
@@ -163,6 +150,23 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 			ready = false
 		} else {
 			ready = true
+		}
+
+		// must recreate the LoadBalancer service otherwise a changed
+		// GatewayConfig.Spec.LoadBalancerServiceAnnotation may not be reflected back to
+		// the service
+		if s := createLbService4Gateway(c, gw); s != nil {
+			if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
+				r.log.Error(err, "cannot set owner reference", "owner",
+					store.GetObjectKey(gw), "reference",
+					store.GetObjectKey(s))
+			}
+
+			log.Info("creating public service for gateway", "name",
+				store.GetObjectKey(s), "gateway", gw.GetName(), "service",
+				fmt.Sprintf("%#v", s))
+
+			c.update.UpsertQueue.Services.Upsert(s)
 		}
 
 		for j := range gw.Spec.Listeners {
