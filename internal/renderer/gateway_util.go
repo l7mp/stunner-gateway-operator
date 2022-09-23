@@ -20,18 +20,18 @@ import (
 // maxConds is the maximum number of conditions that can be stored at one in a Gateway object
 const maxGwayStatusConds = 8
 
-func (r *Renderer) getGateways4Class(gc *gatewayv1alpha2.GatewayClass) []*gatewayv1alpha2.Gateway {
-	r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(gc))
+func (r *Renderer) getGateways4Class(c *RenderContext) []*gatewayv1alpha2.Gateway {
+	r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	ret := []*gatewayv1alpha2.Gateway{}
 
 	for _, g := range store.Gateways.GetAll() {
-		if string(g.Spec.GatewayClassName) == gc.GetName() {
+		if string(g.Spec.GatewayClassName) == c.gc.GetName() {
 			ret = append(ret, g)
 		}
 	}
 
-	r.log.V(4).Info("getGateways4Class: ready", "gateway-class", store.GetObjectKey(gc),
+	r.log.V(4).Info("getGateways4Class: ready", "gateway-class", store.GetObjectKey(c.gc),
 		"gateways", len(ret))
 
 	return ret

@@ -32,11 +32,12 @@ func TestRenderListenerRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -51,7 +52,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
@@ -71,11 +72,12 @@ func TestRenderListenerRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -86,7 +88,7 @@ func TestRenderListenerRender(t *testing.T) {
 					addr: "1.2.3.4",
 					port: 1234,
 				}
-				_, err = r.renderListener(gw, gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
+				_, err = r.renderListener(gw, c.gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
 				assert.Error(t, err, "render fails")
 			},
 		},
@@ -100,11 +102,12 @@ func TestRenderListenerRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -116,7 +119,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
@@ -141,11 +144,12 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -160,7 +164,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, string(l.Name), lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
@@ -186,11 +190,12 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -205,7 +210,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				_, err = r.renderListener(gw, gwConf, &l, rs, addr)
+				_, err = r.renderListener(gw, c.gwConf, &l, rs, addr)
 				assert.Error(t, err, "wrong-proto")
 			},
 		},

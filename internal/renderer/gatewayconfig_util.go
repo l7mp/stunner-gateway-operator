@@ -9,18 +9,17 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/types"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) getGatewayConfig4Class(gc *gatewayv1alpha2.GatewayClass) (*stunnerv1alpha1.GatewayConfig, error) {
-	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(gc))
+func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stunnerv1alpha1.GatewayConfig, error) {
+	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	// ref already checked
-	ref := gc.Spec.ParametersRef
+	ref := c.gc.Spec.ParametersRef
 
 	gwConfName := types.NamespacedName{
 		Namespace: string(*ref.Namespace), // this should already be validated
@@ -33,7 +32,7 @@ func (r *Renderer) getGatewayConfig4Class(gc *gatewayv1alpha2.GatewayClass) (*st
 			gwConfName.String())
 	}
 
-	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(gc), "result",
+	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc), "result",
 		store.GetObjectKey(gwConf))
 
 	return gwConf, nil

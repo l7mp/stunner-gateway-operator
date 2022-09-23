@@ -23,8 +23,17 @@ import (
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
+
+// RenderContext contains the GatewayClass and the GatewayConfig for the current rendering task,
+// plus additional metadata
+type RenderContext struct {
+	origin event.Event
+	update *event.EventUpdate
+	gc     *gatewayv1alpha2.GatewayClass
+	gwConf *stunnerv1alpha1.GatewayConfig
+}
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
 func (r *Renderer) Render(e *event.EventRender) {
@@ -57,23 +66,27 @@ func (r *Renderer) Render(e *event.EventRender) {
 	// pipeline to render into the same configmap, but at least we can prevent race conditions
 	// by serializing update requests on the updaterChannel
 	for _, gc := range gcs {
-		u := event.NewEventUpdate(r.gen)
+		c := &RenderContext{
+			origin: e,
+			update: event.NewEventUpdate(r.gen),
+			gc:     gc,
+		}
 
-		if err := r.renderGatewayClass(gc, u); err != nil {
+		if err := r.renderGatewayClass(c); err != nil {
 			// an irreparable error happened, invalidate the config and set all related
 			// object statuses to signal the error
-			log.Error(err, "rendering", "gateway-class",
-				store.GetObjectKey(gc))
-			r.invalidateGatewayClass(gc, u, err)
+			log.Error(err, "rendering", "gateway-class", store.GetObjectKey(gc))
+			r.invalidateGatewayClass(c, err)
 		}
 
 		// send the update back to the operator
-		r.operatorCh <- u
+		r.operatorCh <- c.update
 	}
 }
 
-func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event.EventUpdate) error {
+func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	log := r.log
+	gc := c.gc
 	log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
 
 	// gw-config.StunnerConfig may override this
@@ -84,12 +97,13 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	}
 
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
-	gwConf, err := r.getGatewayConfig4Class(gc)
+	gwConf, err := r.getGatewayConfig4Class(c)
 	if err != nil {
 		setGatewayClassStatusAccepted(gc, err)
 		return err
 	}
 
+	c.gwConf = gwConf
 	setGatewayClassStatusAccepted(gc, nil)
 
 	if gwConf.Spec.StunnerConfig != nil {
@@ -97,14 +111,14 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 	}
 
 	log.V(1).Info("rendering admin config")
-	admin, err := r.renderAdmin(gwConf)
+	admin, err := r.renderAdmin(c)
 	if err != nil {
 		return err
 	}
 	conf.Admin = *admin
 
 	log.V(1).Info("rendering auth config")
-	auth, err := r.renderAuth(gwConf)
+	auth, err := r.renderAuth(c)
 	if err != nil {
 		return err
 	}
@@ -112,7 +126,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 
 	log.V(1).Info("finding gateway objects")
 	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
-	for _, gw := range r.getGateways4Class(gc) {
+	for _, gw := range r.getGateways4Class(c) {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
@@ -123,7 +137,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		ap, err := r.getPublicAddrPort4Gateway(gw)
 		if err != nil {
 			// error means our own managed LoadBalancer service is not found: create it!
-			if s := createLbService4Gateway(gw); s != nil {
+			if s := createLbService4Gateway(c, gw); s != nil {
 				if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
 					r.log.Error(err, "cannot set owner reference", "owner",
 						store.GetObjectKey(gw), "reference",
@@ -134,7 +148,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 					store.GetObjectKey(s), "gateway", gw.GetName(), "reason",
 					err.Error(), "service", fmt.Sprintf("%#v", s))
 
-				u.UpsertQueue.Services.Upsert(s)
+				c.update.UpsertQueue.Services.Upsert(s)
 			}
 		}
 
@@ -174,7 +188,7 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		u.UpsertQueue.Gateways.Upsert(gw)
+		c.update.UpsertQueue.Gateways.Upsert(gw)
 	}
 
 	log.V(1).Info("processing UDPRoutes")
@@ -210,16 +224,14 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 		}
 
 		// schedule for update
-		u.UpsertQueue.UDPRoutes.Upsert(ro)
+		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
 	// schedule for update
-	u.UpsertQueue.GatewayClasses.Upsert(gc)
+	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "conf",
 		fmt.Sprintf("%#v", conf))
-
-	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
 
 	// schedule for update
 	cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, &conf)
@@ -234,14 +246,15 @@ func (r *Renderer) renderGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event
 
 	// fmt.Printf("%#v\n", cm)
 
-	u.UpsertQueue.ConfigMaps.Upsert(cm)
+	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 
 	return nil
 }
 
 // this never reports errors: we cannot do about such errors anyway
-func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *event.EventUpdate, reason error) {
+func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log := r.log
+	gc := c.gc
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
 	invalidateConf := true
@@ -250,7 +263,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	target := config.DefaultConfigMapName
 
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
-	gwConf, err := r.getGatewayConfig4Class(gc)
+	gwConf, err := r.getGatewayConfig4Class(c)
 	if err != nil {
 		// this is the killer case: we have most probably lost our gatewayconfig and we
 		// don't know which stunner config to invalidate; for now warn, later eliminate
@@ -266,10 +279,10 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 	}
 
 	setGatewayClassStatusAccepted(gc, err)
-	u.UpsertQueue.GatewayClasses.Upsert(gc)
+	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.V(1).Info("finding gateway objects")
-	for _, gw := range r.getGateways4Class(gc) {
+	for _, gw := range r.getGateways4Class(c) {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
@@ -284,7 +297,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		u.UpsertQueue.Gateways.Upsert(gw)
+		c.update.UpsertQueue.Gateways.Upsert(gw)
 	}
 
 	log.V(1).Info("processing UDPRoutes")
@@ -300,7 +313,7 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
 		}
 
-		u.UpsertQueue.UDPRoutes.Upsert(ro)
+		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
@@ -318,6 +331,6 @@ func (r *Renderer) invalidateGatewayClass(gc *gatewayv1alpha2.GatewayClass, u *e
 				"reference", store.GetObjectKey(cm))
 		}
 
-		u.UpsertQueue.ConfigMaps.Upsert(cm)
+		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
 }

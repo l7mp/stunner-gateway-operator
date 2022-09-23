@@ -31,11 +31,12 @@ func TestRenderAuthRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				auth, err := r.renderAuth(gwConf)
+				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
@@ -64,11 +65,12 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				auth, err := r.renderAuth(gwConf)
+				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, "dummy", auth.Realm, "realm")
@@ -91,11 +93,12 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				_, err = r.renderAuth(gwConf)
+				_, err = r.renderAuth(c)
 				assert.Error(t, err, "auth-type")
 			},
 		},
@@ -114,11 +117,12 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				_, err = r.renderAuth(gwConf)
+				_, err = r.renderAuth(c)
 				assert.Error(t, err, "auth-type")
 			},
 		},
@@ -137,11 +141,12 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				_, err = r.renderAuth(gwConf)
+				_, err = r.renderAuth(c)
 				assert.Error(t, err, "auth-type")
 			},
 		},
@@ -160,11 +165,12 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				_, err = r.renderAuth(gwConf)
+				_, err = r.renderAuth(c)
 				assert.Error(t, err, "auth-type")
 			},
 		},

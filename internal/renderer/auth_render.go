@@ -5,11 +5,11 @@ import (
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderAuth(gwConf *stunnerv1alpha1.GatewayConfig) (*stunnerconfv1alpha1.AuthConfig, error) {
+func (r *Renderer) renderAuth(c *RenderContext) (*stunnerconfv1alpha1.AuthConfig, error) {
+	gwConf := c.gwConf
 	r.log.V(4).Info("renderAuth", "gateway-config", store.GetObjectKey(gwConf))
 
 	realm := stunnerconfv1alpha1.DefaultRealm

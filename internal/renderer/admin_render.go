@@ -7,16 +7,14 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-func (r *Renderer) renderAdmin(gwConf *stunnerv1alpha1.GatewayConfig) (*stunnerconfv1alpha1.AdminConfig, error) {
-	r.log.V(4).Info("renderAdmin", "gateway-config", store.GetObjectKey(gwConf))
+func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConfig, error) {
+	r.log.V(4).Info("renderAdmin", "gateway-config", store.GetObjectKey(c.gwConf))
 
 	loglevel := stunnerconfv1alpha1.DefaultLogLevel
-	if gwConf.Spec.LogLevel != nil {
-		loglevel = *gwConf.Spec.LogLevel
+	if c.gwConf.Spec.LogLevel != nil {
+		loglevel = *c.gwConf.Spec.LogLevel
 	}
 
 	admin := stunnerconfv1alpha1.AdminConfig{
@@ -29,7 +27,7 @@ func (r *Renderer) renderAdmin(gwConf *stunnerv1alpha1.GatewayConfig) (*stunnerc
 		return nil, err
 	}
 
-	r.log.V(2).Info("renderAdmin ready", "gateway-config", store.GetObjectKey(gwConf), "result",
+	r.log.V(2).Info("renderAdmin ready", "gateway-config", store.GetObjectKey(c.gwConf), "result",
 		fmt.Sprintf("%#v", admin))
 
 	return &admin, nil

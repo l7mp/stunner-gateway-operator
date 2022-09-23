@@ -71,6 +71,12 @@ type GatewayConfigSpec struct {
 	// +optional
 	AuthLifetime *int32 `json:"authLifetime,omitempty"`
 
+	// LoadBalancerServiceAnnotations is a list of annotations that will go into the
+	// LoadBalancer services created automatically by the operator to wrap Gateways
+	//
+	// +optional
+	LoadBalancerServiceAnnotations map[string]string `json:"annotations,omitempty"`
+
 	// LogLevel specifies the default loglevel for the STUNner daemon
 	//
 	// +optional

@@ -36,21 +36,19 @@ func TestRenderPipeline(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
-					"gatewayclass name")
-
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
-				assert.Equal(t, "gatewayconfig-ok", gwConf.GetName(),
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
 					"gatewayconfig name")
 
-				admin, err := r.renderAdmin(gwConf)
+				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "admin rendered")
 				assert.Equal(t, "testloglevel", admin.LogLevel, "log level")
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
 					admin.Name, "stunnerd name")
 
-				auth, err := r.renderAuth(gwConf)
+				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "auth rendered")
 				assert.Equal(t, stunnerconfv1alpha1.AuthTypePlainText.String(),
 					auth.Type, "auth type")
@@ -74,17 +72,20 @@ func TestRenderPipeline(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
-					"gatewayclass name")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -98,7 +99,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.True(t, ok, "configmap cast")
 
 				conf, err := testutils.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
@@ -164,17 +165,20 @@ func TestRenderPipeline(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
-					"gatewayclass name")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -256,17 +260,20 @@ func TestRenderPipeline(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
-					"gatewayclass name")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -341,16 +348,19 @@ func TestRenderPipeline(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
-					"gatewayclass name")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				r.invalidateGatewayClass(gc, u, errors.New("dummy"))
+				r.invalidateGatewayClass(c, errors.New("dummy"))
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
 
@@ -381,7 +391,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
-				gws := u.UpsertQueue.Gateways.Objects()
+				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
 				gw, found := gws[0].(*gatewayv1alpha2.Gateway)
 				assert.True(t, found, "gateway found")
@@ -457,16 +467,16 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c := &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(gc, u)
+				err := r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
-
 				o := cms[0]
 
 				// objectmeta
@@ -531,14 +541,15 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				u = event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c = &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms = u.UpsertQueue.ConfigMaps.Objects()
+				cms = c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o = cms[0]
@@ -652,14 +663,15 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c := &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(gc, u)
+				err := r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o := cms[0]
@@ -728,14 +740,15 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				u = event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c = &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms = u.UpsertQueue.ConfigMaps.Objects()
+				cms = c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o = cms[0]
@@ -849,14 +862,15 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				u := event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c := &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(gc, u)
+				err := r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := u.UpsertQueue.ConfigMaps.Objects()
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o := cms[0]
@@ -926,14 +940,15 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				u = event.NewEventUpdate(0)
-				assert.NotNil(t, u, "update event create")
+				c = &RenderContext{gc: gc}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(gc, u)
+				err = r.renderGatewayClass(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms = u.UpsertQueue.ConfigMaps.Objects()
+				cms = c.update.UpsertQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 
 				o = cms[0]

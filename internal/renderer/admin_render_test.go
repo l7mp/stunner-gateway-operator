@@ -33,10 +33,11 @@ func TestRenderAdminRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				admin, err := r.renderAdmin(gwConf)
+				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
@@ -59,10 +60,11 @@ func TestRenderAdminRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				admin, err := r.renderAdmin(gwConf)
+				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
