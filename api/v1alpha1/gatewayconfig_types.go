@@ -88,7 +88,7 @@ type GatewayConfigSpec struct {
 	// LogLevel specifies the default loglevel for the STUNner daemon
 	//
 	// +optional
-	LogLevel *string `json:"loglevel,omitempty"`
+	LogLevel *string `json:"logLevel,omitempty"`
 
 	// MinRelayPort is the smallest relay port assigned for STUNner relay connections.
 	//
