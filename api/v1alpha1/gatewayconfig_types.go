@@ -75,8 +75,8 @@ type GatewayConfigSpec struct {
 	// LoadBalancer services created automatically by the operator to wrap Gateways
 	//
 	// NOTE: removing annotations from a GatewayConfig will not result in the removal of the
-	// corresponding annotations from the LoadBalancer service, in order to avoid that we
-	// accidentally remove an annotation installed there by Kubernetes or the cloud
+	// corresponding annotations from the LoadBalancer service, in order to prevent the
+	// accidental removal of an annotation installed there by Kubernetes or the cloud
 	// provider. If you really want to remove an annotation, do this manually or simply remove
 	// all Gateways (which will remove the corresponding LoadBalancer services), update the
 	// GatewayConfig and then recreate the Gateways, so that the newly created LoadBalancer
