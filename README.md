@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="STUNner", src="doc/stunner.svg" width="50%" height="50%"></br>
+</p>
+
 # STUNner Kubernetes Gateway Operator
 
 The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Kubernetes Gateway

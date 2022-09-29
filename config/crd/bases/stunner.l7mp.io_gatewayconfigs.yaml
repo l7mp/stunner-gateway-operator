@@ -60,7 +60,22 @@ spec:
                   mechanism.
                 pattern: ^plaintext|longterm$
                 type: string
-              loglevel:
+              loadBalancerServiceAnnotations:
+                additionalProperties:
+                  type: string
+                description: "LoadBalancerServiceAnnotations is a list of annotations
+                  that will go into the LoadBalancer services created automatically
+                  by the operator to wrap Gateways \n NOTE: removing annotations from
+                  a GatewayConfig will not result in the removal of the corresponding
+                  annotations from the LoadBalancer service, in order to prevent the
+                  accidental removal of an annotation installed there by Kubernetes
+                  or the cloud provider. If you really want to remove an annotation,
+                  do this manually or simply remove all Gateways (which will remove
+                  the corresponding LoadBalancer services), update the GatewayConfig
+                  and then recreate the Gateways, so that the newly created LoadBalancer
+                  services will contain the required annotations"
+                type: object
+              logLevel:
                 description: LogLevel specifies the default loglevel for the STUNner
                   daemon
                 type: string

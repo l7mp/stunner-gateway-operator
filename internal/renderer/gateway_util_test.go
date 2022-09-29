@@ -39,8 +39,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 0, "gw found")
 			},
 		},
@@ -60,8 +61,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 2, "gw found")
 
 				keys := []string{store.GetObjectKey(gws[0]), store.GetObjectKey(gws[1])}
@@ -84,8 +86,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -121,8 +124,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -156,12 +160,12 @@ func TestRenderGatewayUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-
-				gwConf, err := r.getGatewayConfig4Class(gc)
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
@@ -176,7 +180,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 						port: 1234,
 					}
 
-					_, err := r.renderListener(gw, gwConf, &l,
+					_, err := r.renderListener(gw, c.gwConf, &l,
 						[]*gatewayv1alpha2.UDPRoute{}, addr)
 
 					if err != nil {
@@ -291,7 +295,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 						port: 1234,
 					}
 
-					_, err := r.renderListener(gw, gwConf, &l,
+					_, err := r.renderListener(gw, c.gwConf, &l,
 						[]*gatewayv1alpha2.UDPRoute{}, addr)
 
 					if err != nil {

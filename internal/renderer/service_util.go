@@ -66,7 +66,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 			if own {
 				r.log.V(4).Info("public service found", "svc",
 					store.GetObjectKey(svc), "gateway",
-					store.GetObjectKey(svc))
+					store.GetObjectKey(gw))
 
 				// we have found the best candidate
 				ownSvcFound = true
@@ -210,7 +210,7 @@ func isOwner(owner, owned metav1.Object, kind string) bool {
 
 // we always take the FIRST listener port in the gateway: if you want to expose STUNner on multiple
 // ports, use separate Gateways!
-func createLbService4Gateway(gw *gatewayv1alpha2.Gateway) *corev1.Service {
+func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *corev1.Service {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
 		return nil
@@ -237,7 +237,12 @@ func createLbService4Gateway(gw *gatewayv1alpha2.Gateway) *corev1.Service {
 		},
 	}
 
-	// forward the first requsted address to Kubernetes
+	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		svc.ObjectMeta.Annotations[k] = v
+	}
+
+	// forward the first requested address to Kubernetes
 	if len(gw.Spec.Addresses) > 0 {
 		if gw.Spec.Addresses[0].Type == nil ||
 			(gw.Spec.Addresses[0].Type != nil && *gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {

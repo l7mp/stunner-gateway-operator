@@ -18,7 +18,7 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -113,11 +113,15 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
 		// upsert: owner-refs, our own annotation, and the spec
-		as := svc.GetAnnotations()
-		if name, found := as[config.GatewayAddressAnnotationKey]; found {
-			metav1.SetMetaDataAnnotation(&current.ObjectMeta,
-				config.GatewayAddressAnnotationKey, name)
+		// as := svc.GetAnnotations()
+		// if name, found := as[config.GatewayAddressAnnotationKey]; found {
+		// 	metav1.SetMetaDataAnnotation(&current.ObjectMeta,
+		// 		config.GatewayAddressAnnotationKey, name)
+		// }
+		for a, v := range svc.GetAnnotations() {
+			metav1.SetMetaDataAnnotation(&current.ObjectMeta, a, v)
 		}
+
 		current.SetOwnerReferences(svc.GetOwnerReferences())
 		svc.Spec.DeepCopyInto(&current.Spec)
 

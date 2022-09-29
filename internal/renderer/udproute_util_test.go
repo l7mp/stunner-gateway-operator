@@ -33,9 +33,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -91,9 +92,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -129,9 +131,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -163,9 +166,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -208,9 +212,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -249,9 +254,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
@@ -291,9 +297,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 
-				gws := r.getGateways4Class(gc)
+				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 
@@ -357,7 +364,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
+				assert.NoError(t, err, "gw-class found")
 
 				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route found")

@@ -33,9 +33,10 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewway class name")
+				c := &RenderContext{gc: gc}
+				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gateway class name")
 
-				_, err = r.getGatewayConfig4Class(gc)
+				_, err = r.getGatewayConfig4Class(c)
 				assert.Error(t, err, "gw-conf found")
 			},
 		},
@@ -55,9 +56,9 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewayclass name")
+				c := &RenderContext{gc: gc}
 
-				_, err = r.getGatewayConfig4Class(gc)
+				_, err = r.getGatewayConfig4Class(c)
 				assert.Error(t, err, "gw-conf found")
 			},
 		},
@@ -75,7 +76,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
-				assert.Error(t, err, "gw-class found")
+				assert.Error(t, err, "gw-conf found")
 			},
 		},
 		{
@@ -93,9 +94,10 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewayclass name")
 
-				_, err = r.getGatewayConfig4Class(gc)
+				_, err = r.getGatewayConfig4Class(c)
 				assert.Error(t, err, "gw-conf found")
 			},
 		},
