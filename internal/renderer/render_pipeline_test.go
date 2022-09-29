@@ -1007,5 +1007,74 @@ func TestRenderPipeline(t *testing.T) {
 				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
 			},
 		},
+                {
+			name: "user-defined GatewayAddress",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+                                // Set GatewayAddress in the config
+                                var ipAddrType = gatewayv1alpha2.IPAddressType
+                                c.gws[0].Spec.Addresses = []gatewayv1alpha2.GatewayAddress{{
+                                        Type: &ipAddrType,
+                                        Value: "10.20.30.40",
+                                }}
+                        },
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				err = r.renderGatewayClass(c)
+				assert.NoError(t, err, "render success")
+
+                                // What should happen now? Guess we shall not create service
+                                // just have the public ip address variable set in the stunner config
+                        },
+                },
+                {
+			name: "user-defined GatewayAddress without Type",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+                                // Set GatewayAddress in the config
+                                // var ipAddrType = gatewayv1alpha2.IPAddressType
+                                // c.gws[0].Spec.Addresses = []gatewayv1alpha2.GatewayAddress{{
+                                //         Value: "10.20.30.40",
+                                // }}
+                        },
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				err = r.renderGatewayClass(c)
+				assert.NoError(t, err, "render success")
+
+                                // TODO
+
+                        },
+                },
 	})
 }

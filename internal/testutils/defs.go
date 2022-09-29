@@ -73,6 +73,8 @@ var TestGwConfig = stunnerv1alpha1.GatewayConfig{
 	},
 }
 
+var ip_addr_type = gatewayv1alpha2.IPAddressType
+
 // Gateway
 var TestGw = gatewayv1alpha2.Gateway{
 	// TypeMeta: metav1.TypeMeta{
@@ -98,6 +100,13 @@ var TestGw = gatewayv1alpha2.Gateway{
 			Port:     gatewayv1alpha2.PortNumber(2),
 			Protocol: gatewayv1alpha2.ProtocolType("TCP"),
 		}},
+		// Addresses: []gatewayv1alpha2.GatewayAddress{{
+		// 	// Type:     gatewayv1alpha2.IPAddressType,
+		// 	Value: "donkey",
+		// }, {
+                //         Type:   &ip_addr_type,
+		// 	Value: "2.2.2.2",
+		// }},
 	},
 }
 

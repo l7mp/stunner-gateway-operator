@@ -339,5 +339,27 @@ func TestRenderGatewayUtil(t *testing.T) {
 					d.Reason, "reason")
 			},
 		},
+		{
+			name: "bad gatewayaddress is provided",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.GatewayClassName = "dummy"
+				c.gws = []gatewayv1alpha2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+                                // TODO - move sanity checks of getManualGatewayAddress here
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 0, "gw found")
+			},
+		},
 	})
 }

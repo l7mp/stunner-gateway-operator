@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"net"
 	// "github.com/go-logr/logr"
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
@@ -125,6 +126,7 @@ func setListenerStatus(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener,
 	s.AttachedRoutes = int32(routes)
 }
 
+// should be refactored to handle arbitrary reasons?
 func setListenerStatusDetached(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus, accepted bool) {
 	if accepted {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
@@ -177,5 +179,55 @@ func setListenerStatusReady(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.List
 			Reason:             string(gatewayv1alpha2.ListenerReasonPending),
 			Message:            "public address pending",
 		})
+	}
+}
+
+// should be unified with above function
+func setListenerDetachedDueToBadGwAddress(gw *gatewayv1alpha2.Gateway, s *gatewayv1alpha2.ListenerStatus) {
+	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+		Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+		Status:             metav1.ConditionFalse, //False or True?
+		ObservedGeneration: gw.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedAddress),
+		Message:            "unsupported address",
+	})
+}
+
+func getManualGatewayAddress(gw *gatewayv1alpha2.Gateway) (bool, *addrPort) {
+	if gw.Spec.Addresses == nil {
+	    return false, nil
+	}
+
+	valid := false
+	addr := gw.Spec.Addresses[0]
+
+	//AddressType is provided
+	if addr.Type != nil {
+		switch addr_type := *addr.Type; addr_type {
+		case gatewayv1alpha2.IPAddressType:
+			if net.ParseIP(addr.Value) != nil {
+				valid = true
+			}
+		case gatewayv1alpha2.HostnameAddressType:
+			// go-sanitize#Domain?
+			valid = true
+		case gatewayv1alpha2.NamedAddressType:
+		       // no clue
+			valid = true
+		}
+	//AddressType is unknown
+	} else {
+		//hope for the best now - huge TODO
+		valid = true
+	}
+
+	if valid && gw.Spec.Listeners != nil {
+		return true, &addrPort{
+			addr: addr.Value,
+			port: int(gw.Spec.Listeners[0].Port)}
+	} else {
+	       setListenerDetachedDueToBadGwAddress(gw, &gw.Status.Listeners[0])
+	       return false, nil
 	}
 }

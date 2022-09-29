@@ -29,6 +29,7 @@ type addrPort struct {
 
 // returns the preferred address/port exposition for a gateway
 // preference order:
+// - Gateway.Spec.Addresses[0] and Gateway.Spec.Listeners[0].Port
 // - loadbalancer svc created by us (owned by the gateway)
 // - nodeport svc created by us (owned by the gateway)
 // - load-balancer svc created manually by a user but annotated for the gateway
@@ -37,6 +38,14 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 	r.log.V(4).Info("getPublicAddrs4Gateway", "gateway", store.GetObjectKey(gw))
 	ownSvcFound := false
 	aps := []addrPort{}
+	var err error
+
+	// check if valid public IP is provided by the user
+	validManualIP, m_ap := getManualGatewayAddress(gw)
+	if validManualIP {
+		r.log.V(3).Info("Manually configured IP address for the Gateway.", "gateway", gw.GetName(), "ip", m_ap.addr)
+		return m_ap, err
+	}
 
 	for _, svc := range store.Services.GetAll() {
 		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc), "status",
@@ -75,7 +84,6 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 		}
 	}
 
-	var err error
 	if !ownSvcFound {
 		err = errors.New("load-balancer service not found for gateway: owner-ref missing")
 	}
