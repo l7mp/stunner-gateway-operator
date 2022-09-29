@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
-	github.com/l7mp/stunner v0.10.6
+	github.com/l7mp/stunner v0.10.9
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/stretchr/testify v1.8.0
@@ -16,8 +16,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.12.3
 	sigs.k8s.io/gateway-api v0.4.3
 )
-
-replace github.com/l7mp/stunner => github.com/l7mp/stunner v0.10.9-0.20220928203107-a2d718d90804
 
 require (
 	cloud.google.com/go/compute v1.7.0 // indirect
