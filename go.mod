@@ -17,7 +17,7 @@ require (
 	sigs.k8s.io/gateway-api v0.4.3
 )
 
-replace github.com/l7mp/stunner => ../stunner
+replace github.com/l7mp/stunner => github.com/l7mp/stunner v0.10.9-0.20220928203107-a2d718d90804
 
 require (
 	cloud.google.com/go/compute v1.7.0 // indirect
