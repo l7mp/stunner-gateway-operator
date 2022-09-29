@@ -18,8 +18,8 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConf
 	}
 
 	var me string
-	if gwConf.Spec.MetricsEndpoint != nil {
-		me = *gwConf.Spec.MetricsEndpoint
+	if c.gwConf.Spec.MetricsEndpoint != nil {
+		me = *c.gwConf.Spec.MetricsEndpoint
 	}
 
 	admin := stunnerconfv1alpha1.AdminConfig{
