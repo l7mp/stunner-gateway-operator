@@ -17,9 +17,15 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConf
 		loglevel = *c.gwConf.Spec.LogLevel
 	}
 
+	var me string
+	if c.gwConf.Spec.MetricsEndpoint != nil {
+		me = *c.gwConf.Spec.MetricsEndpoint
+	}
+
 	admin := stunnerconfv1alpha1.AdminConfig{
-		Name:     config.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
-		LogLevel: loglevel,
+		Name:            config.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
+		LogLevel:        loglevel,
+		MetricsEndpoint: me,
 	}
 
 	// validate so that defaults get filled in

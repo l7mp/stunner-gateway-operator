@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the stunner v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=stunner.l7mp.io
+// +kubebuilder:object:generate=true
+// +groupName=stunner.l7mp.io
 package v1alpha1
 
 import (

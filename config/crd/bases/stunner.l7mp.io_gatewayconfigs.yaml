@@ -84,6 +84,10 @@ spec:
                   STUNner relay connections.
                 format: int32
                 type: integer
+              metricsEndpoint:
+                description: MetricsEndpoint holds the the URL to the metric server
+                  (Prometheus)
+                type: string
               minPort:
                 description: MinRelayPort is the smallest relay port assigned for
                   STUNner relay connections.
