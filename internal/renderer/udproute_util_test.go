@@ -194,7 +194,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.SetName("udproute-correct-listener-name")
 
 				udp1.Spec.CommonRouteSpec.ParentRefs =
-					make([]gatewayv1alpha2.ParentRef, 3)
+					make([]gatewayv1alpha2.ParentReference, 3)
 
 				sn1 := gatewayv1alpha2.SectionName("gateway-1-listener-udp")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
@@ -329,18 +329,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					parentStatus.ControllerName, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.ConditionRouteAccepted))
+					string(gatewayv1alpha2.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteAccepted), d.Type,
+				assert.Equal(t, string(gatewayv1alpha2.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+					string(gatewayv1alpha2.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteResolvedRefs), d.Type,
+				assert.Equal(t, string(gatewayv1alpha2.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -381,18 +381,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Equal(t, p, parentStatus.ParentRef, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.ConditionRouteAccepted))
+					string(gatewayv1alpha2.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteAccepted), d.Type,
+				assert.Equal(t, string(gatewayv1alpha2.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "NoMatchingListenerHostname", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+					string(gatewayv1alpha2.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gatewayv1alpha2.ConditionRouteResolvedRefs), d.Type,
+				assert.Equal(t, string(gatewayv1alpha2.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")

@@ -111,7 +111,7 @@ var TestUDPRoute = gatewayv1alpha2.UDPRoute{
 	},
 	Spec: gatewayv1alpha2.UDPRouteSpec{
 		CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-			ParentRefs: []gatewayv1alpha2.ParentRef{{
+			ParentRefs: []gatewayv1alpha2.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},

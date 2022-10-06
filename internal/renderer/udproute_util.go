@@ -77,7 +77,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gatewayv1alpha2.Gateway, l *gateway
 	return ret
 }
 
-func resolveParentRef(p *gatewayv1alpha2.ParentRef, gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) (bool, string) {
+func resolveParentRef(p *gatewayv1alpha2.ParentReference, gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) (bool, string) {
 	if p.Group != nil && *p.Group != gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group) {
 		return false, fmt.Sprintf("parent group %q does not match gateway group %q",
 			string(*p.Group), gatewayv1alpha2.GroupVersion.Group)
@@ -106,7 +106,7 @@ func initRouteStatus(ro *gatewayv1alpha2.UDPRoute) {
 	ro.Status.Parents = []gatewayv1alpha2.RouteParentStatus{}
 }
 
-func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, className string) bool {
+func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentReference, className string) bool {
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 		"parent", dumpParentRef(p))
 
@@ -154,12 +154,12 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	return false
 }
 
-func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentRef, controllerName string, accepted bool) {
+func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentReference, controllerName string, accepted bool) {
 	// ns := gatewayv1alpha2.Namespace(ro.GetNamespace())
 	// gr := gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group)
 	// kind := gatewayv1alpha2.Kind("Gateway")
 
-	pRef := gatewayv1alpha2.ParentRef{
+	pRef := gatewayv1alpha2.ParentReference{
 		Name: p.Name,
 	}
 
@@ -193,7 +193,7 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 	}
 
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
+		Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 		Status:             c,
 		ObservedGeneration: ro.Generation,
 		LastTransitionTime: metav1.Now(),
@@ -202,7 +202,7 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 	})
 
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.ConditionRouteResolvedRefs),
+		Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
 		Status:             c,
 		ObservedGeneration: ro.Generation,
 		LastTransitionTime: metav1.Now(),
@@ -213,7 +213,7 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 	ro.Status.Parents = append(ro.Status.Parents, s)
 }
 
-func dumpParentRef(p *gatewayv1alpha2.ParentRef) string {
+func dumpParentRef(p *gatewayv1alpha2.ParentReference) string {
 	g, k, ns, sn := "<NIL>", "<NIL>", "<NIL>", "<NIL>"
 	if p.Group != nil {
 		g = string(*p.Group)

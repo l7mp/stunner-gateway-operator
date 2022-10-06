@@ -423,17 +423,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -805,17 +805,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 	})
@@ -1022,17 +1022,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// Expect(k8sClient).To(BeNil())
@@ -1117,17 +1117,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 		})
 
@@ -1278,14 +1278,14 @@ var _ = Describe("Integration test:", func() {
 				// try to attach to all listeners: p1 -> udp, p2 -> dummy, p3 -> tcp
 				sn := gatewayv1alpha2.SectionName("invalid")
 				current.Spec.CommonRouteSpec.ParentRefs = append(current.Spec.CommonRouteSpec.ParentRefs,
-					gatewayv1alpha2.ParentRef{
+					gatewayv1alpha2.ParentReference{
 						Name:        gatewayv1alpha2.ObjectName("gateway-1"),
 						SectionName: &sn,
 					})
 
 				sn2 := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
 				current.Spec.CommonRouteSpec.ParentRefs = append(current.Spec.CommonRouteSpec.ParentRefs,
-					gatewayv1alpha2.ParentRef{
+					gatewayv1alpha2.ParentReference{
 						Name:        gatewayv1alpha2.ObjectName("gateway-1"),
 						SectionName: &sn2,
 					})
@@ -1419,14 +1419,14 @@ var _ = Describe("Integration test:", func() {
 				// try to attach to all listeners: p1 -> udp, p2 -> dummy, p3 -> tcp
 				sn := gatewayv1alpha2.SectionName("gateway-2-udp")
 				ro.Spec.CommonRouteSpec.ParentRefs = append(ro.Spec.CommonRouteSpec.ParentRefs,
-					gatewayv1alpha2.ParentRef{
+					gatewayv1alpha2.ParentReference{
 						Name:        gatewayv1alpha2.ObjectName("gateway-2"),
 						SectionName: &sn,
 					})
 
 				sn2 := gatewayv1alpha2.SectionName("gateway-2-tcp")
 				ro.Spec.CommonRouteSpec.ParentRefs = append(ro.Spec.CommonRouteSpec.ParentRefs,
-					gatewayv1alpha2.ParentRef{
+					gatewayv1alpha2.ParentReference{
 						Name:        gatewayv1alpha2.ObjectName("gateway-2"),
 						SectionName: &sn2,
 					})
@@ -1699,17 +1699,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// restoure
@@ -2014,17 +2014,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ControllerName).To(Equal(gatewayv1alpha2.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteAccepted))
+				string(gatewayv1alpha2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteAccepted)))
+				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gatewayv1alpha2.ConditionRouteResolvedRefs))
+				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gatewayv1alpha2.ConditionRouteResolvedRefs)))
+				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// Expect(k8sClient).To(BeNil())
