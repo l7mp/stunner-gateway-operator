@@ -505,8 +505,7 @@ STUNner [GitHub repo](https://github.com/l7mp/stunner).
 
 ## Help
 
-STUNner development is coordinated in Discord, send
-[us](https://github.com/l7mp/stunner/blob/main/AUTHORS) an email to ask an invitation.
+STUNner development is coordinated in Discord, feel free to [join](https://discord.gg/DyPgEsbwzc).
 
 ## License
 
