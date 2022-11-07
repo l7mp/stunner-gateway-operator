@@ -219,7 +219,7 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.GetNamespace(),
-			Name:      fmt.Sprintf("%s", gw.GetName()),
+			Name:      gw.GetName(),
 			Annotations: map[string]string{
 				config.GatewayAddressAnnotationKey: store.GetObjectKey(gw),
 			},
