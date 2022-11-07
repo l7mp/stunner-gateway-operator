@@ -6,7 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -34,7 +36,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -64,7 +66,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -90,7 +92,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -115,7 +117,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -141,7 +143,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -172,7 +174,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -224,7 +226,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -259,7 +261,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -288,7 +290,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
@@ -311,17 +313,26 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service",
+			name: "lb service - single listener",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
 			rs:   []gatewayv1alpha2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGw.DeepCopy()
+				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
+					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
+					Port:     gatewayv1alpha2.PortNumber(1),
+					Protocol: gatewayv1alpha2.ProtocolType("UDP"),
+				}}
+				c.gws = []gatewayv1alpha2.Gateway{*w}
+
+			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -349,6 +360,169 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - single listener",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGw.DeepCopy()
+				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
+					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
+					Port:     gatewayv1alpha2.PortNumber(1),
+					Protocol: gatewayv1alpha2.ProtocolType("UDP"),
+				}}
+				c.gws = []gatewayv1alpha2.Gateway{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				gwa, found := as[config.GatewayAddressAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp port")
+			},
+		},
+		{
+			name: "lb service - single listener, no valid listener",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGw.DeepCopy()
+				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
+					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
+					Port:     gatewayv1alpha2.PortNumber(1),
+					Protocol: gatewayv1alpha2.ProtocolType("dummy"),
+				}}
+				c.gws = []gatewayv1alpha2.Gateway{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.Nil(t, s, "svc create")
+			},
+		},
+		{
+			name: "lb service - multi-listener, single proto",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGw.DeepCopy()
+				w.Spec.Listeners[2].Protocol = gatewayv1alpha2.ProtocolType("UDP")
+				c.gws = []gatewayv1alpha2.Gateway{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				gwa, found := as[config.GatewayAddressAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 2, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+				assert.Equal(t, string(gw.Spec.Listeners[2].Protocol), string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[1].Port), "sp 2 - port")
+			},
+		},
+		{
+			name: "lb service - multi-listener, multi proto",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGw.DeepCopy()
+				w.Spec.Listeners[0].Protocol = gatewayv1alpha2.ProtocolType("dummy-2")
+				c.gws = []gatewayv1alpha2.Gateway{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				gwa, found := as[config.GatewayAddressAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[2].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
 			name: "lb service - lb annotations",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
@@ -365,7 +539,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -397,8 +571,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp proto")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp port")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
 	})

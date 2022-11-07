@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
@@ -32,7 +33,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -66,7 +67,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -94,7 +95,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -118,7 +119,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -142,7 +143,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -166,7 +167,7 @@ func TestRenderAuthRender(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 

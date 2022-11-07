@@ -30,19 +30,27 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 
 	eps := []string{}
 
+	// the rest of the errors are not critical, but we still need to keep track of each in
+	// order to set the ResolvedRefs Route status: last error is reported only
+	var backendErr error
+
 	ctype := stunnerconfv1alpha1.ClusterTypeStatic
 	for _, b := range rs[0].BackendRefs {
 
 		// core.v1 has empty Group
 		if b.Group != nil && *b.Group != gatewayv1alpha2.Group("") {
-			r.log.V(2).Info("renderCluster: invalid Group in backend reference (ignoring)",
-				"route", store.GetObjectKey(ro), "group", *b.Group)
+			backendErr = NewNonCriticalRenderError(InvalidBackendGroup)
+			r.log.V(2).Info("renderCluster: error resolving backend", "route",
+				store.GetObjectKey(ro), "backend", string(b.Name), "group",
+				*b.Group, "error", backendErr.Error())
 			continue
 		}
 
 		if b.Kind != nil && *b.Kind != "Service" {
-			r.log.V(2).Info("renderCluster: invalid Kind in backend reference, epecting Service (ignoring)",
-				"route", store.GetObjectKey(ro), "kind", *b.Kind)
+			backendErr = NewNonCriticalRenderError(InvalidBackendKind)
+			r.log.V(2).Info("renderCluster: error resolving backend", "route",
+				store.GetObjectKey(ro), "backend", string(b.Name), "kind", *b.Kind,
+				"error", backendErr)
 			continue
 		}
 
@@ -61,11 +69,27 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 			}
 
 			if config.EnableEndpointDiscovery {
-				ep = append(ep, getEndpointAddrs(n, false)...)
+				ips, err := getEndpointAddrs(n, false)
+				if err != nil {
+					r.log.V(1).Info("renderCluster: could not set endpoint addresses for backend",
+						"route", store.GetObjectKey(ro), "backend", string(b.Name),
+						"error", err.Error())
+					backendErr = err
+				}
+				// ips is empty
+				ep = append(ep, ips...)
 			}
 
 			if config.EnableRelayToClusterIP {
-				ep = append(ep, getClusterIP(n)...)
+				ips, err := getClusterIP(n)
+				if err != nil {
+					r.log.V(1).Info("renderCluster: could not set ClusterIP for backend",
+						"route", store.GetObjectKey(ro), "backend", string(b.Name),
+						"error", err.Error())
+					backendErr = err
+				}
+				// ips is empty
+				ep = append(ep, ips...)
 			}
 		} else {
 			// fall back to strict DNS and hope for the best
@@ -91,8 +115,12 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 		return nil, err
 	}
 
+	backendStatus := "None"
+	if backendErr != nil {
+		backendStatus = backendErr.Error()
+	}
 	r.log.V(2).Info("renderCluster ready", "route", store.GetObjectKey(ro), "result",
-		fmt.Sprintf("%#v", cluster))
+		fmt.Sprintf("%#v", cluster), "backend-error", backendStatus)
 
-	return &cluster, nil
+	return &cluster, backendErr
 }

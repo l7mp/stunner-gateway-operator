@@ -31,7 +31,11 @@ func TestRenderClusterRender(t *testing.T) {
 			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			prep: func(c *renderTestConfig) {},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s1}
+			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
 				assert.Len(t, rs, 1, "route len")
@@ -42,7 +46,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.True(t, accepted, "route accepted")
 
 				_, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster ok")
+				// we have a non-critical error!
+				assert.Nil(t, err, "no error")
 			},
 		},
 		{
@@ -173,7 +178,11 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, InvalidBackendGroup, e.ErrorReason, "invalid route error")
 
 				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -213,7 +222,10 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = false
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, InvalidBackendKind, e.ErrorReason, "invalid kind error")
 
 				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -380,7 +392,10 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, ClusterIPNotFound, e.ErrorReason, "cluster IP not found error")
 
 				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -440,7 +455,7 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
-			name: "eds - cluster with headless setvie OK",
+			name: "eds - cluster with headless setvice OK",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
@@ -467,7 +482,11 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, ClusterIPNotFound, e.ErrorReason, "cluster IP not found error")
 
 				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -550,7 +569,11 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, InvalidBackendGroup, e.ErrorReason, "invalid backend group error")
 
 				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -590,7 +613,11 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
-				assert.NoError(t, err, "render cluster")
+
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, InvalidBackendKind, e.ErrorReason, "invalid backend kind error")
 
 				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -617,6 +644,8 @@ func TestRenderClusterRender(t *testing.T) {
 
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.SetNamespace("dummy")
+				// add a clusterIP to silence renderCluster
+				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 
 				e := testutils.TestEndpoint.DeepCopy()
@@ -642,11 +671,13 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				// and the clusterIP
+				assert.Contains(t, rc.Endpoints, "1.1.1.1", "cluster-ip")
 
 				// restore EDS
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
@@ -675,13 +706,19 @@ func TestRenderClusterRender(t *testing.T) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.SetNamespace("dummy-ns")
 				s1.SetName("dummy")
+				// add a clusterIP to silence renderCluster
+				s1.Spec.ClusterIP = "1.1.1.1"
 
 				s2 := testutils.TestSvc.DeepCopy()
 				s2.SetNamespace("dummy-ns")
 				s2.SetName("testservice-ok-1")
+				// add a clusterIP to silence renderCluster
+				s2.Spec.ClusterIP = "2.2.2.2"
 
 				s3 := testutils.TestSvc.DeepCopy()
 				s3.SetName("testservice-ok-2")
+				// add a clusterIP to silence renderCluster
+				s3.Spec.ClusterIP = "3.3.3.3"
 
 				c.svcs = []corev1.Service{*s1, *s2, *s3}
 
@@ -708,16 +745,24 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(rs[0])
-				assert.NoError(t, err, "render cluster")
+				// handle non-critical error!
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
 
 				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Len(t, rc.Endpoints, 8, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, rc.Endpoints, "1.2.3.8", "endpoint ip-5")
+				// plus the clusterIPs
+				assert.Contains(t, rc.Endpoints, "1.1.1.1", "endpoint cluster-ip-1")
+				assert.Contains(t, rc.Endpoints, "2.2.2.2", "endpoint cluster-ip-2")
+				assert.Contains(t, rc.Endpoints, "3.3.3.3", "endpoint cluster-ip-3")
 
 				// restore
 				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery

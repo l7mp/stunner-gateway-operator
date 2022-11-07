@@ -1123,12 +1123,13 @@ var _ = Describe("Integration test:", func() {
 				Equal(string(gatewayv1alpha2.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
+			// backendRefs resolved, to ResolvedRefs=True
 			s = meta.FindStatusCondition(ps.Conditions,
 				string(gatewayv1alpha2.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gatewayv1alpha2.RouteConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
 		It("changing the auth type", func() {

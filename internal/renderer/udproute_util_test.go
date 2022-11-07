@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -93,7 +94,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -132,7 +133,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -167,7 +168,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -213,7 +214,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -255,7 +256,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -288,7 +289,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "routes status ok",
+			name: "valid routes - status",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
@@ -298,7 +299,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -314,7 +315,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
 				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, true)
+				setRouteConditionStatus(ro, &p, config.ControllerName, true, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -348,7 +349,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid routes status errs",
+			name: "invalid routes - status",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
@@ -373,7 +374,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
 				assert.False(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, false)
+				setRouteConditionStatus(ro, &p, config.ControllerName, false, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -387,14 +388,14 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, "NoMatchingListenerHostname", d.Reason, "reason")
+				assert.Equal(t, "NotAllowedByListeners", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
 					string(gatewayv1alpha2.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
 				assert.Equal(t, string(gatewayv1alpha2.RouteConditionResolvedRefs), d.Type,
 					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 			},

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
@@ -33,7 +34,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gateway class name")
 
 				_, err = r.getGatewayConfig4Class(c)
@@ -56,7 +57,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				_, err = r.getGatewayConfig4Class(c)
 				assert.Error(t, err, "gw-conf found")
@@ -94,7 +95,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(), "gatewayclass name")
 
 				_, err = r.getGatewayConfig4Class(c)
