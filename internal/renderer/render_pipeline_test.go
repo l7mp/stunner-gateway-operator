@@ -425,33 +425,43 @@ func TestRenderPipeline(t *testing.T) {
 				config.EnableRelayToClusterIP = false
 
 				// a new gatewayclass that specifies a different gateway-config
-				gc := testutils.TestGwClass.DeepCopy()
-				gc.SetName("dummy-gateway-class")
-				gc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
+				dummyGc := testutils.TestGwClass.DeepCopy()
+				dummyGc.SetName("dummy-gateway-class")
+				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
 					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
 					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *gc}
+				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
-				conf := testutils.TestGwConfig.DeepCopy()
-				conf.SetName("dummy-gateway-config")
+				dummyConf := testutils.TestGwConfig.DeepCopy()
+				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
-				conf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *conf}
+				dummyConf.Spec.StunnerConfig = &target
+				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
-				// and a new gateway whose controller-name is the new gatewayclass
-				gw := testutils.TestGw.DeepCopy()
-				gw.SetName("dummy-gateway")
-				gw.Spec.GatewayClassName =
+				// a new gateway whose controller-name is the new gatewayclass
+				dummyGw := testutils.TestGw.DeepCopy()
+				dummyGw.SetName("dummy-gateway")
+				dummyGw.Spec.GatewayClassName =
 					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+
+				// a route for dummy-gateway
+				dummyUdp := testutils.TestUDPRoute.DeepCopy()
+				dummyUdp.SetName("dummy-route")
+				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
+				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
+					gatewayv1alpha2.ObjectName("dummy-service")
+				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
-				c.svcs = []corev1.Service{*s}
+				dummySvc := testutils.TestSvc.DeepCopy()
+				dummySvc.SetName("dummy-service")
+				c.svcs = []corev1.Service{*s, *dummySvc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gcs := r.getGatewayClasses()
@@ -587,7 +597,8 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
@@ -597,9 +608,13 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
-				// the route links to the original gateway, our gateway does not
-				// have a linkage from any routes
-				assert.Len(t, conf.Clusters, 0, "cluster num")
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc = conf.Clusters[0]
+				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 1, "endpoints len")
+				assert.Equal(t, "dummy-service.testnamespace.svc.cluster.local",
+					rc.Endpoints[0], "backend-ref")
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
@@ -618,33 +633,52 @@ func TestRenderPipeline(t *testing.T) {
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
-				gc := testutils.TestGwClass.DeepCopy()
-				gc.SetName("dummy-gateway-class")
-				gc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
+				// a new gatewayclass that specifies a different gateway-config
+				dummyGc := testutils.TestGwClass.DeepCopy()
+				dummyGc.SetName("dummy-gateway-class")
+				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
 					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
 					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *gc}
+				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
-				conf := testutils.TestGwConfig.DeepCopy()
-				conf.SetName("dummy-gateway-config")
+				dummyConf := testutils.TestGwConfig.DeepCopy()
+				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
-				conf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *conf}
+				dummyConf.Spec.StunnerConfig = &target
+				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
-				// and a new gateway whose controller-name is the new gatewayclass
-				gw := testutils.TestGw.DeepCopy()
-				gw.SetName("dummy-gateway")
-				gw.Spec.GatewayClassName =
+				// a new gateway whose controller-name is the new gatewayclass
+				dummyGw := testutils.TestGw.DeepCopy()
+				dummyGw.SetName("dummy-gateway")
+				dummyGw.Spec.GatewayClassName =
 					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+
+				// a route for dummy-gateway
+				dummyUdp := testutils.TestUDPRoute.DeepCopy()
+				dummyUdp.SetName("dummy-route")
+				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
+				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
+					gatewayv1alpha2.ObjectName("dummy-service")
+				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
-				c.svcs = []corev1.Service{*s}
+				dummySvc := testutils.TestSvc.DeepCopy()
+				dummySvc.SetName("dummy-service")
+				c.svcs = []corev1.Service{*s, *dummySvc}
+
+				dummyEp := testutils.TestEndpoint.DeepCopy()
+				dummyEp.SetName("dummy-service")
+				dummyEp.Subsets = []corev1.EndpointSubset{{
+					Addresses:         []corev1.EndpointAddress{{IP: "4.4.4.4"}},
+					NotReadyAddresses: []corev1.EndpointAddress{{}},
+				}}
+				c.eps = []corev1.Endpoints{testutils.TestEndpoint, *dummyEp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.EnableEndpointDiscovery = true
@@ -786,7 +820,8 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
@@ -796,9 +831,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
-				// the route links to the original gateway, our gateway does not
-				// have a linkage from any routes
-				assert.Len(t, conf.Clusters, 0, "cluster num")
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc = conf.Clusters[0]
+				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 1, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
@@ -817,33 +855,51 @@ func TestRenderPipeline(t *testing.T) {
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
-				gc := testutils.TestGwClass.DeepCopy()
-				gc.SetName("dummy-gateway-class")
-				gc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
+				dummyGc := testutils.TestGwClass.DeepCopy()
+				dummyGc.SetName("dummy-gateway-class")
+				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
 					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
 					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *gc}
+				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
-				conf := testutils.TestGwConfig.DeepCopy()
-				conf.SetName("dummy-gateway-config")
+				dummyConf := testutils.TestGwConfig.DeepCopy()
+				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
-				conf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *conf}
+				dummyConf.Spec.StunnerConfig = &target
+				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
-				// and a new gateway whose controller-name is the new gatewayclass
-				gw := testutils.TestGw.DeepCopy()
-				gw.SetName("dummy-gateway")
-				gw.Spec.GatewayClassName =
+				// a new gateway whose controller-name is the new gatewayclass
+				dummyGw := testutils.TestGw.DeepCopy()
+				dummyGw.SetName("dummy-gateway")
+				dummyGw.Spec.GatewayClassName =
 					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+
+				// a route for dummy-gateway
+				dummyUdp := testutils.TestUDPRoute.DeepCopy()
+				dummyUdp.SetName("dummy-route")
+				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
+				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
+					gatewayv1alpha2.ObjectName("dummy-service")
+				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
-				c.svcs = []corev1.Service{*s}
+				dummySvc := testutils.TestSvc.DeepCopy()
+				dummySvc.SetName("dummy-service")
+				c.svcs = []corev1.Service{*s, *dummySvc}
+
+				dummyEp := testutils.TestEndpoint.DeepCopy()
+				dummyEp.SetName("dummy-service")
+				dummyEp.Subsets = []corev1.EndpointSubset{{
+					Addresses:         []corev1.EndpointAddress{{IP: "4.4.4.4"}},
+					NotReadyAddresses: []corev1.EndpointAddress{{}},
+				}}
+				c.eps = []corev1.Endpoints{testutils.TestEndpoint, *dummyEp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.EnableEndpointDiscovery = true
@@ -986,7 +1042,8 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
@@ -996,9 +1053,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
-				// the route links to the original gateway, our gateway does not
-				// have a linkage from any routes
-				assert.Len(t, conf.Clusters, 0, "cluster num")
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc = conf.Clusters[0]
+				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 1, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
