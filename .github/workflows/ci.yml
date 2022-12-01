@@ -79,7 +79,7 @@ jobs:
           cd stunner-helm/helm
           sed -ri 's/^(\s*)(version\s*:\s*.*\s*$)/\1version: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/Chart.yaml
           sed -ri 's/^(\s*)(appVersion\s*:\s*.*\s*$)/\1appVersion: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/Chart.yaml
-          sed -ri 's/^(\s*)(        tag\s*:\s*.*\s*$)/\1        tag: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/values.yaml
+          sed -ri 's/^(\s*)(          tag\s*:\s*.*\s*$)/\1          tag: ${{steps.vars.outputs.tag}}/' stunner-gateway-operator/values.yaml
           helm package *
       - name: Update l7mp.io
         run: |
