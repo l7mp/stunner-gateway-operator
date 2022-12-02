@@ -94,7 +94,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.testnamespace.svc.cluster.local",
@@ -135,7 +135,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -175,7 +175,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -215,7 +215,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -255,7 +255,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.dummy.svc.cluster.local",
@@ -296,7 +296,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(rs[0])
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				assert.Contains(t, rc.Endpoints,
@@ -343,7 +343,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -382,7 +382,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -425,7 +425,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -469,7 +469,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -512,7 +512,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -552,7 +552,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -592,7 +592,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-wrong", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
@@ -640,7 +640,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -710,7 +710,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(rs[0])
 				assert.NoError(t, err, "render cluster")
 
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")

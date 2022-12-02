@@ -115,16 +115,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -133,7 +133,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.testnamespace.svc.cluster.local",
@@ -208,16 +208,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -226,7 +226,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -303,16 +303,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -321,7 +321,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -515,16 +515,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -533,7 +533,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.testnamespace.svc.cluster.local",
@@ -590,7 +590,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
@@ -598,10 +598,10 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -610,7 +610,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
-				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/dummy-route", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "dummy-service.testnamespace.svc.cluster.local",
@@ -736,16 +736,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -754,7 +754,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -813,7 +813,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
@@ -821,10 +821,10 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -833,7 +833,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
-				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/dummy-route", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")
@@ -957,16 +957,16 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "udproute-ok", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -975,7 +975,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -1035,7 +1035,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
-				assert.Equal(t, "gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
@@ -1043,10 +1043,10 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "dummy-route", "udp route")
+				assert.Equal(t, lc.Routes[0], "testnamespace/dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
-				assert.Equal(t, "gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -1055,7 +1055,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
-				assert.Equal(t, "dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/dummy-route", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")

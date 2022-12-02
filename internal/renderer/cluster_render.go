@@ -81,7 +81,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 	}
 
 	cluster := stunnerconfv1alpha1.ClusterConfig{
-		Name:      ro.Name,
+		Name:      store.GetObjectKey(ro),
 		Type:      ctype.String(),
 		Endpoints: eps,
 	}

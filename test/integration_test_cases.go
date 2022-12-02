@@ -186,22 +186,22 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -367,24 +367,24 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -395,7 +395,7 @@ var _ = Describe("Integration test:", func() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(1))
 			Expect(c.Endpoints[0]).Should(Equal("testservice-ok.testnamespace.svc.cluster.local"))
@@ -651,24 +651,24 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -679,7 +679,7 @@ var _ = Describe("Integration test:", func() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(1))
 			Expect(c.Endpoints[0]).Should(Equal("testservice-ok.testnamespace.svc.cluster.local"))
@@ -868,13 +868,11 @@ var _ = Describe("Integration test:", func() {
 		It("should update the route for the listeners", func() {
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			// fmt.Printf("1-%#v\n", conf)
-
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -882,22 +880,22 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(1))
 			Expect(c.Endpoints[0]).Should(Equal("testservice-ok.testnamespace.svc.cluster.local"))
@@ -1081,11 +1079,11 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -1093,11 +1091,11 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -1325,44 +1323,44 @@ var _ = Describe("Integration test:", func() {
 
 			Expect(conf.Listeners).To(HaveLen(2))
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("route-2"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes).Should(ContainElement("route-2"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 
 			c := conf.Clusters[0]
-			if c.Name != "udproute-ok" {
+			if c.Name != "testnamespace/udproute-ok" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(1))
 			Expect(c.Endpoints).Should(ContainElement("testservice-ok.testnamespace.svc.cluster.local"))
 
 			c = conf.Clusters[1]
-			if c.Name != "route-2" {
+			if c.Name != "testnamespace/route-2" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("route-2"))
+			Expect(c.Name).Should(Equal("testnamespace/route-2"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("dummy.testnamespace.svc.cluster.local"))
@@ -1468,68 +1466,68 @@ var _ = Describe("Integration test:", func() {
 			l := stunnerconfv1alpha1.ListenerConfig{}
 
 			for _, _l := range conf.Listeners {
-				if _l.Name == "gateway-1-listener-udp" {
+				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-udp" {
 					l = _l
 					break
 				}
 			}
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("route-2"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
 
 			for _, _l := range conf.Listeners {
-				if _l.Name == "gateway-1-listener-tcp" {
+				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-tcp" {
 					l = _l
 					break
 				}
 			}
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Routes).To(HaveLen(0))
 
 			for _, _l := range conf.Listeners {
-				if _l.Name == "gateway-2-udp" {
+				if _l.Name == "testnamespace/gateway-2/gateway-2-udp" {
 					l = _l
 					break
 				}
 			}
-			Expect(l.Name).Should(Equal("gateway-2-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1234))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes).Should(ContainElement("route-2"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
 
 			for _, _l := range conf.Listeners {
-				if _l.Name == "gateway-2-tcp" {
+				if _l.Name == "testnamespace/gateway-2/gateway-2-tcp" {
 					l = _l
 					break
 				}
 			}
-			Expect(l.Name).Should(Equal("gateway-2-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(4321))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes).Should(ContainElement("route-2"))
+			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
-			if c.Name != "udproute-ok" {
+			if c.Name != "testnamespace/udproute-ok" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(1))
 			Expect(c.Endpoints).Should(ContainElement("testservice-ok.testnamespace.svc.cluster.local"))
 
 			c = conf.Clusters[1]
-			if c.Name != "route-2" {
+			if c.Name != "testnamespace/route-2" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("route-2"))
+			Expect(c.Name).Should(Equal("testnamespace/route-2"))
 			Expect(c.Type).Should(Equal("STRICT_DNS"))
 			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("dummy.testnamespace.svc.cluster.local"))
@@ -1640,24 +1638,24 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -1668,7 +1666,7 @@ var _ = Describe("Integration test:", func() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(4))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -1770,23 +1768,23 @@ var _ = Describe("Integration test:", func() {
 
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -1853,13 +1851,11 @@ var _ = Describe("Integration test:", func() {
 		It("should update the route for the listeners", func() {
 			// not sure about the order
 			l := conf.Listeners[0]
-			if l.Name != "gateway-1-listener-udp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
 				l = conf.Listeners[1]
 			}
 
-			// fmt.Printf("1-%#v\n", conf)
-
-			Expect(l.Name).Should(Equal("gateway-1-listener-udp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
@@ -1867,22 +1863,22 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
-			if l.Name != "gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("gateway-1-listener-tcp"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("udproute-ok"))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))

@@ -54,7 +54,7 @@ func TestRenderListenerRender(t *testing.T) {
 
 				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
 				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, string(l.Name), lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
@@ -121,7 +121,7 @@ func TestRenderListenerRender(t *testing.T) {
 
 				lc, err := r.renderListener(gw, c.gwConf, &l, []*gatewayv1alpha2.UDPRoute{}, addr)
 				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, string(l.Name), lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
@@ -166,7 +166,7 @@ func TestRenderListenerRender(t *testing.T) {
 
 				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
 				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, string(l.Name), lc.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
