@@ -60,6 +60,13 @@ spec:
                   mechanism.
                 pattern: ^plaintext|longterm$
                 type: string
+              healthCheckEndpoint:
+                description: HealthCheckEndpoint is the URI of the form `http://address:port`
+                  exposed for external HTTP health-checking. A liveness probe responder
+                  will be exposed on path `/live` and readiness probe on path `/ready`.
+                  The scheme (`http://`) is mandatory, default is to enable health-checking
+                  at "http://0.0.0.0:8086".
+                type: string
               loadBalancerServiceAnnotations:
                 additionalProperties:
                   type: string
@@ -85,8 +92,9 @@ spec:
                 format: int32
                 type: integer
               metricsEndpoint:
-                description: MetricsEndpoint holds the the URL to the metric server
-                  (Prometheus)
+                description: MetricsEndpoint is the URI in the form `http://address:port/path`
+                  at HTTP metric requests are served. The scheme (`http://`") is mandatory.
+                  Default is to expose no metric endpoint.
                 type: string
               minPort:
                 description: MinRelayPort is the smallest relay port assigned for

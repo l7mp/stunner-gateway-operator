@@ -101,6 +101,11 @@ func (in *GatewayConfigSpec) DeepCopyInto(out *GatewayConfigSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.HealthCheckEndpoint != nil {
+		in, out := &in.HealthCheckEndpoint, &out.HealthCheckEndpoint
+		*out = new(string)
+		**out = **in
+	}
 	if in.AuthType != nil {
 		in, out := &in.AuthType, &out.AuthType
 		*out = new(string)

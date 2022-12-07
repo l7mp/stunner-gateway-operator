@@ -42,10 +42,20 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:default:="stunner.l7mp.io"
 	Realm *string `json:"realm,omitempty"`
 
-	// MetricsEndpoint holds the the URL to the metric server (Prometheus)
+	// MetricsEndpoint is the URI in the form `http://address:port/path` at HTTP metric
+	// requests are served. The scheme (`http://`") is mandatory. Default is to expose no
+	// metric endpoint.
 	//
 	// +optional
 	MetricsEndpoint *string `json:"metricsEndpoint,omitempty"`
+
+	// HealthCheckEndpoint is the URI of the form `http://address:port` exposed for external
+	// HTTP health-checking. A liveness probe responder will be exposed on path `/live` and
+	// readiness probe on path `/ready`. The scheme (`http://`) is mandatory, default is to
+	// enable health-checking at "http://0.0.0.0:8086".
+	//
+	// +optional
+	HealthCheckEndpoint *string `json:"healthCheckEndpoint,omitempty"`
 
 	// AuthType is the type of the STUN/TURN authentication mechanism.
 	//

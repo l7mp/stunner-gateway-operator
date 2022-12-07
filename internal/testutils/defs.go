@@ -17,17 +17,18 @@ import (
 )
 
 var (
-	TestNs              = gatewayv1alpha2.Namespace("testnamespace")
-	TestStunnerConfig   = "stunner-config"
-	TestRealm           = "testrealm"
-	TestMetricsEndpoint = "testmetrics"
-	TestAuthType        = "plaintext"
-	TestUsername        = "testuser"
-	TestPassword        = "testpass"
-	TestLogLevel        = "testloglevel"
-	TestMinPort         = int32(1)
-	TestMaxPort         = int32(2)
-	TestSectionName     = gatewayv1alpha2.SectionName("gateway-1-listener-udp")
+	TestNs                  = gatewayv1alpha2.Namespace("testnamespace")
+	TestStunnerConfig       = "stunner-config"
+	TestRealm               = "testrealm"
+	TestMetricsEndpoint     = "testmetrics"
+	TestHealthCheckEndpoint = "testhealth"
+	TestAuthType            = "plaintext"
+	TestUsername            = "testuser"
+	TestPassword            = "testpass"
+	TestLogLevel            = "testloglevel"
+	TestMinPort             = int32(1)
+	TestMaxPort             = int32(2)
+	TestSectionName         = gatewayv1alpha2.SectionName("gateway-1-listener-udp")
 )
 
 // GatewayClass
@@ -63,15 +64,16 @@ var TestGwConfig = stunnerv1alpha1.GatewayConfig{
 		Namespace: "testnamespace",
 	},
 	Spec: stunnerv1alpha1.GatewayConfigSpec{
-		StunnerConfig:   &TestStunnerConfig,
-		Realm:           &TestRealm,
-		MetricsEndpoint: &TestMetricsEndpoint,
-		AuthType:        &TestAuthType,
-		Username:        &TestUsername,
-		Password:        &TestPassword,
-		LogLevel:        &TestLogLevel,
-		MinPort:         &TestMinPort,
-		MaxPort:         &TestMaxPort,
+		StunnerConfig:       &TestStunnerConfig,
+		Realm:               &TestRealm,
+		MetricsEndpoint:     &TestMetricsEndpoint,
+		HealthCheckEndpoint: &TestHealthCheckEndpoint,
+		AuthType:            &TestAuthType,
+		Username:            &TestUsername,
+		Password:            &TestPassword,
+		LogLevel:            &TestLogLevel,
+		MinPort:             &TestMinPort,
+		MaxPort:             &TestMaxPort,
 	},
 }
 

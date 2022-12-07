@@ -43,7 +43,8 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, testutils.TestMetricsEndpoint, admin.MetricsEndpoint, "metrics_endpoint")
-
+				assert.Equal(t, testutils.TestHealthCheckEndpoint, admin.HealthCheckEndpoint,
+					"health-check")
 			},
 		},
 		{
@@ -57,6 +58,7 @@ func TestRenderAdminRender(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				w.Spec.MetricsEndpoint = nil
+				w.Spec.HealthCheckEndpoint = nil
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -72,11 +74,12 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "", admin.MetricsEndpoint, "metrics_endpoint")
-
+				assert.Equal(t, config.DefaultHealthCheckEndpoint, admin.HealthCheckEndpoint,
+					"health-check default on")
 			},
 		},
 		{
-			name: "admin metricsendpoint ok",
+			name: "admin metricsendpoint/healthcheckendpoint ok",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gatewayv1alpha2.Gateway{},
@@ -86,6 +89,7 @@ func TestRenderAdminRender(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				*w.Spec.MetricsEndpoint = "http://0.0.0.0:8080/metrics"
+				*w.Spec.HealthCheckEndpoint = "http://0.0.0.0:8081"
 				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -101,7 +105,8 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "http://0.0.0.0:8080/metrics", admin.MetricsEndpoint, "Metrics_endpoint")
-
+				assert.Equal(t, "http://0.0.0.0:8081", admin.HealthCheckEndpoint,
+					"health-check default on")
 			},
 		},
 	})

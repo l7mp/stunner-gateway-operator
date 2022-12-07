@@ -27,10 +27,9 @@ import (
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-var testerLogLevel = zapcore.Level(-4)
-
+// var testerLogLevel = zapcore.Level(-4)
 // var testerLogLevel = zapcore.DebugLevel
-//var testerLogLevel = zapcore.ErrorLevel
+var testerLogLevel = zapcore.ErrorLevel
 
 var (
 	scheme = runtime.NewScheme()

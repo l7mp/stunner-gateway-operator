@@ -22,10 +22,16 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConf
 		me = *c.gwConf.Spec.MetricsEndpoint
 	}
 
+	he := config.DefaultHealthCheckEndpoint
+	if c.gwConf.Spec.HealthCheckEndpoint != nil {
+		he = *c.gwConf.Spec.HealthCheckEndpoint
+	}
+
 	admin := stunnerconfv1alpha1.AdminConfig{
-		Name:            config.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
-		LogLevel:        loglevel,
-		MetricsEndpoint: me,
+		Name:                config.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
+		LogLevel:            loglevel,
+		MetricsEndpoint:     me,
+		HealthCheckEndpoint: he,
 	}
 
 	// validate so that defaults get filled in
