@@ -175,8 +175,15 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 		// index i is valid, and the protocol and port match the ones specified for the gateway
 		if len(s.Ports) > 0 && spIndex < len(s.Ports) &&
 			s.Ports[spIndex].Port == port && s.Ports[spIndex].Protocol == proto {
+
+			// fallback to Hostname (typically for AWS)
+			a := s.IP
+			if a == "" {
+				a = s.Hostname
+			}
+
 			return &addrPort{
-				addr: s.IP,
+				addr: a,
 				port: int(s.Ports[spIndex].Port),
 			}
 		}
@@ -186,8 +193,14 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 	// fall back to the first load-balancer IP we find and use the port from the service-port
 	// as a port
 	if len(st.Ingress) > 0 {
+		// fallback to Hostname (typically for AWS)
+		a := st.Ingress[0].IP
+		if a == "" {
+			a = st.Ingress[0].Hostname
+		}
+
 		return &addrPort{
-			addr: st.Ingress[0].IP,
+			addr: a,
 			port: int(port),
 		}
 	}

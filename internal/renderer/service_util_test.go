@@ -49,6 +49,35 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "fallback to hostname ok",
+			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
+			rs:   []gatewayv1alpha2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.Status.LoadBalancer.Ingress[0].IP = ""
+				s1.Status.LoadBalancer.Ingress[0].Hostname = "dummy-hostname"
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				addr, err := r.getPublicAddrPort4Gateway(gw)
+				assert.Error(t, err, "owner ref not found")
+				assert.NotNil(t, addr, "public hostname found")
+				assert.Equal(t, 1, addr.port, "public port ok")
+				assert.Equal(t, "dummy-hostname", addr.addr, "public addr ok")
+			},
+		},
+		{
 			name: "wrong annotation name errs",
 			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
