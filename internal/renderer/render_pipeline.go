@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// apiv1 "k8s.io/api/core/v1"
@@ -33,6 +34,7 @@ type RenderContext struct {
 	update *event.EventUpdate
 	gc     *gatewayv1alpha2.GatewayClass
 	gwConf *stunnerv1alpha1.GatewayConfig
+	log    logr.Logger
 }
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
@@ -70,6 +72,7 @@ func (r *Renderer) Render(e *event.EventRender) {
 			origin: e,
 			update: event.NewEventUpdate(r.gen),
 			gc:     gc,
+			log:    log.WithValues("gateway-class", gc.GetName()),
 		}
 
 		if err := r.renderGatewayClass(c); err != nil {
@@ -152,7 +155,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 			ready = true
 		}
 
-		// must recreate the LoadBalancer service otherwise a changed
+		// recreate the LoadBalancer service, otherwise a changed
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation may not be reflected back to
 		// the service
 		if s := createLbService4Gateway(c, gw); s != nil {
@@ -202,29 +205,43 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 		log.V(2).Info("considering", "route", ro.GetName())
 
 		renderRoute := false
+		parentAccept := make([]bool, len(ro.Spec.ParentRefs))
+
 		initRouteStatus(ro)
 
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
 
-			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+			parentAccept[i] = r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// at least one parent accepts the route: render it!
-			renderRoute = renderRoute || accepted
-
-			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
+			renderRoute = renderRoute || parentAccept[i]
 		}
 
+		var backendErr error
 		if renderRoute {
 			rc, err := r.renderCluster(ro)
 			if err != nil {
-				log.Info("error rendering configuration for route", "route",
-					ro.GetName(), "error", err.Error())
-
-				continue
+				backendErr = err
+				if _, ok := err.(NonCriticalRenderError); ok {
+					log.Info("non-critical error rendering cluster", "route",
+						ro.GetName(), "error", err.Error())
+				} else {
+					log.Info("fatal error rendering cluster", "route",
+						ro.GetName(), "error", err.Error())
+					continue
+				}
 			}
 
 			conf.Clusters = append(conf.Clusters, *rc)
+		}
+
+		// set status: we can do this only once we know whether (1) the parent accepted the
+		// route and (2) the backend refs were successfully resolved
+		for i := range ro.Spec.ParentRefs {
+			p := ro.Spec.ParentRefs[i]
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept[i],
+				backendErr)
 		}
 
 		// schedule for update
@@ -314,7 +331,11 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
 			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-			setRouteConditionStatus(ro, &p, config.ControllerName, accepted)
+
+			// TODO: not sure what to set here so we set ResolvedRefs to
+			// BackendNotFound
+			setRouteConditionStatus(ro, &p, config.ControllerName, accepted,
+				NewNonCriticalRenderError(ServiceNotFound))
 		}
 
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)

@@ -232,7 +232,7 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.GetNamespace(),
-			Name:      fmt.Sprintf("stunner-gateway-%s-svc", gw.GetName()),
+			Name:      gw.GetName(),
 			Annotations: map[string]string{
 				config.GatewayAddressAnnotationKey: store.GetObjectKey(gw),
 			},
@@ -240,14 +240,39 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeLoadBalancer,
 			Selector: map[string]string{config.DefaultStunnerDeploymentLabel: config.DefaultStunnerDeploymentValue},
-			Ports: []corev1.ServicePort{
-				{
-					Name:     fmt.Sprintf("stunner-gateway-%s-udp-port", gw.GetName()),
-					Protocol: corev1.Protocol(gw.Spec.Listeners[0].Protocol),
-					Port:     int32(gw.Spec.Listeners[0].Port),
-				},
-			},
+			Ports:    []corev1.ServicePort{},
 		},
+	}
+
+	// copy all listener ports/protocols from the gateway
+	// proto defaults to the first valid listener protocol
+	serviceProto := ""
+	for _, l := range gw.Spec.Listeners {
+		var proto string
+		switch string(l.Protocol) {
+		case "UDP", "DTLS":
+			proto = "UDP"
+		case "TCP", "TLS":
+			proto = "TCP"
+		default:
+			c.log.V(1).Info("createLbService4Gateway: unknown listener protocol",
+				"gateway", store.GetObjectKey(gw), "listener", l.Name, "protocol", string(l.Protocol))
+			continue
+		}
+		if serviceProto == "" {
+			serviceProto = proto
+		} else if proto != serviceProto {
+			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as the listener "+
+				"protocol is different from the service protocol (multi-protocol LB services are not supported)",
+				"gateway", store.GetObjectKey(gw), "listener", l.Name, "listener-protocol", proto,
+				"service-protocol", serviceProto)
+			continue
+		}
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:     fmt.Sprintf("%s-%s", gw.GetName(), strings.ToLower(serviceProto)),
+			Protocol: corev1.Protocol(serviceProto),
+			Port:     int32(l.Port),
+		})
 	}
 
 	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service
@@ -258,24 +283,36 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 	// forward the first requested address to Kubernetes
 	if len(gw.Spec.Addresses) > 0 {
 		if gw.Spec.Addresses[0].Type == nil ||
-			(gw.Spec.Addresses[0].Type != nil && *gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {
+			(gw.Spec.Addresses[0].Type != nil &&
+				*gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {
 			svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
 		}
+	}
+
+	// no valid listener in gateway: refuse to create a service
+	if len(svc.Spec.Ports) == 0 {
+		c.log.V(1).Info("createLbService4Gateway: refusing to create a LB service as there "+
+			"is no valid listener found", "gateway", store.GetObjectKey(gw))
+		return nil
 	}
 
 	return svc
 }
 
 // find the ClusterIP associated with a service
-func getClusterIP(n types.NamespacedName) []string {
+func getClusterIP(n types.NamespacedName) ([]string, error) {
 	ret := []string{}
 
 	s := store.Services.GetObject(n)
-	if s == nil || s.Spec.ClusterIP == "" || s.Spec.ClusterIP == "None" {
-		return ret
+	if s == nil {
+		return ret, NewNonCriticalRenderError(ServiceNotFound)
+	}
+
+	if s.Spec.ClusterIP == "" || s.Spec.ClusterIP == "None" {
+		return ret, NewNonCriticalRenderError(ClusterIPNotFound)
 	}
 
 	ret = append(ret, s.Spec.ClusterIP)
 
-	return ret
+	return ret, nil
 }

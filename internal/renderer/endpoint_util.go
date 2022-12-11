@@ -9,16 +9,16 @@ import (
 )
 
 // find the list of endpoint IP addresses associated with a service
-func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) []string {
+func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) ([]string, error) {
 	ret := []string{}
 
 	ep := store.Endpoints.GetObject(n)
 	if ep == nil {
-		return ret
+		return ret, NewNonCriticalRenderError(EndpointNotFound)
 	}
 
-	// allow clients to reach nonready addresses: they have already gone through ICE
-	// negotiation so they may have a better idea on endpoint-readyness than Kubernetes
+	// allow clients to reach not-ready addresses: they have already gone through ICE
+	// negotiation so they may have a better idea on endpoint-readiness than Kubernetes
 	for _, s := range ep.Subsets {
 		for _, a := range s.Addresses {
 			if a.IP != "" {
@@ -34,5 +34,5 @@ func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) []string {
 		}
 	}
 
-	return ret
+	return ret, nil
 }

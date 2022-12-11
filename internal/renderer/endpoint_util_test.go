@@ -36,8 +36,9 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs := getEndpointAddrs(n, false)
+				addrs, err := getEndpointAddrs(n, false)
 
+				assert.Nil(t, err, "no error")
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
 				assert.Len(t, addrs, 4, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
@@ -60,8 +61,9 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs := getEndpointAddrs(n, true)
+				addrs, err := getEndpointAddrs(n, true)
 
+				assert.Nil(t, err, "no error")
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
 				assert.Len(t, addrs, 3, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
@@ -87,8 +89,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs := getEndpointAddrs(n, false)
+				addrs, err := getEndpointAddrs(n, false)
 
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},
@@ -110,8 +116,12 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs := getEndpointAddrs(n, false)
+				addrs, err := getEndpointAddrs(n, false)
 
+				assert.NotNil(t, err, "error")
+				e, ok := err.(NonCriticalRenderError)
+				assert.True(t, ok, "non-critical error")
+				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},
@@ -133,8 +143,9 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs := getEndpointAddrs(n, false)
+				addrs, err := getEndpointAddrs(n, false)
 
+				assert.Nil(t, err, "no error")
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
 				assert.Len(t, addrs, 4, "endpoint addrs len ok")
 				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")

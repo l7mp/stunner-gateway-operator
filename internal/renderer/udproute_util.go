@@ -154,7 +154,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gatewayv1alpha2.UDPRoute, p *gatew
 	return false
 }
 
-func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentReference, controllerName string, accepted bool) {
+func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.ParentReference, controllerName string, accepted bool, backendErr error) {
 	// ns := gatewayv1alpha2.Namespace(ro.GetNamespace())
 	// gr := gatewayv1alpha2.Group(gatewayv1alpha2.GroupVersion.Group)
 	// kind := gatewayv1alpha2.Kind("Gateway")
@@ -185,30 +185,54 @@ func setRouteConditionStatus(ro *gatewayv1alpha2.UDPRoute, p *gatewayv1alpha2.Pa
 		Conditions:     []metav1.Condition{},
 	}
 
-	c := metav1.ConditionTrue
-	reason := "Accepted"
-	if !accepted {
-		c = metav1.ConditionFalse
-		reason = "NoMatchingListenerHostname"
+	var acceptCond metav1.Condition
+	if accepted {
+		acceptCond = metav1.Condition{
+			Type:               string(gatewayv1alpha2.RouteConditionAccepted),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: ro.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
+			Message:            "parent accepts the route",
+		}
+	} else {
+		acceptCond = metav1.Condition{
+			Type:               string(gatewayv1alpha2.RouteConditionAccepted),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: ro.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.RouteReasonNotAllowedByListeners),
+			Message:            "parent rejects the route",
+		}
+	}
+	meta.SetStatusCondition(&s.Conditions, acceptCond)
+
+	var resolvedCond metav1.Condition
+	if backendErr != nil {
+		reason := gatewayv1alpha2.RouteReasonBackendNotFound
+		if e, ok := backendErr.(NonCriticalRenderError); ok && e.ErrorReason == InvalidBackendKind {
+			reason = gatewayv1alpha2.RouteReasonInvalidKind
+		}
+		resolvedCond = metav1.Condition{
+			Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: ro.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(reason),
+			Message:            "at least one backend reference failed to be successfully resolved",
+		}
+	} else {
+		resolvedCond = metav1.Condition{
+			Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: ro.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1alpha2.RouteReasonResolvedRefs),
+			Message:            "all backend references successfully resolved",
+		}
 	}
 
-	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.RouteConditionAccepted),
-		Status:             c,
-		ObservedGeneration: ro.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             reason,
-		Message:            "parent accepts the route",
-	})
-
-	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-		Type:               string(gatewayv1alpha2.RouteConditionResolvedRefs),
-		Status:             c,
-		ObservedGeneration: ro.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             "ResolvedRefs",
-		Message:            "parent reference successfully resolved",
-	})
+	meta.SetStatusCondition(&s.Conditions, resolvedCond)
 
 	ro.Status.Parents = append(ro.Status.Parents, s)
 }

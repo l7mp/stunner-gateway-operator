@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +40,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 0, "gw found")
@@ -61,7 +62,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 2, "gw found")
@@ -86,7 +87,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -124,7 +125,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -161,7 +162,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc}
+				c := &RenderContext{gc: gc, log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
