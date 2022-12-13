@@ -1,0 +1,81 @@
+name: "release-dev"
+
+on:
+  push:
+    branches:
+      - 'main'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Setup Golang Environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run Tests
+        run: make test
+
+  push_to_registry:
+    name: Push docker image to DockerHub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+      - name: Build the tagged Docker image
+        run: docker build . --file Dockerfile --tag l7mp/stunner-gateway-operator:dev
+      - name: Push the tagged Docker image
+        run: docker push l7mp/stunner-gateway-operator:dev
+  push_chart:
+    name: Push charts to the web
+    runs-on: ubuntu-latest
+    steps:
+      - name: stunner checkout
+        uses: actions/checkout@v3
+        with:
+          path: stunner-gateway-operator
+          ref: main
+          repository: l7mp/stunner-gateway-operator
+      - name: l7mp.io checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.WEB_PAT_TOKEN }}
+          path: l7mp.io
+          ref: master
+          repository: l7mp/l7mp.io
+      - name: stunner-helm checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.WEB_PAT_TOKEN }}
+          path: stunner-helm
+          ref: main
+          repository: l7mp/stunner-helm
+      - name: Set git config
+        run: |
+          git config --global user.email "l7mp.info@gmail.com"
+          git config --global user.name "BotL7mp"
+      - name: Build helm charts
+        run: |
+          cd stunner-helm/helm
+          sed -ri 's/^(\s*)(name\s*:\s*.*\s*$)/\1name: stunner-gateway-operator-dev/' stunner-gateway-operator/Chart.yaml
+          sed -ri 's/^(\s*)(appVersion\s*:\s*.*\s*$)/\1appVersion: dev/' stunner-gateway-operator/Chart.yaml
+          sed -ri 's/^(\s*)(          tag\s*:\s*.*\s*$)/\1          tag: dev/' stunner-gateway-operator/values.yaml
+          helm package ./stunner-gateway-operator
+      - name: Update l7mp.io
+        run: |
+          rm -rf l7mp.io/stunner/stunner-gateway-operator-dev*.tgz
+          cp stunner-helm/helm/*.tgz l7mp.io/stunner
+          helm repo index l7mp.io/stunner/ --url https://l7mp.io/stunner
+          cd l7mp.io
+          git add .
+          git commit -m "Update dev helm chart from l7mp/stunner-gateway-operator" -m "(triggered by the 'Helm release' github action.)"
+          git push origin master
