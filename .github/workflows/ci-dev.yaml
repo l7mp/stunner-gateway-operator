@@ -2,6 +2,10 @@ name: "Release (dev)"
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/**'
+      - 'doc/**'
     branches:
       - 'main'
 
