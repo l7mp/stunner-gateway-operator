@@ -1,4 +1,4 @@
-name: "release-dev"
+name: "Release (dev)"
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
