@@ -41,10 +41,6 @@ const (
 	// ClusterIP of a service.
 	DefaultEnableRelayToClusterIP = true
 
-	// DefaultEnableRenderThrottling makes is possible for the operator to queue up rendering
-	// requests and collapsed them into a single request to decrease operator churn.
-	DefaultEnableRenderThrottling = true
-
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
 	DefaultHealthCheckEndpoint = "http://0.0.0.0:8086"
 )

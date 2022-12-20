@@ -19,8 +19,4 @@ var (
 	// ClusterIP. If both EnableEndpointDiscovery and EnableRelayToClusterIP are on, clients
 	// can connect to both the ClusterIP and any direct pod IP.
 	EnableRelayToClusterIP = DefaultEnableRelayToClusterIP
-
-	// EnableRenderThrottling makes is possible for the operator to queue up rendering requests
-	// and collapsed them into a single request to decrease operator churn, default is true
-	EnableRenderThrottling = DefaultEnableRenderThrottling
 )

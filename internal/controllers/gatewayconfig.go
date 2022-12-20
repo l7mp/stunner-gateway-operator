@@ -20,69 +20,81 @@ import (
 	"context"
 	// "fmt"
 
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/resource"
 )
-
-// -----------------------------------------------------------------------------
-// GatewayConfigReconciler - RBAC Permissions
-// -----------------------------------------------------------------------------
-
-//+kubebuilder:rbac:groups=stunner.l7mp.io,resources=gatewayconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=stunner.l7mp.io,resources=gatewayconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=stunner.l7mp.io,resources=gatewayconfigs/finalizers,verbs=update
 
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
-	scheme  *runtime.Scheme
-	eventCh chan event.Event
+	resources *resource.Store
+	log       logr.Logger
 }
 
-func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event) error {
+func RegisterGatewayConfigController(mgr manager.Manager, resources *resource.Store, log logr.Logger) error {
 	r := &gatewayConfigReconciler{
-		Client:  mgr.GetClient(),
-		scheme:  mgr.GetScheme(),
-		eventCh: ch,
+		Client:    mgr.GetClient(),
+		resources: resources,
+		log:       log,
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&stunnerv1alpha1.GatewayConfig{}).
-		Complete(r)
+	c, err := controller.New("gatewayconfig", mgr, controller.Options{Reconciler: r})
+	if err != nil {
+		return err
+	}
+	r.log.Info("created gatewayconfig controller")
+
+	// Only enqueue GatewayClass objects that match this controller name.
+	if err := c.Watch(
+		&source.Kind{Type: &stnrv1a1.GatewayConfig{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.GenerationChangedPredicate{},
+	); err != nil {
+		return err
+	}
+	r.log.Info("watching gatewayconfig objects")
+
+	return nil
 }
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := log.FromContext(ctx).WithValues("gateway-config", req.Name)
-	log.Info("Reconciling GatewayConfig")
+	log := r.log.WithValues("gateway-config", req.String())
+	log.Info("reconciling")
 
-	var gc stunnerv1alpha1.GatewayConfig
+	var gc stnrv1a1.GatewayConfig
 	found := true
 
 	err := r.Get(ctx, req.NamespacedName, &gc)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get GatewayConfig")
+			log.Error(err, "failed to get GatewayConfig")
 			return reconcile.Result{}, err
 		}
 		found = false
 	}
 
 	if !found {
-		r.eventCh <- event.NewEventDelete(event.EventKindGatewayConfig, req.NamespacedName)
+		r.resources.GatewayConfigs.Delete(req)
 		return reconcile.Result{}, nil
 	}
 
-	r.eventCh <- event.NewEventUpsert(&gc)
+	r.resources.GatewayConfigs.Store(req, &gc)
 
 	return reconcile.Result{}, nil
 }
