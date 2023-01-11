@@ -150,55 +150,38 @@ func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*core
 	r.log.V(1).Info("trying to find  node with a usable external address")
 	count := 0
 
-	// TODO: this will never scale to very large clusters
-	nodes := &corev1.NodeList{}
-	if err := r.List(ctx, nodes); err != nil {
-		return nil, "", err
+	// list only at most NodeListSize number of nodes in one go
+	continueToken := ""
+	lo := &client.ListOptions{
+		Limit:    NodeListSize,
+		Continue: continueToken,
 	}
 
-	for _, node := range nodes.Items {
-		node := node
-		r.log.V(2).Info("processing node", "namespace", node.GetNamespace(),
-			"name", node.GetName())
-
-		if addr := store.GetExternalAddress(&node); addr != "" {
-			return &node, addr, nil
+	for true {
+		nodes := &corev1.NodeList{}
+		if err := r.List(ctx, nodes, lo); err != nil {
+			return nil, "", err
 		}
 
-		count = count + 1
+		for _, node := range nodes.Items {
+			node := node
+			r.log.V(2).Info("processing node", "namespace", node.GetNamespace(),
+				"name", node.GetName())
+
+			if addr := store.GetExternalAddress(&node); addr != "" {
+				return &node, addr, nil
+			}
+
+			count = count + 1
+		}
+
+		if len(nodes.Items) < NodeListSize || nodes.Continue == "" {
+			break
+		}
+
+		// no luck yet: search on
+		lo.Continue = nodes.Continue
 	}
 
 	return nil, "", fmt.Errorf("end of node list found after searching through %d nodes", count)
 }
-
-// // list only at most NodeListSize number of nodes in one go
-// lo := &client.ListOptions{}
-// client.Limit(NodeListSize).ApplyToList(lo)
-
-// for true {
-// 	nodes := &corev1.NodeList{}
-// 	err := r.List(ctx, nodes, lo)
-// 	if err != nil {
-// 		return nil, "", err
-// 	}
-
-// 	if nodes.Size() == 0 {
-// 		return nil, "", nil
-// 	}
-
-// 	// found new dosage of nodes
-// 	for _, node := range nodes.Items {
-// 		node := node
-// 		r.log.V(2).Info("processing node", "namespace", node.GetNamespace(),
-// 			"name", node.GetName())
-
-// 		if addr := store.GetExternalAddress(&node); addr != "" {
-// 			return &node, addr, nil
-// 		}
-
-// 		count = count + 1
-// 	}
-
-// 	// no luck yet: search on
-// 	client.Continue(nodes.Continue).ApplyToList(lo)
-// }

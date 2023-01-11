@@ -84,3 +84,9 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
+  - gatewayconfigs/finalizers
+  verbs:
+  - update

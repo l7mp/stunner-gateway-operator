@@ -65,7 +65,7 @@ const (
 	timeout = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
-	// loglevel = -4
+	//loglevel = -4
 	loglevel = -1
 )
 

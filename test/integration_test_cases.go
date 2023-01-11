@@ -1754,7 +1754,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Clusters) == 2 {
+				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 2 && len(c.Clusters) == 2 {
 					conf = &c
 					return true
 				}
