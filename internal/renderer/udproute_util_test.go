@@ -12,13 +12,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
@@ -26,10 +26,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "get routes ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -55,15 +55,15 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "get multiple routes ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-namespace-correct-name")
-				ns := gatewayv1alpha2.Namespace("dummy-ns")
+				ns := gwapiv1a2.Namespace("dummy-ns")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Group = nil
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Kind = nil
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &ns
@@ -76,20 +76,20 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 
 				udp3 := testutils.TestUDPRoute.DeepCopy()
-				kind := gatewayv1alpha2.Kind("dummy-kind")
+				kind := gwapiv1a2.Kind("dummy-kind")
 				udp3.SetName("udproute-wrong-group-correct-name")
 				udp3.Spec.CommonRouteSpec.ParentRefs[0].Group = nil
 				udp3.Spec.CommonRouteSpec.ParentRefs[0].Kind = &kind
 				udp3.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 
 				udp4 := testutils.TestUDPRoute.DeepCopy()
-				group := gatewayv1alpha2.Group("dummy-kind")
+				group := gwapiv1a2.Group("dummy-kind")
 				udp4.SetName("udproute-wrong-kind-correct-name")
 				udp4.Spec.CommonRouteSpec.ParentRefs[0].Group = &group
 				udp4.Spec.CommonRouteSpec.ParentRefs[0].Kind = nil
 				udp4.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 
-				c.rs = []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2, *udp3, *udp4}
+				c.rs = []gwapiv1a2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2, *udp3, *udp4}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -117,18 +117,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "get route with listener ref ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-correct-listener-name")
-				sn := gatewayv1alpha2.SectionName("gateway-1-listener-udp")
+				sn := gwapiv1a2.SectionName("gateway-1-listener-udp")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp1}
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -152,18 +152,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "get route with wrong listener errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-correct-listener-name")
-				sn := gatewayv1alpha2.SectionName("dummy")
+				sn := gwapiv1a2.SectionName("dummy")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp1}
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -185,31 +185,31 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "get route with multiple listener refs ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-correct-listener-name")
 
 				udp1.Spec.CommonRouteSpec.ParentRefs =
-					make([]gatewayv1alpha2.ParentReference, 3)
+					make([]gwapiv1a2.ParentReference, 3)
 
-				sn1 := gatewayv1alpha2.SectionName("gateway-1-listener-udp")
+				sn1 := gwapiv1a2.SectionName("gateway-1-listener-udp")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn1
 
-				sn2 := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
+				sn2 := gwapiv1a2.SectionName("gateway-1-listener-tcp")
 				udp1.Spec.CommonRouteSpec.ParentRefs[1].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[1].SectionName = &sn2
 
-				sn3 := gatewayv1alpha2.SectionName("dummy")
+				sn3 := gwapiv1a2.SectionName("dummy")
 				udp1.Spec.CommonRouteSpec.ParentRefs[2].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[2].SectionName = &sn3
 
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp1}
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -233,25 +233,25 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "get multiple routes with listeners ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				sn1 := gatewayv1alpha2.SectionName("gateway-1-listener-udp")
+				sn1 := gwapiv1a2.SectionName("gateway-1-listener-udp")
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-namespace-correct-name-1")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn1
 
-				sn2 := gatewayv1alpha2.SectionName("gateway-1-listener-tcp")
+				sn2 := gwapiv1a2.SectionName("gateway-1-listener-tcp")
 				udp2 := testutils.TestUDPRoute.DeepCopy()
 				udp2.SetName("udproute-namespace-correct-name-2")
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn2
 
-				c.rs = []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2}
+				c.rs = []gwapiv1a2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -290,10 +290,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "valid routes - status",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -326,22 +326,22 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gatewayv1alpha2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.RouteConditionAccepted))
+					string(gwapiv1a2.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gatewayv1alpha2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.RouteConditionResolvedRefs))
+					string(gwapiv1a2.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gatewayv1alpha2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -350,18 +350,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 		},
 		{
 			name: "invalid routes - status",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-wrong-listener-name")
-				sn := gatewayv1alpha2.SectionName("dummy")
+				sn := gwapiv1a2.SectionName("dummy")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp1}
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -382,18 +382,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Equal(t, p, parentStatus.ParentRef, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.RouteConditionAccepted))
+					string(gwapiv1a2.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gatewayv1alpha2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "NotAllowedByListeners", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gatewayv1alpha2.RouteConditionResolvedRefs))
+					string(gwapiv1a2.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gatewayv1alpha2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")

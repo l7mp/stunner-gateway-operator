@@ -20,7 +20,11 @@ var (
 	// can connect to both the ClusterIP and any direct pod IP.
 	EnableRelayToClusterIP = DefaultEnableRelayToClusterIP
 
-	// EnableRenderThrottling makes is possible for the operator to queue up rendering requests
-	// and collapsed them into a single request to decrease operator churn, default is true
-	EnableRenderThrottling = DefaultEnableRenderThrottling
+	// ThrottleTimeout defines the amount of time to wait before initiating a new config render
+	// process. This allows to rate-limit config renders in very large clusters or frequently
+	// changing resources, where the config rendering process is too expensive to be run after
+	// every CRUD operation on the object being watched by the operator. The larger the
+	// throttle timeout the slower the controller and the smaller the operator CPU
+	// consumption. Default is 250 msec.
+	ThrottleTimeout = DefaultThrottleTimeout
 )

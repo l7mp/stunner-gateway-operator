@@ -1,7 +1,8 @@
 package store
 
 import (
-	// "fmt"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -13,6 +14,12 @@ func GetObjectKey(object client.Object) string {
 
 	n := types.NamespacedName{Namespace: object.GetNamespace(), Name: object.GetName()}
 	return n.String()
+}
+
+func GetNamespacedName(object client.Object) types.NamespacedName {
+	// s.log.V(5).Info("GetObjectKey", "object", fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName()))
+
+	return types.NamespacedName(client.ObjectKeyFromObject(object))
 }
 
 // FIXME this is not safe against K8s changing the namespace-name separator
@@ -32,4 +39,13 @@ func compareObjects(o1, o2 client.Object) bool {
 	return o1.GetNamespace() == o2.GetNamespace() &&
 		o1.GetName() == o2.GetName() &&
 		o1.GetGeneration() == o2.GetGeneration()
+}
+
+// DumpObject convers an object into a human-readable form for logging.
+func DumpObject(conf interface{}) string {
+	output := fmt.Sprintf("%#v", conf)
+	if json, err := json.Marshal(conf); err == nil {
+		output = string(json)
+	}
+	return output
 }

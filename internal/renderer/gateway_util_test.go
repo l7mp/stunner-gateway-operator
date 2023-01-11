@@ -13,29 +13,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderGatewayUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "wrong gatewayclassname errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.GatewayClassName = "dummy"
-				c.gws = []gatewayv1alpha2.Gateway{*gw}
+				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -48,16 +48,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "multiple gateways ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.ObjectMeta.SetName("dummy")
 				gw.ObjectMeta.SetGeneration(4)
-				c.gws = []gatewayv1alpha2.Gateway{*gw, testutils.TestGw}
+				c.gws = []gwapiv1a2.Gateway{*gw, testutils.TestGw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -78,10 +78,10 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -98,11 +98,11 @@ func TestRenderGatewayUtil(t *testing.T) {
 				setGatewayStatusScheduled(gw, "dummy")
 				setGatewayStatusReady(gw, errors.New("dummy"))
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionScheduled),
 					gw.Status.Conditions[0].Type, "conditions sched")
 				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
 					"conditions gen")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionReady),
 					gw.Status.Conditions[1].Type, "conditions ready")
 				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
 					"conditions gen")
@@ -110,17 +110,17 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway rescheduled/re-ready status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				setGatewayStatusScheduled(gw, "dummy")
 				setGatewayStatusReady(gw, errors.New("dummy"))
 				gw.ObjectMeta.SetGeneration(1)
-				c.gws = []gatewayv1alpha2.Gateway{*gw}
+				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -136,11 +136,11 @@ func TestRenderGatewayUtil(t *testing.T) {
 				setGatewayStatusScheduled(gw, "dummy")
 				setGatewayStatusReady(gw, errors.New("dummy"))
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionScheduled),
 					gw.Status.Conditions[0].Type, "conditions sched")
 				assert.Equal(t, int64(1),
 					gw.Status.Conditions[0].ObservedGeneration, "conditions gen")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionReady),
 					gw.Status.Conditions[1].Type, "conditions ready")
 				assert.Equal(t, int64(1),
 					gw.Status.Conditions[1].ObservedGeneration, "conditions gen")
@@ -148,16 +148,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "lisener status ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// u := testutils.TestUDPRoute.DeepCopy()
 				// u.ObjectMeta.SetName("tcp")
 				// u.Spec.
-				// 	c.rs = []gatewayv1alpha2.UDPRoute{*u, testutils.TestUDPRoute}
+				// 	c.rs = []gwapiv1a2.UDPRoute{*u, testutils.TestUDPRoute}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -182,7 +182,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					}
 
 					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*gatewayv1alpha2.UDPRoute{}, addr)
+						[]*gwapiv1a2.UDPRoute{}, addr)
 
 					if err != nil {
 						setListenerStatus(gw, &l, false, ready, 0)
@@ -195,95 +195,95 @@ func TestRenderGatewayUtil(t *testing.T) {
 				// listeners[0]: ok
 				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
 				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gatewayv1alpha2.ListenerConditionDetached))
+					string(gwapiv1a2.ListenerConditionDetached))
 				assert.NotNil(t, d, "detached found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionDetached), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionDetached), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonAttached), d.Reason,
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonAttached), d.Reason,
 					"reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+					string(gwapiv1a2.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonReady),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonReady),
 					d.Reason, "reason")
 
 				// listeners[1]: detached
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gatewayv1alpha2.ListenerConditionDetached))
+					string(gwapiv1a2.ListenerConditionDetached))
 				assert.NotNil(t, d, "detached found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionDetached), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionDetached), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonUnsupportedProtocol),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+					string(gwapiv1a2.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonReady),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonReady),
 					d.Reason, "reason")
 
 				// listeners[2]: ok
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gatewayv1alpha2.ListenerConditionDetached))
+					string(gwapiv1a2.ListenerConditionDetached))
 				assert.NotNil(t, d, "detached found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionDetached), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionDetached), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonAttached), d.Reason,
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonAttached), d.Reason,
 					"reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gatewayv1alpha2.ListenerConditionResolvedRefs))
+					string(gwapiv1a2.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonReady),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonReady),
 					d.Reason, "reason")
 
 				gw.Generation = 1
@@ -297,7 +297,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					}
 
 					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*gatewayv1alpha2.UDPRoute{}, addr)
+						[]*gwapiv1a2.UDPRoute{}, addr)
 
 					if err != nil {
 						setListenerStatus(gw, &l, false, ready, 0)
@@ -310,33 +310,33 @@ func TestRenderGatewayUtil(t *testing.T) {
 				// test only the ready status
 				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonPending),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonPending),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonPending),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonPending),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gatewayv1alpha2.ListenerConditionReady))
+					string(gwapiv1a2.ListenerConditionReady))
 				assert.NotNil(t, d, "ready found")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerConditionReady), d.Type,
+				assert.Equal(t, string(gwapiv1a2.ListenerConditionReady), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gatewayv1alpha2.ListenerReasonPending),
+				assert.Equal(t, string(gwapiv1a2.ListenerReasonPending),
 					d.Reason, "reason")
 			},
 		},

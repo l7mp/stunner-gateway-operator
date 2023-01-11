@@ -1,5 +1,11 @@
 package config
 
+import (
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+)
+
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
@@ -10,6 +16,15 @@ const (
 	// with a distinct External IP, then each listener must go to a separate Gateway resource
 	// so that the controller can assign the right public  address to the right listener.
 	GatewayAddressAnnotationKey = "stunner.l7mp.io/related-gateway-name"
+
+	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
+	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
+	// `ExternalName` or `LoadBalancer`. Default is `LoadBalancer`.
+	ServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
+
+	// DefaultServiceType defines the default type of services created to expose each Gateway
+	// to external clients.
+	DefaultServiceType = corev1.ServiceTypeLoadBalancer
 
 	// // GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// // the gateway controller.
@@ -41,10 +56,9 @@ const (
 	// ClusterIP of a service.
 	DefaultEnableRelayToClusterIP = true
 
-	// DefaultEnableRenderThrottling makes is possible for the operator to queue up rendering
-	// requests and collapsed them into a single request to decrease operator churn.
-	DefaultEnableRenderThrottling = true
-
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
 	DefaultHealthCheckEndpoint = "http://0.0.0.0:8086"
+
+	// DefaultThrottleTimeout is the default time interval to wait between subsequent config renders.
+	DefaultThrottleTimeout = 250 * time.Millisecond
 )

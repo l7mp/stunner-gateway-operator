@@ -8,17 +8,17 @@ import (
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	// gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-func UnpackConfigMap(cm *corev1.ConfigMap) (stunnerconfv1alpha1.StunnerConfig, error) {
-	conf := stunnerconfv1alpha1.StunnerConfig{}
+func UnpackConfigMap(cm *corev1.ConfigMap) (stnrconfv1a1.StunnerConfig, error) {
+	conf := stnrconfv1a1.StunnerConfig{}
 
 	jsonConf, found := cm.Data[config.DefaultStunnerdConfigfileName]
 	if !found {

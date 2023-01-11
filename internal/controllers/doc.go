@@ -14,9 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package controllers contains the controllers form the STUNNer Gateway API operator
+// Package `controllers` implements the controllers for the STUNNer gateway operator.
 package controllers
-
-// the opetator needs full permission to K8s configmaps
-//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=update

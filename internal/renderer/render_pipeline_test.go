@@ -13,25 +13,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderPipeline(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -51,7 +51,7 @@ func TestRenderPipeline(t *testing.T) {
 
 				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "auth rendered")
-				assert.Equal(t, stunnerconfv1alpha1.AuthTypePlainText.String(),
+				assert.Equal(t, stnrconfv1a1.AuthTypePlainText.String(),
 					auth.Type, "auth type")
 				assert.Equal(t, "testrealm", auth.Realm, "realm")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
@@ -60,10 +60,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "no EDS - E2E test",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -149,10 +149,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "EDS without relay-to-cluster-IP - E2E test",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -244,10 +244,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -340,10 +340,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "E2E invalidation",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -383,30 +383,30 @@ func TestRenderPipeline(t *testing.T) {
 				//statuses
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Type, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := gws[0].(*gatewayv1alpha2.Gateway)
+				gw, found := gws[0].(*gwapiv1a2.Gateway)
 				assert.True(t, found, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionScheduled),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionScheduled),
 					gw.Status.Conditions[0].Type, "conditions sched")
 				assert.Equal(t, metav1.ConditionTrue,
 					gw.Status.Conditions[0].Status, "status ready")
 				assert.Equal(t, int64(0),
 					gw.Status.Conditions[0].ObservedGeneration, "conditions gen")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayConditionReady),
+				assert.Equal(t, string(gwapiv1a2.GatewayConditionReady),
 					gw.Status.Conditions[1].Type, "conditions ready")
 				assert.Equal(t, metav1.ConditionFalse,
 					gw.Status.Conditions[1].Status, "status ready")
@@ -416,10 +416,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "no EDS - E2E rendering for multiple gateway-classes",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				config.EnableEndpointDiscovery = false
@@ -428,35 +428,35 @@ func TestRenderPipeline(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
-					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
-					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
+					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1a2.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gatewayv1alpha2.ObjectName("dummy-service")
-				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+					gwapiv1a2.ObjectName("dummy-service")
+				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -626,10 +626,10 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -637,35 +637,35 @@ func TestRenderPipeline(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
-					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
-					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
+					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1a2.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gatewayv1alpha2.ObjectName("dummy-service")
-				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+					gwapiv1a2.ObjectName("dummy-service")
+				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -848,45 +848,45 @@ func TestRenderPipeline(t *testing.T) {
 		},
 		{
 			name: "EDS with relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gatewayv1alpha2.ParametersReference{
-					Group:     gatewayv1alpha2.Group(stunnerv1alpha1.GroupVersion.Group),
-					Kind:      gatewayv1alpha2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
+					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNs,
 				}
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gatewayv1alpha2.ObjectName("dummy-gateway-class")
-				c.gws = []gatewayv1alpha2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1a2.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gatewayv1alpha2.ObjectName("dummy-service")
-				c.rs = []gatewayv1alpha2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+					gwapiv1a2.ObjectName("dummy-service")
+				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"

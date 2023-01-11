@@ -11,24 +11,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderGatewayClassUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "no gatewayclass errs",
-			cls:  []gatewayv1alpha2.GatewayClass{},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -38,15 +38,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "too many gatewayclasses errs",
-			cls:  []gatewayv1alpha2.GatewayClass{},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				cls2.SetName("dummy")
-				c.cls = []gatewayv1alpha2.GatewayClass{testutils.TestGwClass, *cls2}
+				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gcs := r.getGatewayClasses()
@@ -55,15 +55,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "wrong controller errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
-				cls2.Spec.ControllerName = gatewayv1alpha2.GatewayController("dummy")
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				cls2.Spec.ControllerName = gwapiv1a2.GatewayController("dummy")
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -72,15 +72,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "empty parametersref errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				cls2.Spec.ParametersRef = nil
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -89,15 +89,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "invalid ref group errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
-				cls2.Spec.ParametersRef.Group = gatewayv1alpha2.Group("dummy")
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				cls2.Spec.ParametersRef.Group = gwapiv1a2.Group("dummy")
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -106,15 +106,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "empty ref name errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				cls2.Spec.ParametersRef.Name = ""
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -123,15 +123,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "nil ref namespace errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				cls2.Spec.ParametersRef.Namespace = nil
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -140,15 +140,15 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "empty ref namespace errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				*cls2.Spec.ParametersRef.Namespace = ""
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -157,10 +157,10 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "condition status: accepted",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -169,11 +169,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
@@ -181,16 +181,16 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "condition status: re-scheduled",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				cls2 := testutils.TestGwClass.DeepCopy()
 				setGatewayClassStatusAccepted(cls2, nil)
 				cls2.ObjectMeta.SetGeneration(1)
-				c.cls = []gatewayv1alpha2.GatewayClass{*cls2}
+				c.cls = []gwapiv1a2.GatewayClass{*cls2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -198,11 +198,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(1),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
@@ -210,10 +210,10 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		},
 		{
 			name: "condition status: invalid-params",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -222,11 +222,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, errors.New("dummy"))
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionFalse,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gatewayv1alpha2.GatewayClassReasonInvalidParameters),
+				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonInvalidParameters),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")

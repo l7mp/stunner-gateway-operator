@@ -13,13 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
@@ -27,10 +27,10 @@ func TestRenderServiceUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "public-ip ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -52,10 +52,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "fallback to hostname ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -81,10 +81,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong annotation name errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -108,10 +108,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong annotation errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -133,10 +133,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong proto errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -159,10 +159,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "wrong port errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -185,10 +185,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "no service-port stats ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -218,10 +218,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "multiple service-ports public-ip ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -270,10 +270,10 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "nodeport public-port ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -306,15 +306,15 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "owner-status found",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.SetUID(types.UID("uid"))
-				c.gws = []gatewayv1alpha2.Gateway{*gw}
+				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -343,19 +343,19 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - single listener",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
-					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
-					Port:     gatewayv1alpha2.PortNumber(1),
-					Protocol: gatewayv1alpha2.ProtocolType("UDP"),
+				w.Spec.Listeners = []gwapiv1a2.Listener{{
+					Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1a2.PortNumber(1),
+					Protocol: gwapiv1a2.ProtocolType("UDP"),
 				}}
-				c.gws = []gatewayv1alpha2.Gateway{*w}
+				c.gws = []gwapiv1a2.Gateway{*w}
 
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -390,19 +390,19 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - single listener",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
-					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
-					Port:     gatewayv1alpha2.PortNumber(1),
-					Protocol: gatewayv1alpha2.ProtocolType("UDP"),
+				w.Spec.Listeners = []gwapiv1a2.Listener{{
+					Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1a2.PortNumber(1),
+					Protocol: gwapiv1a2.ProtocolType("UDP"),
 				}}
-				c.gws = []gatewayv1alpha2.Gateway{*w}
+				c.gws = []gwapiv1a2.Gateway{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -436,19 +436,19 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - single listener, no valid listener",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = []gatewayv1alpha2.Listener{{
-					Name:     gatewayv1alpha2.SectionName("gateway-1-listener-udp"),
-					Port:     gatewayv1alpha2.PortNumber(1),
-					Protocol: gatewayv1alpha2.ProtocolType("dummy"),
+				w.Spec.Listeners = []gwapiv1a2.Listener{{
+					Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1a2.PortNumber(1),
+					Protocol: gwapiv1a2.ProtocolType("dummy"),
 				}}
-				c.gws = []gatewayv1alpha2.Gateway{*w}
+				c.gws = []gwapiv1a2.Gateway{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -467,15 +467,15 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - multi-listener, single proto",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners[2].Protocol = gatewayv1alpha2.ProtocolType("UDP")
-				c.gws = []gatewayv1alpha2.Gateway{*w}
+				w.Spec.Listeners[2].Protocol = gwapiv1a2.ProtocolType("UDP")
+				c.gws = []gwapiv1a2.Gateway{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -511,15 +511,15 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - multi-listener, multi proto",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners[0].Protocol = gatewayv1alpha2.ProtocolType("dummy-2")
-				c.gws = []gatewayv1alpha2.Gateway{*w}
+				w.Spec.Listeners[0].Protocol = gwapiv1a2.ProtocolType("dummy-2")
+				c.gws = []gwapiv1a2.Gateway{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -553,17 +553,17 @@ func TestRenderServiceUtil(t *testing.T) {
 		},
 		{
 			name: "lb service - lb annotations",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["test"] = "testval"
 				w.Spec.LoadBalancerServiceAnnotations["dummy"] = "dummyval"
-				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -584,12 +584,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, as, 3, "annotations len")
 
 				a, found := as[config.GatewayAddressAnnotationKey]
-				assert.True(t, found, "annotation found")
-				assert.Equal(t, store.GetObjectKey(gw), a, "annotation ok")
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
 				a, found = as["test"]
 				assert.True(t, found, "annotation 2 found")
-				assert.Equal(t, "testval", a, "annotation 3 ok")
+				assert.Equal(t, "testval", a, "annotation 2 ok")
 
 				a, found = as["dummy"]
 				assert.True(t, found, "annotation 3 found")
@@ -602,6 +602,262 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
+			name: "lb service - lb annotations from gwConf override from Gw",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["test"] = "testval"
+				w.Spec.LoadBalancerServiceAnnotations["dummy"] = "dummyval"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				gw := testutils.TestGw.DeepCopy()
+				ann := make(map[string]string)
+				ann["test"] = "testval"         // same
+				ann["dummy"] = "something-else" // overrride
+				ann["extra"] = "extraval"       // extra
+				gw.SetAnnotations(ann)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 4, "annotations len")
+
+				a, found := as[config.GatewayAddressAnnotationKey]
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
+
+				a, found = as["test"]
+				assert.True(t, found, "annotation 2 found")
+				assert.Equal(t, "testval", a, "annotation 2 ok")
+
+				a, found = as["dummy"]
+				assert.True(t, found, "annotation 3 found")
+				assert.Equal(t, "something-else", a, "annotation 3 ok")
+
+				a, found = as["extra"]
+				assert.True(t, found, "annotation 4 found")
+				assert.Equal(t, "extraval", a, "annotation 4 ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
+			name: "lb service - default svc type",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+			},
+		},
+		{
+			name: "lb service - svc type ClusterIP from gwConf",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+			},
+		},
+		{
+			name: "lb service - svc type NodePort from gwConf",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "NodePort"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+			},
+		},
+		{
+			name: "lb service - svc type from svc annotation",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				ann := make(map[string]string)
+				ann[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				gw.SetAnnotations(ann)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+			},
+		},
+		{
+			name: "lb service - nodeport svc override gwConf from svc annotation",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				gw := testutils.TestGw.DeepCopy()
+				ann := make(map[string]string)
+				ann[config.ServiceTypeAnnotationKey] = "NodePort"
+				gw.SetAnnotations(ann)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+			},
+		},
+		{
+			name: "lb service - svc type NodePort from gw annotation",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				ann := make(map[string]string)
+				ann[config.ServiceTypeAnnotationKey] = "NodePort"
+				gw.SetAnnotations(ann)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
 			},
 		},
 	})

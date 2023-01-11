@@ -15,16 +15,16 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	// corev1 "k8s.io/api/core/v1"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // RenderContext contains the GatewayClass and the GatewayConfig for the current rendering task,
@@ -32,8 +32,8 @@ import (
 type RenderContext struct {
 	origin event.Event
 	update *event.EventUpdate
-	gc     *gatewayv1alpha2.GatewayClass
-	gwConf *stunnerv1alpha1.GatewayConfig
+	gc     *gwapiv1a2.GatewayClass
+	gwConf *stnrv1a1.GatewayConfig
 	log    logr.Logger
 }
 
@@ -95,8 +95,8 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	// gw-config.StunnerConfig may override this
 	target := config.DefaultConfigMapName
 
-	conf := stunnerconfv1alpha1.StunnerConfig{
-		ApiVersion: stunnerconfv1alpha1.ApiVersion,
+	conf := stnrconfv1a1.StunnerConfig{
+		ApiVersion: stnrconfv1a1.ApiVersion,
 	}
 
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
@@ -128,7 +128,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	conf.Auth = *auth
 
 	log.V(1).Info("finding gateway objects")
-	conf.Listeners = []stunnerconfv1alpha1.ListenerConfig{}
+	conf.Listeners = []stnrconfv1a1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(c) {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
@@ -156,8 +156,8 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 		}
 
 		// recreate the LoadBalancer service, otherwise a changed
-		// GatewayConfig.Spec.LoadBalancerServiceAnnotation may not be reflected back to
-		// the service
+		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
+		// be reflected back to the service
 		if s := createLbService4Gateway(c, gw); s != nil {
 			if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
 				r.log.Error(err, "cannot set owner reference", "owner",
@@ -167,7 +167,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 
 			log.Info("creating public service for gateway", "name",
 				store.GetObjectKey(s), "gateway", gw.GetName(), "service",
-				fmt.Sprintf("%#v", s))
+				store.DumpObject(s))
 
 			c.update.UpsertQueue.Services.Upsert(s)
 		}
@@ -199,7 +199,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	}
 
 	log.V(1).Info("processing UDPRoutes")
-	conf.Clusters = []stunnerconfv1alpha1.ClusterConfig{}
+	conf.Clusters = []stnrconfv1a1.ClusterConfig{}
 	rs := store.UDPRoutes.GetAll()
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())
@@ -251,8 +251,8 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	// schedule for update
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
-	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "conf",
-		fmt.Sprintf("%#v", conf))
+	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
+		store.DumpObject(conf))
 
 	// schedule for update
 	cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, &conf)

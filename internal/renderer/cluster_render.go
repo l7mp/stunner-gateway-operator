@@ -5,16 +5,16 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	// corev1 "k8s.io/api/core/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // FIXME handle endpoint discovery for non-headless services
-func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1alpha1.ClusterConfig, error) {
+func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterConfig, error) {
 	r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
 	// track down the backendref
@@ -34,11 +34,11 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 	// order to set the ResolvedRefs Route status: last error is reported only
 	var backendErr error
 
-	ctype := stunnerconfv1alpha1.ClusterTypeStatic
+	ctype := stnrconfv1a1.ClusterTypeStatic
 	for _, b := range rs[0].BackendRefs {
 
 		// core.v1 has empty Group
-		if b.Group != nil && *b.Group != gatewayv1alpha2.Group("") {
+		if b.Group != nil && *b.Group != gwapiv1a2.Group("") {
 			backendErr = NewNonCriticalRenderError(InvalidBackendGroup)
 			r.log.V(2).Info("renderCluster: error resolving backend", "route",
 				store.GetObjectKey(ro), "backend", string(b.Name), "group",
@@ -62,7 +62,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 
 		ep := []string{}
 		if config.EnableEndpointDiscovery || config.EnableRelayToClusterIP {
-			ctype = stunnerconfv1alpha1.ClusterTypeStatic
+			ctype = stnrconfv1a1.ClusterTypeStatic
 			n := types.NamespacedName{
 				Namespace: ns,
 				Name:      string(b.Name),
@@ -93,7 +93,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 			}
 		} else {
 			// fall back to strict DNS and hope for the best
-			ctype = stunnerconfv1alpha1.ClusterTypeStrictDNS
+			ctype = stnrconfv1a1.ClusterTypeStrictDNS
 			ep = append(ep, fmt.Sprintf("%s.%s.svc.cluster.local", string(b.Name), ns))
 		}
 
@@ -104,7 +104,7 @@ func (r *Renderer) renderCluster(ro *gatewayv1alpha2.UDPRoute) (*stunnerconfv1al
 		eps = append(eps, ep...)
 	}
 
-	cluster := stunnerconfv1alpha1.ClusterConfig{
+	cluster := stnrconfv1a1.ClusterConfig{
 		Name:      store.GetObjectKey(ro),
 		Type:      ctype.String(),
 		Endpoints: eps,
