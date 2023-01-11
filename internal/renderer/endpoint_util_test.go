@@ -11,13 +11,13 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	// gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	// stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderEndpointUtil(t *testing.T) {

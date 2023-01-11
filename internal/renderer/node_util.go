@@ -3,8 +3,6 @@ package renderer
 import (
 	// "fmt"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -13,11 +11,8 @@ import (
 // (NodePorts might mot work anyway, e.g., on private vpcs)
 func getFirstNodeAddr() string {
 	for _, n := range store.Nodes.GetAll() {
-		for _, a := range n.Status.Addresses {
-			if a.Type == corev1.NodeExternalIP && a.Address != "" {
-				return a.Address
-			}
-
+		if a := store.GetExternalAddress(n); a != "" {
+			return a
 		}
 	}
 

@@ -2,24 +2,15 @@ package updater
 
 // updater uploads client updates
 import (
-	// "context"
 	"fmt"
-	// "reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// corev1 "k8s.io/api/core/v1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/config"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -45,7 +36,7 @@ func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass, gen int) 
 	}
 
 	u.log.V(1).Info("gateway-class updated", "resource", store.GetObjectKey(gc), "generation",
-		gen, "result", current)
+		gen, "result", store.DumpObject(current))
 
 	return nil
 }
@@ -71,7 +62,7 @@ func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway, gen int) error {
 	}
 
 	u.log.V(1).Info("gateway updated", "resource", store.GetObjectKey(gw), "generation", gen,
-		"result", current)
+		"result", store.DumpObject(current))
 
 	return nil
 }
@@ -97,7 +88,7 @@ func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute, gen int) error {
 	}
 
 	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "generation",
-		gen, "result", current)
+		gen, "result", store.DumpObject(current))
 
 	return nil
 }
@@ -112,12 +103,6 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// upsert: owner-refs, our own annotation, and the spec
-		// as := svc.GetAnnotations()
-		// if name, found := as[config.GatewayAddressAnnotationKey]; found {
-		// 	metav1.SetMetaDataAnnotation(&current.ObjectMeta,
-		// 		config.GatewayAddressAnnotationKey, name)
-		// }
 		for a, v := range svc.GetAnnotations() {
 			metav1.SetMetaDataAnnotation(&current.ObjectMeta, a, v)
 		}
@@ -134,7 +119,7 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}
 
 	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "generation",
-		gen, "result", current)
+		gen, "result", store.DumpObject(current))
 
 	return op, nil
 }
@@ -171,7 +156,7 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	}
 
 	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "generation",
-		gen, "result", current)
+		gen, "result", store.DumpObject(current))
 
 	return op, nil
 }

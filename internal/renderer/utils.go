@@ -2,17 +2,12 @@ package renderer
 
 import (
 	"encoding/json"
-	// "fmt"
-	// "reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 )
@@ -45,7 +40,7 @@ import (
 // 	return -1
 // }
 
-func (r *Renderer) write2ConfigMap(ns, name string, conf *stunnerconfv1alpha1.StunnerConfig) (*corev1.ConfigMap, error) {
+func (r *Renderer) write2ConfigMap(ns, name string, conf *stnrconfv1a1.StunnerConfig) (*corev1.ConfigMap, error) {
 	s := ""
 
 	if conf != nil {

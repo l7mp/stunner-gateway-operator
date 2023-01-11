@@ -11,24 +11,24 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderAdminRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "admin ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -50,17 +50,17 @@ func TestRenderAdminRender(t *testing.T) {
 		},
 		{
 			name: "admin default ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				w.Spec.MetricsEndpoint = nil
 				w.Spec.HealthCheckEndpoint = nil
-				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -73,7 +73,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "", admin.MetricsEndpoint, "metrics_endpoint")
 				assert.Equal(t, config.DefaultHealthCheckEndpoint, admin.HealthCheckEndpoint,
 					"health-check default on")
@@ -81,17 +81,17 @@ func TestRenderAdminRender(t *testing.T) {
 		},
 		{
 			name: "admin metricsendpoint/healthcheckendpoint ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{},
-			rs:   []gatewayv1alpha2.UDPRoute{},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LogLevel = nil
 				*w.Spec.MetricsEndpoint = "http://0.0.0.0:8080/metrics"
 				*w.Spec.HealthCheckEndpoint = "http://0.0.0.0:8081"
-				c.cfs = []stunnerv1alpha1.GatewayConfig{*w}
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -104,7 +104,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, stunnerconfv1alpha1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "http://0.0.0.0:8080/metrics", admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "http://0.0.0.0:8081", admin.HealthCheckEndpoint,
 					"health-check default on")

@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -33,7 +33,7 @@ type addrPort struct {
 // - nodeport svc created by us (owned by the gateway)
 // - load-balancer svc created manually by a user but annotated for the gateway
 // - nodeport svc created manually by a user but annotated for the gateway
-func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addrPort, error) {
+func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*addrPort, error) {
 	r.log.V(4).Info("getPublicAddrs4Gateway", "gateway", store.GetObjectKey(gw))
 	ownSvcFound := false
 	aps := []addrPort{}
@@ -94,7 +94,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gatewayv1alpha2.Gateway) (*addr
 }
 
 // we need the namespaced name!
-func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) bool {
+func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2.Gateway) bool {
 	r.log.V(4).Info("isServiceAnnotated4Gateway", "service", store.GetObjectKey(svc),
 		"gateway", store.GetObjectKey(gw), "annotations", fmt.Sprintf("%#v",
 			svc.GetAnnotations()))
@@ -114,7 +114,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gatewayv1
 // FIXME: we assume there's only a single ServicePort in the service ad we use the first one
 // available. this is true for the services we create bu may break if user creates funky services
 // for us
-func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*addrPort, bool, bool) {
+func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway) (*addrPort, bool, bool) {
 	var ap *addrPort
 
 	own := false
@@ -148,7 +148,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gatewayv1alpha2.Gateway) (*a
 }
 
 // first matching listener-proto-port and service-proto-port pair
-func getServicePort(gw *gatewayv1alpha2.Gateway, svc *corev1.Service) (int, bool) {
+func getServicePort(gw *gwapiv1a2.Gateway, svc *corev1.Service) (int, bool) {
 	for _, l := range gw.Spec.Listeners {
 		for i, s := range svc.Spec.Ports {
 			if strings.EqualFold(string(l.Protocol), string(s.Protocol)) &&
@@ -223,7 +223,7 @@ func isOwner(owner, owned metav1.Object, kind string) bool {
 
 // we always take the FIRST listener port in the gateway: if you want to expose STUNner on multiple
 // ports, use separate Gateways!
-func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *corev1.Service {
+func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Service {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
 		return nil
@@ -238,10 +238,32 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeLoadBalancer,
+			Type:     config.DefaultServiceType,
 			Selector: map[string]string{config.DefaultStunnerDeploymentLabel: config.DefaultStunnerDeploymentValue},
 			Ports:    []corev1.ServicePort{},
 		},
+	}
+
+	// update service type if necessary
+	svcType := string(config.DefaultServiceType)
+	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey]; ok {
+		svcType = t
+	}
+	if t, ok := gw.GetAnnotations()[config.ServiceTypeAnnotationKey]; ok {
+		svcType = t
+	}
+
+	switch svcType {
+	case "ClusterIP":
+		svc.Spec.Type = corev1.ServiceTypeClusterIP
+	case "NodePort":
+		svc.Spec.Type = corev1.ServiceTypeNodePort
+	case "ExternalName":
+		svc.Spec.Type = corev1.ServiceTypeExternalName
+	case "LoadBalancer":
+		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+	default:
+		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	}
 
 	// copy all listener ports/protocols from the gateway
@@ -280,11 +302,16 @@ func createLbService4Gateway(c *RenderContext, gw *gatewayv1alpha2.Gateway) *cor
 		svc.ObjectMeta.Annotations[k] = v
 	}
 
+	// copy the Gateway annotations, if any, to the Service, updating the default from the service
+	for k, v := range gw.GetAnnotations() {
+		svc.ObjectMeta.Annotations[k] = v
+	}
+
 	// forward the first requested address to Kubernetes
 	if len(gw.Spec.Addresses) > 0 {
 		if gw.Spec.Addresses[0].Type == nil ||
 			(gw.Spec.Addresses[0].Type != nil &&
-				*gw.Spec.Addresses[0].Type == gatewayv1alpha2.IPAddressType) {
+				*gw.Spec.Addresses[0].Type == gwapiv1a2.IPAddressType) {
 			svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
 		}
 	}

@@ -3,37 +3,37 @@ package renderer
 import (
 	"fmt"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderAuth(c *RenderContext) (*stunnerconfv1alpha1.AuthConfig, error) {
+func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
 	gwConf := c.gwConf
 	r.log.V(4).Info("renderAuth", "gateway-config", store.GetObjectKey(gwConf))
 
-	realm := stunnerconfv1alpha1.DefaultRealm
+	realm := stnrconfv1a1.DefaultRealm
 	if gwConf.Spec.Realm != nil {
 		realm = *gwConf.Spec.Realm
 	}
 
-	auth := stunnerconfv1alpha1.AuthConfig{
+	auth := stnrconfv1a1.AuthConfig{
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
 
 	// FIXME auth-type validation/parsing should be provided by the stunner API
-	authType := stunnerconfv1alpha1.DefaultAuthType
+	authType := stnrconfv1a1.DefaultAuthType
 	if gwConf.Spec.AuthType != nil {
 		authType = *gwConf.Spec.AuthType
 	}
 
-	atype, err := stunnerconfv1alpha1.NewAuthType(authType)
+	atype, err := stnrconfv1a1.NewAuthType(authType)
 	if err != nil {
 		return nil, err
 	}
 	switch atype {
-	case stunnerconfv1alpha1.AuthTypePlainText:
+	case stnrconfv1a1.AuthTypePlainText:
 		if gwConf.Spec.Username == nil || gwConf.Spec.Password == nil {
 			return nil, fmt.Errorf("missing username and password for authetication type %q",
 				"plaintext")
@@ -41,7 +41,7 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stunnerconfv1alpha1.AuthConfig
 
 		auth.Credentials["username"] = *gwConf.Spec.Username
 		auth.Credentials["password"] = *gwConf.Spec.Password
-	case stunnerconfv1alpha1.AuthTypeLongTerm:
+	case stnrconfv1a1.AuthTypeLongTerm:
 		if gwConf.Spec.SharedSecret == nil {
 			return nil, fmt.Errorf("missing shared-secret for authetication type %q",
 				"longterm")

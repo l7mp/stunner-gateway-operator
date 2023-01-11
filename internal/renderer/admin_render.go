@@ -3,16 +3,16 @@ package renderer
 import (
 	"fmt"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConfig, error) {
+func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1a1.AdminConfig, error) {
 	r.log.V(4).Info("renderAdmin", "gateway-config", store.GetObjectKey(c.gwConf))
 
-	loglevel := stunnerconfv1alpha1.DefaultLogLevel
+	loglevel := stnrconfv1a1.DefaultLogLevel
 	if c.gwConf.Spec.LogLevel != nil {
 		loglevel = *c.gwConf.Spec.LogLevel
 	}
@@ -27,7 +27,7 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stunnerconfv1alpha1.AdminConf
 		he = *c.gwConf.Spec.HealthCheckEndpoint
 	}
 
-	admin := stunnerconfv1alpha1.AdminConfig{
+	admin := stnrconfv1a1.AdminConfig{
 		Name:                config.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
 		LogLevel:            loglevel,
 		MetricsEndpoint:     me,

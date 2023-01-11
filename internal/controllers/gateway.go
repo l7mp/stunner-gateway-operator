@@ -24,27 +24,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/resource"
+	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 const (
 	secretGatewayIndex = "secretGatewayIndex"
+	classGatewayIndex  = "classGatewayIndex"
 )
 
 type gatewayReconciler struct {
 	client.Client
-	resources *resource.Store
-	log       logr.Logger
+	eventCh chan event.Event
+	log     logr.Logger
 }
 
-func RegisterGatewayController(mgr manager.Manager, resources *resource.Store, log logr.Logger) error {
+// RegisterGatewayController registers a reconciler for Gateway and the associated Secret objects.
+func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+	ctx := context.Background()
 	r := &gatewayReconciler{
-		Client:    mgr.GetClient(),
-		resources: resources,
-		log:       log,
+		Client:  mgr.GetClient(),
+		eventCh: ch,
+		log:     log.WithName("gateway-controller"),
 	}
 
 	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
@@ -53,102 +57,149 @@ func RegisterGatewayController(mgr manager.Manager, resources *resource.Store, l
 	}
 	r.log.Info("created gateway controller")
 
-	// Only enqueue GatewayClass objects that match this controller name.
+	// watch Gateway objects that match the controller name
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1b1.Gateway{}},
+		&source.Kind{Type: &gwapiv1a2.Gateway{}},
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.hasMatchingController),
+		//trigger when the Spec or an annotation changes on a Gateway we manage
+		predicate.And(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			),
+			predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+		),
 	); err != nil {
 		return err
 	}
 	r.log.Info("watching gateway objects")
 
-	// Create an index on Secrets: this will be used later for creating reconcile requests for
-	// the Gateways affected by a change in a Secret.
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Secret{}, secretGatewayIndex,
-		func(rawObj client.Object) []string {
-			// Extract the ConfigMap name from the ConfigDeployment Spec, if one is provided
-			gw := rawObj.(*gwapiv1b1.Gateway)
-			var refSecrets []string
-
-			if !r.hasMatchingController(gw) {
-				return []string{}
-			}
-
-			for j := range gw.Spec.Listeners {
-				l := gw.Spec.Listeners[j]
-
-				if !terminatesTLS(&l) {
-					continue
-				}
-
-				for i := range l.TLS.CertificateRefs {
-					r := l.TLS.CertificateRefs[i]
-					if !refsSecret(&r) {
-						continue
-					}
-
-					// If an explicit Secret namespace is not provided, use the
-					// Gateway namespace.
-					refSecrets = append(refSecrets,
-						types.NamespacedName{
-							Namespace: resource.NamespaceDerefOr(r.Namespace,
-								gw.GetNamespace()),
-							Name: string(r.Name),
-						}.String(),
-					)
-				}
-			}
-			return refSecrets
-		}); err != nil {
+	// index Gateway objects as per the referenced Secrets
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.Gateway{}, secretGatewayIndex,
+		secretGatewayIndexFunc); err != nil {
 		return err
 	}
 
-	// Trigger gateway reconciliation when a Secret that is referenced by a managed Gateway has
-	// changed.
-	if err := c.Watch(&source.Kind{Type: &corev1.Secret{}},
-		handler.EnqueueRequestsFromMapFunc(r.findSecretsForGateway)); err != nil {
+	// index Gateway objects as per the referenced GatewayClass
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.Gateway{}, classGatewayIndex,
+		classGatewayIndexFunc); err != nil {
 		return err
 	}
+
+	// watch Secret objects referenced by one of our Gateways
+	if err := c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+	); err != nil {
+		return err
+	}
+	r.log.Info("watching secret objects")
+
 	return nil
 }
 
+// Reconcile handles updates to a Gateway managed by this controller or a Secret referenced by one
+// of the Gateways managed by this controller.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("gateway-class", req.Name)
+	log := r.log.WithValues("object", req.String())
 	log.Info("reconciling")
 
-	var gw gwapiv1b1.Gateway
-	found := true
+	gatewayList := []client.Object{}
+	secretList := []client.Object{}
 
-	err := r.Get(ctx, req.NamespacedName, &gw)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "failed to get Gateway")
+	// find Gateways managed by this controller
+	gwClasses := &gwapiv1a2.GatewayClassList{}
+	if err := r.List(ctx, gwClasses); err != nil {
+		r.log.Error(err, "error obtaining  GatewayClasses", "name", config.ControllerName)
+		return reconcile.Result{}, err
+	}
+
+	for _, gc := range gwClasses.Items {
+		gc := gc
+		// do we manage this class
+		if string(gc.Spec.ControllerName) != config.ControllerName {
+			continue
+		}
+
+		// get gateways for this class
+		gateways := &gwapiv1a2.GatewayList{}
+		if err := r.List(ctx, gateways, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gc.GetName()),
+		}); err != nil {
+			r.log.Info("no associated Gateways found for GatewayClass", "name", config.ControllerName)
 			return reconcile.Result{}, err
 		}
-		found = false
+
+		for _, gw := range gateways.Items {
+			gw := gw
+			r.log.V(1).Info("processing Gateway", "namespace", gw.Namespace, "name", gw.Name)
+
+			gatewayList = append(gatewayList, &gw)
+
+			for _, listener := range gw.Spec.Listeners {
+				if listener.TLS == nil ||
+					(listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1a2.TLSModeTerminate) ||
+					(string(listener.Protocol) != "TLS" && string(listener.Protocol) != "DTLS") {
+					continue
+				}
+				for _, ref := range listener.TLS.CertificateRefs {
+					if (ref.Group != nil && *ref.Group != corev1.GroupName) ||
+						(ref.Kind != nil && *ref.Kind != "Secret") {
+						continue
+					}
+
+					// obtain ref'd secret
+					secret := corev1.Secret{}
+
+					// if no explicit Service namespace is provided, use the UDPRoute
+					// namespace to lookup the provided Service
+					secretNamespace := gw.Namespace
+					if ref.Namespace != nil {
+						secretNamespace = string(*ref.Namespace)
+					}
+
+					if err := r.Get(ctx,
+						types.NamespacedName{Namespace: secretNamespace, Name: string(ref.Name)},
+						&secret,
+					); err != nil {
+						// not fatal
+						if !apierrors.IsNotFound(err) {
+							r.log.Error(err, "error getting Secret", "namespace",
+								secretNamespace, "name", string(ref.Name))
+							continue
+						}
+
+						r.log.Info("no Secret found for Gateway", "gateway",
+							store.GetObjectKey(&gw), "listener", listener.Name,
+							"namespace", secretNamespace, "name", string(ref.Name))
+						continue
+					}
+
+					// TODO: check for ReferenceGrants
+
+					secretList = append(secretList, &secret)
+				}
+			}
+		}
 	}
 
-	if !found {
-		r.resources.Gateways.Delete(req)
-		return reconcile.Result{}, nil
-	}
+	store.Gateways.Reset(gatewayList)
+	r.log.V(2).Info("reset Gateway store", "gateways", store.Gateways.String())
 
-	r.resources.Gateways.Store(req, &gw)
+	store.Secrets.Reset(secretList)
+	r.log.V(2).Info("reset Secret store", "secrets", store.Secrets.String())
+
+	r.eventCh <- event.NewEventRender()
 
 	return reconcile.Result{}, nil
 }
 
-// hasMatchingController returns true if the provided object is a Gateway using a GatewayClass
-// matching the configured gatewayclass controller name.
-func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
-	gw, ok := obj.(*gwapiv1b1.Gateway)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-
-	gc := &gwapiv1b1.GatewayClass{}
+// validateGatewayForReconcile returns true if the provided object is a Gateway using a
+// GatewayClass matching the configured gatewayclass controller name.
+func (r *gatewayReconciler) validateGatewayForReconcile(o client.Object) bool {
+	gw := o.(*gwapiv1a2.Gateway)
+	gc := &gwapiv1a2.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 	if err := r.Get(context.Background(), key, gc); err != nil {
 		r.log.Info("no matching gatewayclass", "name", gw.Spec.GatewayClassName)
@@ -156,45 +207,68 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 	}
 
 	if string(gc.Spec.ControllerName) == config.ControllerName {
-		return false
-	}
-
-	return true
-}
-
-// findSecretsForGateway finds the secrets that are referenced in one of the gateways and creates a
-// reconcile request for the gateway objects identified.
-func (r *gatewayReconciler) findSecretsForGateway(secret client.Object) []reconcile.Request {
-	gatewaysForSecret := &gwapiv1b1.GatewayList{}
-	listOps := &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, secret.GetName()),
-		Namespace:     secret.GetNamespace(),
-	}
-
-	err := r.List(context.TODO(), gatewaysForSecret, listOps)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-
-	requests := make([]reconcile.Request, len(gatewaysForSecret.Items))
-	for i := range gatewaysForSecret.Items {
-		item := gatewaysForSecret.Items[i]
-		requests[i] = reconcile.Request{resource.NamespacedName(&item)}
-	}
-	return requests
-}
-
-// terminatesTLS returns true if the provided gateway contains a listener configured for TLS
-// termination.
-func terminatesTLS(listener *gwapiv1b1.Listener) bool {
-	if listener.TLS != nil && (listener.TLS.Mode == nil || *listener.TLS.Mode == gwapiv1b1.TLSModeTerminate) {
 		return true
 	}
+
 	return false
 }
 
-// refsSecret returns true if ref refers to a Secret.
-func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
-	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
-		(ref.Kind == nil || *ref.Kind == resource.KindSecret)
+// validateSecretForReconcile checks whether the Secret belongs to a valid Gateway.
+func (r *gatewayReconciler) validateSecretForReconcile(obj client.Object) bool {
+	secret := obj.(*corev1.Secret)
+	gwList := &gwapiv1a2.GatewayList{}
+	secretName := store.GetNamespacedName(secret).String()
+	if err := r.List(context.Background(), gwList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, secretName),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated gateways", "secret", secretName)
+		return false
+	}
+
+	if len(gwList.Items) == 0 {
+		return false
+	}
+
+	for _, gw := range gwList.Items {
+		gw := gw
+		if r.validateGatewayForReconcile(&gw) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func secretGatewayIndexFunc(o client.Object) []string {
+	gateway := o.(*gwapiv1a2.Gateway)
+	var secretReferences []string
+
+	for _, listener := range gateway.Spec.Listeners {
+		if listener.TLS == nil || (listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1a2.TLSModeTerminate) {
+			continue
+		}
+		for _, cert := range listener.TLS.CertificateRefs {
+			if cert.Kind == nil || (cert.Kind != nil && string(*cert.Kind) == "Secret") {
+				// if no explicit Secret namespace is provided, use the Gateway
+				// namespace to lookup the provided Secret Name
+				namespace := gateway.Namespace
+				if cert.Namespace != nil {
+					namespace = string(*cert.Namespace)
+				}
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(cert.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
+	return secretReferences
+}
+
+func classGatewayIndexFunc(o client.Object) []string {
+	gateway := o.(*gwapiv1a2.Gateway)
+	return []string{string(gateway.Spec.GatewayClassName)}
 }

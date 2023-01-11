@@ -25,7 +25,7 @@ import (
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 type RendererConfig struct {

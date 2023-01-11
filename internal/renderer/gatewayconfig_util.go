@@ -10,12 +10,12 @@ import (
 	// "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/types"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stunnerv1alpha1.GatewayConfig, error) {
+func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrv1a1.GatewayConfig, error) {
 	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	// ref already checked

@@ -10,24 +10,24 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderNodeUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name:  "node-ip ok",
-			cls:   []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:   []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:    []gatewayv1alpha2.UDPRoute{},
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep:  func(c *renderTestConfig) {},
@@ -39,10 +39,10 @@ func TestRenderNodeUtil(t *testing.T) {
 		},
 		{
 			name:  "second valid node-ip ok",
-			cls:   []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:   []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:    []gatewayv1alpha2.UDPRoute{},
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep: func(c *renderTestConfig) {

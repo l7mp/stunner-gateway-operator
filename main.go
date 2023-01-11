@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -57,13 +58,13 @@ func init() {
 }
 
 func main() {
-	var controllerName string
-	var metricsAddr string
-	var enableLeaderElection bool
-	var enableEDS bool
-	var probeAddr string
+	var controllerName, metricsAddr, throttleTimeout, probeAddr string
+	var enableLeaderElection, enableEDS bool
+
 	flag.StringVar(&controllerName, "controller-name", config.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
+	flag.StringVar(&throttleTimeout, "throttle-timeout", config.DefaultThrottleTimeout.String(),
+		"Time interval to wait between subsequent config renders.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -83,6 +84,11 @@ func main() {
 
 	setupLog.Info("endpoint discovery", "state", enableEDS)
 	config.EnableEndpointDiscovery = enableEDS
+
+	if d, err := time.ParseDuration(throttleTimeout); err != nil {
+		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
+		config.ThrottleTimeout = d
+	}
 
 	setupLog.Info("setting up Kubernetes controller manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

@@ -18,13 +18,13 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // var testerLogLevel = zapcore.Level(-4)
@@ -37,19 +37,20 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
+	utilruntime.Must(stnrv1a1.AddToScheme(scheme))
 }
 
 type renderTestConfig struct {
 	name   string
-	cls    []gatewayv1alpha2.GatewayClass
-	cfs    []stunnerv1alpha1.GatewayConfig
-	gws    []gatewayv1alpha2.Gateway
-	rs     []gatewayv1alpha2.UDPRoute
+	cls    []gwapiv1a2.GatewayClass
+	cfs    []stnrv1a1.GatewayConfig
+	gws    []gwapiv1a2.Gateway
+	rs     []gwapiv1a2.UDPRoute
 	svcs   []corev1.Service
 	nodes  []corev1.Node
 	eps    []corev1.Endpoints
+	scrts  []corev1.Secret
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -110,6 +111,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Endpoints.Flush()
 			for i := range c.eps {
 				store.Endpoints.Upsert(&c.eps[i])
+			}
+
+			store.Secrets.Flush()
+			for i := range c.scrts {
+				store.Secrets.Upsert(&c.scrts[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

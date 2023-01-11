@@ -11,24 +11,24 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderClusterRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "backend found",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -52,16 +52,16 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "linking to a foreign gateway errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.GatewayClassName = gatewayv1alpha2.ObjectName("dummy")
-				c.gws = []gatewayv1alpha2.Gateway{*gw}
+				gw.Spec.GatewayClassName = gwapiv1a2.ObjectName("dummy")
+				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -75,10 +75,10 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - cluster ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {},
@@ -112,17 +112,17 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - no backend errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
-				udp.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{}
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -151,18 +151,18 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - wrong backend group ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
-				group := gatewayv1alpha2.Group("dummy")
+				group := gwapiv1a2.Group("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Group = &group
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -195,18 +195,18 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - wrong backend kind ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				kind := gatewayv1alpha2.Kind("dummy")
+				kind := gwapiv1a2.Kind("dummy")
 				udp.SetName("udproute-wrong")
 				udp.Spec.Rules[0].BackendRefs[0].Kind = &kind
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -238,17 +238,17 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - namespace ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				ns := gatewayv1alpha2.Namespace("dummy")
+				ns := gwapiv1a2.Namespace("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -280,22 +280,22 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "no EDS - multiple backends ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				ns := gatewayv1alpha2.Namespace("dummy-ns")
-				udp.Spec.Rules[0].BackendRefs = make([]gatewayv1alpha2.BackendRef, 3)
+				ns := gwapiv1a2.Namespace("dummy-ns")
+				udp.Spec.Rules[0].BackendRefs = make([]gwapiv1a2.BackendRef, 3)
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
 				udp.Spec.Rules[0].BackendRefs[0].Name = "dummy"
 				udp.Spec.Rules[0].BackendRefs[1].Namespace = &ns
 				udp.Spec.Rules[0].BackendRefs[1].Name = "testservice-ok-1"
 				udp.Spec.Rules[0].BackendRefs[2].Name = "testservice-ok-2"
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -327,10 +327,10 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - cluster with clusterIP relaying switched off",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -370,10 +370,10 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - cluster with no ClusterIP ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {},
@@ -412,10 +412,10 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - cluster with ClusterIP ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -456,10 +456,10 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - cluster with headless setvice OK",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -503,17 +503,17 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - no backend errs",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
-				udp.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{}
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -542,18 +542,18 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - wrong backend group ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.SetName("udproute-wrong")
-				group := gatewayv1alpha2.Group("dummy")
+				group := gwapiv1a2.Group("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Group = &group
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -586,18 +586,18 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - wrong backend kind ignored",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				kind := gatewayv1alpha2.Kind("dummy")
+				kind := gwapiv1a2.Kind("dummy")
 				udp.SetName("udproute-wrong")
 				udp.Spec.Rules[0].BackendRefs[0].Kind = &kind
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				rs := store.UDPRoutes.GetAll()
@@ -630,17 +630,17 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - namespace ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				ns := gatewayv1alpha2.Namespace("dummy")
+				ns := gwapiv1a2.Namespace("dummy")
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.SetNamespace("dummy")
@@ -686,22 +686,22 @@ func TestRenderClusterRender(t *testing.T) {
 		},
 		{
 			name: "eds - multiple backends ok",
-			cls:  []gatewayv1alpha2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stunnerv1alpha1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gatewayv1alpha2.Gateway{testutils.TestGw},
-			rs:   []gatewayv1alpha2.UDPRoute{testutils.TestUDPRoute},
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
 				udp := testutils.TestUDPRoute.DeepCopy()
-				ns := gatewayv1alpha2.Namespace("dummy-ns")
-				udp.Spec.Rules[0].BackendRefs = make([]gatewayv1alpha2.BackendRef, 3)
+				ns := gwapiv1a2.Namespace("dummy-ns")
+				udp.Spec.Rules[0].BackendRefs = make([]gwapiv1a2.BackendRef, 3)
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
 				udp.Spec.Rules[0].BackendRefs[0].Name = "dummy"
 				udp.Spec.Rules[0].BackendRefs[1].Namespace = &ns
 				udp.Spec.Rules[0].BackendRefs[1].Name = "testservice-ok-1"
 				udp.Spec.Rules[0].BackendRefs[2].Name = "testservice-ok-2"
-				c.rs = []gatewayv1alpha2.UDPRoute{*udp}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
 
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.SetNamespace("dummy-ns")

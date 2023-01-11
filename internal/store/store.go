@@ -12,6 +12,8 @@ import (
 type Store interface {
 	// Get returns an object from the store
 	Get(nsName types.NamespacedName) client.Object
+	// Set resets the store to the specified objects
+	Reset(objects []client.Object)
 	// UpsertIfChanged adds the resource to the store and returns true if an actual update has
 	// happened
 	UpsertIfChanged(object client.Object) bool
@@ -55,6 +57,19 @@ func (s *storeImpl) Get(nsName types.NamespacedName) client.Object {
 
 	// s.log.V(4).Info("get", "key", nsName, "result", GetObjectKey(o))
 	return o
+}
+
+func (s *storeImpl) Reset(objects []client.Object) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for k := range s.objects {
+		delete(s.objects, k)
+	}
+
+	for _, o := range objects {
+		s.objects[GetObjectKey(o)] = o
+	}
 }
 
 func (s *storeImpl) UpsertIfChanged(new client.Object) bool {

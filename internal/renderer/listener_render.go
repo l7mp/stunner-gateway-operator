@@ -2,33 +2,33 @@ package renderer
 
 import (
 	"fmt"
-	"strings"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func stnrListenerName(gw *gatewayv1alpha2.Gateway, l *gatewayv1alpha2.Listener) string {
+func stnrListenerName(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1alpha1.GatewayConfig, l *gatewayv1alpha2.Listener, rs []*gatewayv1alpha2.UDPRoute, ap *addrPort) (*stunnerconfv1alpha1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1a2.Listener, rs []*gwapiv1a2.UDPRoute, ap *addrPort) (*stnrconfv1a1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr",
 		fmt.Sprintf("%#v", ap))
 
-	proto := strings.ToUpper(string(l.Protocol))
-	if proto != "UDP" && proto != "TCP" {
-		return nil, fmt.Errorf("unsupported protocol: %s", proto)
+	proto, err := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
+	if err != nil {
+		return nil, err
 	}
 
-	minPort, maxPort := stunnerconfv1alpha1.DefaultMinRelayPort,
-		stunnerconfv1alpha1.DefaultMaxRelayPort
+	minPort, maxPort := stnrconfv1a1.DefaultMinRelayPort,
+		stnrconfv1a1.DefaultMaxRelayPort
 	if gwConf.Spec.MinPort != nil {
 		minPort = int(*gwConf.Spec.MinPort)
 	}
@@ -42,15 +42,20 @@ func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1
 		p = ap.port
 	}
 
-	lc := stunnerconfv1alpha1.ListenerConfig{
+	lc := stnrconfv1a1.ListenerConfig{
 		Name:         stnrListenerName(gw, l),
-		Protocol:     string(l.Protocol),
+		Protocol:     proto.String(),
 		Addr:         "$STUNNER_ADDR", // Addr will be filled in from the pod environment
 		Port:         int(l.Port),
 		PublicAddr:   a,
 		PublicPort:   p,
 		MinRelayPort: minPort,
 		MaxRelayPort: maxPort,
+	}
+
+	if cert, key, ok := r.getTLS(gw, l); ok {
+		lc.Cert = cert
+		lc.Key = key
 	}
 
 	for _, r := range rs {
@@ -62,4 +67,82 @@ func (r *Renderer) renderListener(gw *gatewayv1alpha2.Gateway, gwConf *stunnerv1
 		fmt.Sprintf("%#v", lc))
 
 	return &lc, nil
+}
+
+func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string, string, bool) {
+	proto, _ := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
+
+	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1a2.TLSModeTerminate) ||
+		(proto != stnrconfv1a1.ListenerProtocolTLS && proto != stnrconfv1a1.ListenerProtocolDTLS) {
+		return "", "", false
+	}
+
+	if len(l.TLS.CertificateRefs) == 0 {
+		r.log.Info("no CertificateRef found in Gateway listener", "gateway", store.GetObjectKey(gw),
+			"listener", l.Name)
+		return "", "", false
+	}
+
+	if len(l.TLS.CertificateRefs) > 1 {
+		r.log.Info("too many CertificateRef found in Gateway listener, using the first one",
+			"gateway", store.GetObjectKey(gw), "listener", l.Name)
+	}
+
+	for _, ref := range l.TLS.CertificateRefs {
+		ref := ref
+		if (ref.Group != nil && *ref.Group != corev1.GroupName) ||
+			(ref.Kind != nil && *ref.Kind != "Secret") {
+			name := ""
+			if ref.Group != nil {
+				name = string(*ref.Group)
+			}
+			if ref.Kind != nil {
+				name = fmt.Sprintf("%s/%s", name, string(*ref.Kind))
+			}
+
+			r.log.Info("ignoring secret-reference to an unknown object", "gateway", store.GetObjectKey(gw),
+				"listener", l.Name, "object-ref", name)
+			continue
+		}
+
+		// find the named secret, use the Gw namespace if no namespace found in the ref
+		namespace := gw.GetNamespace()
+		if ref.Namespace != nil {
+			namespace = string(*ref.Namespace)
+		}
+
+		n := types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
+		secret := store.Secrets.GetObject(n)
+		if secret == nil {
+			r.log.Info("secret not found", "gateway", store.GetObjectKey(gw),
+				"listener", l.Name, "secret", n.String())
+			// fall through: we may found a worlable cert-ref
+			continue
+		}
+
+		if secret.Type != corev1.SecretTypeTLS {
+			r.log.Info("expecting Secret of type \"kubernetes.io/tls\" (using anyway)",
+				"gateway", store.GetObjectKey(gw), "listener", l.Name, "secret", n.String())
+		}
+
+		// make this foolproof
+		cert, certOk := secret.Data["tls.crt"]
+		if !certOk {
+			cert, certOk = secret.Data["crt"]
+			if !certOk {
+				cert, certOk = secret.Data["cert"]
+			}
+		}
+
+		key, keyOk := secret.Data["tls.key"]
+		if !keyOk {
+			key, keyOk = secret.Data["key"]
+		}
+
+		if certOk && keyOk {
+			return string(cert), string(key), true
+		}
+	}
+
+	return "", "", false
 }

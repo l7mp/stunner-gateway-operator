@@ -27,38 +27,18 @@ rules:
   - ""
   resources:
   - endpoints
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - nodes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - nodes/status
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
+  - secrets
   - services
   verbs:
-  - create
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - ""
   resources:
+  - endpoints/status
+  - nodes/status
   - services/status
   verbs:
   - get
@@ -66,51 +46,7 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gatewayclasses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gatewayclasses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - gateways
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gateways/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gateways/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - udproutes
   verbs:
   - get
@@ -121,15 +57,10 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - udproutes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
+  - gatewayclasses/status
+  - gateways/status
   - udproutes/status
   verbs:
-  - get
   - patch
   - update
 - apiGroups:
@@ -137,24 +68,6 @@ rules:
   resources:
   - gatewayconfigs
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - stunner.l7mp.io
-  resources:
-  - gatewayconfigs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - stunner.l7mp.io
-  resources:
-  - gatewayconfigs/status
-  verbs:
-  - get
-  - patch
-  - update

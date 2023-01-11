@@ -22,8 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -33,25 +31,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-
-	"github.com/l7mp/stunner-gateway-operator/internal/resource"
 )
 
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
-	resources *resource.Store
-	log       logr.Logger
+	eventCh chan event.Event
+	log     logr.Logger
 }
 
-func RegisterGatewayConfigController(mgr manager.Manager, resources *resource.Store, log logr.Logger) error {
+func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
 	r := &gatewayConfigReconciler{
-		Client:    mgr.GetClient(),
-		resources: resources,
-		log:       log,
+		Client:  mgr.GetClient(),
+		eventCh: ch,
+		log:     log.WithName("gatewayconfig-controller"),
 	}
 
 	c, err := controller.New("gatewayconfig", mgr, controller.Options{Reconciler: r})
@@ -60,10 +56,10 @@ func RegisterGatewayConfigController(mgr manager.Manager, resources *resource.St
 	}
 	r.log.Info("created gatewayconfig controller")
 
-	// Only enqueue GatewayClass objects that match this controller name.
 	if err := c.Watch(
 		&source.Kind{Type: &stnrv1a1.GatewayConfig{}},
 		&handler.EnqueueRequestForObject{},
+		// trigger when the GatewayConfig spec changes
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
 		return err
@@ -90,11 +86,13 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	}
 
 	if !found {
-		r.resources.GatewayConfigs.Delete(req)
+		store.GatewayConfigs.Remove(req.NamespacedName)
+		r.eventCh <- event.NewEventRender()
 		return reconcile.Result{}, nil
 	}
 
-	r.resources.GatewayConfigs.Store(req, &gc)
+	store.GatewayConfigs.Upsert(&gc)
+	r.eventCh <- event.NewEventRender()
 
 	return reconcile.Result{}, nil
 }

@@ -44,7 +44,8 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	// gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -52,7 +53,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 func init() {
@@ -125,11 +126,16 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = clientgoscheme.AddToScheme(scheme)
-	// err = corev1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gatewayv1alpha2.AddToScheme(scheme)
+
+	// Gateway API schemes
+	err = gwapiv1a2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = stunnerv1alpha1.AddToScheme(scheme)
+	// err = gwapiv1b1.AddToScheme(scheme)
+	// Expect(err).NotTo(HaveOccurred())
+
+	// STUNner CRD scheme
+	err = stnrv1a1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -165,7 +171,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	// make rendering fast!
-	config.EnableRenderThrottling = false
+	config.ThrottleTimeout = time.Millisecond
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
@@ -215,33 +221,15 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-// inplace object rewriters
-
-// type ServiceMutator func(current *corev1.Service)
-
-// func recreateOrUpdateService(f ServiceMutator) {
-// 	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
-// 		Name:      testSvc.GetName(),
-// 		Namespace: testSvc.GetNamespace(),
-// 	}}
-
-// 	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
-// 		testutils.TestSvc.Spec.DeepCopyInto(&current.Spec)
-// 		f(current)
-// 		return nil
-// 	})
-// 	Expect(err).Should(Succeed())
-// }
-
-type UDPRouteMutator func(current *gatewayv1alpha2.UDPRoute)
+type UDPRouteMutator func(current *gwapiv1a2.UDPRoute)
 
 func recreateOrUpdateUDPRoute(f UDPRouteMutator) {
-	current := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      testUDPRoute.GetName(),
 		Namespace: testUDPRoute.GetNamespace(),
 	}}
 
-	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
 		testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 		f(current)
 		return nil
@@ -249,15 +237,15 @@ func recreateOrUpdateUDPRoute(f UDPRouteMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayMutator func(current *gatewayv1alpha2.Gateway)
+type GatewayMutator func(current *gwapiv1a2.Gateway)
 
 func recreateOrUpdateGateway(f GatewayMutator) {
-	current := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      testGw.GetName(),
 		Namespace: testGw.GetNamespace(),
 	}}
 
-	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
 		testutils.TestGw.Spec.DeepCopyInto(&current.Spec)
 		f(current)
 		return nil
@@ -265,18 +253,73 @@ func recreateOrUpdateGateway(f GatewayMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayConfigMutator func(current *stunnerv1alpha1.GatewayConfig)
+type GatewayConfigMutator func(current *stnrv1a1.GatewayConfig)
 
 func recreateOrUpdateGatewayConfig(f GatewayConfigMutator) {
-	current := &stunnerv1alpha1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+	current := &stnrv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
 		Name:      testGwConfig.GetName(),
 		Namespace: testGwConfig.GetNamespace(),
 	}}
 
-	_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
 		testutils.TestGwConfig.Spec.DeepCopyInto(&current.Spec)
 		f(current)
 		return nil
 	})
 	Expect(err).Should(Succeed())
+}
+
+type SecretMutator func(current *corev1.Secret)
+
+func recreateOrUpdateSecret(f SecretMutator) {
+	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      testSecret.GetName(),
+		Namespace: testSecret.GetNamespace(),
+	}}
+
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
+		current.Type = testSecret.Type
+		current.Data = make(map[string][]byte)
+		for k, v := range testSecret.Data {
+			current.Data[k] = v
+		}
+		f(current)
+		return nil
+	})
+	Expect(err).Should(Succeed())
+}
+
+type NodeMutator func(current *corev1.Node)
+
+func statusUpdateNode(name string, f NodeMutator) {
+	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name: name,
+	}}
+
+	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current)
+	Expect(err).Should(Succeed())
+
+	f(current)
+
+	err = k8sClient.Status().Update(ctx, current)
+	Expect(err).Should(Succeed())
+}
+
+// createOrUpdate will retry when ctrlutil.CreateOrUpdate fails. This is useful to robustify tests:
+// sometimes an update is going on why we try to run the next test and then the CreateOrUpdate may
+// fail with a Conflict.
+func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f ctrlutil.MutateFn) (ctrlutil.OperationResult, error) {
+	res, err := ctrlutil.CreateOrUpdate(ctx, c, obj, f)
+	if err == nil {
+		return res, err
+	}
+
+	for i := 1; i < 5; i++ {
+		res, err = ctrlutil.CreateOrUpdate(ctx, c, obj, f)
+		if err == nil {
+			return res, err
+		}
+	}
+
+	return res, err
 }
