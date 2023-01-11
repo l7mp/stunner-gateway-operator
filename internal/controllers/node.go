@@ -116,7 +116,6 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 				"new-address", newAddr)
 
 			store.Nodes.Upsert(&node)
-			stored = &node
 
 			r.eventCh <- event.NewEventRender()
 			return reconcile.Result{}, nil
@@ -124,7 +123,6 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 
 		// node address is going away
 		store.Nodes.Remove(req.NamespacedName)
-		stored = nil
 	}
 
 	// find a new new node with a workable external address if one the 3 possible cases happens
@@ -143,7 +141,6 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		store.GetObjectKey(newNode), "address", addr)
 
 	store.Nodes.Upsert(newNode)
-	stored = newNode
 
 	r.eventCh <- event.NewEventRender()
 	return reconcile.Result{}, nil
