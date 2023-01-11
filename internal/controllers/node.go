@@ -157,7 +157,7 @@ func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*core
 		Continue: continueToken,
 	}
 
-	for true {
+	for {
 		nodes := &corev1.NodeList{}
 		if err := r.List(ctx, nodes, lo); err != nil {
 			return nil, "", err
