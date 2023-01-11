@@ -93,8 +93,8 @@ spec:
                 type: integer
               metricsEndpoint:
                 description: MetricsEndpoint is the URI in the form `http://address:port/path`
-                  at HTTP metric requests are served. The scheme (`http://`") is mandatory.
-                  Default is to expose no metric endpoint.
+                  exposed for metric scraping (Prometheus). The scheme (`http://`)
+                  is mandatory. Default is to expose no metric endpoint.
                 type: string
               minPort:
                 description: MinRelayPort is the smallest relay port assigned for

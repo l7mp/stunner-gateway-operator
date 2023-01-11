@@ -42,8 +42,8 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:default:="stunner.l7mp.io"
 	Realm *string `json:"realm,omitempty"`
 
-	// MetricsEndpoint is the URI in the form `http://address:port/path` at HTTP metric
-	// requests are served. The scheme (`http://`") is mandatory. Default is to expose no
+	// MetricsEndpoint is the URI in the form `http://address:port/path` exposed for metric
+	// scraping (Prometheus). The scheme (`http://`) is mandatory. Default is to expose no
 	// metric endpoint.
 	//
 	// +optional
