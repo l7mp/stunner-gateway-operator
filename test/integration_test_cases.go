@@ -692,6 +692,38 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("should add annotations from Gateway", func() {
+			ctrl.Log.Info("re-loading gateway with further annotations")
+			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+				current.SetAnnotations(map[string]string{
+					config.ServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":                "dummy-1",
+					"someOtherAnnotation":           "dummy-2",
+				})
+			})
+
+			// retry, but also check if a public address has been added
+			lookupKey := store.GetNamespacedName(testGw)
+			Eventually(func() bool {
+				svc := &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as[config.ServiceTypeAnnotationKey]
+				a2, ok2 := as["someAnnotation"]
+				a3, ok3 := as["someOtherAnnotation"]
+
+				if ok1 && ok2 && ok3 && a1 == "NodePort" && a2 == "dummy-1" && a3 == "dummy-2" {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
 			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
