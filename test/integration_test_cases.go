@@ -724,6 +724,54 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("should not change NodePort when Gateway annotations are modified", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+
+			// learn nodeports
+			svc := &corev1.Service{}
+			Expect(k8sClient.Get(ctx, lookupKey, svc)).Should(Succeed())
+			Expect(svc.Spec.Ports).To(HaveLen(1))
+			np1 := svc.Spec.Ports[0].NodePort
+			// np1, np2, np3 := svc.Spec.Ports[0].NodePort,
+			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
+
+			ctrl.Log.Info("re-loading gateway with further annotations")
+			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+				current.SetAnnotations(map[string]string{
+					config.ServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":                "new-dummy-1",
+					"someOtherAnnotation":           "dummy-2",
+				})
+			})
+
+			// retry, but also check if a public address has been added
+			Eventually(func() bool {
+				svc = &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as[config.ServiceTypeAnnotationKey]
+				a2, ok2 := as["someAnnotation"]
+				a3, ok3 := as["someOtherAnnotation"]
+
+				if ok1 && ok2 && ok3 && a1 == "NodePort" && a2 == "new-dummy-1" && a3 == "dummy-2" {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			// query svc again
+			Expect(k8sClient.Get(ctx, lookupKey, svc)).Should(Succeed())
+			Expect(svc.Spec.Ports).To(HaveLen(1))
+			Expect(svc.Spec.Ports[0].NodePort).Should(Equal(np1))
+			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
+			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
+		})
+
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
 			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
