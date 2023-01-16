@@ -48,6 +48,8 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*addrPort, 
 
 			ap, lb, own := getPublicAddrPort4Svc(svc, gw)
 			if ap == nil {
+				r.log.V(4).Info("service: public address/port not found", "svc",
+					store.GetObjectKey(svc), "load-balancer", lb, "own", own)
 				continue
 			}
 
@@ -151,9 +153,22 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway) (*addrPor
 func getServicePort(gw *gwapiv1a2.Gateway, svc *corev1.Service) (int, bool) {
 	for _, l := range gw.Spec.Listeners {
 		for i, s := range svc.Spec.Ports {
-			if strings.EqualFold(string(l.Protocol), string(s.Protocol)) &&
-				int32(l.Port) == s.Port {
-				return i, true
+			if int32(l.Port) == s.Port {
+				p := ""
+				switch l.Protocol {
+				case "TCP":
+					p = "TCP"
+				case "UDP":
+					p = "UDP"
+				case "TLS":
+					p = "TCP"
+				case "DTLS":
+					p = "UDP"
+				}
+
+				if strings.EqualFold(p, string(s.Protocol)) {
+					return i, true
+				}
 			}
 		}
 	}
@@ -211,7 +226,6 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 // taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
 func isOwner(owner, owned metav1.Object, kind string) bool {
 	for _, ownerRef := range owned.GetOwnerReferences() {
-
 		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
 			ownerRef.Kind == kind {
 			return true
