@@ -76,20 +76,19 @@ func DumpObject(o client.Object) string {
 	ro := o.DeepCopyObject()
 
 	var tmp client.Object
-	switch ro.(type) {
+	switch ro := ro.(type) {
 	case *gwapiv1a2.GatewayClass:
-		tmp = ro.(*gwapiv1a2.GatewayClass)
+		tmp = ro
 	case *gwapiv1a2.Gateway:
-		tmp = ro.(*gwapiv1a2.Gateway)
+		tmp = ro
 	case *gwapiv1a2.UDPRoute:
-		tmp = ro.(*gwapiv1a2.UDPRoute)
+		tmp = ro
 	case *corev1.Service:
-		tmp = ro.(*corev1.Service)
+		tmp = ro
 	case *stnrv1a1.GatewayConfig:
-		tmp = ro.(*stnrv1a1.GatewayConfig)
+		tmp = ro
 	case *corev1.ConfigMap:
-		cm := ro.(*corev1.ConfigMap)
-		tmp = stripCM(cm)
+		tmp = stripCM(ro)
 	default:
 		// this is not fatal
 		return output
