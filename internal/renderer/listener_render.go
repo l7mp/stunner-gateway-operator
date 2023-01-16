@@ -116,13 +116,14 @@ func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string,
 		if secret == nil {
 			r.log.Info("secret not found", "gateway", store.GetObjectKey(gw),
 				"listener", l.Name, "secret", n.String())
-			// fall through: we may found a worlable cert-ref
+			// fall through: we may find another workable cert-ref
 			continue
 		}
 
 		if secret.Type != corev1.SecretTypeTLS {
-			r.log.Info("expecting Secret of type \"kubernetes.io/tls\" (using anyway)",
-				"gateway", store.GetObjectKey(gw), "listener", l.Name, "secret", n.String())
+			r.log.Info("expecting Secret of type \"kubernetes.io/tls\" (trying to "+
+				"use Secret anyway)", "gateway", store.GetObjectKey(gw), "listener",
+				l.Name, "secret", n.String())
 		}
 
 		// make this foolproof
@@ -139,9 +140,13 @@ func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string,
 			key, keyOk = secret.Data["key"]
 		}
 
-		if certOk && keyOk {
-			return string(cert), string(key), true
+		if !certOk || !keyOk {
+			r.log.Info("cannot find cert and/or key in Secret", "gateway",
+				store.GetObjectKey(gw), "listener", l.Name, "secret", n.String())
+			continue
 		}
+
+		return string(cert), string(key), true
 	}
 
 	return "", "", false

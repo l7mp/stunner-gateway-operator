@@ -8,8 +8,7 @@ package controllers
 
 import (
 	"context"
-	// "errors"
-	// "fmt"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -56,6 +57,20 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 		return err
 	}
 	r.log.Info("created gateway controller")
+
+	// watch GatewayClass objects that match this controller name
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1a2.GatewayClass{}},
+		&handler.EnqueueRequestForObject{},
+		// trigger when the spec changes on a GatewayClass we manage
+		predicate.And(
+			predicate.NewPredicateFuncs(r.hasMatchingController),
+			predicate.GenerationChangedPredicate{},
+		),
+	); err != nil {
+		return err
+	}
+	r.log.Info("watching gatewayclass objects")
 
 	// watch Gateway objects that match the controller name
 	if err := c.Watch(
@@ -105,6 +120,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	log := r.log.WithValues("object", req.String())
 	log.Info("reconciling")
 
+	gatewayClassList := []client.Object{}
 	gatewayList := []client.Object{}
 	secretList := []client.Object{}
 
@@ -122,6 +138,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 			continue
 		}
 
+		// is class valid?
+		if err := validateGatewayClass(&gc); err != nil {
+			r.log.Error(err, "invalid GatewayClass", "name", store.GetObjectKey(&gc),
+				"gateway-class", fmt.Sprintf("%#v", gc))
+			continue
+		}
+
+		gatewayClassList = append(gatewayClassList, &gc)
+		r.log.V(2).Info("found GatewayClass", "name", store.GetObjectKey(&gc))
+
 		// get gateways for this class
 		gateways := &gwapiv1a2.GatewayList{}
 		if err := r.List(ctx, gateways, &client.ListOptions{
@@ -133,7 +159,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 		for _, gw := range gateways.Items {
 			gw := gw
-			r.log.V(1).Info("processing Gateway", "namespace", gw.Namespace, "name", gw.Name)
+			r.log.V(1).Info("found Gateway", "namespace", gw.Namespace, "name", gw.Name)
 
 			gatewayList = append(gatewayList, &gw)
 
@@ -178,11 +204,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 					// TODO: check for ReferenceGrants
 
+					r.log.V(2).Info("found Secret", "name", store.GetObjectKey(&gc))
 					secretList = append(secretList, &secret)
 				}
 			}
 		}
 	}
+
+	store.GatewayClasses.Reset(gatewayClassList)
+	r.log.V(2).Info("reset GatewayClass store", "gateway-classes",
+		store.GatewayClasses.String())
 
 	store.Gateways.Reset(gatewayList)
 	r.log.V(2).Info("reset Gateway store", "gateways", store.Gateways.String())
@@ -195,6 +226,21 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	return reconcile.Result{}, nil
 }
 
+// hasMatchingController returns true if the provided object is a GatewayClass with a
+// Spec.Controller string matching the controller string, or false otherwise.
+func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
+	gc, ok := obj.(*gwapiv1a2.GatewayClass)
+	if !ok {
+		return false
+	}
+
+	if string(gc.Spec.ControllerName) == config.ControllerName {
+		return true
+	}
+
+	return false
+}
+
 // validateGatewayForReconcile returns true if the provided object is a Gateway using a
 // GatewayClass matching the configured gatewayclass controller name.
 func (r *gatewayReconciler) validateGatewayForReconcile(o client.Object) bool {
@@ -202,7 +248,8 @@ func (r *gatewayReconciler) validateGatewayForReconcile(o client.Object) bool {
 	gc := &gwapiv1a2.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 	if err := r.Get(context.Background(), key, gc); err != nil {
-		r.log.Info("no matching gatewayclass", "name", gw.Spec.GatewayClassName)
+		r.log.V(1).Info("ignoring gateway: no matching gatewayclass", "gateway",
+			store.GetObjectKey(gw), "name", gw.Spec.GatewayClassName)
 		return false
 	}
 
@@ -237,6 +284,31 @@ func (r *gatewayReconciler) validateSecretForReconcile(obj client.Object) bool {
 	}
 
 	return false
+}
+
+// validateGatewayClass checks whether the ParametersReference ref points to an actual
+// GatewayConfig and the namespace in the ref is set
+func validateGatewayClass(gc *gwapiv1a2.GatewayClass) error {
+	ref := gc.Spec.ParametersRef
+	if ref == nil {
+		return fmt.Errorf("empty ParametersRef in GatewayClassSpec: %#v", gc.Spec)
+	}
+
+	if string(ref.Group) != stnrv1a1.GroupVersion.Group {
+		return fmt.Errorf("invalid group in ParametersRef %q, expecting %q",
+			string(ref.Group), stnrv1a1.GroupVersion.Group)
+	}
+
+	if string(ref.Kind) != "GatewayConfig" {
+		return fmt.Errorf("invalid Kind in ParametersRef %q, expecting %q",
+			string(ref.Kind), "GatewayConfig")
+	}
+
+	if ref.Namespace == nil {
+		return fmt.Errorf("invalid Namespace in ParametersRef: namespace must be set")
+	}
+
+	return nil
 }
 
 func secretGatewayIndexFunc(o client.Object) []string {

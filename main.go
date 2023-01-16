@@ -65,13 +65,13 @@ func main() {
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
 	flag.StringVar(&throttleTimeout, "throttle-timeout", config.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
+	flag.BoolVar(&enableEDS, "endpoint-discovery", config.DefaultEnableEndpointDiscovery,
+		fmt.Sprintf("Enable endpoint discovery, default: %t.", config.DefaultEnableEndpointDiscovery))
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.BoolVar(&enableEDS, "endpoint-discovery", config.DefaultEnableEndpointDiscovery,
-		fmt.Sprintf("Enable endpoint discovery, default: %t.", config.DefaultEnableEndpointDiscovery))
 	opts := zap.Options{
 		Development: true,
 	}

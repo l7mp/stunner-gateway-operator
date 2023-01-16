@@ -131,7 +131,9 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	// - no node stored
 	newNode, addr, err := r.findNodeWithExternalAddress(ctx)
 	if err != nil {
-		r.log.Error(err, "failed to find node with valid external address")
+		// this is not fatal
+		r.log.Info("failed to find node with valid external address", "reason",
+			err.Error())
 
 		r.eventCh <- event.NewEventRender()
 		return reconcile.Result{}, nil
@@ -165,8 +167,7 @@ func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*core
 
 		for _, node := range nodes.Items {
 			node := node
-			r.log.V(2).Info("processing node", "namespace", node.GetNamespace(),
-				"name", node.GetName())
+			r.log.V(2).Info("processing node", "name", node.GetName())
 
 			if addr := store.GetExternalAddress(&node); addr != "" {
 				return &node, addr, nil
@@ -183,5 +184,6 @@ func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*core
 		lo.Continue = nodes.Continue
 	}
 
-	return nil, "", fmt.Errorf("end of node list found after searching through %d nodes", count)
+	return nil, "", fmt.Errorf("end of node list reached after searching through %d node(s)",
+		count)
 }

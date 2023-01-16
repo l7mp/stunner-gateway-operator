@@ -70,12 +70,6 @@ func (o *Operator) Start(ctx context.Context) error {
 		return fmt.Errorf("controller runtime manager uninitialized")
 	}
 
-	log.V(3).Info("starting GatewayClass controller", "controller-name",
-		config.ControllerName)
-	if err := controllers.RegisterGatewayClassController(o.mgr, o.operatorCh, o.logger); err != nil {
-		return fmt.Errorf("cannot register gateway-class controller: %w", err)
-	}
-
 	log.V(3).Info("starting GatewayConfig controller")
 	if err := controllers.RegisterGatewayConfigController(o.mgr, o.operatorCh, o.logger); err != nil {
 		return fmt.Errorf("cannot register gatewayconfig controller: %w", err)
