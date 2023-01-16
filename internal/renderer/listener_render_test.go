@@ -287,8 +287,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 
 				l = ls[2]
 				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr)
@@ -297,8 +297,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "DTLS", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -356,8 +356,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -409,8 +409,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -578,8 +578,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -637,8 +637,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -817,8 +817,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 		{
@@ -881,8 +881,8 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "testcert", lc.Cert, "cert")
-				assert.Equal(t, "testkey", lc.Key, "key")
+				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
+				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
 		},
 	})

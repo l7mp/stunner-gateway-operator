@@ -56,6 +56,8 @@ var (
 	testNode     = testutils.TestNode.DeepCopy()
 	testSecret   = testutils.TestSecret.DeepCopy()
 	_            = fmt.Sprintf("whatever: %d", 1)
+	newCert64    = "bmV3Y2VydA==" // newcert
+	newKey64     = "bmV3a2V5"     // newkey
 )
 
 // GatewayClass + GatewayConfig + Gateway should be enough to render a valid STUNner conf
@@ -134,7 +136,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				_, err = testutils.UnpackConfigMap(cm)
+				_, err = store.UnpackConfigMap(cm)
 				return err == nil
 
 			}, timeout, interval).Should(BeTrue())
@@ -159,7 +161,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -341,7 +343,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -454,7 +456,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -496,7 +498,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -538,7 +540,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -586,7 +588,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -629,7 +631,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -671,7 +673,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -807,7 +809,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -843,8 +845,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
-			Expect(l.Cert).Should(Equal("testcert"))
-			Expect(l.Key).Should(Equal("testkey"))
+			Expect(l.Cert).Should(Equal(testutils.TestCert64))
+			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
 
 			l = conf.Listeners[2]
@@ -876,7 +878,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -887,7 +889,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Cert == "newcert" {
+				if c.Listeners[1].Cert == newCert64 {
 					conf = &c
 					return true
 				}
@@ -902,8 +904,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
-			Expect(l.Cert).Should(Equal("newcert"))
-			Expect(l.Key).Should(Equal("testkey"))
+			Expect(l.Cert).Should(Equal(newCert64))
+			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -927,7 +929,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -938,7 +940,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Key == "newkey" {
+				if c.Listeners[1].Key == newKey64 {
 					conf = &c
 					return true
 				}
@@ -953,8 +955,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
-			Expect(l.Cert).Should(Equal("testcert"))
-			Expect(l.Key).Should(Equal("newkey"))
+			Expect(l.Cert).Should(Equal(testutils.TestCert64))
+			Expect(l.Key).Should(Equal(newKey64))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -998,7 +1000,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1036,8 +1038,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
-			Expect(l.Cert).Should(Equal("testcert"))
-			Expect(l.Key).Should(Equal("testkey"))
+			Expect(l.Cert).Should(Equal(testutils.TestCert64))
+			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
 
 			l = conf.Listeners[2]
@@ -1046,8 +1048,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
-			Expect(l.Cert).Should(Equal("testcert"))
-			Expect(l.Key).Should(Equal("testkey"))
+			Expect(l.Cert).Should(Equal(testutils.TestCert64))
+			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -1070,7 +1072,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1108,7 +1110,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1153,7 +1155,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1368,7 +1370,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1584,7 +1586,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1681,7 +1683,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1721,7 +1723,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1758,7 +1760,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1829,7 +1831,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -1969,7 +1971,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -2097,7 +2099,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -2141,7 +2143,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -2269,7 +2271,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}
@@ -2350,7 +2352,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				c, err := testutils.UnpackConfigMap(cm)
+				c, err := store.UnpackConfigMap(cm)
 				if err != nil {
 					return false
 				}

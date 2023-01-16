@@ -252,7 +252,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
-		store.DumpObject(conf))
+		conf.String())
 
 	// schedule for update
 	cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, &conf)

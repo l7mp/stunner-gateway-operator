@@ -29,6 +29,8 @@ var (
 	TestMinPort             = int32(1)
 	TestMaxPort             = int32(2)
 	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
+	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
+	TestKey64               = "dGVzdGtleQ==" // "testkey"
 )
 
 // GatewayClass

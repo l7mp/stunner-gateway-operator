@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,9 +63,14 @@ func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.Gatewa
 		lc.Routes = append(lc.Routes, store.GetObjectKey(r))
 	}
 
+	// remove cert/key from dump
+	tmp := lc
+	tmp.Cert = "<SECRET>"
+	tmp.Key = "<SECRET>"
+
 	r.log.V(2).Info("renderListener ready", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "result",
-		fmt.Sprintf("%#v", lc))
+		fmt.Sprintf("%#v", tmp))
 
 	return &lc, nil
 }
@@ -146,7 +152,8 @@ func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string,
 			continue
 		}
 
-		return string(cert), string(key), true
+		return base64.StdEncoding.EncodeToString(cert),
+			base64.StdEncoding.EncodeToString(key), true
 	}
 
 	return "", "", false

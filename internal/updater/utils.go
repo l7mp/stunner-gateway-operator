@@ -9,17 +9,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass, gen int) error {
+func (u *Updater) updateGatewayClass(gc *gwapiv1a2.GatewayClass, gen int) error {
 	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gatewayv1alpha2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 		Name:      gc.GetName(),
 		Namespace: gc.GetNamespace(),
 	}}
@@ -41,12 +41,12 @@ func (u *Updater) updateGatewayClass(gc *gatewayv1alpha2.GatewayClass, gen int) 
 	return nil
 }
 
-func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway, gen int) error {
+func (u *Updater) updateGateway(gw *gwapiv1a2.Gateway, gen int) error {
 	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gatewayv1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      gw.GetName(),
 		Namespace: gw.GetNamespace(),
 	}}
@@ -67,12 +67,12 @@ func (u *Updater) updateGateway(gw *gatewayv1alpha2.Gateway, gen int) error {
 	return nil
 }
 
-func (u *Updater) updateUDPRoute(ro *gatewayv1alpha2.UDPRoute, gen int) error {
+func (u *Updater) updateUDPRoute(ro *gwapiv1a2.UDPRoute, gen int) error {
 	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gatewayv1alpha2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      ro.GetName(),
 		Namespace: ro.GetNamespace(),
 	}}

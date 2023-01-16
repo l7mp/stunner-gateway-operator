@@ -99,7 +99,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -192,7 +192,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -287,7 +287,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -499,7 +499,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -574,7 +574,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err = testutils.UnpackConfigMap(cm)
+				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -720,7 +720,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -797,7 +797,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err = testutils.UnpackConfigMap(cm)
+				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -941,7 +941,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err := testutils.UnpackConfigMap(cm)
+				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
@@ -1019,7 +1019,7 @@ func TestRenderPipeline(t *testing.T) {
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, err = testutils.UnpackConfigMap(cm)
+				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
 				assert.Equal(t, config.DefaultStunnerdInstanceName,
