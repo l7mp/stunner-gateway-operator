@@ -434,10 +434,59 @@ var _ = Describe("Integration test:", func() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
+		It("should allow Gateway to set the Gateway Address", func() {
+			ctrl.Log.Info("re-loading gateway with specific address")
+			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+				addr := gwapiv1a2.IPAddressType
+				current.Spec.Addresses = []gwapiv1a2.GatewayAddress{{
+					Type:  &addr,
+					Value: "1.2.3.5",
+				}}
+			})
+
+			// retry, but also check if a public address has been added
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "1.2.3.5" && c.Listeners[0].PublicPort == 1 {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		// we cannot set the public IP: no load-balancer operator in the envTest API server
 		// -> check the nodeport fallback
 
 		It("should install a NodePort public IP/port", func() {
+			ctrl.Log.Info("re-loading gateway")
+			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+
 			ctrl.Log.Info("loading a Kubernetes Node")
 			Expect(k8sClient.Create(ctx, testNode)).Should(Succeed())
 

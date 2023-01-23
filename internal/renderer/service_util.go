@@ -38,6 +38,17 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*addrPort, 
 	ownSvcFound := false
 	aps := []addrPort{}
 
+	// hint the public address: if the Gateway contains a Spec.Addresses then use that as a
+	// fallback for the public address
+	addrHint := ""
+	if len(gw.Spec.Addresses) > 0 && (gw.Spec.Addresses[0].Type == nil ||
+		(gw.Spec.Addresses[0].Type != nil && *gw.Spec.Addresses[0].Type ==
+			gwapiv1a2.IPAddressType)) && gw.Spec.Addresses[0].Value != "" {
+		addrHint = gw.Spec.Addresses[0].Value
+		r.log.V(2).Info("found public address in Gateway.Spec.Addresses, using as a hint",
+			"gateway", store.GetObjectKey(gw), "address-hint", addrHint)
+	}
+
 	for _, svc := range store.Services.GetAll() {
 		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc), "status",
 			fmt.Sprintf("%#v", svc.Status))
@@ -46,7 +57,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*addrPort, 
 			r.log.V(4).Info("service is annotated for gateway", "svc",
 				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
 
-			ap, lb, own := getPublicAddrPort4Svc(svc, gw)
+			ap, lb, own := getPublicAddrPort4Svc(svc, gw, addrHint)
 			if ap == nil {
 				r.log.V(4).Info("service: public address/port not found", "svc",
 					store.GetObjectKey(svc), "load-balancer", lb, "own", own)
@@ -113,10 +124,8 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 	return false
 }
 
-// FIXME: we assume there's only a single ServicePort in the service ad we use the first one
-// available. this is true for the services we create bu may break if user creates funky services
-// for us
-func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway) (*addrPort, bool, bool) {
+// for the semantics, see https://github.com/l7mp/stunner-gateway-operator/issues/3
+func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway, addrHint string) (*addrPort, bool, bool) {
 	var ap *addrPort
 
 	own := false
@@ -125,6 +134,22 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway) (*addrPor
 	}
 
 	i, found := getServicePort(gw, svc)
+
+	// https://github.com/l7mp/stunner-gateway-operator/issues/3
+	//
+	// Accordingly, the desired selection of public IP should go in the following order:
+	//
+	// 1. Gateway.Spec.Addresses[0] + Gateway.Spec.Listeners[0].Port
+	if found && i < len(svc.Spec.Ports) && addrHint != "" {
+		svcPort := svc.Spec.Ports[i]
+		ap = &addrPort{
+			addr: addrHint,
+			port: int(svcPort.Port),
+		}
+		return ap, false, own
+	}
+
+	// 2. If Address is not set, we use the LoadBalancer IP and the above listener port
 	if found && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		lbStatus := svc.Status.LoadBalancer
 
@@ -134,7 +159,8 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway) (*addrPor
 		}
 	}
 
-	// fall-back to nodeport
+	// 3. If Address is not set and there is no LoadBalancer IP, we use the first node's IP and
+	// NodePort
 	if found && i < len(svc.Spec.Ports) {
 		svcPort := svc.Spec.Ports[i]
 		if svcPort.NodePort > 0 {
