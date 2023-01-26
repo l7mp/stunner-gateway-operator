@@ -509,7 +509,7 @@ STUNner development is coordinated in Discord, feel free to [join](https://disco
 
 ## License
 
-Copyright 2021-2022 by its authors. Some rights reserved. See
+Copyright 2021-2023 by its authors. Some rights reserved. See
 [AUTHORS](https://github.com/l7mp/stunner/blob/main/AUTHORS).
 
 APACHE License - see [LICENSE](/LICENSE) for full text.
