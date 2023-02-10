@@ -50,11 +50,11 @@ jobs:
       - name: Get the version
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF:11})
-      - name: Trigger repository dispatch event with passing the tagged version
-        uses: peter-evans/repository-dispatch@v2.1.1
+      - name: Triggering release workflow in the stunner-helm repo
+        uses: convictional/trigger-workflow-and-wait
         with:
-          token: ${{ secrets.WEB_PAT_TOKEN }}
-          repository: l7mp/stunner-helm
-          event-type: release
-          client-payload: '{"tag": "${{steps.vars.outputs.tag}}", "type": "stunner-gateway-operator"}'
-
+          github_token: ${{ secrets.WEB_PAT_TOKEN }}
+          owner: l7mp
+          repo: stunner-helm
+          client_payload: '{"tag": "${{steps.vars.outputs.tag}}", "type": "stunner-gateway-operator"}'
+          workflow_file_name: publish.yaml
