@@ -29,18 +29,43 @@ jobs:
         run: make test
 
   push_to_registry:
-    name: Push docker image to DockerHub
+    name: Push Docker image to DockerHub
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Login to DockerHub Registry
-        run: echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
-      - name: Build the tagged Docker image
-        run: docker build . --file Dockerfile --tag l7mp/stunner-gateway-operator:dev
-      - name: Push the tagged Docker image
-        run: docker push l7mp/stunner-gateway-operator:dev
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: l7mp/stunner-gateway-operator
+          tags: |
+            type=raw,value=dev
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   push_chart:
-    name: Push charts to the web
+    name: Push charts to l7mp.io
     runs-on: ubuntu-latest
     steps:
       - name: stunner checkout
@@ -49,6 +74,7 @@ jobs:
           path: stunner-gateway-operator
           ref: main
           repository: l7mp/stunner-gateway-operator
+
       - name: l7mp.io checkout
         uses: actions/checkout@v3
         with:
@@ -56,6 +82,7 @@ jobs:
           path: l7mp.io
           ref: master
           repository: l7mp/l7mp.io
+
       - name: stunner-helm checkout
         uses: actions/checkout@v3
         with:
@@ -63,10 +90,12 @@ jobs:
           path: stunner-helm
           ref: main
           repository: l7mp/stunner-helm
+
       - name: Set git config
         run: |
           git config --global user.email "l7mp.info@gmail.com"
           git config --global user.name "BotL7mp"
+
       - name: Build helm charts
         run: |
           cd stunner-helm/helm
@@ -74,6 +103,7 @@ jobs:
           sed -ri 's/^(\s*)(appVersion\s*:\s*.*\s*$)/\1appVersion: dev/' stunner-gateway-operator/Chart.yaml
           sed -ri 's/^(\s*)(          tag\s*:\s*.*\s*$)/\1          tag: dev/' stunner-gateway-operator/values.yaml
           helm package ./stunner-gateway-operator
+
       - name: Update l7mp.io
         run: |
           rm -rf l7mp.io/stunner/stunner-gateway-operator-dev*.tgz
