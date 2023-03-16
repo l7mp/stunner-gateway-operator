@@ -62,7 +62,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   push_chart:
-    name: Push charts to the web
+    name: Push helm charts to the web
     runs-on: ubuntu-latest
     steps:
       - name: Get version
@@ -75,5 +75,5 @@ jobs:
           github_token: ${{ secrets.WEB_PAT_TOKEN }}
           owner: l7mp
           repo: stunner-helm
-          client_payload: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner"}'
+          client_payload: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner-gateway-operator"}'
           workflow_file_name: publish.yaml
