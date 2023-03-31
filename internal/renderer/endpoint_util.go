@@ -14,7 +14,7 @@ func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) ([]string, 
 
 	ep := store.Endpoints.GetObject(n)
 	if ep == nil {
-		return ret, NewNonCriticalRenderError(EndpointNotFound)
+		return ret, NewNonCriticalError(EndpointNotFound)
 	}
 
 	// allow clients to reach not-ready addresses: they have already gone through ICE

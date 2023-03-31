@@ -6,7 +6,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
@@ -78,7 +80,7 @@ func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.Gatewa
 func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string, string, bool) {
 	proto, _ := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
 
-	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1a2.TLSModeTerminate) ||
+	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
 		(proto != stnrconfv1a1.ListenerProtocolTLS && proto != stnrconfv1a1.ListenerProtocolDTLS) {
 		return "", "", false
 	}

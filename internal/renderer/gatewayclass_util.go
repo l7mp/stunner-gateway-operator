@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
@@ -78,61 +79,25 @@ func (r *Renderer) validateGatewayClass(gc *gwapiv1a2.GatewayClass) error {
 	return nil
 }
 
-// func setGatewayClassStatusScheduled(gc *gwapiv1a2.GatewayClass) {
-// 	meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-// 		Type:               string(gwapiv1a2.GatewayConditionScheduled),
-// 		Status:             metav1.ConditionTrue,
-// 		ObservedGeneration: gc.Generation,
-// 		LastTransitionTime: metav1.Now(),
-// 		Reason:             string(gwapiv1a2.GatewayReasonScheduled),
-// 		Message: fmt.Sprintf("gatewayclass under processing by controller %q",
-// 			config.ControllerName),
-// 	})
-// }
-
-// func setGatewayClassStatusReady(gc *gwapiv1a2.GatewayClass, err error) {
-// 	if err == nil {
-// 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1a2.GatewayConditionReady),
-// 			Status:             metav1.ConditionTrue,
-// 			ObservedGeneration: gc.Generation,
-// 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1a2.GatewayReasonReady),
-// 			Message: fmt.Sprintf("gatewayclass is now managed by controller %q",
-// 				config.ControllerName),
-// 		})
-// 	} else {
-// 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1a2.GatewayConditionReady),
-// 			Status:             metav1.ConditionFalse,
-// 			ObservedGeneration: gc.Generation,
-// 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1a2.GatewayReasonReady),
-// 			Message: fmt.Sprintf("controller %q failed to pick up controller: %s",
-// 				config.ControllerName, err.Error()),
-// 		})
-// 	}
-// }
-
 func setGatewayClassStatusAccepted(gc *gwapiv1a2.GatewayClass, err error) {
 	if err == nil {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1a2.GatewayClassReasonAccepted),
-			Message: fmt.Sprintf("gateway-class is now managed by controller %q",
+			Reason:             string(gwapiv1b1.GatewayClassReasonAccepted),
+			Message: fmt.Sprintf("GatewayClass is now managed by controller %q",
 				config.ControllerName),
 		})
 	} else {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1a2.GatewayClassReasonInvalidParameters),
-			Message: fmt.Sprintf("controller %q failed to pick up gateway-class: %s",
+			Reason:             string(gwapiv1b1.GatewayClassReasonInvalidParameters),
+			Message: fmt.Sprintf("controller %q failed to process GatewayClass: %s",
 				config.ControllerName, err.Error()),
 		})
 	}

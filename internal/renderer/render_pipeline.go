@@ -102,7 +102,6 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(c)
 	if err != nil {
-		setGatewayClassStatusAccepted(gc, err)
 		return err
 	}
 
@@ -127,13 +126,15 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	}
 	conf.Auth = *auth
 
+	// all errors from this point are non-critical
+
 	log.V(1).Info("finding gateway objects")
 	conf.Listeners = []stnrconfv1a1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(c) {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
-		setGatewayStatusScheduled(gw, config.ControllerName)
+		initGatewayStatus(gw, config.ControllerName)
 
 		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
 		var ready bool
@@ -191,7 +192,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 			setListenerStatus(gw, &l, true, ready, len(rs))
 		}
 
-		setGatewayStatusReady(gw, nil)
+		setGatewayStatusProgrammed(gw, nil)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -223,7 +224,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 			rc, err := r.renderCluster(ro)
 			if err != nil {
 				backendErr = err
-				if _, ok := err.(NonCriticalRenderError); ok {
+				if IsNonCritical(err) {
 					log.Info("non-critical error rendering cluster", "route",
 						ro.GetName(), "error", err.Error())
 				} else {
@@ -307,14 +308,14 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
-		setGatewayStatusScheduled(gw, config.ControllerName)
+		initGatewayStatus(gw, config.ControllerName)
 
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
 			setListenerStatus(gw, &l, true, false, 0)
 		}
 
-		setGatewayStatusReady(gw, reason)
+		setGatewayStatusProgrammed(gw, reason)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -335,7 +336,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 			// TODO: not sure what to set here so we set ResolvedRefs to
 			// BackendNotFound
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted,
-				NewNonCriticalRenderError(ServiceNotFound))
+				NewNonCriticalError(ServiceNotFound))
 		}
 
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)

@@ -1,10 +1,15 @@
 package renderer
 
-// NonCriticalRenderErrorType species the type of a non-critical rendering error
-type NonCriticalRenderErrorType int
+// ErrorType species the type of a non-critical rendering error
+type ErrorType int
 
 const (
-	NoError NonCriticalRenderErrorType = iota
+	NoError ErrorType = iota
+	// critical
+	InvalidUsernamePassword
+	InvalidSecret
+
+	// noncritical
 	InvalidBackendGroup
 	InvalidBackendKind
 	ServiceNotFound
@@ -12,14 +17,44 @@ const (
 	EndpointNotFound
 )
 
-// NonCriticalRenderError is a non-fatal rendering error that affects a Gateway or a Route status
-type NonCriticalRenderError struct {
-	ErrorReason NonCriticalRenderErrorType
+type TypedError struct {
+	reason ErrorType
 }
 
-// Error returns an error message
-func (e NonCriticalRenderError) Error() string {
-	switch e.ErrorReason {
+// CriticalError is a fatal rendering error that prevents the rendering of a dataplane config.
+type CriticalError struct {
+	TypedError
+}
+
+// NewCriticalError creates a new fatal error.
+func NewCriticalError(reason ErrorType) error {
+	return &CriticalError{TypedError{reason: reason}}
+}
+
+// Error returns an error message.
+func (e *CriticalError) Error() string {
+	switch e.reason {
+	case InvalidUsernamePassword:
+		return "missing username and password for plaintext authetication"
+	case InvalidSecret:
+		return "missing shared-secret for longterm authetication"
+	}
+	return "No error"
+}
+
+// NonCriticalError is a non-fatal error that affects a Gateway or a Route status.
+type NonCriticalError struct {
+	TypedError
+}
+
+// NewNonCriticalError creates a new non-critical render error object.
+func NewNonCriticalError(reason ErrorType) error {
+	return &NonCriticalError{TypedError{reason: reason}}
+}
+
+// Error returns an error message.
+func (e *NonCriticalError) Error() string {
+	switch e.reason {
 	case InvalidBackendGroup:
 		return "Invalid Group in backend reference (expecing: None)"
 	case InvalidBackendKind:
@@ -34,7 +69,26 @@ func (e NonCriticalRenderError) Error() string {
 	return "No error"
 }
 
-// NewNonCriticalRenderError creates a new non-critical render error object
-func NewNonCriticalRenderError(reason NonCriticalRenderErrorType) NonCriticalRenderError {
-	return NonCriticalRenderError{ErrorReason: reason}
+// IsCritical returns true of an error is critical.
+func IsCritical(e error) bool {
+	_, ok := e.(*CriticalError)
+	return ok
+}
+
+// IsCriticalError returns true of an error is a critical error of the given type.
+func IsCriticalError(e error, reason ErrorType) bool {
+	err, ok := e.(*CriticalError)
+	return ok && err.reason == reason
+}
+
+// IsNonCritical returns true of an error is critical.
+func IsNonCritical(e error) bool {
+	_, ok := e.(*NonCriticalError)
+	return ok
+}
+
+// IsNonCriticalError returns true of an error is a critical error of the given type.
+func IsNonCriticalError(e error, reason ErrorType) bool {
+	err, ok := e.(*NonCriticalError)
+	return ok && err.reason == reason
 }

@@ -28,7 +28,7 @@ func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrv1a1.GatewayCo
 
 	gwConf := store.GatewayConfigs.GetObject(gwConfName)
 	if gwConf == nil {
-		return nil, fmt.Errorf("cannot find gateway-config in parametersRef with name: %s",
+		return nil, fmt.Errorf("no GatewayConfig found for name: %s",
 			gwConfName.String())
 	}
 

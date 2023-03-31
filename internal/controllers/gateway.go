@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
@@ -165,7 +166,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 			for _, listener := range gw.Spec.Listeners {
 				if listener.TLS == nil ||
-					(listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1a2.TLSModeTerminate) ||
+					(listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
 					(string(listener.Protocol) != "TLS" && string(listener.Protocol) != "DTLS") {
 					continue
 				}
@@ -316,11 +317,14 @@ func secretGatewayIndexFunc(o client.Object) []string {
 	var secretReferences []string
 
 	for _, listener := range gateway.Spec.Listeners {
-		if listener.TLS == nil || (listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1a2.TLSModeTerminate) {
+		if listener.TLS == nil || (listener.TLS.Mode != nil &&
+			*listener.TLS.Mode != gwapiv1b1.TLSModeTerminate) {
 			continue
 		}
 		for _, cert := range listener.TLS.CertificateRefs {
-			if cert.Kind == nil || (cert.Kind != nil && string(*cert.Kind) == "Secret") {
+			if cert.Kind == nil ||
+				(cert.Kind != nil && string(*cert.Kind) == "Secret") {
+
 				// if no explicit Secret namespace is provided, use the Gateway
 				// namespace to lookup the provided Secret Name
 				namespace := gateway.Namespace

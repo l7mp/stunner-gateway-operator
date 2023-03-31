@@ -180,9 +180,8 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, InvalidBackendGroup, e.ErrorReason, "invalid route error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, InvalidBackendGroup), "invalid backend error")
 
 				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -223,9 +222,8 @@ func TestRenderClusterRender(t *testing.T) {
 
 				rc, err := r.renderCluster(ro)
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, InvalidBackendKind, e.ErrorReason, "invalid kind error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, InvalidBackendKind), "invalid backend error")
 
 				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -393,9 +391,8 @@ func TestRenderClusterRender(t *testing.T) {
 
 				rc, err := r.renderCluster(ro)
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, ClusterIPNotFound, e.ErrorReason, "cluster IP not found error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, ClusterIPNotFound), "invalid clusterip error")
 
 				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -484,9 +481,8 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, ClusterIPNotFound, e.ErrorReason, "cluster IP not found error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, ClusterIPNotFound), "invalid clusterip error")
 
 				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -571,9 +567,8 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, InvalidBackendGroup, e.ErrorReason, "invalid backend group error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, InvalidBackendGroup), "invalid backend error")
 
 				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -615,9 +610,8 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(ro)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, InvalidBackendKind, e.ErrorReason, "invalid backend kind error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, InvalidBackendKind), "invalid backend error")
 
 				assert.Equal(t, "testnamespace/udproute-wrong", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
@@ -747,9 +741,8 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, err := r.renderCluster(rs[0])
 				// handle non-critical error!
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
 
 				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")

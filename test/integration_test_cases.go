@@ -35,6 +35,7 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
@@ -213,13 +214,13 @@ var _ = Describe("Integration test:", func() {
 			Expect(gc.Status.Conditions).To(HaveLen(1))
 
 			s := meta.FindStatusCondition(gc.Status.Conditions,
-				string(gwapiv1a2.GatewayClassConditionStatusAccepted))
+				string(gwapiv1b1.GatewayClassConditionStatusAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayClassConditionStatusAccepted)))
+				Equal(string(gwapiv1b1.GatewayClassConditionStatusAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(
-				Equal(string(gwapiv1a2.GatewayClassReasonAccepted)))
+				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
 		})
 
 		It("should set the Gateway status", func() {
@@ -230,17 +231,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionScheduled))
+				string(gwapiv1b1.GatewayConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionScheduled)))
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionReady))
+				string(gwapiv1b1.GatewayConditionProgrammed))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionReady)))
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
@@ -248,78 +249,72 @@ var _ = Describe("Integration test:", func() {
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 		})
 
@@ -829,7 +824,7 @@ var _ = Describe("Integration test:", func() {
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -1015,7 +1010,7 @@ var _ = Describe("Integration test:", func() {
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 1st listener")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -1268,17 +1263,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionScheduled))
+				string(gwapiv1b1.GatewayConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionScheduled)))
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionReady))
+				string(gwapiv1b1.GatewayConditionProgrammed))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionReady)))
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
@@ -1286,78 +1281,72 @@ var _ = Describe("Integration test:", func() {
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -1483,17 +1472,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionScheduled))
+				string(gwapiv1b1.GatewayConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionScheduled)))
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionReady))
+				string(gwapiv1b1.GatewayConditionProgrammed))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionReady)))
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
@@ -1501,78 +1490,72 @@ var _ = Describe("Integration test:", func() {
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -2472,17 +2455,17 @@ var _ = Describe("Integration test:", func() {
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionScheduled))
+				string(gwapiv1b1.GatewayConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionScheduled)))
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(gw.Status.Conditions,
-				string(gwapiv1a2.GatewayConditionReady))
+				string(gwapiv1b1.GatewayConditionProgrammed))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.GatewayConditionReady)))
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
@@ -2490,81 +2473,75 @@ var _ = Describe("Integration test:", func() {
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionReady))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonReady)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonUnsupportedProtocol)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonUnsupportedProtocol)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionReady))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonReady)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionDetached))
+				string(gwapiv1b1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionDetached)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonAttached)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionResolvedRefs))
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonResolvedRefs)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1a2.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionReady))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.ListenerConditionReady)))
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1a2.ListenerReasonReady)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),

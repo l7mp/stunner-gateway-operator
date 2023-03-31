@@ -92,9 +92,8 @@ func TestRenderEndpointUtil(t *testing.T) {
 				addrs, err := getEndpointAddrs(n, false)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},
@@ -119,9 +118,8 @@ func TestRenderEndpointUtil(t *testing.T) {
 				addrs, err := getEndpointAddrs(n, false)
 
 				assert.NotNil(t, err, "error")
-				e, ok := err.(NonCriticalRenderError)
-				assert.True(t, ok, "non-critical error")
-				assert.Equal(t, EndpointNotFound, e.ErrorReason, "endpoint not found error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
 				assert.Empty(t, addrs, "endpoint addrs found")
 			},
 		},

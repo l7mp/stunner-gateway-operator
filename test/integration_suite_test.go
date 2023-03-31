@@ -18,7 +18,7 @@ package integration
 
 import (
 	"context"
-	// "fmt"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,7 +39,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	// logf "sigs.k8s.io/controller-runtime/pkg/log"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -55,6 +54,8 @@ import (
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
+
+var _ = fmt.Sprintf("%d", 1)
 
 func init() {
 	os.Setenv("ACK_GINKGO_DEPRECATIONS", "1.16.5")
@@ -96,9 +97,17 @@ func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	// for gingko/v2
+	// suiteConfig, reporterConfig := GinkgoConfiguration()
+	// reporterConfig.FullTrace = true
+	// RunSpecs(t, "Controller Suite", suiteConfig, reporterConfig)
+
+	// RunSpecsWithDefaultAndCustomReporters(t,
+	// 	"Controller Suite",
+	// 	[]Reporter{envtest.NewlineReporter{}},
+	// )
+
+	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -113,7 +122,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "config", "gateway-api-v0.4.3", "crd"),
+			filepath.Join("..", "config", "gateway-api-v0.6.2", "crd"),
 		},
 		ErrorIfCRDPathMissing:    true,
 		AttachControlPlaneOutput: true,

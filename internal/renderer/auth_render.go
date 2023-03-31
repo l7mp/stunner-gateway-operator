@@ -35,16 +35,15 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error
 	switch atype {
 	case stnrconfv1a1.AuthTypePlainText:
 		if gwConf.Spec.Username == nil || gwConf.Spec.Password == nil {
-			return nil, fmt.Errorf("missing username and password for authetication type %q",
-				"plaintext")
+			return nil, NewNonCriticalError(InvalidUsernamePassword)
 		}
 
 		auth.Credentials["username"] = *gwConf.Spec.Username
 		auth.Credentials["password"] = *gwConf.Spec.Password
+
 	case stnrconfv1a1.AuthTypeLongTerm:
 		if gwConf.Spec.SharedSecret == nil {
-			return nil, fmt.Errorf("missing shared-secret for authetication type %q",
-				"longterm")
+			return nil, NewNonCriticalError(InvalidUsernamePassword)
 		}
 		auth.Credentials["secret"] = *gwConf.Spec.SharedSecret
 	}

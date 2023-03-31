@@ -13,7 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -383,11 +385,11 @@ func TestRenderPipeline(t *testing.T) {
 				//statuses
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Type, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
@@ -400,18 +402,24 @@ func TestRenderPipeline(t *testing.T) {
 					store.GetObjectKey(gw), "gw name found")
 
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-				assert.Equal(t, string(gwapiv1a2.GatewayConditionScheduled),
-					gw.Status.Conditions[0].Type, "conditions sched")
-				assert.Equal(t, metav1.ConditionTrue,
-					gw.Status.Conditions[0].Status, "status ready")
-				assert.Equal(t, int64(0),
-					gw.Status.Conditions[0].ObservedGeneration, "conditions gen")
-				assert.Equal(t, string(gwapiv1a2.GatewayConditionReady),
-					gw.Status.Conditions[1].Type, "conditions ready")
-				assert.Equal(t, metav1.ConditionFalse,
-					gw.Status.Conditions[1].Status, "status ready")
-				assert.Equal(t, int64(0),
-					gw.Status.Conditions[1].ObservedGeneration, "conditions gen")
+
+				assert.Equal(t, string(gwapiv1b1.GatewayConditionAccepted),
+					gw.Status.Conditions[0].Type, "conditions accepted")
+				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
+					"conditions gen")
+				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
+					"status")
+				assert.Equal(t, string(gwapiv1b1.GatewayReasonAccepted),
+					gw.Status.Conditions[0].Reason, "reason")
+
+				assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed),
+					gw.Status.Conditions[1].Type, "programmed")
+				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
+					"conditions gen")
+				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
+					"status")
+				assert.Equal(t, string(gwapiv1b1.GatewayReasonInvalid),
+					gw.Status.Conditions[1].Reason, "reason")
 			},
 		},
 		{

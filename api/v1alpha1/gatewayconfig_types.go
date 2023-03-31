@@ -119,18 +119,6 @@ type GatewayConfigSpec struct {
 	MaxPort *int32 `json:"maxPort,omitempty"`
 }
 
-// // GatewayConfigStatus defines the observed state of GatewayConfig
-// type GatewayConfigStatus struct {
-// 	// Conditions describe the current conditions of the GatewayConfig API.
-// 	//
-// 	// +optional
-// 	// +listType=map
-// 	// +listMapKey=type
-// 	// +kubebuilder:validation:MaxItems=8
-// 	// +kubebuilder:default={{type: "Scheduled", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-// 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-// }
-
 //+kubebuilder:object:root=true
 // //+kubebuilder:subresource:status
 //+kubebuilder:resource:categories=stunner,shortName=gtwconf

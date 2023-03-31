@@ -11,7 +11,9 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -225,7 +227,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -311,7 +313,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -370,7 +372,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
@@ -423,7 +425,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -478,7 +480,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModePassthrough
+				mode := gwapiv1b1.TLSModePassthrough
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -533,7 +535,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -592,7 +594,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -651,7 +653,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -710,7 +712,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -769,7 +771,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
@@ -831,7 +833,7 @@ func TestRenderListenerRender(t *testing.T) {
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1a2.TLSModeTerminate
+				mode := gwapiv1b1.TLSModeTerminate
 				tls := gwapiv1a2.GatewayTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1a2.SecretObjectReference{{

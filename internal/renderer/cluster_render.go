@@ -39,7 +39,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 
 		// core.v1 has empty Group
 		if b.Group != nil && *b.Group != gwapiv1a2.Group("") {
-			backendErr = NewNonCriticalRenderError(InvalidBackendGroup)
+			backendErr = NewNonCriticalError(InvalidBackendGroup)
 			r.log.V(2).Info("renderCluster: error resolving backend", "route",
 				store.GetObjectKey(ro), "backend", string(b.Name), "group",
 				*b.Group, "error", backendErr.Error())
@@ -47,7 +47,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 		}
 
 		if b.Kind != nil && *b.Kind != "Service" {
-			backendErr = NewNonCriticalRenderError(InvalidBackendKind)
+			backendErr = NewNonCriticalError(InvalidBackendKind)
 			r.log.V(2).Info("renderCluster: error resolving backend", "route",
 				store.GetObjectKey(ro), "backend", string(b.Name), "kind", *b.Kind,
 				"error", backendErr)

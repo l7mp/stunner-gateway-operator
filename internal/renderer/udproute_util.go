@@ -210,7 +210,7 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 	var resolvedCond metav1.Condition
 	if backendErr != nil {
 		reason := gwapiv1a2.RouteReasonBackendNotFound
-		if e, ok := backendErr.(NonCriticalRenderError); ok && e.ErrorReason == InvalidBackendKind {
+		if IsNonCriticalError(backendErr, InvalidBackendKind) {
 			reason = gwapiv1a2.RouteReasonInvalidKind
 		}
 		resolvedCond = metav1.Condition{

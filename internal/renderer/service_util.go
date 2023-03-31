@@ -372,11 +372,11 @@ func getClusterIP(n types.NamespacedName) ([]string, error) {
 
 	s := store.Services.GetObject(n)
 	if s == nil {
-		return ret, NewNonCriticalRenderError(ServiceNotFound)
+		return ret, NewNonCriticalError(ServiceNotFound)
 	}
 
 	if s.Spec.ClusterIP == "" || s.Spec.ClusterIP == "None" {
-		return ret, NewNonCriticalRenderError(ClusterIPNotFound)
+		return ret, NewNonCriticalError(ClusterIPNotFound)
 	}
 
 	ret = append(ret, s.Spec.ClusterIP)

@@ -11,7 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	// "github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -169,11 +171,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
@@ -198,11 +200,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassReasonAccepted),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(1),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
@@ -222,11 +224,11 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 
 				setGatewayClassStatusAccepted(gc, errors.New("dummy"))
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassConditionStatusAccepted),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 					gc.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, metav1.ConditionFalse,
 					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1a2.GatewayClassReasonInvalidParameters),
+				assert.Equal(t, string(gwapiv1b1.GatewayClassReasonInvalidParameters),
 					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
