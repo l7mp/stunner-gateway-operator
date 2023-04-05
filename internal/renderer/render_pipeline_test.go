@@ -98,6 +98,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
 
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
@@ -190,6 +196,12 @@ func TestRenderPipeline(t *testing.T) {
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
+
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
@@ -286,6 +298,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
 
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
@@ -372,6 +390,12 @@ func TestRenderPipeline(t *testing.T) {
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
+
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
@@ -504,6 +528,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
 
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
@@ -578,6 +608,12 @@ func TestRenderPipeline(t *testing.T) {
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
+
+				// related gw
+				as = o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok = as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
@@ -725,6 +761,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
 
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
@@ -801,6 +843,12 @@ func TestRenderPipeline(t *testing.T) {
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
+
+				// related gw
+				as = o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok = as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
@@ -946,6 +994,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
 
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
@@ -1023,6 +1077,12 @@ func TestRenderPipeline(t *testing.T) {
 					"configmap name")
 				assert.Equal(t, o.GetNamespace(),
 					"testnamespace", "configmap namespace")
+
+				// related gw
+				as = o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok = as[config.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")

@@ -135,11 +135,14 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// thing that might have been changed by the controler: the owner ref and the data
+		// thing that might have been changed by the controler: the owner ref, annotations
+		// and the data
 
 		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
 
 		current.SetOwnerReferences(cm.GetOwnerReferences())
+		current.SetAnnotations(cm.GetAnnotations())
+
 		current.Data = make(map[string]string)
 		for k, v := range cm.Data {
 			current.Data[k] = v

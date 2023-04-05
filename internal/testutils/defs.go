@@ -136,7 +136,7 @@ var TestSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			config.GatewayAddressAnnotationKey: "testnamespace/gateway-1",
+			config.RelatedGatewayAnnotationKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{

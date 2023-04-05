@@ -1,20 +1,14 @@
 package renderer
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
-
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 )
 
 // // set owner ref without using the scheme:
@@ -44,32 +38,6 @@ import (
 // 	}
 // 	return -1
 // }
-
-func (r *Renderer) write2ConfigMap(ns, name string, conf *stnrconfv1a1.StunnerConfig) (*corev1.ConfigMap, error) {
-	s := ""
-
-	if conf != nil {
-		sc, err := json.Marshal(*conf)
-		if err != nil {
-			return nil, err
-		} else {
-			s = string(sc)
-		}
-	}
-
-	immutable := true
-
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Immutable: &immutable,
-		Data: map[string]string{
-			config.DefaultStunnerdConfigfileName: s,
-		},
-	}, nil
-}
 
 // getSecretNameFromRef obtains a namespaced name from a SecretObjectReference, performing validity
 // checks along the way.

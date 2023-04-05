@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	// apiv1 "k8s.io/api/core/v1"
@@ -15,8 +14,6 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	// corev1 "k8s.io/api/core/v1"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -24,18 +21,7 @@ import (
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
-
-// RenderContext contains the GatewayClass and the GatewayConfig for the current rendering task,
-// plus additional metadata
-type RenderContext struct {
-	origin event.Event
-	update *event.EventUpdate
-	gc     *gwapiv1a2.GatewayClass
-	gwConf *stnrv1a1.GatewayConfig
-	log    logr.Logger
-}
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
 func (r *Renderer) Render(e *event.EventRender) {
@@ -68,13 +54,7 @@ func (r *Renderer) Render(e *event.EventRender) {
 	// pipeline to render into the same configmap, but at least we can prevent race conditions
 	// by serializing update requests on the updaterChannel
 	for _, gc := range gcs {
-		c := &RenderContext{
-			origin: e,
-			update: event.NewEventUpdate(r.gen),
-			gc:     gc,
-			log:    log.WithValues("gateway-class", gc.GetName()),
-		}
-
+		c := NewRenderContext(e, r, gc)
 		if err := r.renderGatewayClass(c); err != nil {
 			// an irreparable error happened, invalidate the config and set all related
 			// object statuses to signal the error
@@ -256,14 +236,9 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 		conf.String())
 
 	// schedule for update
-	cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, &conf)
+	cm, err := r.renderConfig(c, target, &conf)
 	if err != nil {
 		return err
-	}
-
-	if err := controllerutil.SetOwnerReference(gwConf, cm, r.scheme); err != nil {
-		log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
-			"reference", store.GetObjectKey(cm))
 	}
 
 	// fmt.Printf("%#v\n", cm)
@@ -346,7 +321,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 
 	// schedule for update
 	if invalidateConf {
-		cm, err := r.write2ConfigMap(gwConf.GetNamespace(), target, nil)
+		cm, err := r.renderConfig(c, target, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target", target)
 			return

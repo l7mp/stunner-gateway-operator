@@ -288,6 +288,6 @@ func serviceUDPRouteIndexFunc(o client.Object) []string {
 // validateLoadBalancerReconcile checks whether a Service is annotated as a related-service for a
 // gateway.
 func (r *udpRouteReconciler) validateLoadBalancerReconcile(o client.Object) bool {
-	_, found := o.GetAnnotations()[config.GatewayAddressAnnotationKey]
+	_, found := o.GetAnnotations()[config.RelatedGatewayAnnotationKey]
 	return found
 }

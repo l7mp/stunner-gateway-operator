@@ -88,7 +88,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
-				delete(s1.ObjectMeta.Annotations, config.GatewayAddressAnnotationKey)
+				delete(s1.ObjectMeta.Annotations, config.RelatedGatewayAnnotationKey)
 				s1.ObjectMeta.Annotations["dummy"] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -115,7 +115,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
-				s1.ObjectMeta.Annotations[config.GatewayAddressAnnotationKey] = "dummy"
+				s1.ObjectMeta.Annotations[config.RelatedGatewayAnnotationKey] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -375,7 +375,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.GatewayAddressAnnotationKey]
+				gwa, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -421,7 +421,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.GatewayAddressAnnotationKey]
+				gwa, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -494,7 +494,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.GatewayAddressAnnotationKey]
+				gwa, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -538,7 +538,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.GatewayAddressAnnotationKey]
+				gwa, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -583,7 +583,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[config.GatewayAddressAnnotationKey]
+				a, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -643,7 +643,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				as := s.GetAnnotations()
 				assert.Len(t, as, 4, "annotations len")
 
-				a, found := as[config.GatewayAddressAnnotationKey]
+				a, found := as[config.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 

@@ -119,7 +119,8 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-
+			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
 		It("should render a ConfigMap that can be successfully unpacked", func() {
@@ -144,7 +145,8 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-
+			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
@@ -178,6 +180,8 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -353,6 +357,8 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
+			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
