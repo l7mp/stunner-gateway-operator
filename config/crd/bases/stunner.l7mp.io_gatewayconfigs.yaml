@@ -54,6 +54,49 @@ spec:
                   credentials in seconds.
                 format: int32
                 type: integer
+              authRef:
+                description: 'Note that externally set credentials override any inline
+                  auth credentials (AuthType, AuthUsername, etc.): if AuthRef is nonempty
+                  then it is expected that the referenced Secret exists and *all*
+                  authentication credentials are correctly set in the referenced Secret
+                  (username/password or shared secret). Mixing of credential sources
+                  (inline/external) is not supported.'
+                properties:
+                  group:
+                    default: ""
+                    description: Group is the group of the referent. For example,
+                      "gateway.networking.k8s.io". When unspecified or empty string,
+                      core API group is inferred.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  kind:
+                    default: Secret
+                    description: Kind is kind of the referent. For example "HTTPRoute"
+                      or "Service".
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                    type: string
+                  name:
+                    description: Name is the name of the referent.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: "Namespace is the namespace of the backend. When
+                      unspecified, the local namespace is inferred. \n Note that when
+                      a namespace is specified, a ReferenceGrant object is required
+                      in the referent namespace to allow that namespace's owner to
+                      accept the reference. See the ReferenceGrant documentation for
+                      details. \n Support: Core"
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                required:
+                - name
+                type: object
               authType:
                 default: plaintext
                 description: AuthType is the type of the STUN/TURN authentication
@@ -72,19 +115,19 @@ spec:
                   type: string
                 description: "LoadBalancerServiceAnnotations is a list of annotations
                   that will go into the LoadBalancer services created automatically
-                  by the operator to wrap Gateways \n NOTE: removing annotations from
-                  a GatewayConfig will not result in the removal of the corresponding
+                  by the operator to wrap Gateways. \n NOTE: removing annotations
+                  from a GatewayConfig will not result in the removal of the corresponding
                   annotations from the LoadBalancer service, in order to prevent the
                   accidental removal of an annotation installed there by Kubernetes
                   or the cloud provider. If you really want to remove an annotation,
                   do this manually or simply remove all Gateways (which will remove
                   the corresponding LoadBalancer services), update the GatewayConfig
                   and then recreate the Gateways, so that the newly created LoadBalancer
-                  services will contain the required annotations"
+                  services will contain the required annotations."
                 type: object
               logLevel:
                 description: LogLevel specifies the default loglevel for the STUNner
-                  daemon
+                  daemon.
                 type: string
               maxPort:
                 description: MaxRelayPort is the smallest relay port assigned for
@@ -117,7 +160,7 @@ spec:
                 type: string
               sharedSecret:
                 description: SharedSecret defines the shared secret to be used for
-                  "longterm" authentication
+                  "longterm" authentication.
                 type: string
               stunnerConfig:
                 default: stunnerd-config

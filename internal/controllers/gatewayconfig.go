@@ -21,7 +21,10 @@ import (
 	// "fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -36,6 +39,8 @@ import (
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
+const secretGatewayConfigIndex = "secretGatewayConfigIndex"
+
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
@@ -44,6 +49,7 @@ type gatewayConfigReconciler struct {
 }
 
 func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+	ctx := context.Background()
 	r := &gatewayConfigReconciler{
 		Client:  mgr.GetClient(),
 		eventCh: ch,
@@ -66,6 +72,22 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 	}
 	r.log.Info("watching gatewayconfig objects")
 
+	// index GatewayConfig objects as per the referenced Secret
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrv1a1.GatewayConfig{}, secretGatewayConfigIndex,
+		secretGatewayConfigIndexFunc); err != nil {
+		return err
+	}
+
+	// watch Secret objects referenced by one of our Gateways
+	if err := c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+	); err != nil {
+		return err
+	}
+	r.log.Info("watching secret objects")
+
 	return nil
 }
 
@@ -73,26 +95,118 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	log := r.log.WithValues("gateway-config", req.String())
 	log.Info("reconciling")
 
-	var gc stnrv1a1.GatewayConfig
-	found := true
+	configList := []client.Object{}
+	authSecretList := []client.Object{}
 
-	err := r.Get(ctx, req.NamespacedName, &gc)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "failed to get GatewayConfig")
-			return reconcile.Result{}, err
+	// find all GatewayConfigs
+	gcList := &stnrv1a1.GatewayConfigList{}
+	if err := r.List(ctx, gcList); err != nil {
+		r.log.Info("no gateway-configs found")
+		return reconcile.Result{}, err
+	}
+
+	for _, gc := range gcList.Items {
+		gc := gc
+		r.log.V(1).Info("processing GatewayConfig", "name", store.GetObjectKey(&gc))
+
+		configList = append(configList, &gc)
+
+		ref := gc.Spec.AuthRef
+		if ref == nil {
+			continue
 		}
-		found = false
+
+		// obtain ref'd secret
+		if (ref.Group != nil && *ref.Group != corev1.GroupName && *ref.Group != "v1") ||
+			(ref.Kind != nil && *ref.Kind != "Secret") {
+			continue
+		}
+
+		namespace := gc.Namespace
+		if ref.Namespace != nil {
+			namespace = string(*ref.Namespace)
+		}
+
+		secret := corev1.Secret{}
+		secretKey := types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
+		if err := r.Get(ctx, secretKey, &secret); err != nil {
+			// not fatal
+			if !apierrors.IsNotFound(err) {
+				r.log.Error(err, "error getting Secret", "secret", secretKey)
+				continue
+			}
+
+			r.log.Info("no Secret found for external auth ref", "GatewayConfig",
+				store.GetObjectKey(&gc), "secret", secretKey)
+
+			continue
+		}
+
+		r.log.V(1).Info("found Secret for external auth ref", "GatewayConfig",
+			store.GetObjectKey(&gc), "secret", secretKey)
+
+		authSecretList = append(authSecretList, &secret)
 	}
 
-	if !found {
-		store.GatewayConfigs.Remove(req.NamespacedName)
-		r.eventCh <- event.NewEventRender()
-		return reconcile.Result{}, nil
-	}
+	store.GatewayConfigs.Reset(configList)
+	r.log.V(2).Info("reset GatewayConfig store", "configs", store.GatewayConfigs.String())
 
-	store.GatewayConfigs.Upsert(&gc)
+	store.AuthSecrets.Reset(authSecretList)
+	r.log.V(2).Info("reset AuthSecret store", "secrets", store.AuthSecrets.String())
+
 	r.eventCh <- event.NewEventRender()
 
 	return reconcile.Result{}, nil
+}
+
+// validateSecretForReconcile checks whether the Secret belongs to a valid GatewayConfig.
+func (r *gatewayConfigReconciler) validateSecretForReconcile(obj client.Object) bool {
+	secret := obj.(*corev1.Secret)
+	gcList := &stnrv1a1.GatewayConfigList{}
+	secretName := store.GetNamespacedName(secret).String()
+	if err := r.List(context.Background(), gcList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretGatewayConfigIndex, secretName),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated GatewayConfigs", "secret", secretName)
+		return false
+	}
+
+	return len(gcList.Items) != 0
+}
+
+// secretGatewayConfigIndexFunc indexes GatewayConfigs on the Secret referred via the authRef.
+func secretGatewayConfigIndexFunc(o client.Object) []string {
+	gatewayConfig := o.(*stnrv1a1.GatewayConfig)
+	ret := []string{}
+
+	// authRef not specified
+	if gatewayConfig.Spec.AuthRef == nil {
+		return ret
+	}
+
+	ref := gatewayConfig.Spec.AuthRef
+
+	// - group MUST be set to "" (corev1.GroupName), "v1", or omitted,
+	if ref.Group != nil && (string(*ref.Group) != corev1.GroupName && string(*ref.Group) != "v1") {
+		return ret
+	}
+
+	// - kind MUST be set to "Secret" or omitted,
+	if ref.Kind != nil && string(*ref.Kind) != "Secret" {
+		return ret
+	}
+
+	// - namespace MAY be omitted, in which case it defaults to the namespace of
+	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+	namespace := gatewayConfig.Namespace
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	ret = append(ret, types.NamespacedName{
+		Namespace: namespace,
+		Name:      string(ref.Name),
+	}.String())
+
+	return ret
 }

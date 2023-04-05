@@ -220,3 +220,17 @@ var TestSecret = corev1.Secret{
 		"tls.key": []byte("testkey"),
 	},
 }
+
+// TestAuthSecret for external auth tests
+var TestAuthSecret = corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testauthsecret-ok",
+	},
+	Type: corev1.SecretTypeOpaque,
+	Data: map[string][]byte{
+		"username": []byte("ext-testuser"),
+		"password": []byte("ext-testpass"),
+		"secret":   []byte("ext-secret"),
+	},
+}

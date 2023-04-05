@@ -5,9 +5,13 @@ type ErrorType int
 
 const (
 	NoError ErrorType = iota
+
 	// critical
+	InvalidAuthType
 	InvalidUsernamePassword
-	InvalidSecret
+	InvalidSharedSecret
+	ExternalAuthCredentialsNotFound
+	InvalidAuthConfig
 
 	// noncritical
 	InvalidBackendGroup
@@ -34,12 +38,18 @@ func NewCriticalError(reason ErrorType) error {
 // Error returns an error message.
 func (e *CriticalError) Error() string {
 	switch e.reason {
+	case InvalidAuthType:
+		return "invalid authentication type"
 	case InvalidUsernamePassword:
-		return "missing username and password for plaintext authetication"
-	case InvalidSecret:
+		return "missing username and/or password for plaintext authetication"
+	case InvalidSharedSecret:
 		return "missing shared-secret for longterm authetication"
+	case InvalidAuthConfig:
+		return "internal error: could not validate generated auth config"
+	case ExternalAuthCredentialsNotFound:
+		return "missing or invalid external authentication credentials"
 	}
-	return "No error"
+	return "Unknown error"
 }
 
 // NonCriticalError is a non-fatal error that affects a Gateway or a Route status.
@@ -66,7 +76,7 @@ func (e *NonCriticalError) Error() string {
 	case EndpointNotFound:
 		return "No Endpoint found for backend"
 	}
-	return "No error"
+	return "Unknown error"
 }
 
 // IsCritical returns true of an error is critical.

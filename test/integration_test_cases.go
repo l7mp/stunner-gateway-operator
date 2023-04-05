@@ -48,17 +48,18 @@ import (
 
 // make sure we use fmt
 var (
-	testGwClass  = testutils.TestGwClass.DeepCopy()
-	testGwConfig = testutils.TestGwConfig.DeepCopy()
-	testGw       = testutils.TestGw.DeepCopy()
-	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
-	testSvc      = testutils.TestSvc.DeepCopy()
-	testEndpoint = testutils.TestEndpoint.DeepCopy()
-	testNode     = testutils.TestNode.DeepCopy()
-	testSecret   = testutils.TestSecret.DeepCopy()
-	_            = fmt.Sprintf("whatever: %d", 1)
-	newCert64    = "bmV3Y2VydA==" // newcert
-	newKey64     = "bmV3a2V5"     // newkey
+	testGwClass    = testutils.TestGwClass.DeepCopy()
+	testGwConfig   = testutils.TestGwConfig.DeepCopy()
+	testGw         = testutils.TestGw.DeepCopy()
+	testUDPRoute   = testutils.TestUDPRoute.DeepCopy()
+	testSvc        = testutils.TestSvc.DeepCopy()
+	testEndpoint   = testutils.TestEndpoint.DeepCopy()
+	testNode       = testutils.TestNode.DeepCopy()
+	testSecret     = testutils.TestSecret.DeepCopy()
+	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
+	_              = fmt.Sprintf("whatever: %d", 1)
+	newCert64      = "bmV3Y2VydA==" // newcert
+	newKey64       = "bmV3a2V5"     // newkey
 )
 
 // GatewayClass + GatewayConfig + Gateway should be enough to render a valid STUNner conf
@@ -1700,6 +1701,257 @@ var _ = Describe("Integration test:", func() {
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if c.Auth.Type == "longterm" {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Auth.Type).Should(Equal("longterm"))
+			Expect(conf.Auth.Credentials["secret"]).Should(Equal("dummy"))
+		})
+
+		// external auth ref
+		It("switching to external auth refs", func() {
+			ctrl.Log.Info("loading the external auth Secret")
+			Expect(k8sClient.Create(ctx, testAuthSecret)).Should(Succeed())
+
+			ctrl.Log.Info("re-loading gateway-config")
+			namespace := gwapiv1b1.Namespace("testnamespace")
+			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+				atype := "longterm"
+				current.Spec.AuthType = &atype
+				current.Spec.Username = nil
+				current.Spec.Password = nil
+				current.Spec.AuthRef = &gwapiv1b1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1b1.ObjectName("testauthsecret-ok"),
+				}
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if c.Auth.Type == "plaintext" {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Credentials["username"]).Should(Equal("ext-testuser"))
+			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
+		})
+
+		It("external auth refs override inline auth", func() {
+			ctrl.Log.Info("re-loading gateway-config")
+			namespace := gwapiv1b1.Namespace("testnamespace")
+			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+				atype := "longterm"
+				current.Spec.AuthType = &atype
+				current.Spec.Username = nil
+				current.Spec.Password = nil
+				sharedSecret := "testsecret"
+				current.Spec.SharedSecret = &sharedSecret
+				current.Spec.AuthRef = &gwapiv1b1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1b1.ObjectName("testauthsecret-ok"),
+				}
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if c.Auth.Type == "plaintext" {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Credentials["username"]).Should(Equal("ext-testuser"))
+			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
+		})
+
+		It("updating the external auth ref should re-generate the config", func() {
+			ctrl.Log.Info("re-loading the external auth Secret")
+			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+				current.Data["username"] = []byte("new-user")
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				u, ok := c.Auth.Credentials["username"]
+				if ok && u == "new-user" {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Credentials["username"]).Should(Equal("new-user"))
+			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
+		})
+
+		It("cnanging the external auth ref type should re-generate the config", func() {
+			ctrl.Log.Info("re-loading the external auth Secret")
+			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+				current.Data["type"] = []byte("longterm")
+				current.Data["secret"] = []byte("dummy")
+				delete(current.Data, "username")
+				delete(current.Data, "password")
+			})
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if c.Auth.Type == "longterm" {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			Expect(conf.Auth.Type).Should(Equal("longterm"))
+			Expect(conf.Auth.Credentials["secret"]).Should(Equal("dummy"))
+		})
+
+		It("external auth refs with missing Secret should fail", func() {
+			ctrl.Log.Info("deleting auth Secret")
+			Expect(k8sClient.Delete(ctx, testAuthSecret)).Should(Succeed())
+
+			lookupKey := types.NamespacedName{
+				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Namespace: string(testutils.TestNs),
+			}
+			cm := &corev1.ConfigMap{}
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				conf, ok := cm.Data[config.DefaultStunnerdConfigfileName]
+
+				if ok && conf == "" {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("fallback to inline auth defs", func() {
+			ctrl.Log.Info("re-loading gateway-config with inline auth")
+			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+				atype := "longterm"
+				secret := "dummy"
+				current.Spec.AuthType = &atype
+				current.Spec.SharedSecret = &secret
+				current.Spec.AuthRef = nil
 			})
 
 			lookupKey := types.NamespacedName{

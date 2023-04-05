@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // GatewayConfigSpec defines the desired state of GatewayConfig
@@ -76,7 +77,7 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
 	Password *string `json:"password,omitempty"`
 
-	// SharedSecret defines the shared secret to be used for "longterm" authentication
+	// SharedSecret defines the shared secret to be used for "longterm" authentication.
 	//
 	// +optional
 	SharedSecret *string `json:"sharedSecret,omitempty"`
@@ -86,8 +87,36 @@ type GatewayConfigSpec struct {
 	// +optional
 	AuthLifetime *int32 `json:"authLifetime,omitempty"`
 
+	// AuthRef holds an optional reference to a Secret that specifies the TURN authentication
+	// credentials for STUNner.  The following conditions must hold:
+	// - group MUST be set to "" (corev1.GroupName), "v1", or omitted,
+	// - kind MUST be set to "Secret" or omitted,
+	// - name MUST be the name of a valid Secret,
+	// - namespace MAY be omitted, in which case it defaults to the namespace of
+	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+
+	// The referenced Secret MUST be of type Opaque and the following conditions MUST hold:
+	// - the Secret MUST contain a "type" field that MUST be set to either
+	//   "plaintext" or "longterm" (but see
+	//   https://github.com/l7mp/stunner-gateway-operator/issues/7),
+	// - if type is "plaintext" then the Secret MUST contain a "username" and a
+	//   "password" field that together specify the username/password pair clients can use to
+	//   authenticate with Stunner,
+	// - if type is "lonterm" then the Secret MUST contain a single field named
+	//   "sharedSecret" or "secret" that is used to check the authenticity of time-windowed
+	//   TURN credentials.
+
+	// Note that externally set credentials override any inline auth credentials (AuthType,
+	// AuthUsername, etc.): if AuthRef is nonempty then it is expected that the referenced
+	// Secret exists and *all* authentication credentials are correctly set in the referenced
+	// Secret (username/password or shared secret). Mixing of credential sources
+	// (inline/external) is not supported.
+	//
+	// +optional
+	AuthRef *gwapiv1b1.SecretObjectReference `json:"authRef,omitempty"`
+
 	// LoadBalancerServiceAnnotations is a list of annotations that will go into the
-	// LoadBalancer services created automatically by the operator to wrap Gateways
+	// LoadBalancer services created automatically by the operator to wrap Gateways.
 	//
 	// NOTE: removing annotations from a GatewayConfig will not result in the removal of the
 	// corresponding annotations from the LoadBalancer service, in order to prevent the
@@ -95,12 +124,12 @@ type GatewayConfigSpec struct {
 	// provider. If you really want to remove an annotation, do this manually or simply remove
 	// all Gateways (which will remove the corresponding LoadBalancer services), update the
 	// GatewayConfig and then recreate the Gateways, so that the newly created LoadBalancer
-	// services will contain the required annotations
+	// services will contain the required annotations.
 	//
 	// +optional
 	LoadBalancerServiceAnnotations map[string]string `json:"loadBalancerServiceAnnotations,omitempty"`
 
-	// LogLevel specifies the default loglevel for the STUNner daemon
+	// LogLevel specifies the default loglevel for the STUNner daemon.
 	//
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`

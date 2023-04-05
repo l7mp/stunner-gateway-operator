@@ -81,7 +81,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 	}
 	r.log.Info("watching secret objects")
 
-	// watch EndPoint objects references by one of the ref'd Services
+	// watch EndPoints object references by one of the ref'd Services
 	if config.EnableEndpointDiscovery {
 		if err := c.Watch(
 			&source.Kind{Type: &corev1.Endpoints{}},
@@ -98,7 +98,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 // Reconcile handles an update to a UDPRoute or a Service/Endpoints referenced by an UDPRoute.
 func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("object", req.String())
+	log := r.log.WithValues("udproute", req.String())
 	log.Info("reconciling")
 
 	routeList := []client.Object{}

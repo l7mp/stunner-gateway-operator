@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -98,28 +97,16 @@ func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string,
 
 	for _, ref := range l.TLS.CertificateRefs {
 		ref := ref
-		if (ref.Group != nil && *ref.Group != corev1.GroupName) ||
-			(ref.Kind != nil && *ref.Kind != "Secret") {
-			name := ""
-			if ref.Group != nil {
-				name = string(*ref.Group)
-			}
-			if ref.Kind != nil {
-				name = fmt.Sprintf("%s/%s", name, string(*ref.Kind))
-			}
 
-			r.log.Info("ignoring secret-reference to an unknown object", "gateway", store.GetObjectKey(gw),
-				"listener", l.Name, "object-ref", name)
+		n, err := getSecretNameFromRef(&ref, gw.GetNamespace())
+		if err != nil {
+			r.log.Info("ignoring secret-reference to an unknown or invalid object",
+				"gateway", store.GetObjectKey(gw),
+				"ref", dumpSecretRef(&ref, gw.GetNamespace()),
+				"error", err.Error())
 			continue
 		}
 
-		// find the named secret, use the Gw namespace if no namespace found in the ref
-		namespace := gw.GetNamespace()
-		if ref.Namespace != nil {
-			namespace = string(*ref.Namespace)
-		}
-
-		n := types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
 		secret := store.Secrets.GetObject(n)
 		if secret == nil {
 			r.log.Info("secret not found", "gateway", store.GetObjectKey(gw),

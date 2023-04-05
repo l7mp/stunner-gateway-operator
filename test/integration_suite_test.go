@@ -66,8 +66,8 @@ const (
 	timeout = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
-	//loglevel = -4
-	loglevel = -1
+	loglevel = -4
+	//loglevel = -1
 )
 
 var (
@@ -290,6 +290,24 @@ func recreateOrUpdateSecret(f SecretMutator) {
 		current.Type = testSecret.Type
 		current.Data = make(map[string][]byte)
 		for k, v := range testSecret.Data {
+			current.Data[k] = v
+		}
+		f(current)
+		return nil
+	})
+	Expect(err).Should(Succeed())
+}
+
+func recreateOrUpdateAuthSecret(f SecretMutator) {
+	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      testAuthSecret.GetName(),
+		Namespace: testAuthSecret.GetNamespace(),
+	}}
+
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
+		current.Type = testAuthSecret.Type
+		current.Data = make(map[string][]byte)
+		for k, v := range testAuthSecret.Data {
 			current.Data[k] = v
 		}
 		f(current)

@@ -2,10 +2,15 @@ package renderer
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
+
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
@@ -64,4 +69,58 @@ func (r *Renderer) write2ConfigMap(ns, name string, conf *stnrconfv1a1.StunnerCo
 			config.DefaultStunnerdConfigfileName: s,
 		},
 	}, nil
+}
+
+// getSecretNameFromRef obtains a namespaced name from a SecretObjectReference, performing validity
+// checks along the way.
+func getSecretNameFromRef(ref *gwapiv1b1.SecretObjectReference, namespace string) (types.NamespacedName, error) {
+	ret := types.NamespacedName{}
+	if ref == nil {
+		return ret, errors.New("internal error obtaining Secret: called with nil pointer")
+	}
+
+	// - group MUST be set to "" (corev1.GroupName), "v1", or omitted,
+	if ref.Group != nil && (string(*ref.Group) != corev1.GroupName && string(*ref.Group) != "v1") {
+		return ret, fmt.Errorf("internal error obtaining Secret: invalid Group")
+	}
+
+	// - kind MUST be set to "Secret" or omitted,
+	if ref.Kind != nil && string(*ref.Kind) != "Secret" {
+		return ret, fmt.Errorf("internal error obtaining Secret: invalid Kind")
+	}
+
+	// - namespace MAY be omitted, in which case it defaults to the namespace of
+	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	ret = types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
+	return ret, nil
+}
+
+// dumpSecretRef is a helper to create a human-readable dump from a secret ref.
+func dumpSecretRef(ref *gwapiv1b1.SecretObjectReference, namespace string) string {
+	if ref == nil {
+		return "<nil>"
+	}
+
+	group := "<nil>"
+	if ref.Group != nil {
+		group = string(*ref.Group)
+	}
+
+	kind := "<nil>"
+	if ref.Kind != nil {
+		kind = string(*ref.Kind)
+	}
+
+	// - namespace MAY be omitted, in which case it defaults to the namespace of
+	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s}", group, kind,
+		namespace, string(ref.Name))
 }

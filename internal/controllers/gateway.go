@@ -312,6 +312,13 @@ func validateGatewayClass(gc *gwapiv1a2.GatewayClass) error {
 	return nil
 }
 
+// classGatewayIndexFunc indexes Gateways on the parent GatewayClass name.
+func classGatewayIndexFunc(o client.Object) []string {
+	gateway := o.(*gwapiv1a2.Gateway)
+	return []string{string(gateway.Spec.GatewayClassName)}
+}
+
+// secretGatewayIndexFunc indexes Gateways on the Secrets referred to via the TLS certRef.
 func secretGatewayIndexFunc(o client.Object) []string {
 	gateway := o.(*gwapiv1a2.Gateway)
 	var secretReferences []string
@@ -342,9 +349,4 @@ func secretGatewayIndexFunc(o client.Object) []string {
 	}
 
 	return secretReferences
-}
-
-func classGatewayIndexFunc(o client.Object) []string {
-	gateway := o.(*gwapiv1a2.Gateway)
-	return []string{string(gateway.Spec.GatewayClassName)}
 }
