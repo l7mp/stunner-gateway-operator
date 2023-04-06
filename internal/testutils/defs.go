@@ -10,9 +10,7 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
@@ -44,7 +42,7 @@ var TestGwClass = gwapiv1a2.GatewayClass{
 		Namespace: "testnamespace",
 	},
 	Spec: gwapiv1a2.GatewayClassSpec{
-		ControllerName: gwapiv1a2.GatewayController(config.DefaultControllerName),
+		ControllerName: gwapiv1a2.GatewayController(opdefault.DefaultControllerName),
 		ParametersRef: &gwapiv1a2.ParametersReference{
 			Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
 			Kind:      gwapiv1a2.Kind("GatewayConfig"),
@@ -136,7 +134,7 @@ var TestSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			config.RelatedGatewayAnnotationKey: "testnamespace/gateway-1",
+			opdefault.DefaultRelatedGatewayAnnotationKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{

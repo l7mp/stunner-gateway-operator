@@ -10,18 +10,18 @@ const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
 
-	// RelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
+	// DefaultRelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
 	// LoadBalancer service and a STUNner dataplane ConfigMap to a Gateway. The value is either
 	// a singular pair of a namespace and name when of the related Gateway (in the form
 	// "namespace/name", mostly used for associating a LB Service to a Gateway) or
 	// GatewayConfig (used for ConfigMaps storing STUNner dataplane configs, which usually
 	// belong to multiple Gateways).
-	RelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
+	DefaultRelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
 
-	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
+	// DefaultServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
 	// `ExternalName` or `LoadBalancer`. Default is `LoadBalancer`.
-	ServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
+	DefaultServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
 
 	// DefaultServiceType defines the default type of services created to expose each Gateway
 	// to external clients.
@@ -43,7 +43,6 @@ const (
 	DefaultStunnerdConfigfileName = "stunnerd.conf"
 
 	// DefaultStunnerDeploymentLabel defines the label used to mark the stunnerd deployment
-	// FIXME make this configurable.
 	DefaultStunnerDeploymentLabel = "app"
 
 	// DefaultStunnerDeploymentValue defines the label value used to mark the stunnerd deployment

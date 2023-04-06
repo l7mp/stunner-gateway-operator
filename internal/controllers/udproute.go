@@ -20,6 +20,7 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -288,6 +289,6 @@ func serviceUDPRouteIndexFunc(o client.Object) []string {
 // validateLoadBalancerReconcile checks whether a Service is annotated as a related-service for a
 // gateway.
 func (r *udpRouteReconciler) validateLoadBalancerReconcile(o client.Object) bool {
-	_, found := o.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+	_, found := o.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 	return found
 }

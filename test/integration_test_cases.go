@@ -39,6 +39,7 @@ import (
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -119,7 +120,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
@@ -145,7 +146,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
@@ -180,7 +181,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
@@ -357,7 +358,7 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := cm.GetAnnotations()[config.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 		})
 
@@ -664,7 +665,7 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				current.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				current.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey] = "ClusterIP"
 			})
 
 			// retry, but also check if a public address has been added
@@ -706,7 +707,7 @@ var _ = Describe("Integration test:", func() {
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
-				current.SetAnnotations(map[string]string{config.ServiceTypeAnnotationKey: "NodePort"})
+				current.SetAnnotations(map[string]string{opdefault.DefaultServiceTypeAnnotationKey: "NodePort"})
 			})
 
 			// retry, but also check if a public address has been added
@@ -749,9 +750,9 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
-					config.ServiceTypeAnnotationKey: "NodePort",
-					"someAnnotation":                "dummy-1",
-					"someOtherAnnotation":           "dummy-2",
+					opdefault.DefaultServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":      "dummy-1",
+					"someOtherAnnotation": "dummy-2",
 				})
 			})
 
@@ -764,7 +765,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				as := svc.GetAnnotations()
-				a1, ok1 := as[config.ServiceTypeAnnotationKey]
+				a1, ok1 := as[opdefault.DefaultServiceTypeAnnotationKey]
 				a2, ok2 := as["someAnnotation"]
 				a3, ok3 := as["someOtherAnnotation"]
 
@@ -791,9 +792,9 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
-					config.ServiceTypeAnnotationKey: "NodePort",
-					"someAnnotation":                "new-dummy-1",
-					"someOtherAnnotation":           "dummy-2",
+					opdefault.DefaultServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":      "new-dummy-1",
+					"someOtherAnnotation": "dummy-2",
 				})
 			})
 
@@ -805,7 +806,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				as := svc.GetAnnotations()
-				a1, ok1 := as[config.ServiceTypeAnnotationKey]
+				a1, ok1 := as[opdefault.DefaultServiceTypeAnnotationKey]
 				a2, ok2 := as["someAnnotation"]
 				a3, ok3 := as["someOtherAnnotation"]
 
@@ -1939,7 +1940,7 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				conf, ok := cm.Data[config.DefaultStunnerdConfigfileName]
+				conf, ok := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 
 				if ok && conf == "" {
 					return true
@@ -2371,8 +2372,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(k8sClient.Delete(ctx, ro)).Should(Succeed())
 
 			// restore
-			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 
 		It("should render an empty config", func() {
@@ -2526,8 +2527,8 @@ var _ = Describe("Integration test:", func() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// restoure
-			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})
 
@@ -2611,8 +2612,8 @@ var _ = Describe("Integration test:", func() {
 				Namespace: "testnamespace", Name: "testservice-ok"})
 			Expect(c.Endpoints).Should(ContainElement(svc.Spec.ClusterIP))
 
-			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-			config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})
 
@@ -2855,7 +2856,7 @@ var _ = Describe("Integration test:", func() {
 			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
 
 			// restore
-			config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 		})
 	})
 })

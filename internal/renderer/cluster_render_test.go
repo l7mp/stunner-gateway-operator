@@ -13,6 +13,7 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -106,8 +107,8 @@ func TestRenderClusterRender(t *testing.T) {
 					rc.Endpoints[0], "backend-ref")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -145,8 +146,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -188,8 +189,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -230,8 +231,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -272,8 +273,8 @@ func TestRenderClusterRender(t *testing.T) {
 					rc.Endpoints[0], "backend-ref")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -319,8 +320,8 @@ func TestRenderClusterRender(t *testing.T) {
 					rc.Endpoints[0], "backend-ref-3")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -362,8 +363,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -403,8 +404,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -447,8 +448,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "4.3.2.1", "cluster-ip")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -493,8 +494,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -532,8 +533,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -575,8 +576,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -618,8 +619,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rc.Endpoints, 0, "endpoints len")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -674,8 +675,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.1.1.1", "cluster-ip")
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -758,8 +759,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "3.3.3.3", "endpoint cluster-ip-3")
 
 				// restore
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 	})

@@ -46,6 +46,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	// gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
@@ -184,7 +185,7 @@ var _ = BeforeSuite(func() {
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
-		ControllerName: config.DefaultControllerName,
+		ControllerName: opdefault.DefaultControllerName,
 		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
 		UpdaterCh:      u.GetUpdaterChannel(),

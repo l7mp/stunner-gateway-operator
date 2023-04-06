@@ -10,7 +10,7 @@ import (
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -24,7 +24,6 @@ func (r *Renderer) renderConfig(c *RenderContext, name string, conf *stnrconfv1a
 			return nil, NewCriticalError(ConfigMapRenderingError)
 		}
 		s = string(sc)
-
 	}
 
 	immutable := true
@@ -33,12 +32,12 @@ func (r *Renderer) renderConfig(c *RenderContext, name string, conf *stnrconfv1a
 			Name:      name,
 			Namespace: c.gwConf.GetNamespace(),
 			Annotations: map[string]string{
-				config.RelatedGatewayAnnotationKey: store.GetObjectKey(c.gc),
+				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(c.gc),
 			},
 		},
 		Immutable: &immutable,
 		Data: map[string]string{
-			config.DefaultStunnerdConfigfileName: s,
+			opdefault.DefaultStunnerdConfigfileName: s,
 		},
 	}
 

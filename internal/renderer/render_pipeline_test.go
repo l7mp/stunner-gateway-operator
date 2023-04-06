@@ -17,6 +17,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -48,7 +49,7 @@ func TestRenderPipeline(t *testing.T) {
 				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "admin rendered")
 				assert.Equal(t, "testloglevel", admin.LogLevel, "log level")
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					admin.Name, "stunnerd name")
 
 				auth, err := r.renderAuth(c)
@@ -101,7 +102,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -110,7 +111,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -151,8 +152,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -200,7 +201,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -209,7 +210,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -252,8 +253,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -301,7 +302,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -310,7 +311,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -354,8 +355,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -394,13 +395,13 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
 				assert.True(t, ok, "configmap cast")
 
-				conf, found := cm.Data[config.DefaultStunnerdConfigfileName]
+				conf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 				assert.True(t, found, "configmap data: stunnerd.conf found")
 				assert.Equal(t, "", conf, "configmap data: stunnerd.conf empty")
 
@@ -531,7 +532,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -540,7 +541,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -612,7 +613,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[config.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -621,7 +622,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -664,8 +665,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -764,7 +765,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -773,7 +774,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -847,7 +848,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[config.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -856,7 +857,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -898,8 +899,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 		{
@@ -997,7 +998,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[config.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -1006,7 +1007,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -1081,7 +1082,7 @@ func TestRenderPipeline(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[config.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -1090,7 +1091,7 @@ func TestRenderPipeline(t *testing.T) {
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName,
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
@@ -1132,8 +1133,8 @@ func TestRenderPipeline(t *testing.T) {
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore EDS
-				config.EnableEndpointDiscovery = config.DefaultEnableEndpointDiscovery
-				config.EnableRelayToClusterIP = config.DefaultEnableRelayToClusterIP
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
 	})

@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -88,7 +88,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
-				delete(s1.ObjectMeta.Annotations, config.RelatedGatewayAnnotationKey)
+				delete(s1.ObjectMeta.Annotations, opdefault.DefaultRelatedGatewayAnnotationKey)
 				s1.ObjectMeta.Annotations["dummy"] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
@@ -115,7 +115,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
-				s1.ObjectMeta.Annotations[config.RelatedGatewayAnnotationKey] = "dummy"
+				s1.ObjectMeta.Annotations[opdefault.DefaultRelatedGatewayAnnotationKey] = "dummy"
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -375,7 +375,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.RelatedGatewayAnnotationKey]
+				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -421,7 +421,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.RelatedGatewayAnnotationKey]
+				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -494,7 +494,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.RelatedGatewayAnnotationKey]
+				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -538,7 +538,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[config.RelatedGatewayAnnotationKey]
+				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
 
@@ -583,7 +583,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[config.RelatedGatewayAnnotationKey]
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -643,7 +643,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				as := s.GetAnnotations()
 				assert.Len(t, as, 4, "annotations len")
 
-				a, found := as[config.RelatedGatewayAnnotationKey]
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -703,7 +703,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey] = "ClusterIP"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -735,7 +735,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "NodePort"
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey] = "NodePort"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -767,7 +767,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
-				ann[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				ann[opdefault.DefaultServiceTypeAnnotationKey] = "ClusterIP"
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
@@ -800,11 +800,11 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				w.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey] = "ClusterIP"
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey] = "ClusterIP"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
-				ann[config.ServiceTypeAnnotationKey] = "NodePort"
+				ann[opdefault.DefaultServiceTypeAnnotationKey] = "NodePort"
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1a2.Gateway{*gw}
 			},
@@ -837,7 +837,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
-				ann[config.ServiceTypeAnnotationKey] = "NodePort"
+				ann[opdefault.DefaultServiceTypeAnnotationKey] = "NodePort"
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1a2.Gateway{*gw}
 			},

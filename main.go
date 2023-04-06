@@ -38,6 +38,7 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
@@ -61,12 +62,12 @@ func main() {
 	var controllerName, metricsAddr, throttleTimeout, probeAddr string
 	var enableLeaderElection, enableEDS bool
 
-	flag.StringVar(&controllerName, "controller-name", config.DefaultControllerName,
+	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
-	flag.StringVar(&throttleTimeout, "throttle-timeout", config.DefaultThrottleTimeout.String(),
+	flag.StringVar(&throttleTimeout, "throttle-timeout", opdefault.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
-	flag.BoolVar(&enableEDS, "endpoint-discovery", config.DefaultEnableEndpointDiscovery,
-		fmt.Sprintf("Enable endpoint discovery, default: %t.", config.DefaultEnableEndpointDiscovery))
+	flag.BoolVar(&enableEDS, "endpoint-discovery", opdefault.DefaultEnableEndpointDiscovery,
+		fmt.Sprintf("Enable endpoint discovery, default: %t.", opdefault.DefaultEnableEndpointDiscovery))
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,

@@ -15,7 +15,7 @@ import (
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 )
 
 func GetObjectKey(object client.Object) string {
@@ -54,10 +54,10 @@ func compareObjects(o1, o2 client.Object) bool {
 func UnpackConfigMap(cm *corev1.ConfigMap) (stnrconfv1a1.StunnerConfig, error) {
 	conf := stnrconfv1a1.StunnerConfig{}
 
-	jsonConf, found := cm.Data[config.DefaultStunnerdConfigfileName]
+	jsonConf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 	if !found {
 		return conf, fmt.Errorf("error unpacking configmap data: %s not found",
-			config.DefaultStunnerdConfigfileName)
+			opdefault.DefaultStunnerdConfigfileName)
 	}
 
 	if err := json.Unmarshal([]byte(jsonConf), &conf); err != nil {
@@ -145,7 +145,7 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 	}
 
 	cm.Data = map[string]string{
-		config.DefaultStunnerdConfigfileName: string(sc),
+		opdefault.DefaultStunnerdConfigfileName: string(sc),
 	}
 
 	return cm

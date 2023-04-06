@@ -16,6 +16,7 @@ import (
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -73,7 +74,7 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
 
 	// gw-config.StunnerConfig may override this
-	target := config.DefaultConfigMapName
+	target := opdefault.DefaultConfigMapName
 
 	conf := stnrconfv1a1.StunnerConfig{
 		ApiVersion: stnrconfv1a1.ApiVersion,
@@ -257,7 +258,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	invalidateConf := true
 
 	// gw-config.StunnerConfig may override this
-	target := config.DefaultConfigMapName
+	target := opdefault.DefaultConfigMapName
 
 	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 	gwConf, err := r.getGatewayConfig4Class(c)

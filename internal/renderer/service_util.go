@@ -17,8 +17,8 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -114,7 +114,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
-	v, found := as[config.RelatedGatewayAnnotationKey]
+	v, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
 	if found && v == namespacedName {
 		// r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
 		// 	"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
@@ -274,22 +274,22 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
 			Annotations: map[string]string{
-				config.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     config.DefaultServiceType,
-			Selector: map[string]string{config.DefaultStunnerDeploymentLabel: config.DefaultStunnerDeploymentValue},
+			Type:     opdefault.DefaultServiceType,
+			Selector: map[string]string{opdefault.DefaultStunnerDeploymentLabel: opdefault.DefaultStunnerDeploymentValue},
 			Ports:    []corev1.ServicePort{},
 		},
 	}
 
 	// update service type if necessary
-	svcType := string(config.DefaultServiceType)
-	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[config.ServiceTypeAnnotationKey]; ok {
+	svcType := string(opdefault.DefaultServiceType)
+	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey]; ok {
 		svcType = t
 	}
-	if t, ok := gw.GetAnnotations()[config.ServiceTypeAnnotationKey]; ok {
+	if t, ok := gw.GetAnnotations()[opdefault.DefaultServiceTypeAnnotationKey]; ok {
 		svcType = t
 	}
 

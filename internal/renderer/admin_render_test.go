@@ -13,7 +13,8 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	// "github.com/l7mp/stunner-gateway-operator/internal/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -41,7 +42,7 @@ func TestRenderAdminRender(t *testing.T) {
 				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "renderAdmin")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, testutils.TestMetricsEndpoint, admin.MetricsEndpoint, "metrics_endpoint")
 				assert.Equal(t, testutils.TestHealthCheckEndpoint, admin.HealthCheckEndpoint,
@@ -72,10 +73,10 @@ func TestRenderAdminRender(t *testing.T) {
 				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "renderAdmin")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "", admin.MetricsEndpoint, "metrics_endpoint")
-				assert.Equal(t, config.DefaultHealthCheckEndpoint, admin.HealthCheckEndpoint,
+				assert.Equal(t, opdefault.DefaultHealthCheckEndpoint, admin.HealthCheckEndpoint,
 					"health-check default on")
 			},
 		},
@@ -103,7 +104,7 @@ func TestRenderAdminRender(t *testing.T) {
 				admin, err := r.renderAdmin(c)
 				assert.NoError(t, err, "renderAdmin")
 
-				assert.Equal(t, config.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "http://0.0.0.0:8080/metrics", admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "http://0.0.0.0:8081", admin.HealthCheckEndpoint,
