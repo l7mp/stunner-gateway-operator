@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,16 +68,28 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 		return err
 	}
 
+	// a label-selector predicate to select the loadbalancer services we are interested in
+	loadBalancerPredicate, err := predicate.LabelSelectorPredicate(
+		metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				// "app:stunner"
+				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+			},
+		})
+	if err != nil {
+		return err
+	}
+
 	// watch Service objects referenced by one of our UDPRoutes
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
 		&handler.EnqueueRequestForObject{},
-		// trigget when either a gateway-loadbalancer service (svc annotated as a
+		// trigger when either a gateway-loadbalancer service (svc annotated as a
 		// related-service for a gateway) or a backend-service changes
 		predicate.Or(
 			predicate.NewPredicateFuncs(r.validateBackendForReconcile),
-			predicate.NewPredicateFuncs(r.validateLoadBalancerReconcile),
-		),
+			// predicate.NewPredicateFuncs(r.validateLoadBalancerReconcile),
+			loadBalancerPredicate),
 	); err != nil {
 		return err
 	}
@@ -106,16 +119,14 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	svcList := []client.Object{}
 	endpointsList := []client.Object{}
 
-	// find all related-services that we use as LoadBalancers for Gateways
-	// TODO: this will fail on very large clusters (note that we cannot filter for annotations
-	// at the server side, we must do the filtering on ALL services here)
+	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
+	// "app:stunner")
 	svcs := &corev1.ServiceList{}
-	if err := r.List(ctx, svcs); err == nil {
+	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue})
+	if err == nil {
 		for _, svc := range svcs.Items {
 			svc := svc
-			if r.validateLoadBalancerReconcile(&svc) {
-				svcList = append(svcList, &svc)
-			}
+			svcList = append(svcList, &svc)
 		}
 	}
 
@@ -286,9 +297,9 @@ func serviceUDPRouteIndexFunc(o client.Object) []string {
 	return services
 }
 
-// validateLoadBalancerReconcile checks whether a Service is annotated as a related-service for a
-// gateway.
-func (r *udpRouteReconciler) validateLoadBalancerReconcile(o client.Object) bool {
-	_, found := o.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
-	return found
-}
+// // validateLoadBalancerReconcile checks whether a Service is annotated as a related-service for a
+// // gateway.
+// func (r *udpRouteReconciler) validateLoadBalancerReconcile(o client.Object) bool {
+// 	_, found := o.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
+// 	return found
+// }
