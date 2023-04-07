@@ -122,6 +122,9 @@ var _ = Describe("Integration test:", func() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should render a ConfigMap that can be successfully unpacked", func() {
@@ -148,6 +151,9 @@ var _ = Describe("Integration test:", func() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
@@ -183,6 +189,9 @@ var _ = Describe("Integration test:", func() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -360,6 +369,9 @@ var _ = Describe("Integration test:", func() {
 
 			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
@@ -758,8 +770,9 @@ var _ = Describe("Integration test:", func() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := store.GetNamespacedName(testGw)
+			svc := &corev1.Service{}
 			Eventually(func() bool {
-				svc := &corev1.Service{}
+				svc = &corev1.Service{}
 				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
 					return false
 				}
@@ -776,6 +789,10 @@ var _ = Describe("Integration test:", func() {
 				return false
 
 			}, timeout, interval).Should(BeTrue())
+
+			v, ok := svc.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should not change NodePort when Gateway annotations are modified", func() {
@@ -824,6 +841,10 @@ var _ = Describe("Integration test:", func() {
 			Expect(svc.Spec.Ports[0].NodePort).Should(Equal(np1))
 			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
 			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
+
+			v, ok := svc.GetLabels()[opdefault.DefaultAppLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
 		})
 
 		It("should install TLS cert/keys", func() {

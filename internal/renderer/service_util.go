@@ -273,13 +273,16 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
+			Labels: map[string]string{
+				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+			},
 			Annotations: map[string]string{
 				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     opdefault.DefaultServiceType,
-			Selector: map[string]string{opdefault.DefaultStunnerDeploymentLabel: opdefault.DefaultStunnerDeploymentValue},
+			Selector: map[string]string{opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue},
 			Ports:    []corev1.ServicePort{},
 		},
 	}

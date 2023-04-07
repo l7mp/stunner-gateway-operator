@@ -103,10 +103,11 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		for a, v := range svc.GetAnnotations() {
-			metav1.SetMetaDataAnnotation(&current.ObjectMeta, a, v)
-		}
-
+		// for a, v := range svc.GetAnnotations() {
+		// 	metav1.SetMetaDataAnnotation(&current.ObjectMeta, a, v)
+		// }
+		current.SetAnnotations(svc.GetAnnotations())
+		current.SetLabels(svc.GetLabels())
 		current.SetOwnerReferences(svc.GetOwnerReferences())
 		svc.Spec.DeepCopyInto(&current.Spec)
 
@@ -142,6 +143,7 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 
 		current.SetOwnerReferences(cm.GetOwnerReferences())
 		current.SetAnnotations(cm.GetAnnotations())
+		current.SetLabels(cm.GetLabels())
 
 		current.Data = make(map[string]string)
 		for k, v := range cm.Data {

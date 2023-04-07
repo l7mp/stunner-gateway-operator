@@ -31,6 +31,9 @@ func (r *Renderer) renderConfig(c *RenderContext, name string, conf *stnrconfv1a
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.gwConf.GetNamespace(),
+			Labels: map[string]string{
+				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+			},
 			Annotations: map[string]string{
 				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(c.gc),
 			},

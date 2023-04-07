@@ -373,6 +373,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
 				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
@@ -418,6 +424,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				s := createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
@@ -492,6 +504,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
 				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
@@ -536,6 +554,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
 				as := s.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
 				gwa, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
@@ -579,6 +603,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				s := createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")

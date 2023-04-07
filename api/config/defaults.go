@@ -31,10 +31,12 @@ const (
 	// // the gateway controller.
 	// GatewayManagedLabelValue = "gateway"
 
-	// DefaultStunnerConfigMapName names a ConfigMap by the operator to render the stunnerd config file.
+	// DefaultStunnerConfigMapName names a ConfigMap by the operator to render the stunnerd
+	// config file.
 	DefaultConfigMapName = "stunnerd-config"
 
-	// DefaultStunnerdInstanceName specifies the name of the stunnerd instance managed by the operator.
+	// DefaultStunnerdInstanceName specifies the name of the stunnerd instance managed by the
+	// operator.
 	DefaultStunnerdInstanceName = "stunner-daemon"
 
 	// DefaultStunnerdConfigfileName defines the file name under which the generated configfile
@@ -42,12 +44,12 @@ const (
 	// ConfigMap that maintains the stunnerd config.
 	DefaultStunnerdConfigfileName = "stunnerd.conf"
 
-	// DefaultStunnerDeploymentLabel defines the label used to mark the stunnerd deployment
-	DefaultStunnerDeploymentLabel = "app"
+	// DefaultAppLabelKey defines the label used to mark the stunnerd deployment.
+	DefaultAppLabelKey = "app"
 
-	// DefaultStunnerDeploymentValue defines the label value used to mark the stunnerd deployment
+	// DefaultAppLabelValue defines the label value used to mark the stunnerd deployment.
 	// FIXME make this configurable.
-	DefaultStunnerDeploymentValue = "stunner"
+	DefaultAppLabelValue = "stunner"
 
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints.
 	DefaultEnableEndpointDiscovery = true
@@ -59,6 +61,7 @@ const (
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
 	DefaultHealthCheckEndpoint = "http://0.0.0.0:8086"
 
-	// DefaultThrottleTimeout is the default time interval to wait between subsequent config renders.
+	// DefaultThrottleTimeout is the default time interval to wait between subsequent config
+	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
 )
