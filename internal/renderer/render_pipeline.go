@@ -16,9 +16,9 @@ import (
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	// "github.com/l7mp/stunner-gateway-operator/internal/updater"

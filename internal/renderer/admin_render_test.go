@@ -14,8 +14,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/config"
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 

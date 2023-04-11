@@ -18,8 +18,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 type addrPort struct {
@@ -114,7 +114,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
-	v, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+	v, found := as[opdefault.RelatedGatewayAnnotationKey]
 	if found && v == namespacedName {
 		// r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
 		// 	"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
@@ -274,25 +274,26 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
 			Labels: map[string]string{
-				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
+				opdefault.AppLabelKey:     opdefault.AppLabelValue,
 			},
 			Annotations: map[string]string{
-				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     opdefault.DefaultServiceType,
-			Selector: map[string]string{opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue},
+			Selector: map[string]string{opdefault.AppLabelKey: opdefault.AppLabelValue},
 			Ports:    []corev1.ServicePort{},
 		},
 	}
 
 	// update service type if necessary
 	svcType := string(opdefault.DefaultServiceType)
-	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey]; ok {
+	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey]; ok {
 		svcType = t
 	}
-	if t, ok := gw.GetAnnotations()[opdefault.DefaultServiceTypeAnnotationKey]; ok {
+	if t, ok := gw.GetAnnotations()[opdefault.ServiceTypeAnnotationKey]; ok {
 		svcType = t
 	}
 

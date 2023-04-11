@@ -21,10 +21,10 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 const (
@@ -72,8 +72,10 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 	loadBalancerPredicate, err := predicate.LabelSelectorPredicate(
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				// "app:stunner"
-				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+				// LB services have both "app:stunner" and
+				// "stunner.l7mp.io/owned-by:stunner" labels set, we use the app
+				// label here
+				opdefault.AppLabelKey: opdefault.AppLabelValue,
 			},
 		})
 	if err != nil {
@@ -122,7 +124,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
 	svcs := &corev1.ServiceList{}
-	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue})
+	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.AppLabelKey: opdefault.AppLabelValue})
 	if err == nil {
 		for _, svc := range svcs.Items {
 			svc := svc

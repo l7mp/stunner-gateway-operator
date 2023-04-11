@@ -15,7 +15,7 @@ import (
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func GetObjectKey(object client.Object) string {

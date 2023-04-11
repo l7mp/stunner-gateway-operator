@@ -10,8 +10,8 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 var (
@@ -134,7 +134,7 @@ var TestSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			opdefault.DefaultRelatedGatewayAnnotationKey: "testnamespace/gateway-1",
+			opdefault.RelatedGatewayAnnotationKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{

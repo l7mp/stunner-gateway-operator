@@ -38,18 +38,17 @@ import (
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme = runtime.NewScheme()
 )
 
 func init() {
@@ -78,6 +77,12 @@ func main() {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	logger := zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
+		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
+	})
+	ctrl.SetLogger(logger.WithName("ctrl-runtime"))
+	setupLog := logger.WithName("setup")
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
@@ -117,13 +122,13 @@ func main() {
 	setupLog.Info("setting up STUNner config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
 		Scheme: scheme,
-		Logger: ctrl.Log,
+		Logger: logger,
 	})
 
 	setupLog.Info("setting up updater client")
 	u := updater.NewUpdater(updater.UpdaterConfig{
 		Manager: mgr,
-		Logger:  ctrl.Log,
+		Logger:  logger,
 	})
 
 	setupLog.Info("setting up operator")
@@ -132,7 +137,7 @@ func main() {
 		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
 		UpdaterCh:      u.GetUpdaterChannel(),
-		Logger:         ctrl.Log,
+		Logger:         logger,
 	})
 
 	r.SetOperatorChannel(op.GetOperatorChannel())
