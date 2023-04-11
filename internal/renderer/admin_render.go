@@ -31,7 +31,7 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1a1.AdminConfig, err
 		Name:                opdefault.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
 		LogLevel:            loglevel,
 		MetricsEndpoint:     me,
-		HealthCheckEndpoint: he,
+		HealthCheckEndpoint: &he,
 	}
 
 	// validate so that defaults get filled in
