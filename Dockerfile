@@ -14,6 +14,7 @@ RUN go mod download
 COPY main.go main.go
 COPY api/ api/
 COPY internal/ internal/
+COPY pkg/config/ pkg/config/
 
 # Build
 RUN apkArch="$(apk --print-arch)"; \
