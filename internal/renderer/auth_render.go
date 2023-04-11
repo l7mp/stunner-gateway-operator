@@ -36,14 +36,9 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig,
 		Credentials: make(map[string]string),
 	}
 
-	authType := stnrconfv1a1.DefaultAuthType
-	if gwConf.Spec.AuthType != nil {
-		authType = *gwConf.Spec.AuthType
-	}
-
-	atype, err := stnrconfv1a1.NewAuthType(authType)
+	atype, err := getAuthType(gwConf.Spec.AuthType)
 	if err != nil {
-		return nil, NewCriticalError(InvalidAuthType)
+		return nil, err
 	}
 
 	switch atype {
@@ -111,15 +106,15 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfi
 			"gateway-config", store.GetObjectKey(c.gwConf), "secret", n.String())
 	}
 
-	// allow default type
-	authType := stnrconfv1a1.DefaultAuthType
-	if atype, ok := secret.Data["type"]; ok {
-		authType = string(atype)
+	var hint *string
+	if stype, ok := secret.Data["type"]; ok {
+		stype := string(stype)
+		hint = &stype
 	}
 
-	atype, err := stnrconfv1a1.NewAuthType(authType)
+	atype, err := getAuthType(hint)
 	if err != nil {
-		return nil, NewCriticalError(InvalidAuthType)
+		return nil, err
 	}
 
 	switch atype {
@@ -159,4 +154,33 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfi
 		"secret", n.String(), "result", fmt.Sprintf("%#v", auth))
 
 	return &auth, nil
+}
+
+func getAuthType(hint *string) (stnrconfv1a1.AuthType, error) {
+	authType := stnrconfv1a1.DefaultAuthType
+	if hint != nil {
+		authType = *hint
+	}
+
+	// aliases
+	switch authType {
+	// plaintext
+	case "static":
+		fallthrough
+	case "plaintext":
+		authType = "plaintext"
+	case "ephemeral":
+		fallthrough
+	case "timewindowed":
+		fallthrough
+	case "longterm":
+		authType = "longterm"
+	}
+
+	atype, err := stnrconfv1a1.NewAuthType(authType)
+	if err != nil {
+		return stnrconfv1a1.AuthTypeUnknown, NewCriticalError(InvalidAuthType)
+	}
+
+	return atype, nil
 }

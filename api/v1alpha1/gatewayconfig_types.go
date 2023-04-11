@@ -61,7 +61,7 @@ type GatewayConfigSpec struct {
 	// AuthType is the type of the STUN/TURN authentication mechanism.
 	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^plaintext|longterm$`
+	// +kubebuilder:validation:Pattern=`^plaintext|static|longterm|ephemeral|timewindowed$`
 	// +kubebuilder:default:="plaintext"
 	AuthType *string `json:"authType,omitempty"`
 

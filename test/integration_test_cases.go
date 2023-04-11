@@ -1723,7 +1723,7 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("changing the auth type", func() {
-			atype := "longterm"
+			atype := "ephemeral" // use alias -> longterm
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
@@ -1777,7 +1777,7 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
-				atype := "longterm"
+				atype := "timewindowed" // use alias -> longterm
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
 				current.Spec.Password = nil
@@ -1912,7 +1912,7 @@ var _ = Describe("Integration test:", func() {
 		It("cnanging the external auth ref type should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
 			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
-				current.Data["type"] = []byte("longterm")
+				current.Data["type"] = []byte("ephemeral")
 				current.Data["secret"] = []byte("dummy")
 				delete(current.Data, "username")
 				delete(current.Data, "password")
@@ -1981,7 +1981,7 @@ var _ = Describe("Integration test:", func() {
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
-				atype := "longterm"
+				atype := "timewindowed" // use alias -> longterm
 				secret := "dummy"
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret

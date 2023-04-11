@@ -156,6 +156,36 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
+			name: "auth type alias: static - ok",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				*w.Spec.AuthType = "static"
+				u, p := "testuser", "testpasswd"
+				w.Spec.Username = &u
+				w.Spec.Password = &p
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+
+				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
+				assert.Equal(t, "testpasswd", auth.Credentials["password"], "password")
+			},
+		},
+		{
 			name: "lonterm no-secret errs",
 			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
@@ -178,6 +208,70 @@ func TestRenderAuthRender(t *testing.T) {
 				_, err = r.renderAuth(c)
 				assert.Error(t, err, "auth-type")
 				assert.True(t, IsCritical(err), "critical err")
+			},
+		},
+		{
+			name: "auth type alias: timewindowed - ok",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				*w.Spec.StunnerConfig = "dummy"
+				*w.Spec.Realm = "dummy"
+				*w.Spec.AuthType = "timewindowed"
+				s := "dummy"
+				w.Spec.SharedSecret = &s
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+
+				assert.Equal(t, "dummy", auth.Realm, "realm")
+				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
+
+			},
+		},
+		{
+			name: "auth type alias: ephemeral - ok",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				*w.Spec.StunnerConfig = "dummy"
+				*w.Spec.Realm = "dummy"
+				*w.Spec.AuthType = "timewindowed"
+				s := "dummy"
+				w.Spec.SharedSecret = &s
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+
+				assert.Equal(t, "dummy", auth.Realm, "realm")
+				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
+
 			},
 		},
 		// external auth tests
