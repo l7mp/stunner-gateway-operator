@@ -5,8 +5,8 @@ import (
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1a1.AdminConfig, error) {
@@ -31,7 +31,7 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1a1.AdminConfig, err
 		Name:                opdefault.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
 		LogLevel:            loglevel,
 		MetricsEndpoint:     me,
-		HealthCheckEndpoint: he,
+		HealthCheckEndpoint: &he,
 	}
 
 	// validate so that defaults get filled in

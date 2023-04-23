@@ -10,8 +10,8 @@ import (
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func (r *Renderer) renderConfig(c *RenderContext, name string, conf *stnrconfv1a1.StunnerConfig) (*corev1.ConfigMap, error) {
@@ -32,10 +32,10 @@ func (r *Renderer) renderConfig(c *RenderContext, name string, conf *stnrconfv1a
 			Name:      name,
 			Namespace: c.gwConf.GetNamespace(),
 			Labels: map[string]string{
-				opdefault.DefaultAppLabelKey: opdefault.DefaultAppLabelValue,
+				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 			Annotations: map[string]string{
-				opdefault.DefaultRelatedGatewayAnnotationKey: store.GetObjectKey(c.gc),
+				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(c.gc),
 			},
 		},
 		Immutable: &immutable,

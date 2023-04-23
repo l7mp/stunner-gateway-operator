@@ -3,7 +3,7 @@
 package config
 
 import (
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 // -----------------------------------------------------------------------------

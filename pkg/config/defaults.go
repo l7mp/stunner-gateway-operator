@@ -1,3 +1,5 @@
+// Package "pkg/config" contaais the public API defaults and settings that may be reused across
+// control plane projects.
 package config
 
 import (
@@ -10,18 +12,34 @@ const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
 
-	// DefaultRelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
+	// RelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
 	// LoadBalancer service and a STUNner dataplane ConfigMap to a Gateway. The value is either
 	// a singular pair of a namespace and name when of the related Gateway (in the form
 	// "namespace/name", mostly used for associating a LB Service to a Gateway) or
 	// GatewayConfig (used for ConfigMaps storing STUNner dataplane configs, which usually
 	// belong to multiple Gateways).
-	DefaultRelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
+	RelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
 
-	// DefaultServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
+	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
+	AppLabelKey = "app"
+
+	// AppLabelValue defines the label value used to mark the pods of the stunnerd deployment.
+	AppLabelValue = "stunner"
+
+	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
+	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
+	// that the Deployments and Services created by the operator will have both the AppLabelKey
+	// and the OwnedByLabelKey labels set.
+	OwnedByLabelKey = "stunner.l7mp.io/owned-by"
+
+	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
+	// maintained by the operator.
+	OwnedByLabelValue = "stunner"
+
+	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
 	// `ExternalName` or `LoadBalancer`. Default is `LoadBalancer`.
-	DefaultServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
+	ServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
 
 	// DefaultServiceType defines the default type of services created to expose each Gateway
 	// to external clients.
@@ -43,13 +61,6 @@ const (
 	// will appear in the filesystem of the stunnerd pods. This is also the key on the
 	// ConfigMap that maintains the stunnerd config.
 	DefaultStunnerdConfigfileName = "stunnerd.conf"
-
-	// DefaultAppLabelKey defines the label used to mark the stunnerd deployment.
-	DefaultAppLabelKey = "app"
-
-	// DefaultAppLabelValue defines the label value used to mark the stunnerd deployment.
-	// FIXME make this configurable.
-	DefaultAppLabelValue = "stunner"
 
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints.
 	DefaultEnableEndpointDiscovery = true

@@ -101,7 +101,7 @@ spec:
                 default: plaintext
                 description: AuthType is the type of the STUN/TURN authentication
                   mechanism.
-                pattern: ^plaintext|longterm$
+                pattern: ^plaintext|static|longterm|ephemeral|timewindowed$
                 type: string
               healthCheckEndpoint:
                 description: HealthCheckEndpoint is the URI of the form `http://address:port`

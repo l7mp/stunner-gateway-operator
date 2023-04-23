@@ -39,10 +39,10 @@ import (
 
 	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/api/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -120,11 +120,11 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a ConfigMap that can be successfully unpacked", func() {
@@ -149,11 +149,11 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
@@ -187,11 +187,11 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -367,11 +367,11 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := cm.GetAnnotations()[opdefault.DefaultRelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
@@ -677,7 +677,7 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				current.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultServiceTypeAnnotationKey] = "ClusterIP"
+				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
 
 			// retry, but also check if a public address has been added
@@ -719,7 +719,7 @@ var _ = Describe("Integration test:", func() {
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
-				current.SetAnnotations(map[string]string{opdefault.DefaultServiceTypeAnnotationKey: "NodePort"})
+				current.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "NodePort"})
 			})
 
 			// retry, but also check if a public address has been added
@@ -762,9 +762,9 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
-					opdefault.DefaultServiceTypeAnnotationKey: "NodePort",
-					"someAnnotation":      "dummy-1",
-					"someOtherAnnotation": "dummy-2",
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":                   "dummy-1",
+					"someOtherAnnotation":              "dummy-2",
 				})
 			})
 
@@ -778,7 +778,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				as := svc.GetAnnotations()
-				a1, ok1 := as[opdefault.DefaultServiceTypeAnnotationKey]
+				a1, ok1 := as[opdefault.ServiceTypeAnnotationKey]
 				a2, ok2 := as["someAnnotation"]
 				a3, ok3 := as["someOtherAnnotation"]
 
@@ -790,9 +790,12 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			v, ok := svc.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			v, ok = svc.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should not change NodePort when Gateway annotations are modified", func() {
@@ -809,9 +812,9 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
 			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
-					opdefault.DefaultServiceTypeAnnotationKey: "NodePort",
-					"someAnnotation":      "new-dummy-1",
-					"someOtherAnnotation": "dummy-2",
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":                   "new-dummy-1",
+					"someOtherAnnotation":              "dummy-2",
 				})
 			})
 
@@ -823,7 +826,7 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				as := svc.GetAnnotations()
-				a1, ok1 := as[opdefault.DefaultServiceTypeAnnotationKey]
+				a1, ok1 := as[opdefault.ServiceTypeAnnotationKey]
 				a2, ok2 := as["someAnnotation"]
 				a3, ok3 := as["someOtherAnnotation"]
 
@@ -842,9 +845,12 @@ var _ = Describe("Integration test:", func() {
 			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
 			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
 
-			v, ok := svc.GetLabels()[opdefault.DefaultAppLabelKey]
+			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.DefaultAppLabelValue))
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			v, ok = svc.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should install TLS cert/keys", func() {
@@ -1717,7 +1723,7 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("changing the auth type", func() {
-			atype := "longterm"
+			atype := "ephemeral" // use alias -> longterm
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
@@ -1771,7 +1777,7 @@ var _ = Describe("Integration test:", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
-				atype := "longterm"
+				atype := "timewindowed" // use alias -> longterm
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
 				current.Spec.Password = nil
@@ -1906,7 +1912,7 @@ var _ = Describe("Integration test:", func() {
 		It("cnanging the external auth ref type should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
 			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
-				current.Data["type"] = []byte("longterm")
+				current.Data["type"] = []byte("ephemeral")
 				current.Data["secret"] = []byte("dummy")
 				delete(current.Data, "username")
 				delete(current.Data, "password")
@@ -1975,7 +1981,7 @@ var _ = Describe("Integration test:", func() {
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
 			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
-				atype := "longterm"
+				atype := "timewindowed" // use alias -> longterm
 				secret := "dummy"
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
