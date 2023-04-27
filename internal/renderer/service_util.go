@@ -310,8 +310,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	}
 
+	as := gw.GetAnnotations()
+	isMixedProtocolEnabled, _ := as[opdefault.EnableMixedProtocolLb]
 	// copy all listener ports/protocols from the gateway
-	// proto defaults to the first valid listener protocol
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
 		var proto string
@@ -327,9 +328,11 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		}
 		if serviceProto == "" {
 			serviceProto = proto
+		} else if isMixedProtocolEnabled == "true" {
+			serviceProto = proto
 		} else if proto != serviceProto {
 			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as the listener "+
-				"protocol is different from the service protocol (multi-protocol LB services are not supported)",
+				"protocol is different from the service protocol (multi-protocol LB services are disabled by default)",
 				"gateway", store.GetObjectKey(gw), "listener", l.Name, "listener-protocol", proto,
 				"service-protocol", serviceProto)
 			continue
