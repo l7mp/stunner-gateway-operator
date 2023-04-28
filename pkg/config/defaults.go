@@ -76,9 +76,13 @@ const (
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
 
-	// EnableMixedProtocolLb is the name(key) of the annotation that is used to
+	// MixedProtocolAnnotationKey is the name(key) of the annotation that is used to
 	// disable STUNner's blocking of mixed-protocol LBs for specific Gateways.
-	// If false the LB's proto defaults to the first valid listener protocol in the Gateway spec.
+	// If false or any other string other than true the LB's proto defaults to the first
+	// valid listener protocol in the Gateway spec.
 	// If true all valid listener protocols will be added to the LB.
-	EnableMixedProtocolLb = "stunner.l7mp.io/enable-mixed-protocol-lb"
+	MixedProtocolAnnotationKey = "stunner.l7mp.io/enable-mixed-protocol-lb"
+
+	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
+	MixedProtocolAnnotationValue = "true"
 )

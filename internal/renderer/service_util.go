@@ -311,7 +311,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	}
 
 	as := gw.GetAnnotations()
-	isMixedProtocolEnabled, _ := as[opdefault.EnableMixedProtocolLb]
+	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
 	// copy all listener ports/protocols from the gateway
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
@@ -328,7 +328,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		}
 		if serviceProto == "" {
 			serviceProto = proto
-		} else if isMixedProtocolEnabled == "true" {
+		} else if found && isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue {
 			serviceProto = proto
 		} else if proto != serviceProto {
 			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as the listener "+

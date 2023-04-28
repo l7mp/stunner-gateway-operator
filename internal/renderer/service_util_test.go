@@ -598,7 +598,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGw.DeepCopy()
 				w.Spec.Listeners = append(w.Spec.Listeners[:1], w.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
-					opdefault.EnableMixedProtocolLb: "true",
+					opdefault.MixedProtocolAnnotationKey: "true",
 				}
 				w.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
 				c.gws = []gwapiv1a2.Gateway{*w}
@@ -632,9 +632,9 @@ func TestRenderServiceUtil(t *testing.T) {
 				gwa, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
-				emp, found := as[opdefault.EnableMixedProtocolLb]
+				emp, found := as[opdefault.MixedProtocolAnnotationKey]
 				assert.True(t, found, "annotation found")
-				assert.Equal(t, "true", emp, "annotation ok")
+				assert.Equal(t, opdefault.MixedProtocolAnnotationValue, emp, "annotation ok")
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
@@ -660,7 +660,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGw.DeepCopy()
 				w.Spec.Listeners = append(w.Spec.Listeners[:1], w.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
-					opdefault.EnableMixedProtocolLb: "dummy",
+					opdefault.MixedProtocolAnnotationKey: "dummy",
 				}
 				w.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
 				c.gws = []gwapiv1a2.Gateway{*w}
@@ -694,9 +694,9 @@ func TestRenderServiceUtil(t *testing.T) {
 				gwa, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
-				emp, found := as[opdefault.EnableMixedProtocolLb]
+				emp, found := as[opdefault.MixedProtocolAnnotationKey]
 				assert.True(t, found, "annotation found")
-				assert.Equal(t, "dummy", emp, "annotation ok")
+				assert.NotEqual(t, opdefault.MixedProtocolAnnotationValue, emp, "annotation ok")
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
