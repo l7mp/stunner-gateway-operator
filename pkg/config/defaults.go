@@ -75,21 +75,4 @@ const (
 	// DefaultThrottleTimeout is the default time interval to wait between subsequent config
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
-
-	// DefaultEnableHealthCheck enables health check port to be exposed.
-	DefaultEnableHealthCheck = false
-
-	// DefaultHealthCheckAnnotationKey is the name of the annotation that is used to
-	// enable health check.
-	DefaultHealthCheckAnnotationKey = "stunner.l7mp.io/expose-health-check-port"
-
-	// Digitalocean requires exposed health check port for load balancers.
-	// DefaultDoHealthCheckPortAnnotationKey is the name of the annotation that is used to
-	// expose health check port
-	DefaultDoHealthCheckPortAnnotationKey = "service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"
-
-	// Digitalocean requires exposed health check port for load balancers.
-	// DefaultDoHealthCheckPortAnnotationKey is the name of the annotation that is used to
-	// expose health check by it's protocol
-	DefaultDoHealthCheckProtocolAnnotationKey = "service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"
 )

@@ -3,6 +3,7 @@ package renderer
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -342,37 +343,49 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		})
 	}
 
-	if t, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultHealthCheckAnnotationKey]; ok {
-		hc, err := strconv.ParseBool(t)
-		if err != nil {
-			c.log.V(1).Error(err, "%s annotation can't parse as an bool", opdefault.DefaultHealthCheckAnnotationKey)
+	// Set health check port
+	regexProtocol := `^service.beta.kubernetes.io/.*health.*protocol$`
+	regexPort := `^service.beta.kubernetes.io/.*health.*port$`
+
+	annotationRegexProtocol := regexp.MustCompile(regexProtocol)
+	annotationRegexPort := regexp.MustCompile(regexPort)
+
+	var healthCheckPort int32
+	healthCheckProtocol := "TCP"
+
+	// Find health check port
+	for annotationKey, annotation := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		match := annotationRegexPort.FindStringSubmatch(annotationKey)
+		if len(match) > 0 {
+			p, err := strconv.ParseInt(annotation, 10, 32)
+			if err != nil {
+				c.log.V(1).Error(err, "%s annotation value can't be parsed as an int", match[0])
+			} else {
+				healthCheckPort = int32(p)
+			}
 		}
-		if hc {
-			var port int32
-			var proto string
-			if p, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultDoHealthCheckPortAnnotationKey]; ok {
-				p, err := strconv.ParseInt(p, 10, 32)
-				if err != nil {
-					c.log.V(1).Error(err, "%s annotation can't parse as an int", opdefault.DefaultDoHealthCheckPortAnnotationKey)
-				}
-				port = int32(p)
-			}
-			if p, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DefaultDoHealthCheckProtocolAnnotationKey]; ok {
-				proto = p
-			}
-			switch proto {
+	}
+
+	// Find health check protocol
+	for annotationKey, annotation := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		match := annotationRegexProtocol.FindStringSubmatch(annotationKey)
+		if len(match) > 0 {
+			switch strings.ToUpper(annotation) {
 			case "TCP", "HTTP":
-				proto = "TCP"
+				healthCheckProtocol = "TCP"
 			default:
 				c.log.V(1).Info("createLbService4Gateway: unknown health check protocol",
-					"gateway", store.GetObjectKey(gw), "protocol", string(proto))
+					"gateway", store.GetObjectKey(gw), "protocol", string(healthCheckProtocol))
 			}
-			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-				Name:     fmt.Sprintf("health-check-%s-%d", proto, port),
-				Protocol: corev1.Protocol(proto),
-				Port:     port,
-			})
 		}
+	}
+
+	if healthCheckPort > 0 {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:     "health-check",
+			Protocol: corev1.Protocol(healthCheckProtocol),
+			Port:     int32(healthCheckPort),
+		})
 	}
 
 	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service

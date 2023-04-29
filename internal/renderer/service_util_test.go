@@ -3,8 +3,9 @@ package renderer
 import (
 	// "context"
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -647,6 +648,251 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
+			name: "lb service - lb health check annotations (aws)",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"] = "HTTP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 3, "annotations len")
+
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
+
+				a, found = as["service.beta.kubernetes.io/aws-load-balancer-healthcheck-port"]
+				assert.True(t, found, "annotation 2 found")
+				assert.Equal(t, "8080", a, "annotation 2 ok")
+
+				a, found = as["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"]
+				assert.True(t, found, "annotation 3 found")
+				assert.Equal(t, "HTTP", a, "annotation 3 ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 2, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+
+				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, int32(8080), sp[1].Port, "sp 2 - port")
+			},
+		},
+		{
+			name: "lb service - lb health check annotations (do)",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 3, "annotations len")
+
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"]
+				assert.True(t, found, "annotation 2 found")
+				assert.Equal(t, "8080", a, "annotation 2 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"]
+				assert.True(t, found, "annotation 3 found")
+				assert.Equal(t, "HTTP", a, "annotation 3 ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 2, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+
+				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, int32(8080), sp[1].Port, "sp 2 - port")
+			},
+		},
+		{
+			name: "lb service - lb health check annotations not an int port (do)",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "eighty"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 3, "annotations len")
+
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"]
+				assert.True(t, found, "annotation 2 found")
+				assert.Equal(t, "eighty", a, "annotation 2 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"]
+				assert.True(t, found, "annotation 3 found")
+				assert.Equal(t, "HTTP", a, "annotation 3 ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
+			name: "lb service - lb health check annotations UDP protocol (do)",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "UDP"
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 1, "labels len")
+				lab, found := ls[opdefault.DefaultAppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 3, "annotations len")
+
+				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation 1 found")
+				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"]
+				assert.True(t, found, "annotation 2 found")
+				assert.Equal(t, "8080", a, "annotation 2 ok")
+
+				a, found = as["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"]
+				assert.True(t, found, "annotation 3 found")
+				assert.Equal(t, "UDP", a, "annotation 3 ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 2, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+
+				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, int32(8080), sp[1].Port, "sp 2 - port")
 			},
 		},
 		{
