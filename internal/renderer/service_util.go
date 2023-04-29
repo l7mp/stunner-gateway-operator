@@ -344,8 +344,8 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	}
 
 	// Set health check port
-	regexProtocol := `^service.beta.kubernetes.io/.*health.*protocol$`
-	regexPort := `^service.beta.kubernetes.io/.*health.*port$`
+	regexProtocol := `^service\.beta\.kubernetes\.io\/.*health.*protocol$`
+	regexPort := `^service\.beta\.kubernetes\.io\/.*health.*port$`
 
 	annotationRegexProtocol := regexp.MustCompile(regexProtocol)
 	annotationRegexPort := regexp.MustCompile(regexPort)

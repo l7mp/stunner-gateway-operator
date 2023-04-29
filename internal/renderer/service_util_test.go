@@ -681,14 +681,14 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				ls := s.GetLabels()
 				assert.Len(t, ls, 1, "labels len")
-				lab, found := ls[opdefault.DefaultAppLabelKey]
+				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
-				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				a, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -743,14 +743,14 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				ls := s.GetLabels()
 				assert.Len(t, ls, 1, "labels len")
-				lab, found := ls[opdefault.DefaultAppLabelKey]
+				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
-				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				a, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -805,14 +805,14 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				ls := s.GetLabels()
 				assert.Len(t, ls, 1, "labels len")
-				lab, found := ls[opdefault.DefaultAppLabelKey]
+				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
-				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				a, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
@@ -864,14 +864,14 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				ls := s.GetLabels()
 				assert.Len(t, ls, 1, "labels len")
-				lab, found := ls[opdefault.DefaultAppLabelKey]
+				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
-				assert.Equal(t, opdefault.DefaultAppLabelValue, lab, "label ok")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
 				assert.Len(t, as, 3, "annotations len")
 
-				a, found := as[opdefault.DefaultRelatedGatewayAnnotationKey]
+				a, found := as[opdefault.RelatedGatewayAnnotationKey]
 				assert.True(t, found, "annotation 1 found")
 				assert.Equal(t, store.GetObjectKey(gw), a, "annotation 1 ok")
 
