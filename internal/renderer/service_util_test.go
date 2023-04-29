@@ -680,7 +680,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				ls := s.GetLabels()
-				assert.Len(t, ls, 1, "labels len")
+				assert.Len(t, ls, 2, "labels len")
 				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
 				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
@@ -742,7 +742,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				ls := s.GetLabels()
-				assert.Len(t, ls, 1, "labels len")
+				assert.Len(t, ls, 2, "labels len")
 				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
 				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
@@ -804,7 +804,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				ls := s.GetLabels()
-				assert.Len(t, ls, 1, "labels len")
+				assert.Len(t, ls, 2, "labels len")
 				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
 				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
@@ -863,7 +863,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				ls := s.GetLabels()
-				assert.Len(t, ls, 1, "labels len")
+				assert.Len(t, ls, 2, "labels len")
 				lab, found := ls[opdefault.AppLabelKey]
 				assert.True(t, found, "label found")
 				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
