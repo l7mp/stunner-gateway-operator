@@ -588,7 +588,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto with enabled mixed proto annotation, all valid",
+			name: "lb service - multi-listener, multi proto with enabled mixed proto annotation in gateway, all valid",
 			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
@@ -697,6 +697,131 @@ func TestRenderServiceUtil(t *testing.T) {
 				emp, found := as[opdefault.MixedProtocolAnnotationKey]
 				assert.True(t, found, "annotation found")
 				assert.NotEqual(t, opdefault.MixedProtocolAnnotationValue, emp, "annotation ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
+			name: "lb service - multi-listener, multi proto with enabled in GwConfig",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 2, "labels len")
+				lab, found := ls[opdefault.AppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
+				lab, found = ls[opdefault.OwnedByLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 2, "annotations len")
+				gwa, found := as[opdefault.RelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
+				emp, found := as[opdefault.MixedProtocolAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, opdefault.MixedProtocolAnnotationValue, emp, "annotation ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				sp := spec.Ports
+				assert.Len(t, sp, 2, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Protocol), string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto-tcp")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Port), string(sp[1].Port), "sp 2 - port")
+			},
+		},
+		{
+			name: "lb service - multi-listener, multi proto with enabled in GwConfig but overridden and disabled in Gateway",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
+				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
+				mixedProtoAnnotation := map[string]string{
+					opdefault.MixedProtocolAnnotationKey: "false",
+				}
+				gw.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 2, "labels len")
+				lab, found := ls[opdefault.AppLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.AppLabelValue, lab, "label ok")
+				lab, found = ls[opdefault.OwnedByLabelKey]
+				assert.True(t, found, "label found")
+				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 2, "annotations len")
+				gwa, found := as[opdefault.RelatedGatewayAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
+				emp, found := as[opdefault.MixedProtocolAnnotationKey]
+				assert.True(t, found, "annotation found")
+				assert.Equal(t, "false", emp, "annotation ok")
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")

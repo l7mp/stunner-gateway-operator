@@ -310,7 +310,19 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	}
 
-	as := gw.GetAnnotations()
+	// merge both GatewayConfig.spec.LBServiceAnnotations map and
+	// Gateway.metadata.Annotations map into a common map
+	// this way the MixedProtocolAnnotation can be placed in either of them
+	// Annotations from the Gateway will override annotations from the GwConfig
+	// if present with the same key
+	as := make(map[string]string)
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		as[k] = v
+	}
+	for k, v := range gw.GetAnnotations() {
+		as[k] = v
+	}
+
 	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
 	// copy all listener ports/protocols from the gateway
 	serviceProto := ""
@@ -344,13 +356,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		})
 	}
 
-	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service
-	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		svc.ObjectMeta.Annotations[k] = v
-	}
-
-	// copy the Gateway annotations, if any, to the Service, updating the default from the service
-	for k, v := range gw.GetAnnotations() {
+	// copy the LoadBalancer annotations from the GatewayConfig
+	// and the Gateway Annotations to the Service
+	for k, v := range as {
 		svc.ObjectMeta.Annotations[k] = v
 	}
 
