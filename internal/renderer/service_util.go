@@ -358,9 +358,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 
 	healthCheckPort, err := setHealthCheck(as, svc)
 	if err != nil {
-		c.log.V(1).Info("%s", err)
-	} else {
-		c.log.V(1).Info("Health Check port %d opened", healthCheckPort)
+		c.log.V(1).Info("could not set health check port", "error", err.Error())
+	} else if healthCheckPort != 0 {
+		c.log.V(1).Info("health check port opened", "port", healthCheckPort)
 	}
 
 	// copy the LoadBalancer annotations from the GatewayConfig
@@ -424,7 +424,7 @@ func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, 
 		})
 		return int32(healthCheckPort), nil
 	}
-	return 0, errors.New("missing health check port and/or protocol")
+	return 0, nil
 }
 
 func mergeMaps(maps ...map[string]string) map[string]string {
