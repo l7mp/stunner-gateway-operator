@@ -3,6 +3,8 @@ package renderer
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -18,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -26,6 +29,9 @@ type addrPort struct {
 	addr string
 	port int
 }
+
+var annotationRegexProtocol *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*protocol$`)
+var annotationRegexPort *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*port$`)
 
 // returns the preferred address/port exposition for a gateway
 // preference order:
@@ -315,13 +321,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	// this way the MixedProtocolAnnotation can be placed in either of them
 	// Annotations from the Gateway will override annotations from the GwConfig
 	// if present with the same key
-	as := make(map[string]string)
-	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		as[k] = v
-	}
-	for k, v := range gw.GetAnnotations() {
-		as[k] = v
-	}
+	as := mergeMaps(c.gwConf.Spec.LoadBalancerServiceAnnotations, gw.Annotations)
 
 	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
 	// copy all listener ports/protocols from the gateway
@@ -356,6 +356,13 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		})
 	}
 
+	healthCheckPort, err := setHealthCheck(as, svc)
+	if err != nil {
+		c.log.V(1).Info("could not set health check port", "error", err.Error())
+	} else if healthCheckPort != 0 {
+		c.log.V(1).Info("health check port opened", "port", healthCheckPort)
+	}
+
 	// copy the LoadBalancer annotations from the GatewayConfig
 	// and the Gateway Annotations to the Service
 	for k, v := range as {
@@ -379,6 +386,57 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	}
 
 	return svc
+}
+
+func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {
+	var healthCheckPort int32
+	var healthCheckProtocol string
+
+	// Find health check port
+	for annotationKey, annotation := range annotations {
+		if annotationRegexPort.MatchString(annotationKey) {
+			p, err := strconv.ParseInt(annotation, 10, 32)
+			if err != nil {
+				return 0, err
+			} else {
+				healthCheckPort = int32(p)
+			}
+		}
+	}
+
+	// Find health check protocol
+	for annotationKey, annotation := range annotations {
+		if annotationRegexProtocol.MatchString(annotationKey) {
+			switch strings.ToUpper(annotation) {
+			case "TCP", "HTTP":
+				healthCheckProtocol = "TCP"
+			default:
+				return 0, errors.New("unknown health check protocol")
+			}
+		}
+	}
+
+	if healthCheckPort > 0 && healthCheckProtocol != "" {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:     "gateway-health-check",
+			Protocol: corev1.Protocol(healthCheckProtocol),
+			Port:     int32(healthCheckPort),
+		})
+		return int32(healthCheckPort), nil
+	}
+	return 0, nil
+}
+
+func mergeMaps(maps ...map[string]string) map[string]string {
+	mergedMap := make(map[string]string)
+
+	for _, m := range maps {
+		for k, v := range m {
+			mergedMap[k] = v
+		}
+	}
+
+	return mergedMap
 }
 
 // find the ClusterIP associated with a service
