@@ -165,15 +165,9 @@ func getAuthType(hint *string) (stnrconfv1a1.AuthType, error) {
 	// aliases
 	switch authType {
 	// plaintext
-	case "static":
-		fallthrough
-	case "plaintext":
+	case "static", "plaintext":
 		authType = "plaintext"
-	case "ephemeral":
-		fallthrough
-	case "timewindowed":
-		fallthrough
-	case "longterm":
+	case "ephemeral", "timewindowed", "longterm":
 		authType = "longterm"
 	}
 
