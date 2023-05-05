@@ -316,8 +316,21 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	}
 
+	// merge both GatewayConfig.spec.LBServiceAnnotations map and
+	// Gateway.metadata.Annotations map into a common map
+	// this way the MixedProtocolAnnotation can be placed in either of them
+	// Annotations from the Gateway will override annotations from the GwConfig
+	// if present with the same key
+	as := make(map[string]string)
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		as[k] = v
+	}
+	for k, v := range gw.GetAnnotations() {
+		as[k] = v
+	}
+
+	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
 	// copy all listener ports/protocols from the gateway
-	// proto defaults to the first valid listener protocol
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
 		var proto string
@@ -333,9 +346,11 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		}
 		if serviceProto == "" {
 			serviceProto = proto
+		} else if found && isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue {
+			serviceProto = proto
 		} else if proto != serviceProto {
 			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as the listener "+
-				"protocol is different from the service protocol (multi-protocol LB services are not supported)",
+				"protocol is different from the service protocol (multi-protocol LB services are disabled by default)",
 				"gateway", store.GetObjectKey(gw), "listener", l.Name, "listener-protocol", proto,
 				"service-protocol", serviceProto)
 			continue
@@ -354,13 +369,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		c.log.V(1).Info("Health Check port %d opened", healthCheckPort)
 	}
 
-	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service
-	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		svc.ObjectMeta.Annotations[k] = v
-	}
-
-	// copy the Gateway annotations, if any, to the Service, updating the default from the service
-	for k, v := range gw.GetAnnotations() {
+	// copy the LoadBalancer annotations from the GatewayConfig
+	// and the Gateway Annotations to the Service
+	for k, v := range as {
 		svc.ObjectMeta.Annotations[k] = v
 	}
 
