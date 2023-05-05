@@ -20,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -28,6 +29,9 @@ type addrPort struct {
 	addr string
 	port int
 }
+
+var annotationRegexProtocol *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*protocol$`)
+var annotationRegexPort *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*port$`)
 
 // returns the preferred address/port exposition for a gateway
 // preference order:
@@ -343,49 +347,11 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		})
 	}
 
-	// Set health check port
-	regexProtocol := `^service\.beta\.kubernetes\.io\/.*health.*protocol$`
-	regexPort := `^service\.beta\.kubernetes\.io\/.*health.*port$`
-
-	annotationRegexProtocol := regexp.MustCompile(regexProtocol)
-	annotationRegexPort := regexp.MustCompile(regexPort)
-
-	var healthCheckPort int32
-	healthCheckProtocol := "TCP"
-
-	// Find health check port
-	for annotationKey, annotation := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		match := annotationRegexPort.FindStringSubmatch(annotationKey)
-		if len(match) > 0 {
-			p, err := strconv.ParseInt(annotation, 10, 32)
-			if err != nil {
-				c.log.V(1).Error(err, "%s annotation value can't be parsed as an int", match[0])
-			} else {
-				healthCheckPort = int32(p)
-			}
-		}
-	}
-
-	// Find health check protocol
-	for annotationKey, annotation := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		match := annotationRegexProtocol.FindStringSubmatch(annotationKey)
-		if len(match) > 0 {
-			switch strings.ToUpper(annotation) {
-			case "TCP", "HTTP":
-				healthCheckProtocol = "TCP"
-			default:
-				c.log.V(1).Info("createLbService4Gateway: unknown health check protocol",
-					"gateway", store.GetObjectKey(gw), "protocol", string(healthCheckProtocol))
-			}
-		}
-	}
-
-	if healthCheckPort > 0 {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "health-check",
-			Protocol: corev1.Protocol(healthCheckProtocol),
-			Port:     int32(healthCheckPort),
-		})
+	healthCheckPort, err := setHealthCheck(c.gwConf, gw, svc)
+	if err != nil {
+		c.log.V(1).Info("%s", err)
+	} else {
+		c.log.V(1).Info("Health Check port %d opened", healthCheckPort)
 	}
 
 	// copy the LoadBalancer annotations, if any, from the GatewayConfig to the Service
@@ -415,6 +381,59 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	}
 
 	return svc
+}
+
+func setHealthCheck(gwConf *stnrv1a1.GatewayConfig, gw *gwapiv1a2.Gateway, svc *corev1.Service) (int32, error) {
+	var healthCheckPort int32
+	var healthCheckProtocol string
+
+	annotations := mergeMaps(gwConf.Spec.LoadBalancerServiceAnnotations, gw.ObjectMeta.Annotations)
+
+	// Find health check port
+	for annotationKey, annotation := range annotations {
+		if annotationRegexPort.MatchString(annotationKey) {
+			p, err := strconv.ParseInt(annotation, 10, 32)
+			if err != nil {
+				return 0, err
+			} else {
+				healthCheckPort = int32(p)
+			}
+		}
+	}
+
+	// Find health check protocol
+	for annotationKey, annotation := range annotations {
+		if annotationRegexProtocol.MatchString(annotationKey) {
+			switch strings.ToUpper(annotation) {
+			case "TCP", "HTTP":
+				healthCheckProtocol = "TCP"
+			default:
+				return 0, errors.New("unknown health check protocol")
+			}
+		}
+	}
+
+	if healthCheckPort > 0 && healthCheckProtocol != "" {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:     fmt.Sprintf("%s-health-check", gw.ObjectMeta.Name),
+			Protocol: corev1.Protocol(healthCheckProtocol),
+			Port:     int32(healthCheckPort),
+		})
+		return int32(healthCheckPort), nil
+	}
+	return 0, errors.New("missing health check port and/or protocol")
+}
+
+func mergeMaps(maps ...map[string]string) map[string]string {
+	mergedMap := make(map[string]string)
+
+	for _, m := range maps {
+		for k, v := range m {
+			mergedMap[k] = v
+		}
+	}
+
+	return mergedMap
 }
 
 // find the ClusterIP associated with a service
