@@ -20,7 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -321,13 +321,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	// this way the MixedProtocolAnnotation can be placed in either of them
 	// Annotations from the Gateway will override annotations from the GwConfig
 	// if present with the same key
-	as := make(map[string]string)
-	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
-		as[k] = v
-	}
-	for k, v := range gw.GetAnnotations() {
-		as[k] = v
-	}
+	as := mergeMaps(c.gwConf.Spec.LoadBalancerServiceAnnotations, gw.Annotations)
 
 	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
 	// copy all listener ports/protocols from the gateway
@@ -362,7 +356,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		})
 	}
 
-	healthCheckPort, err := setHealthCheck(c.gwConf, gw, svc)
+	healthCheckPort, err := setHealthCheck(as, svc)
 	if err != nil {
 		c.log.V(1).Info("%s", err)
 	} else {
@@ -394,11 +388,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 	return svc
 }
 
-func setHealthCheck(gwConf *stnrv1a1.GatewayConfig, gw *gwapiv1a2.Gateway, svc *corev1.Service) (int32, error) {
+func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {
 	var healthCheckPort int32
 	var healthCheckProtocol string
-
-	annotations := mergeMaps(gwConf.Spec.LoadBalancerServiceAnnotations, gw.ObjectMeta.Annotations)
 
 	// Find health check port
 	for annotationKey, annotation := range annotations {
@@ -426,7 +418,7 @@ func setHealthCheck(gwConf *stnrv1a1.GatewayConfig, gw *gwapiv1a2.Gateway, svc *
 
 	if healthCheckPort > 0 && healthCheckProtocol != "" {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     fmt.Sprintf("%s-health-check", gw.ObjectMeta.Name),
+			Name:     "gateway-health-check",
 			Protocol: corev1.Protocol(healthCheckProtocol),
 			Port:     int32(healthCheckPort),
 		})
