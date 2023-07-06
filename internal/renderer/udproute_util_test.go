@@ -145,6 +145,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.SetName("udproute-dummy-namespace")
 				udp2.SetNamespace("dummy-namespace")
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
+				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 
 				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
@@ -239,6 +240,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.SetName("udproute-dummy-namespace")
 				udp2.SetNamespace("dummy-namespace")
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
+				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 
 				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
@@ -482,6 +484,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.SetName("udproute-dummy-namespace-listener-udp")
 				udp1.SetNamespace("dummy-namespace")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
+				udp1.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn1
 
 				sn2 := gwapiv1a2.SectionName("gateway-1-listener-tcp")
@@ -489,6 +492,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.SetName("udproute-dummy-namespace-listener-tcp")
 				udp2.SetNamespace("dummy-namespace")
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
+				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn2
 
 				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
@@ -565,10 +569,12 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{
 					{
 						Name:        "gateway-1",
+						Namespace:   &testutils.TestNsName,
 						SectionName: &testutils.TestSectionName,
 					},
 					{
 						Name:        "gateway-1",
+						Namespace:   &testutils.TestNsName,
 						SectionName: &sn,
 					},
 				}
@@ -579,10 +585,12 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{
 					{
 						Name:        "gateway-1",
+						Namespace:   &testutils.TestNsName,
 						SectionName: &testutils.TestSectionName,
 					},
 					{
 						Name:        "gateway-1",
+						Namespace:   &testutils.TestNsName,
 						SectionName: &sn,
 					},
 				}

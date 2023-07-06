@@ -62,14 +62,21 @@ func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, gw *
 		return false, fmt.Sprintf("parent group %q does not match gateway group %q",
 			string(*p.Group), gwapiv1a2.GroupVersion.Group)
 	}
+
 	if p.Kind != nil && *p.Kind != "Gateway" {
 		return false, fmt.Sprintf("parent kind %q does not match gateway kind %q",
 			string(*p.Kind), "Gateway")
 	}
-	if p.Namespace != nil && *p.Namespace != gwapiv1a2.Namespace(gw.GetNamespace()) {
-		return false, fmt.Sprintf("parent namespace %q does not match gateway namespace %q",
-			string(*p.Namespace), gw.GetNamespace())
+
+	namespace := gwapiv1a2.Namespace(ro.GetNamespace())
+	if p.Namespace != nil {
+		namespace = *p.Namespace
 	}
+	if namespace != gwapiv1a2.Namespace(gw.GetNamespace()) {
+		return false, fmt.Sprintf("parent namespace %q does not match gateway namespace %q",
+			string(namespace), gw.GetNamespace())
+	}
+
 	if p.Name != gwapiv1a2.ObjectName(gw.GetName()) {
 		return false, fmt.Sprintf("parent name %q does not match gateway name %q",
 			string(p.Name), gw.GetName())
@@ -78,6 +85,7 @@ func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, gw *
 	if !allowed {
 		return false, msg
 	}
+
 	if p.SectionName != nil && *p.SectionName != l.Name {
 		return false, fmt.Sprintf("parent SectionName %q does not match listener name %q",
 			string(*p.SectionName), l.Name)
