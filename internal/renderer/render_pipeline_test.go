@@ -423,7 +423,7 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Len(t, gws, 1, "gateway num")
 				gw, found := gws[0].(*gwapiv1a2.Gateway)
 				assert.True(t, found, "gateway found")
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
@@ -465,7 +465,7 @@ func TestRenderPipeline(t *testing.T) {
 					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
 					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
-					Namespace: &testutils.TestNs,
+					Namespace: &testutils.TestNsName,
 				}
 				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
@@ -686,7 +686,7 @@ func TestRenderPipeline(t *testing.T) {
 					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
 					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
-					Namespace: &testutils.TestNs,
+					Namespace: &testutils.TestNsName,
 				}
 				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 
@@ -919,7 +919,7 @@ func TestRenderPipeline(t *testing.T) {
 					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
 					Kind:      gwapiv1a2.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
-					Namespace: &testutils.TestNs,
+					Namespace: &testutils.TestNsName,
 				}
 				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
 

@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	TestNs                  = gwapiv1a2.Namespace("testnamespace")
+	TestNsName              = gwapiv1a2.Namespace("testnamespace")
 	TestStunnerConfig       = "stunner-config"
 	TestRealm               = "testrealm"
 	TestMetricsEndpoint     = "testmetrics"
@@ -26,17 +26,23 @@ var (
 	TestLogLevel            = "testloglevel"
 	TestMinPort             = int32(1)
 	TestMaxPort             = int32(2)
+	TestLabelName           = "testlabel"
+	TestLabelValue          = "testvalue"
 	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
 	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
 	TestKey64               = "dGVzdGtleQ==" // "testkey"
 )
 
+// Namespace
+var TestNs = corev1.Namespace{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:   string(TestNsName),
+		Labels: map[string]string{TestLabelName: TestLabelValue},
+	},
+}
+
 // GatewayClass
 var TestGwClass = gwapiv1a2.GatewayClass{
-	// TypeMeta: metav1.TypeMeta{
-	// 	APIVersion: fmt.Sprintf("%s/%s", gwapiv1a2.GroupVersion.Group, gwapiv1a2.GroupVersion.Version),
-	// 	Kind:       "GatewaylClass",
-	// },
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayclass-ok",
 		Namespace: "testnamespace",
@@ -47,7 +53,7 @@ var TestGwClass = gwapiv1a2.GatewayClass{
 			Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
 			Kind:      gwapiv1a2.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
-			Namespace: &TestNs,
+			Namespace: &TestNsName,
 		},
 	},
 }

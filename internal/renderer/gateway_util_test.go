@@ -71,10 +71,10 @@ func TestRenderGatewayUtil(t *testing.T) {
 
 				keys := []string{store.GetObjectKey(gws[0]), store.GetObjectKey(gws[1])}
 				assert.Contains(t, keys,
-					fmt.Sprintf("%s/%s", testutils.TestNs, "dummy"),
+					fmt.Sprintf("%s/%s", testutils.TestNsName, "dummy"),
 					"gw 1 name found")
 				assert.Contains(t, keys,
-					fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+					fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					"gw 2 name found")
 			},
 		},
@@ -94,7 +94,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				initGatewayStatus(gw, "dummy")
@@ -142,7 +142,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNs, "gateway-1"),
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
 				initGatewayStatus(gw, "dummy")
@@ -192,7 +192,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
-					testutils.TestNs, "gateway-1"), "gw name found")
+					testutils.TestNsName, "gateway-1"), "gw name found")
 
 				initGatewayStatus(gw, config.ControllerName)
 				ready := true

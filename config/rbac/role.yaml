@@ -27,6 +27,7 @@ rules:
   - ""
   resources:
   - endpoints
+  - namespaces
   - nodes
   - secrets
   verbs:

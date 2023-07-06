@@ -52,6 +52,7 @@ type renderTestConfig struct {
 	eps    []corev1.Endpoints
 	scrts  []corev1.Secret
 	ascrts []corev1.Secret
+	nss    []corev1.Namespace
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -122,6 +123,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.AuthSecrets.Flush()
 			for i := range c.ascrts {
 				store.AuthSecrets.Upsert(&c.ascrts[i])
+			}
+
+			store.Namespaces.Flush()
+			for i := range c.nss {
+				store.Namespaces.Upsert(&c.nss[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

@@ -118,6 +118,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	log.Info("reconciling")
 
 	routeList := []client.Object{}
+	namespaceList := []client.Object{}
 	svcList := []client.Object{}
 	endpointsList := []client.Object{}
 
@@ -164,10 +165,24 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 				}
 			}
 		}
+
+		nsName := udproute.GetNamespace()
+		r.log.V(2).Info("looking for the namespace of UDPRoute", "name", nsName)
+		namespace := corev1.Namespace{}
+		if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
+			r.log.Error(err, "error getting namespace for udproute", "udproute",
+				store.GetObjectKey(&udproute), "namespace-name", nsName)
+			continue
+		}
+
+		namespaceList = append(namespaceList, &namespace)
 	}
 
 	store.UDPRoutes.Reset(routeList)
 	r.log.V(2).Info("reset UDPRoute store", "udproutes", store.UDPRoutes.String())
+
+	store.Namespaces.Reset(namespaceList)
+	r.log.V(2).Info("reset Namespace store", "namespaces", store.Namespaces.String())
 
 	store.Services.Reset(svcList)
 	r.log.V(2).Info("reset Service store", "services", store.Services.String())

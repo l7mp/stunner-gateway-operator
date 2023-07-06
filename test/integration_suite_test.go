@@ -29,7 +29,6 @@ import (
 
 	// "k8s.io/client-go/kubernetes/scheme"
 
-	// "github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +37,8 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	// logf "sigs.k8s.io/controller-runtime/pkg/log"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -67,8 +65,8 @@ const (
 	timeout = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
-	loglevel = -4
-	//loglevel = -1
+	//loglevel = -4
+	loglevel = -1
 )
 
 var (
@@ -153,11 +151,7 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	setupLog.Info("creating a testing namespace")
-	Expect(k8sClient.Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(testutils.TestNs),
-		},
-	})).Should(Succeed())
+	Expect(k8sClient.Create(ctx, testNs)).Should(Succeed())
 
 	setupLog.Info("setting up client manager")
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -218,11 +212,7 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	By("removing test namespace")
-	Expect(k8sClient.Delete(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(testutils.TestNs),
-		},
-	})).Should(Succeed())
+	Expect(k8sClient.Delete(ctx, testNs)).Should(Succeed())
 
 	cancel()
 
