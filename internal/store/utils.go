@@ -150,3 +150,31 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 
 	return cm
 }
+
+// IsReferenceService returns true of the provided BackendRef points to a Service.
+func IsReferenceService(ref *gwapiv1a2.BackendRef) bool {
+	// Group is the group of the referent. For example, “gateway.networking.k8s.io”. When
+	// unspecified or empty string, core API group is inferred.
+	if ref.Group != nil && *ref.Group != corev1.GroupName {
+		return false
+	}
+
+	if ref.Kind != nil && *ref.Kind != "Service" {
+		return false
+	}
+
+	return true
+}
+
+// IsReferenceStaticService returns true of the provided BackendRef points to a StaticService.
+func IsReferenceStaticService(ref *gwapiv1a2.BackendRef) bool {
+	if ref.Group == nil || string(*ref.Group) != stnrv1a1.GroupVersion.Group {
+		return false
+	}
+
+	if ref.Kind == nil || (*ref.Kind) != "StaticService" {
+		return false
+	}
+
+	return true
+}

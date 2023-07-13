@@ -869,5 +869,147 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 			},
 		},
+		{
+			name: "missing Service backend - status",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				udp1 := testutils.TestUDPRoute.DeepCopy()
+				udp1.SetName("udproute-missing-service-backend")
+				udp1.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Name: "dummy-svc",
+					},
+				}}
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route found")
+				ro := rs[0]
+
+				_, err = r.renderCluster(ro)
+				assert.Error(t, err, "render cluster")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
+
+				initRouteStatus(ro)
+				p := ro.Spec.ParentRefs[0]
+				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
+				setRouteConditionStatus(ro, &p, config.ControllerName, true, err)
+
+				assert.Len(t, ro.Status.Parents, 1, "parent status len")
+				parentStatus := ro.Status.Parents[0]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
+
+				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d := meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1a2.RouteConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "Accepted", d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1a2.RouteConditionResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "BackendNotFound", d.Reason, "reason")
+			},
+		},
+		{
+			name:  "missing StaticService backend - status",
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
+			prep: func(c *renderTestConfig) {
+				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1a2.Kind("StaticService")
+				udp1 := testutils.TestUDPRoute.DeepCopy()
+				udp1.SetName("udproute-missing-service-backend")
+				udp1.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-dummy",
+					},
+				}, {
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-ok",
+					},
+				}}
+
+				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route found")
+				ro := rs[0]
+
+				_, err = r.renderCluster(ro)
+				assert.Error(t, err, "render cluster")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
+
+				initRouteStatus(ro)
+				p := ro.Spec.ParentRefs[0]
+				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
+				setRouteConditionStatus(ro, &p, config.ControllerName, true, err)
+
+				assert.Len(t, ro.Status.Parents, 1, "parent status len")
+				parentStatus := ro.Status.Parents[0]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
+
+				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d := meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1a2.RouteConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "Accepted", d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1a2.RouteConditionResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "BackendNotFound", d.Reason, "reason")
+			},
+		},
 	})
 }

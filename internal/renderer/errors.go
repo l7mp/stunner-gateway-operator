@@ -13,20 +13,24 @@ const (
 	ExternalAuthCredentialsNotFound
 	InvalidAuthConfig
 	ConfigMapRenderingError
+	InternalError
 
 	// noncritical
 	InvalidBackendGroup
 	InvalidBackendKind
+	BackendNotFound
 	ServiceNotFound
 	ClusterIPNotFound
 	EndpointNotFound
+	InconsitentClusterType
 )
 
 type TypedError struct {
 	reason ErrorType
 }
 
-// CriticalError is a fatal rendering error that prevents the rendering of a dataplane config.
+// CriticalError is a fatal rendering error that prevents the rendering the dataplane config as a
+// whole, or in parts.
 type CriticalError struct {
 	TypedError
 }
@@ -51,11 +55,15 @@ func (e *CriticalError) Error() string {
 		return "missing or invalid external authentication credentials"
 	case ConfigMapRenderingError:
 		return "could not render dataplane config"
+	case InternalError:
+		return "internal error"
 	}
 	return "Unknown error"
 }
 
-// NonCriticalError is a non-fatal error that affects a Gateway or a Route status.
+// NonCriticalError is a non-fatal error that affects a Gateway or a Route status: this is an event
+// that is worth reporting but otherwise does not prevent the rendering of a valid dataplane
+// config.
 type NonCriticalError struct {
 	TypedError
 }
@@ -72,12 +80,16 @@ func (e *NonCriticalError) Error() string {
 		return "Invalid Group in backend reference (expecing: None)"
 	case InvalidBackendKind:
 		return "Invalid Kind in backend reference (expecting Service)"
+	case BackendNotFound:
+		return "Backend not found"
 	case ServiceNotFound:
 		return "No Service found for backend"
 	case ClusterIPNotFound:
-		return "No ClusterIP found (use a STRICT_DNS cluster if service is headless)"
+		return "No ClusterIP found for Service (this is fine for headless Services)"
 	case EndpointNotFound:
 		return "No Endpoint found for backend"
+	case InconsitentClusterType:
+		return "inconsitent cluster type for backends"
 	}
 	return "Unknown error"
 }

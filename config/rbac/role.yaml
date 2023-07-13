@@ -79,6 +79,7 @@ rules:
   - stunner.l7mp.io
   resources:
   - gatewayconfigs
+  - staticservices
   verbs:
   - get
   - list
@@ -89,5 +90,6 @@ rules:
   - stunner.l7mp.io
   resources:
   - gatewayconfigs/finalizers
+  - staticservices/finalizers
   verbs:
   - update

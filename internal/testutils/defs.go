@@ -238,3 +238,14 @@ var TestAuthSecret = corev1.Secret{
 		"secret":   []byte("ext-secret"),
 	},
 }
+
+// StaticService
+var TestStaticSvc = stnrv1a1.StaticService{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "teststaticservice-ok",
+	},
+	Spec: stnrv1a1.StaticServiceSpec{
+		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
+	},
+}

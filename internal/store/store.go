@@ -59,6 +59,7 @@ func (s *storeImpl) Get(nsName types.NamespacedName) client.Object {
 	return o
 }
 
+// Reset resets a store from a list of objects and removes duplicates along the way.
 func (s *storeImpl) Reset(objects []client.Object) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

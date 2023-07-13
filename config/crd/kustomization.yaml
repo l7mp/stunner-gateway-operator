@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/stunner.l7mp.io_gatewayconfigs.yaml
+- bases/stunner.l7mp.io_staticservices.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

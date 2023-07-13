@@ -255,9 +255,15 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 
 	var resolvedCond metav1.Condition
 	if backendErr != nil {
-		reason := gwapiv1a2.RouteReasonBackendNotFound
-		if IsNonCriticalError(backendErr, InvalidBackendKind) {
+		var reason gwapiv1a2.RouteConditionReason
+		switch {
+		case IsNonCriticalError(backendErr, InvalidBackendKind), IsNonCriticalError(backendErr, InvalidBackendGroup):
+			// "RouteReasonInvalidKind" is used with the "ResolvedRefs" condition when
+			// one of the Route's rules has a reference to an unknown or unsupported
+			// Group and/or Kind.
 			reason = gwapiv1a2.RouteReasonInvalidKind
+		default:
+			reason = gwapiv1a2.RouteReasonBackendNotFound
 		}
 		resolvedCond = metav1.Condition{
 			Type:               string(gwapiv1a2.RouteConditionResolvedRefs),

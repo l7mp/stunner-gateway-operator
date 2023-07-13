@@ -53,6 +53,7 @@ type renderTestConfig struct {
 	scrts  []corev1.Secret
 	ascrts []corev1.Secret
 	nss    []corev1.Namespace
+	ssvcs  []stnrv1a1.StaticService
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -128,6 +129,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Namespaces.Flush()
 			for i := range c.nss {
 				store.Namespaces.Upsert(&c.nss[i])
+			}
+
+			store.StaticServices.Flush()
+			for i := range c.ssvcs {
+				store.StaticServices.Upsert(&c.ssvcs[i])
 			}
 
 			log.V(1).Info("starting renderer thread")
