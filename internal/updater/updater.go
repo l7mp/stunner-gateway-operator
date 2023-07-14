@@ -120,6 +120,13 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 		}
 	}
 
+	for _, dp := range q.Deployments.GetAll() {
+		if op, err := u.upsertDeployment(dp, gen); err != nil {
+			u.log.Error(err, "cannot upsert deployment", "operation", op)
+			continue
+		}
+	}
+
 	// run the delete queue
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
@@ -153,6 +160,13 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	for _, cm := range q.ConfigMaps.Objects() {
 		if err := u.deleteObject(cm, gen); err != nil {
 			u.log.Error(err, "cannot delete config-map")
+			continue
+		}
+	}
+
+	for _, dp := range q.Deployments.Objects() {
+		if err := u.deleteObject(dp, gen); err != nil {
+			u.log.Error(err, "cannot delete deployment")
 			continue
 		}
 	}
