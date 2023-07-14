@@ -13,6 +13,7 @@ type UpdateConf struct {
 	UDPRoutes      *store.UDPRouteStore
 	Services       *store.ServiceStore
 	ConfigMaps     *store.ConfigMapStore
+	Deployments    *store.DeploymentStore
 }
 
 type EventUpdate struct {
@@ -32,6 +33,7 @@ func NewEventUpdate(generation int) *EventUpdate {
 			UDPRoutes:      store.NewUDPRouteStore(),
 			Services:       store.NewServiceStore(),
 			ConfigMaps:     store.NewConfigMapStore(),
+			Deployments:    store.NewDeploymentStore(),
 		},
 		DeleteQueue: UpdateConf{
 			GatewayClasses: store.NewGatewayClassStore(),
@@ -39,6 +41,7 @@ func NewEventUpdate(generation int) *EventUpdate {
 			UDPRoutes:      store.NewUDPRouteStore(),
 			Services:       store.NewServiceStore(),
 			ConfigMaps:     store.NewConfigMapStore(),
+			Deployments:    store.NewDeploymentStore(),
 		},
 		Generation: generation,
 	}
@@ -49,10 +52,12 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s (gen: %d): upsert-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d / "+
-		"delete-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d", e.Type.String(),
+	return fmt.Sprintf("%s (gen: %d): upsert-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d, dp: %d / "+
+		"delete-queue: gway-cls: %d, gway: %d, route: %d, svc: %d, confmap: %d, dp: %d", e.Type.String(),
 		e.Generation, e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
-		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
+		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.Services.Len(),
+		e.UpsertQueue.ConfigMaps.Len(), e.UpsertQueue.Deployments.Len(),
 		e.DeleteQueue.GatewayClasses.Len(), e.DeleteQueue.Gateways.Len(),
-		e.DeleteQueue.UDPRoutes.Len(), e.DeleteQueue.Services.Len(), e.DeleteQueue.ConfigMaps.Len())
+		e.DeleteQueue.UDPRoutes.Len(), e.DeleteQueue.Services.Len(),
+		e.DeleteQueue.ConfigMaps.Len(), e.DeleteQueue.Deployments.Len())
 }

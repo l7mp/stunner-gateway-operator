@@ -12,7 +12,7 @@ const (
 	InvalidSharedSecret
 	ExternalAuthCredentialsNotFound
 	InvalidAuthConfig
-	ConfigMapRenderingError
+	RenderingError
 	InternalError
 
 	// noncritical
@@ -53,7 +53,7 @@ func (e *CriticalError) Error() string {
 		return "internal error: could not validate generated auth config"
 	case ExternalAuthCredentialsNotFound:
 		return "missing or invalid external authentication credentials"
-	case ConfigMapRenderingError:
+	case RenderingError:
 		return "could not render dataplane config"
 	case InternalError:
 		return "internal error"

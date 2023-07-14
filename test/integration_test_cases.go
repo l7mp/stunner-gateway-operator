@@ -71,6 +71,9 @@ var _ = Describe("Integration test:", func() {
 
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
+		// switch to legacy mode
+		config.DataplaneMode = config.DataplaneModeLegacy
+
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -4068,6 +4071,8 @@ var _ = Describe("Integration test:", func() {
 
 			// restore
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+
+			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 		})
 	})
 })

@@ -58,11 +58,14 @@ func init() {
 }
 
 func main() {
-	var controllerName, metricsAddr, throttleTimeout, probeAddr string
+	var controllerName, dataplaneMode, metricsAddr, throttleTimeout, probeAddr string
 	var enableLeaderElection, enableEDS bool
 
 	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
+	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
+		`Managed dataplane mode: "managed" means the operator takes care of providing the stunnerd pods `+
+			`for each Gateway, "legacy" mode means the dataplane(s) must be provided by the user.`)
 	flag.StringVar(&throttleTimeout, "throttle-timeout", opdefault.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
 	flag.BoolVar(&enableEDS, "endpoint-discovery", opdefault.DefaultEnableEndpointDiscovery,
@@ -87,6 +90,14 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
 	}))
+
+	if dataplaneMode != "managed" && dataplaneMode != "legacy" {
+		setupLog.Info(`unknown dataplane mode: must be either "managed" or "legacy"`)
+		os.Exit(1)
+	}
+
+	setupLog.Info("dataplane mode", "state", dataplaneMode)
+	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 
 	setupLog.Info("endpoint discovery", "state", enableEDS)
 	config.EnableEndpointDiscovery = enableEDS

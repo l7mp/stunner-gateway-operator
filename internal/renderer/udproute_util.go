@@ -148,6 +148,22 @@ func initRouteStatus(ro *gwapiv1a2.UDPRoute) {
 	ro.Status.Parents = []gwapiv1a2.RouteParentStatus{}
 }
 
+// isParentOutContext returns true if (1) the parent exists and (2) it is NOT included in the
+// gateway context being processed (in which case we do not generate a status for the parent)
+func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) bool {
+	r.log.V(4).Info("isParentInContext", "route", store.GetObjectKey(ro),
+		"parent", dumpParentRef(p), "gw-context-length", gws.Len())
+
+	// find the corresponding gateway
+	ns := ro.GetNamespace()
+	if p.Namespace != nil {
+		ns = string(*p.Namespace)
+	}
+
+	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
+	return store.Gateways.GetObject(namespacedName) != nil && gws.GetObject(namespacedName) == nil
+}
+
 func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, className string) bool {
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 		"parent", dumpParentRef(p))

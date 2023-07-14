@@ -4,6 +4,7 @@
 resources:
 - bases/stunner.l7mp.io_gatewayconfigs.yaml
 - bases/stunner.l7mp.io_staticservices.yaml
+- bases/stunner.l7mp.io_dataplanes.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

@@ -3,29 +3,14 @@ package renderer
 import (
 	"context"
 	// "fmt"
-	// "reflect"
 
 	"github.com/go-logr/logr"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	// apiv1 "k8s.io/api/core/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
-	// corev1 "k8s.io/api/core/v1"
-
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	// stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
-	// "github.com/l7mp/stunner-gateway-operator/internal/updater"
-	// stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 type RendererConfig struct {

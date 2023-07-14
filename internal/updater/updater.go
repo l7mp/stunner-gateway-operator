@@ -20,8 +20,6 @@ import (
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// "github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 type UpdaterConfig struct {

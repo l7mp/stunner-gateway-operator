@@ -12,12 +12,18 @@ const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
 
+	// DefaultDataplaneName is the name of the default Dataplane to use when no dataplane is specified explicitly.
+	DefaultDataplaneName = "default"
+
+	// DefaultDataplaneMode is the default "managed dataplane" mode.
+	DefaultDataplaneMode = "managed"
+
 	// RelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
-	// LoadBalancer service and a STUNner dataplane ConfigMap to a Gateway. The value is either
-	// a singular pair of a namespace and name when of the related Gateway (in the form
-	// "namespace/name", mostly used for associating a LB Service to a Gateway) or
-	// GatewayConfig (used for ConfigMaps storing STUNner dataplane configs, which usually
-	// belong to multiple Gateways).
+	// LoadBalancer service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in
+	// managed mode) to a Gateway. The value is either a singular pair of a namespace and name
+	// when of the related Gateway (in the form "namespace/name", mostly used for associating a
+	// LB Service to a Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane
+	// configs in legacy mode, which usually belong to multiple Gateways).
 	RelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.

@@ -146,6 +146,14 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:validation:Minimum:1
 	// +kubebuilder:validation:Maximum:65535
 	MaxPort *int32 `json:"maxPort,omitempty"`
+
+	// Dataplane defines the TURN server to set up for the STUNner Gateways using this
+	// GatewayConfig. Can be used to select the stunnerd image repo and version or deploy into
+	// the host-network namespace.
+	//
+	// +optional
+	// +kubebuilder:default:="default"
+	Dataplane *string `json:"dataplane,omitempty"`
 }
 
 //+kubebuilder:object:root=true

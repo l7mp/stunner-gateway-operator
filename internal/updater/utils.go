@@ -4,6 +4,7 @@ package updater
 import (
 	"fmt"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -174,6 +175,73 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	}
 
 	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "generation",
+		gen, "result", store.DumpObject(current))
+
+	return op, nil
+}
+
+func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert deployment", "resource", store.GetObjectKey(dp), "generation", gen)
+
+	client := u.manager.GetClient()
+	current := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Name:      dp.GetName(),
+		Namespace: dp.GetNamespace(),
+	}}
+
+	// use CreateOrPatch: hopefully more clever than CreateOrUpdate
+	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
+		// things that might have been changed by the controler: the owner ref,
+		// annotations, labels and the spec
+
+		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
+
+		current.SetOwnerReferences(dp.GetOwnerReferences())
+		current.SetAnnotations(dp.GetAnnotations())
+		current.SetLabels(dp.GetLabels())
+
+		current.Spec.Selector = dp.Spec.Selector
+		if dp.Spec.Replicas != nil {
+			current.Spec.Replicas = dp.Spec.Replicas
+		}
+
+		current.Spec.Strategy = dp.Spec.Strategy
+
+		dp.Spec.Template.ObjectMeta.DeepCopyInto(&current.Spec.Template.ObjectMeta)
+
+		currentspec := &current.Spec.Template.Spec
+		dpspec := &dp.Spec.Template.Spec
+
+		// containers verbatim
+		currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
+		for i := range dpspec.Containers {
+			dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
+		}
+
+		// grace
+		if dpspec.TerminationGracePeriodSeconds != nil {
+			currentspec.TerminationGracePeriodSeconds = dpspec.TerminationGracePeriodSeconds
+		}
+
+		// hostnetwork
+		currentspec.HostNetwork = dpspec.HostNetwork
+
+		// affinity
+		if dpspec.Affinity != nil {
+			currentspec.Affinity = dpspec.Affinity
+		}
+
+		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))
+
+		return nil
+	})
+
+	if err != nil {
+		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert deployment-map %q: %w",
+			store.GetObjectKey(dp), err)
+	}
+
+	u.log.V(1).Info("deployment upserted", "resource", store.GetObjectKey(dp), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return op, nil

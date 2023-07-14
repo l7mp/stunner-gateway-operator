@@ -20,9 +20,7 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )

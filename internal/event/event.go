@@ -2,11 +2,6 @@ package event
 
 import (
 	"fmt"
-	// "sync"
-	// "k8s.io/apimachinery/pkg/types"
-	// "sigs.k8s.io/controller-runtime/pkg/client"
-	// // stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// // gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 // EventType specifies the type of an event sent to the operator

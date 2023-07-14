@@ -18,17 +18,18 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 )
 
 func TestRenderPipeline(t *testing.T) {
+	// legacy mode
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
@@ -39,6 +40,8 @@ func TestRenderPipeline(t *testing.T) {
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -60,6 +63,8 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "testrealm", auth.Realm, "realm")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
 				assert.Equal(t, "testpass", auth.Credentials["password"], "password")
+
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -71,13 +76,15 @@ func TestRenderPipeline(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				// switch EDS off
 				config.EnableEndpointDiscovery = false
 				config.EnableRelayToClusterIP = false
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -86,7 +93,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -155,6 +163,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -171,12 +180,14 @@ func TestRenderPipeline(t *testing.T) {
 				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				config.EnableEndpointDiscovery = true
 				config.EnableRelayToClusterIP = false
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -185,7 +196,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -256,6 +268,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -272,12 +285,14 @@ func TestRenderPipeline(t *testing.T) {
 				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				config.EnableEndpointDiscovery = true
 				config.EnableRelayToClusterIP = true
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -286,7 +301,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -358,6 +374,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -369,9 +386,11 @@ func TestRenderPipeline(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -499,6 +518,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.svcs = []corev1.Service{*s, *dummySvc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				gcs := r.getGatewayClasses()
 				assert.Len(t, gcs, 2, "gw-classes found")
 
@@ -512,11 +533,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err := r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -592,11 +614,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				c = &RenderContext{gc: gc, log: logr.Discard()}
+				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -668,6 +691,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -728,6 +752,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.eps = []corev1.Endpoints{testutils.TestEndpoint, *dummyEp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				config.EnableEndpointDiscovery = true
 				config.EnableRelayToClusterIP = false
 
@@ -744,11 +770,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err := r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -827,11 +854,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				c = &RenderContext{gc: gc, log: logr.Discard()}
+				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -902,6 +930,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -961,6 +990,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.eps = []corev1.Endpoints{testutils.TestEndpoint, *dummyEp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				config.EnableEndpointDiscovery = true
 				config.EnableRelayToClusterIP = true
 
@@ -977,11 +1008,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err := r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err := r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -1061,11 +1093,12 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				c = &RenderContext{gc: gc, log: logr.Discard()}
+				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -1136,6 +1169,7 @@ func TestRenderPipeline(t *testing.T) {
 				// restore EDS
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 		{
@@ -1159,9 +1193,11 @@ func TestRenderPipeline(t *testing.T) {
 				c.rs = []gwapiv1a2.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -1170,7 +1206,8 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -1311,6 +1348,8 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
+
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 	})
