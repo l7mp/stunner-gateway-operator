@@ -6,7 +6,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	// gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
@@ -64,6 +64,16 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 		r.log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
 		c := NewRenderContext(e, r, gc)
 
+		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
+		var err error
+		c.gwConf, err = r.getGatewayConfig4Class(c)
+		if err != nil {
+			r.log.Error(err, "error obtaining gateway-config",
+				"gateway-class", gc.GetName())
+			r.invalidateGatewayClass(c, err)
+			continue
+		}
+
 		r.log.V(1).Info("finding gateways", "gateway-class", store.GetObjectKey(gc))
 		gws := r.getGateways4Class(c)
 		c.gws.ResetGateways(gws)
@@ -87,9 +97,59 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 	r.log.Info("commencing full dataplane render", "mode", "managed")
 
-	return
+	r.log.V(1).Info("obtaining gateway-class objects")
+	gcs := r.getGatewayClasses()
+
+	if len(gcs) == 0 {
+		r.log.Info("no gateway-class objects found", "event", e.String())
+		return
+	}
+
+	for _, gc := range gcs {
+		r.log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
+
+		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
+
+		c := NewRenderContext(e, r, gc)
+		gwConf, err := r.getGatewayConfig4Class(c)
+		if err != nil {
+			r.log.Error(err, "error obtaining gateway-config",
+				"gateway-class", gc.GetName())
+			r.invalidateGatewayClass(c, err)
+			continue
+		}
+
+		for _, gw := range r.getGateways4Class(c) {
+			gw := gw
+
+			r.log.V(1).Info("rendering for gateway",
+				"gateway-class", store.GetObjectKey(gc),
+				"gateway", store.GetObjectKey(gw),
+			)
+
+			// recreate context per each gateway
+			c = NewRenderContext(e, r, gc)
+			c.gwConf = gwConf
+			c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+
+			// render for this gateway
+			if err := r.renderForGateways(c); err != nil {
+				r.log.Error(err, "rendering",
+					"gateway-class", store.GetObjectKey(gc),
+					"gateway", store.GetObjectKey(gw),
+				)
+				// r.invalidateGateway(c, err)
+			}
+		}
+
+		setGatewayClassStatusAccepted(gc, nil)
+
+		// send the update back to the operator
+		r.operatorCh <- c.update
+	}
 }
 
+// renderForGateways renders a configuration for a set of Gateways (c.gws)
 func (r *Renderer) renderForGateways(c *RenderContext) error {
 	log := r.log
 	gc := c.gc
@@ -97,13 +157,6 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	conf := stnrconfv1a1.StunnerConfig{
 		ApiVersion: stnrconfv1a1.ApiVersion,
 	}
-
-	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
-	gwConf, err := r.getGatewayConfig4Class(c)
-	if err != nil {
-		return err
-	}
-	c.gwConf = gwConf
 
 	targetName, targetNamespace := getTarget(c)
 
@@ -199,40 +252,34 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())
 
-		renderRoute := false
-		parentOutContext := make([]bool, len(ro.Spec.ParentRefs))
-		parentAccept := make([]bool, len(ro.Spec.ParentRefs))
-
 		initRouteStatus(ro)
 
+		renderRoute := false
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
 
-			parentOutContext[i] = r.isParentOutContext(c.gws, ro, &p)
-			parentAccept[i] = r.isParentAcceptingRoute(ro, &p, gc.GetName())
+			parentOutContext := r.isParentOutContext(c.gws, ro, &p)
+			parentAccept := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// at least one parent accepts the route: render it!
-			renderRoute = renderRoute || (!parentOutContext[i] && parentAccept[i])
+			renderRoute = renderRoute || (!parentOutContext && parentAccept)
 		}
 
-		var backendErr error
-		if renderRoute {
-			rc, err := r.renderCluster(ro)
-			if err != nil {
-				backendErr = err
-				if IsNonCritical(err) {
-					log.Info("non-critical error rendering cluster", "route",
-						ro.GetName(), "error", err.Error())
-				} else {
-					log.Error(err, "fatal error rendering cluster", "route",
-						ro.GetName())
-					continue
-				}
+		rc, err := r.renderCluster(ro)
+		if err != nil {
+			if IsNonCritical(err) {
+				log.Info("non-critical error rendering cluster", "route",
+					ro.GetName(), "error", err.Error())
+				// note error but otherwise ignore
+				err = nil
+			} else {
+				log.Error(err, "fatal error rendering cluster", "route",
+					ro.GetName())
 			}
+		}
 
-			if rc != nil {
-				conf.Clusters = append(conf.Clusters, *rc)
-			}
+		if renderRoute && err == nil && rc != nil {
+			conf.Clusters = append(conf.Clusters, *rc)
 		}
 
 		// set status: we can do this only once we know whether (1) the parent accepted the
@@ -240,16 +287,15 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
 
-			// skip parents that we do not manage
-			if parentOutContext[i] {
-				continue
-			}
+			// set className="" -> do not consider class of the gw for setting the status
+			parentAccept := r.isParentAcceptingRoute(ro, &p, "")
 
-			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept[i],
-				backendErr)
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept, err)
 		}
 
-		// schedule for update
+		// schedule for update: note that we may process the same UDPRoute several times,
+		// in the context of different Gateways: Upsert makes sure the last render will be
+		// updated
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
@@ -280,31 +326,39 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	return nil
 }
 
-// this never reports errors: we cannot do anything about such errors anyway
+// invalidateGatewayClass invalidates an entire gateway-class, with all the gateways underneath
 func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log := r.log
 	gc := c.gc
+
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
-	invalidateConf := true
 
-	log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
-	gwConf, err := r.getGatewayConfig4Class(c)
-	if err != nil {
+	if c.gwConf == nil {
 		// this is the killer case: we have most probably lost our gatewayconfig and we
 		// don't know which stunner config to invalidate; for now warn, later eliminate
 		// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
 		// started using them
-		log.Info("cannot find the gateway-config: active STUNNer configuration may remain stale",
+		log.Info("no gateway-config: active STUNNer configuration may remain stale",
 			"gateway-class", gc.GetName())
-		invalidateConf = false
 	}
 
-	setGatewayClassStatusAccepted(gc, err)
+	setGatewayClassStatusAccepted(gc, reason)
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
-	log.V(1).Info("finding gateway objects")
-	for _, gw := range r.getGateways4Class(c) {
+	log.V(1).Info("invalidating all gateway objects in gateway-class",
+		"gateway-class", gc.GetName())
+	c.gws.ResetGateways(r.getGateways4Class(c))
+
+	r.invalidateGateways(c, reason)
+}
+
+// invalidateGateways invalidates a set of Gateways
+func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
+	log := r.log
+	gc := c.gc
+
+	for _, gw := range c.gws.GetAll() {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
@@ -331,12 +385,18 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
+
+			// skip if we are not responsible
+			if r.isParentOutContext(c.gws, ro, &p) {
+				continue
+			}
+
 			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
-			// TODO: not sure what to set here so we set ResolvedRefs to
-			// BackendNotFound
-			setRouteConditionStatus(ro, &p, config.ControllerName, accepted,
-				NewNonCriticalError(ServiceNotFound))
+			// render a stale cluster so that we know the ResolvedRefs status
+			_, err := r.renderCluster(ro)
+
+			setRouteConditionStatus(ro, &p, config.ControllerName, accepted, err)
 		}
 
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
@@ -345,8 +405,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
 
 	// schedule for update
-	if invalidateConf {
-		c.gwConf = gwConf
+	if c.gwConf != nil {
 		targetName, targetNamespace := getTarget(c)
 
 		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
@@ -356,7 +415,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 			return
 		}
 
-		if err := controllerutil.SetOwnerReference(gwConf, cm, r.scheme); err != nil {
+		if err := controllerutil.SetOwnerReference(c.gwConf, cm, r.scheme); err != nil {
 			log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
 				"reference", store.GetObjectKey(cm))
 		}

@@ -10,6 +10,8 @@ const (
 	InvalidAuthType
 	InvalidUsernamePassword
 	InvalidSharedSecret
+	InvalidDataplane
+	NoRuleFound
 	ExternalAuthCredentialsNotFound
 	InvalidAuthConfig
 	RenderingError
@@ -51,6 +53,10 @@ func (e *CriticalError) Error() string {
 		return "missing shared-secret for longterm authetication"
 	case InvalidAuthConfig:
 		return "internal error: could not validate generated auth config"
+	case InvalidDataplane:
+		return "missing Dataplane resource for Gateway"
+	case NoRuleFound:
+		return "no rules found in route"
 	case ExternalAuthCredentialsNotFound:
 		return "missing or invalid external authentication credentials"
 	case RenderingError:

@@ -3,9 +3,10 @@ package testutils
 import (
 	"fmt"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -31,6 +32,18 @@ var (
 	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
 	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
 	TestKey64               = "dGVzdGtleQ==" // "testkey"
+	TestReplicas            = int32(3)
+	TestDeployStrategy      = appv1.DeploymentStrategy{Type: appv1.RecreateDeploymentStrategyType, RollingUpdate: nil}
+	TestTerminationGrace    = int64(60)
+	TestProbe               = corev1.Probe{PeriodSeconds: 15, SuccessThreshold: 2, FailureThreshold: 3}
+	TestCPURequest          = resource.NewQuantity(100, resource.DecimalSI)
+	TestMemoryLimit         = resource.NewQuantity(500, resource.DecimalSI)
+	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceRequestsCPU: *TestCPURequest,
+	})
+	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceLimitsMemory: *TestMemoryLimit,
+	})
 )
 
 // Namespace
@@ -247,5 +260,68 @@ var TestStaticSvc = stnrv1a1.StaticService{
 	},
 	Spec: stnrv1a1.StaticServiceSpec{
 		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
+	},
+}
+
+// Dataplane
+var TestDataplane = stnrv1a1.Dataplane{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: opdefault.DefaultDataplaneName,
+	},
+	Spec: stnrv1a1.DataplaneSpec{
+		Replicas: &TestReplicas,
+		Strategy: &TestDeployStrategy,
+		Containers: []stnrv1a1.Container{{
+			Name:    "testcontainer-1",
+			Image:   "testimage-1",
+			Command: []string{"testcommand-1-1", "testcommand-1-2"},
+			Args:    []string{"testarg-1-1", "testarg-1-2"},
+			Ports: []corev1.ContainerPort{{
+				Name:          "testport-1-1",
+				ContainerPort: int32(1),
+				Protocol:      corev1.ProtocolUDP,
+			}, {
+				Name:          "testport-1-2",
+				ContainerPort: int32(2),
+				Protocol:      corev1.ProtocolTCP,
+			}},
+			EnvFrom: []corev1.EnvFromSource{},
+			Env:     []corev1.EnvVar{},
+			Resources: stnrv1a1.ResourceRequirements{
+				Limits:   TestResourceRequest,
+				Requests: TestResourceLimit,
+			},
+			LivenessProbe:   &TestProbe,
+			ReadinessProbe:  &TestProbe,
+			ImagePullPolicy: corev1.PullAlways,
+			SecurityContext: nil,
+		}, {
+			Name:    "testcontainer-2",
+			Image:   "testimage-2",
+			Command: []string{"testcommand-2-1", "testcommand-2-2"},
+			Args:    []string{"testarg-2-1", "testarg-2-2"},
+			Ports: []corev1.ContainerPort{{
+				Name:          "testport-2-1",
+				ContainerPort: int32(1),
+				Protocol:      corev1.ProtocolUDP,
+			}, {
+				Name:          "testport-2-2",
+				ContainerPort: int32(2),
+				Protocol:      corev1.ProtocolTCP,
+			}},
+			EnvFrom: []corev1.EnvFromSource{},
+			Env:     []corev1.EnvVar{},
+			Resources: stnrv1a1.ResourceRequirements{
+				Limits:   TestResourceRequest,
+				Requests: TestResourceLimit,
+			},
+			LivenessProbe:   &TestProbe,
+			ReadinessProbe:  &TestProbe,
+			ImagePullPolicy: corev1.PullAlways,
+			SecurityContext: nil,
+		}},
+		TerminationGracePeriodSeconds: &TestTerminationGrace,
+		HostNetwork:                   true,
+		Affinity:                      nil,
 	},
 }

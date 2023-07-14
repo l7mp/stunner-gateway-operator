@@ -151,9 +151,6 @@ func initRouteStatus(ro *gwapiv1a2.UDPRoute) {
 // isParentOutContext returns true if (1) the parent exists and (2) it is NOT included in the
 // gateway context being processed (in which case we do not generate a status for the parent)
 func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) bool {
-	r.log.V(4).Info("isParentInContext", "route", store.GetObjectKey(ro),
-		"parent", dumpParentRef(p), "gw-context-length", gws.Len())
-
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
 	if p.Namespace != nil {
@@ -161,9 +158,16 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDP
 	}
 
 	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
-	return store.Gateways.GetObject(namespacedName) != nil && gws.GetObject(namespacedName) == nil
+	ret := store.Gateways.GetObject(namespacedName) != nil && gws.GetObject(namespacedName) == nil
+
+	r.log.V(4).Info("isParentOutContext", "route", store.GetObjectKey(ro),
+		"parent", dumpParentRef(p), "gw-context-length", gws.Len(), "result", ret)
+
+	return ret
 }
 
+// className == "" means "do not consider classness of parent", this is useful for generating a
+// route status that is consistent across rendering contexts
 func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, className string) bool {
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 		"parent", dumpParentRef(p))
@@ -184,8 +188,8 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 
 	// does the parent belong to the class we are processing: we don't want to generate routes
 	// for gateways that link to other classes
-	if gw.Spec.GatewayClassName != gwapiv1a2.ObjectName(className) {
-		r.log.V(4).Info("route links to a gateway that is being managed by another "+
+	if className != "" && gw.Spec.GatewayClassName != gwapiv1a2.ObjectName(className) {
+		r.log.V(4).Info("parent links to a gateway that is being managed by another "+
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
 			fmt.Sprintf("%#v", *p), "linked-gateway-class", gw.Spec.GatewayClassName,
 			"current-gateway-class", className)
@@ -233,7 +237,8 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 		pRef.Kind = p.Kind
 	}
 
-	if p.Namespace != nil && *p.Namespace != gwapiv1a2.Namespace(ro.GetNamespace()) {
+	// if p.Namespace != nil && *p.Namespace != gwapiv1a2.Namespace(ro.GetNamespace()) {
+	if p.Namespace != nil {
 		pRef.Namespace = p.Namespace
 	}
 

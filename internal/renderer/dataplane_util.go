@@ -28,7 +28,7 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 
 	dataplane := store.Dataplanes.GetObject(types.NamespacedName{Name: dataplaneName})
 	if dataplane == nil {
-		err := NewCriticalError(RenderingError)
+		err := NewCriticalError(InvalidDataplane)
 		r.log.Error(err, "cannot find Dataplane for Gateway",
 			"gateway-config", store.GetObjectKey(c.gwConf),
 			"gateway", store.GetObjectKey(gw),

@@ -20,7 +20,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 	// track down the backendref
 	rs := ro.Spec.Rules
 	if len(rs) == 0 {
-		return nil, fmt.Errorf("no rules found in route %q", store.GetObjectKey(ro))
+		return nil, NewCriticalError(NoRuleFound)
 	}
 
 	if len(rs) > 1 {

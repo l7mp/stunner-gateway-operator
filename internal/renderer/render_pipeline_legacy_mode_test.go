@@ -28,7 +28,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-func TestRenderPipeline(t *testing.T) {
+func TestRenderPipelineLegacyMode(t *testing.T) {
 	// legacy mode
 	renderTester(t, []renderTestConfig{
 		{
@@ -537,8 +537,12 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				gwConf, err := r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
+				c.gwConf = gwConf
 				c.gws.ResetGateways(r.getGateways4Class(c))
-				err := r.renderForGateways(c)
+
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -618,7 +622,10 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
 				c.gws.ResetGateways(r.getGateways4Class(c))
+
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
@@ -774,8 +781,12 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				gwConf, err := r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
+				c.gwConf = gwConf
 				c.gws.ResetGateways(r.getGateways4Class(c))
-				err := r.renderForGateways(c)
+
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -858,7 +869,10 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
 				c.gws.ResetGateways(r.getGateways4Class(c))
+
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
@@ -1012,8 +1026,12 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				gwConf, err := r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
+				c.gwConf = gwConf
 				c.gws.ResetGateways(r.getGateways4Class(c))
-				err := r.renderForGateways(c)
+
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -1097,7 +1115,10 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
 				c.gws.ResetGateways(r.getGateways4Class(c))
+
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
@@ -1206,7 +1227,10 @@ func TestRenderPipeline(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
 				c.gws.ResetGateways(r.getGateways4Class(c))
+
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
