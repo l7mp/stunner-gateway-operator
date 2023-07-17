@@ -148,6 +148,39 @@ func initRouteStatus(ro *gwapiv1a2.UDPRoute) {
 	ro.Status.Parents = []gwapiv1a2.RouteParentStatus{}
 }
 
+// isParentOutContext returns true if at least one of the parents of the route is controlled by us
+func (r *Renderer) isRouteControlled(ro *gwapiv1a2.UDPRoute) bool {
+	gcs := r.getGatewayClasses()
+
+	for i := range ro.Spec.ParentRefs {
+		p := &ro.Spec.ParentRefs[i]
+
+		// obtain the parent gw
+		gw := r.getParentGateway(ro, p)
+		if gw == nil {
+			continue
+		}
+
+		// obtain the gatewayclass
+		for _, gc := range gcs {
+			if gc.GetName() == string(gw.Spec.GatewayClassName) {
+				r.log.V(2).Info("route is handled by this controller: accepting",
+					"route", store.GetObjectKey(ro),
+					"parent", dumpParentRef(p),
+					"linked-gateway-class", gw.Spec.GatewayClassName,
+				)
+				return true
+			}
+		}
+	}
+
+	r.log.V(2).Info("route is handled by another controller: rejecting",
+		"route", store.GetObjectKey(ro),
+	)
+
+	return false
+}
+
 // isParentOutContext returns true if (1) the parent exists and (2) it is NOT included in the
 // gateway context being processed (in which case we do not generate a status for the parent)
 func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) bool {
@@ -172,14 +205,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 		"parent", dumpParentRef(p))
 
-	// find the corresponding gateway
-	ns := ro.GetNamespace()
-	if p.Namespace != nil {
-		ns = string(*p.Namespace)
-	}
-
-	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
-	gw := store.Gateways.GetObject(namespacedName)
+	gw := r.getParentGateway(ro, p)
 	if gw == nil {
 		r.log.V(4).Info("no gateway found for Parent", "route",
 			store.GetObjectKey(ro), "parent", dumpParentRef(p))
@@ -191,7 +217,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 	if className != "" && gw.Spec.GatewayClassName != gwapiv1a2.ObjectName(className) {
 		r.log.V(4).Info("parent links to a gateway that is being managed by another "+
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
-			fmt.Sprintf("%#v", *p), "linked-gateway-class", gw.Spec.GatewayClassName,
+			dumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
 			"current-gateway-class", className)
 		return false
 	}
@@ -218,6 +244,17 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 		"parent", fmt.Sprintf("%#v", *p), "result", "rejected")
 
 	return false
+}
+
+func (r *Renderer) getParentGateway(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) *gwapiv1a2.Gateway {
+	// find the corresponding gateway
+	ns := ro.GetNamespace()
+	if p.Namespace != nil {
+		ns = string(*p.Namespace)
+	}
+
+	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
+	return store.Gateways.GetObject(namespacedName)
 }
 
 func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, controllerName string, accepted bool, backendErr error) {

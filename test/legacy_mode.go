@@ -21,7 +21,7 @@ import (
 	// "time"
 	// "reflect"
 	// "testing"
-	"fmt"
+	// "fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,33 +47,17 @@ import (
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-var (
-	testNs         = testutils.TestNs.DeepCopy()
-	testGwClass    = testutils.TestGwClass.DeepCopy()
-	testGwConfig   = testutils.TestGwConfig.DeepCopy()
-	testGw         = testutils.TestGw.DeepCopy()
-	testUDPRoute   = testutils.TestUDPRoute.DeepCopy()
-	testSvc        = testutils.TestSvc.DeepCopy()
-	testEndpoint   = testutils.TestEndpoint.DeepCopy()
-	testNode       = testutils.TestNode.DeepCopy()
-	testSecret     = testutils.TestSecret.DeepCopy()
-	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
-	testStaticSvc  = testutils.TestStaticSvc.DeepCopy()
-	newCert64      = "bmV3Y2VydA=="                 // newcert
-	newKey64       = "bmV3a2V5"                     // newkey
-	_              = fmt.Sprintf("whatever: %d", 1) // make sure we use fmt
-)
-
-// GatewayClass + GatewayConfig + Gateway should be enough to render a valid STUNner conf
-var _ = Describe("Integration test:", func() {
-	// fmt.Printf("%#v\n", testUDPRoute)
-	// fmt.Printf("%#v\n", testSvc)
+func testLegacyMode() {
+	// this should be kept as the first test
+	Context(`When using the "legacy" dataplane mode`, func() {
+		It(`It should be possible to set the dataplane mode to "legacy"`, func() {
+			// switch EDS off
+			config.DataplaneMode = config.DataplaneModeLegacy
+		})
+	})
 
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
-		// switch to legacy mode
-		config.DataplaneMode = config.DataplaneModeLegacy
-
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -2821,10 +2805,11 @@ var _ = Describe("Integration test:", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
-			ctrl.Log.Info("re-loading UDPRoute: ParentRef = dummy")
+			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
 			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
-				current.Spec.CommonRouteSpec.ParentRefs[0].Name =
-					gwapiv1a2.ObjectName("dummy")
+				sn := gwapiv1a2.SectionName("dummy")
+				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
+				// gwapiv1a2.ObjectName("dummy")
 			})
 
 			lookupKey := types.NamespacedName{
@@ -2884,13 +2869,35 @@ var _ = Describe("Integration test:", func() {
 			Expect(conf.Clusters).To(HaveLen(0))
 
 			ro := &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			// wait until status gets updated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || ro == nil {
+					return false
+				}
+
+				if len(ro.Status.Parents) != 1 {
+					return false
+				}
+
+				if ro.Status.Parents[0].ParentRef.SectionName != nil &&
+					*ro.Status.Parents[0].ParentRef.SectionName == gwapiv1a2.SectionName("dummy") {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			// Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+			// 	ro)).Should(Succeed())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("dummy")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).NotTo(BeNil())
+			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1a2.SectionName("dummy")))
 			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
@@ -4071,8 +4078,13 @@ var _ = Describe("Integration test:", func() {
 
 			// restore
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+		})
+	})
 
+	// this should always be the last test
+	Context(`When using the "legacy" dataplane mode`, func() {
+		Context("It should be possible to reset the dataplane mode to the default", func() {
 			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 		})
 	})
-})
+}

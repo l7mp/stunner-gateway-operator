@@ -1376,5 +1376,82 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
+		{
+			name: "reject uncontrolled route",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			prep: func(c *renderTestConfig) {
+				// a new gatewayclass that specifies a different gateway-config
+				dummyGc := testutils.TestGwClass.DeepCopy()
+				dummyGc.SetName("dummy-gateway-class")
+				dummyGc.Spec.ControllerName = "dummy-controller"
+				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
+					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+					Name:      "dummy-gateway-config",
+					Namespace: &testutils.TestNsName,
+				}
+				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+
+				// the new gateway-config that renders into a different stunner configmap
+				dummyConf := testutils.TestGwConfig.DeepCopy()
+				dummyConf.SetName("dummy-gateway-config")
+				target := "dummy-stunner-config"
+				dummyConf.Spec.StunnerConfig = &target
+				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+
+				// a new gateway whose controller-name is the new gatewayclass
+				dummyGw := testutils.TestGw.DeepCopy()
+				dummyGw.SetName("dummy-gateway")
+				dummyGw.Spec.GatewayClassName =
+					gwapiv1a2.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+
+				// a route for dummy-gateway
+				dummyUdp := testutils.TestUDPRoute.DeepCopy()
+				dummyUdp.SetName("dummy-route")
+				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
+				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
+					gwapiv1a2.ObjectName("dummy-service")
+				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+
+				gcs := r.getGatewayClasses()
+				assert.Len(t, gcs, 1, "gw-classes found")
+
+				// render our own gatewayclass
+				c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: logr.Discard()}
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gwConf, err := r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
+				c.gwConf = gwConf
+				c.gws.ResetGateways(r.getGateways4Class(c))
+
+				err = r.renderForGateways(c)
+				assert.NoError(t, err, "render success")
+
+				// the update list should contain zero routes
+				ros := c.update.UpsertQueue.UDPRoutes.Objects()
+				assert.Len(t, ros, 0, "routenum")
+
+				// after the render our udpRoute should have an empty status
+				// (handled by another controller)
+				udpRoutes := store.UDPRoutes.GetAll()
+				assert.Len(t, udpRoutes, 1, "routenum")
+				ro := udpRoutes[0]
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "dummy-route"),
+					store.GetObjectKey(ro), "route name found")
+
+				assert.Len(t, ro.Status.Parents, 0, "parent status len")
+
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+			},
+		},
 	})
 }

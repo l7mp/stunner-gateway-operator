@@ -89,6 +89,23 @@ var (
 	// }
 )
 
+var (
+	testNs         = testutils.TestNs.DeepCopy()
+	testGwClass    = testutils.TestGwClass.DeepCopy()
+	testGwConfig   = testutils.TestGwConfig.DeepCopy()
+	testGw         = testutils.TestGw.DeepCopy()
+	testUDPRoute   = testutils.TestUDPRoute.DeepCopy()
+	testSvc        = testutils.TestSvc.DeepCopy()
+	testEndpoint   = testutils.TestEndpoint.DeepCopy()
+	testNode       = testutils.TestNode.DeepCopy()
+	testSecret     = testutils.TestSecret.DeepCopy()
+	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
+	testStaticSvc  = testutils.TestStaticSvc.DeepCopy()
+	newCert64      = "bmV3Y2VydA=="                 // newcert
+	newKey64       = "bmV3a2V5"                     // newkey
+	_              = fmt.Sprintf("whatever: %d", 1) // make sure we use fmt
+)
+
 func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(time.RFC3339Nano))
 }
@@ -341,3 +358,7 @@ func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f c
 
 	return res, err
 }
+
+var _ = Describe("Integration test:", func() {
+	testLegacyMode()
+})

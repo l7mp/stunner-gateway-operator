@@ -252,6 +252,10 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())
 
+		if !r.isRouteControlled(ro) {
+			continue
+		}
+
 		initRouteStatus(ro)
 
 		renderRoute := false
