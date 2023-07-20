@@ -119,7 +119,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch StaticService objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Service{}},
+		&source.Kind{Type: &stnrv1a1.StaticService{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateStaticServiceForReconcile),
 	); err != nil {
@@ -234,7 +234,6 @@ func (r *udpRouteReconciler) validateBackendForReconcile(o client.Object) bool {
 		// endpoints and services are of the same name
 		key = store.GetObjectKey(e)
 	} else {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", store.GetObjectKey(o))
 		return false
 	}
 
@@ -261,7 +260,6 @@ func (r *udpRouteReconciler) validateStaticServiceForReconcile(o client.Object) 
 	if svc, ok := o.(*stnrv1a1.StaticService); ok {
 		key = store.GetObjectKey(svc)
 	} else {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", store.GetObjectKey(o))
 		return false
 	}
 

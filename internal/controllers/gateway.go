@@ -112,6 +112,9 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 	}
 	r.log.Info("watching secret objects")
 
+	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
+	// with backend Services)
+
 	return nil
 }
 
