@@ -148,7 +148,7 @@ func initRouteStatus(ro *gwapiv1a2.UDPRoute) {
 	ro.Status.Parents = []gwapiv1a2.RouteParentStatus{}
 }
 
-// isParentOutContext returns true if at least one of the parents of the route is controlled by us
+// isParentController returns true if at least one of the parents of the route is controlled by us
 func (r *Renderer) isRouteControlled(ro *gwapiv1a2.UDPRoute) bool {
 	gcs := r.getGatewayClasses()
 
@@ -202,8 +202,8 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDP
 // className == "" means "do not consider classness of parent", this is useful for generating a
 // route status that is consistent across rendering contexts
 func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, className string) bool {
-	r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
-		"parent", dumpParentRef(p))
+	// r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
+	// 	"parent", dumpParentRef(p))
 
 	gw := r.getParentGateway(ro, p)
 	if gw == nil {

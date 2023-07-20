@@ -106,21 +106,7 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
 		// merge metadata
-		labs := labels.Merge(current.GetLabels(), svc.GetLabels())
-		current.SetLabels(labs)
-
-		annotations := current.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		for k, v := range svc.GetAnnotations() {
-			annotations[k] = v
-		}
-		current.SetAnnotations(annotations)
-
-		if err := addOwnerRef(current, svc); err != nil {
-			return err
-		}
+		mergeMetadata(current, svc)
 
 		// rewrite spec
 		svc.Spec.DeepCopyInto(&current.Spec)
@@ -155,9 +141,7 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 
 		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
 
-		current.SetOwnerReferences(cm.GetOwnerReferences())
-		current.SetAnnotations(cm.GetAnnotations())
-		current.SetLabels(cm.GetLabels())
+		mergeMetadata(current, cm)
 
 		current.Data = make(map[string]string)
 		for k, v := range cm.Data {
@@ -194,11 +178,7 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		// things that might have been changed by the controler: the owner ref,
 		// annotations, labels and the spec
 
-		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
-
-		current.SetOwnerReferences(dp.GetOwnerReferences())
-		current.SetAnnotations(dp.GetAnnotations())
-		current.SetLabels(dp.GetLabels())
+		mergeMetadata(current, dp)
 
 		current.Spec.Selector = dp.Spec.Selector
 		if dp.Spec.Replicas != nil {
@@ -251,6 +231,22 @@ func (u *Updater) deleteObject(o client.Object, gen int) error {
 	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
+}
+
+func mergeMetadata(dst, src client.Object) error {
+	labs := labels.Merge(dst.GetLabels(), src.GetLabels())
+	dst.SetLabels(labs)
+
+	annotations := dst.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	for k, v := range src.GetAnnotations() {
+		annotations[k] = v
+	}
+	dst.SetAnnotations(annotations)
+
+	return addOwnerRef(dst, src)
 }
 
 func addOwnerRef(dst, src client.Object) error {

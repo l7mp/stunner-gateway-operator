@@ -24,7 +24,7 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error
 
 func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
 	gwConf := c.gwConf
-	r.log.V(4).Info("renderInlineAuth", "gateway-config", store.GetObjectKey(gwConf))
+	// r.log.V(4).Info("renderInlineAuth", "gateway-config", store.GetObjectKey(gwConf))
 
 	realm := stnrconfv1a1.DefaultRealm
 	if gwConf.Spec.Realm != nil {
@@ -72,7 +72,7 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig,
 
 func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
 	gwConf := c.gwConf
-	r.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
+	// r.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 
 	realm := stnrconfv1a1.DefaultRealm
 	if gwConf.Spec.Realm != nil {

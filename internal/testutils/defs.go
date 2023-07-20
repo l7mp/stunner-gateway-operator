@@ -276,7 +276,7 @@ var TestDataplane = stnrv1a1.Dataplane{
 	Spec: stnrv1a1.DataplaneSpec{
 		Replicas: &TestReplicas,
 		Strategy: &TestDeployStrategy,
-		Containers: []stnrv1a1.Container{{
+		Containers: []corev1.Container{{
 			Name:    "testcontainer-1",
 			Image:   "testimage-1",
 			Command: []string{"testcommand-1-1", "testcommand-1-2"},
@@ -298,7 +298,7 @@ var TestDataplane = stnrv1a1.Dataplane{
 				Name:      "TEST_ENV_2",
 				ValueFrom: &TestEnvEnvVarSource,
 			}},
-			Resources: stnrv1a1.ResourceRequirements{
+			Resources: corev1.ResourceRequirements{
 				Limits:   TestResourceLimit,
 				Requests: TestResourceRequest,
 			},
@@ -327,7 +327,7 @@ var TestDataplane = stnrv1a1.Dataplane{
 			}},
 			EnvFrom: []corev1.EnvFromSource{},
 			Env:     []corev1.EnvVar{},
-			Resources: stnrv1a1.ResourceRequirements{
+			Resources: corev1.ResourceRequirements{
 				Limits:   TestResourceLimit,
 				Requests: TestResourceRequest,
 			},

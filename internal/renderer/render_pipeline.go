@@ -239,6 +239,8 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			setListenerStatus(gw, &l, true, ready, len(rs))
 		}
 
+		fmt.Println("+++++++++++++++PROGRAMMED+++++++++++++++++++")
+
 		setGatewayStatusProgrammed(gw, nil)
 		gw = pruneGatewayStatusConds(gw)
 

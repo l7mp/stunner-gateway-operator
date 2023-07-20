@@ -15,7 +15,7 @@ import (
 )
 
 func (r *Renderer) getGatewayClasses() []*gwapiv1a2.GatewayClass {
-	r.log.V(4).Info("getGatewayClasses")
+	// r.log.V(4).Info("getGatewayClasses")
 	ret := []*gwapiv1a2.GatewayClass{}
 
 	for _, gc := range store.GatewayClasses.GetAll() {
@@ -33,7 +33,7 @@ func (r *Renderer) getGatewayClasses() []*gwapiv1a2.GatewayClass {
 }
 
 func (r *Renderer) validateGatewayClass(gc *gwapiv1a2.GatewayClass) error {
-	r.log.V(4).Info("validateGatewayClass")
+	// r.log.V(4).Info("validateGatewayClass")
 
 	// play it safe
 	if string(gc.Spec.ControllerName) != config.ControllerName {

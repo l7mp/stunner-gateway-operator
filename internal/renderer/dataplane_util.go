@@ -61,6 +61,9 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	deployment.SetLabels(labs)
 
 	annotations := deployment.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	for k, v := range gw.GetAnnotations() {
 		annotations[k] = v
 	}
@@ -108,7 +111,7 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	// containers verbatim
 	podSpec.Containers = make([]corev1.Container, len(dataplane.Spec.Containers))
 	for i := range dataplane.Spec.Containers {
-		dataplane.Spec.Containers[i].DeepCopyIntoCoreV1(&podSpec.Containers[i])
+		dataplane.Spec.Containers[i].DeepCopyInto(&podSpec.Containers[i])
 	}
 
 	// volumes

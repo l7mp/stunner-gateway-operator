@@ -62,7 +62,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch GatewayClass objects that match this controller name
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.GatewayClass{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when the spec changes on a GatewayClass we manage
 		predicate.And(
@@ -76,7 +76,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch Gateway objects that match the controller name
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.Gateway{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.Gateway{}),
 		&handler.EnqueueRequestForObject{},
 		//trigger when the Spec or an annotation changes on a Gateway we manage
 		predicate.And(
@@ -105,7 +105,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch Secret objects referenced by one of our Gateways
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {
@@ -116,7 +116,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		// watch Deployment objects referenced by one of our Gateways
 		if err := c.Watch(
-			&source.Kind{Type: &appv1.Deployment{}},
+			source.Kind(mgr.GetCache(), &appv1.Deployment{}),
 			&handler.EnqueueRequestForObject{},
 			predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
 		); err != nil {

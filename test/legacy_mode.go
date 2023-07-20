@@ -227,9 +227,20 @@ func testLegacyMode() {
 		})
 
 		It("should set the Gateway status", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -823,9 +834,6 @@ func testLegacyMode() {
 				l3, ok3 := ls[opdefault.OwnedByLabelKey]
 				l4, ok4 := ls[opdefault.AppLabelKey]
 
-				fmt.Println("++++++++++++++++++++++")
-				fmt.Println(ls)
-
 				if !ok1 || !ok2 || !ok3 || !ok4 {
 					return false
 				}
@@ -838,10 +846,7 @@ func testLegacyMode() {
 				as := svc.GetAnnotations()
 				a1, ok1 := as["someNewAnnotation"]
 				a2, ok2 := as["someOtherNewAnnotation"]
-				a3, ok3 := as[opdefault.RelatedGatewayAnnotationKey]
-
-				fmt.Println("++++++++++++++++++++++")
-				fmt.Println(as)
+				a3, ok3 := as[opdefault.RelatedGatewayKey]
 
 				if !ok1 || !ok2 || !ok3 {
 					return false
@@ -1245,7 +1250,8 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") {
+				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
+					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
 					conf = &c
 					return true
 				}
@@ -1312,9 +1318,20 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(
 				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
 
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -1596,9 +1613,20 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -1806,9 +1834,21 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2046,9 +2086,21 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2301,9 +2353,21 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2594,9 +2658,21 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2830,7 +2906,8 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners) != 2 || len(c.Clusters) == 0 {
+				if len(c.Listeners) > 0 && len(c.Listeners) != 2 ||
+					len(c.Clusters) == 0 && len(c.Listeners[0].Routes) == 0 {
 					conf = &c
 					return true
 				}
@@ -3660,7 +3737,8 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
 					conf = &c
 					return true
 				}
@@ -3929,9 +4007,21 @@ func testLegacyMode() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
