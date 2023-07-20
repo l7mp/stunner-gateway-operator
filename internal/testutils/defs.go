@@ -16,29 +16,33 @@ import (
 )
 
 var (
-	TestNsName              = gwapiv1a2.Namespace("testnamespace")
-	TestStunnerConfig       = "stunner-config"
-	TestRealm               = "testrealm"
-	TestMetricsEndpoint     = "testmetrics"
-	TestHealthCheckEndpoint = "testhealth"
-	TestAuthType            = "plaintext"
-	TestUsername            = "testuser"
-	TestPassword            = "testpass"
-	TestLogLevel            = "testloglevel"
-	TestMinPort             = int32(1)
-	TestMaxPort             = int32(2)
-	TestLabelName           = "testlabel"
-	TestLabelValue          = "testvalue"
-	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
-	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
-	TestKey64               = "dGVzdGtleQ==" // "testkey"
-	TestReplicas            = int32(3)
-	TestDeployStrategy      = appv1.DeploymentStrategy{Type: appv1.RecreateDeploymentStrategyType, RollingUpdate: nil}
-	TestTerminationGrace    = int64(60)
-	TestProbe               = corev1.Probe{PeriodSeconds: 15, SuccessThreshold: 2, FailureThreshold: 3}
-	TestCPURequest          = resource.NewQuantity(100, resource.DecimalSI)
-	TestMemoryLimit         = resource.NewQuantity(500, resource.DecimalSI)
-	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+	TestTrue                  = true
+	TestNsName                = gwapiv1a2.Namespace("testnamespace")
+	TestStunnerConfig         = "stunner-config"
+	TestRealm                 = "testrealm"
+	TestMetricsEndpoint       = "testmetrics"
+	TestHealthCheckEndpoint   = "testhealth"
+	TestAuthType              = "plaintext"
+	TestUsername              = "testuser"
+	TestPassword              = "testpass"
+	TestLogLevel              = "testloglevel"
+	TestMinPort               = int32(1)
+	TestMaxPort               = int32(2)
+	TestLabelName             = "testlabel"
+	TestLabelValue            = "testvalue"
+	TestSectionName           = gwapiv1a2.SectionName("gateway-1-listener-udp")
+	TestCert64                = "dGVzdGNlcnQ=" // "testcert"
+	TestKey64                 = "dGVzdGtleQ==" // "testkey"
+	TestReplicas              = int32(3)
+	TestDeployStrategy        = appv1.DeploymentStrategy{Type: appv1.RecreateDeploymentStrategyType, RollingUpdate: nil}
+	TestFieldSelector         = corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
+	TestEnvEnvVarSource       = corev1.EnvVarSource{FieldRef: &TestFieldSelector}
+	TestConfigMapVolumeSource = corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "testgateway-1"}, Optional: &TestTrue}
+	TestTerminationGrace      = int64(60)
+	TestProbe                 = corev1.Probe{PeriodSeconds: 15, SuccessThreshold: 2, FailureThreshold: 3}
+	TestCPURequest            = resource.NewQuantity(100, resource.DecimalSI)
+	TestMemoryLimit           = resource.NewQuantity(500, resource.DecimalSI)
+	TestResourceRequest       = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceRequestsCPU: *TestCPURequest,
 	})
 	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
@@ -105,6 +109,7 @@ var TestGw = gwapiv1a2.Gateway{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gateway-1",
 		Namespace: "testnamespace",
+		Labels:    map[string]string{"dummy-label": "dummy-value"},
 	},
 	Spec: gwapiv1a2.GatewaySpec{
 		GatewayClassName: "gatewayclass-ok",
@@ -153,7 +158,7 @@ var TestSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			opdefault.RelatedGatewayAnnotationKey: "testnamespace/gateway-1",
+			opdefault.RelatedGatewayKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{
@@ -286,11 +291,22 @@ var TestDataplane = stnrv1a1.Dataplane{
 				Protocol:      corev1.ProtocolTCP,
 			}},
 			EnvFrom: []corev1.EnvFromSource{},
-			Env:     []corev1.EnvVar{},
+			Env: []corev1.EnvVar{{
+				Name:  "TEST_ENV_1",
+				Value: "test-env-val",
+			}, {
+				Name:      "TEST_ENV_2",
+				ValueFrom: &TestEnvEnvVarSource,
+			}},
 			Resources: stnrv1a1.ResourceRequirements{
-				Limits:   TestResourceRequest,
-				Requests: TestResourceLimit,
+				Limits:   TestResourceLimit,
+				Requests: TestResourceRequest,
 			},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      "testvolume-name",
+				ReadOnly:  true,
+				MountPath: "/tmp/mount",
+			}},
 			LivenessProbe:   &TestProbe,
 			ReadinessProbe:  &TestProbe,
 			ImagePullPolicy: corev1.PullAlways,
@@ -312,13 +328,19 @@ var TestDataplane = stnrv1a1.Dataplane{
 			EnvFrom: []corev1.EnvFromSource{},
 			Env:     []corev1.EnvVar{},
 			Resources: stnrv1a1.ResourceRequirements{
-				Limits:   TestResourceRequest,
-				Requests: TestResourceLimit,
+				Limits:   TestResourceLimit,
+				Requests: TestResourceRequest,
 			},
 			LivenessProbe:   &TestProbe,
 			ReadinessProbe:  &TestProbe,
-			ImagePullPolicy: corev1.PullAlways,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			SecurityContext: nil,
+		}},
+		Volumes: []corev1.Volume{{
+			Name: "testvolume-name",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &TestConfigMapVolumeSource,
+			},
 		}},
 		TerminationGracePeriodSeconds: &TestTerminationGrace,
 		HostNetwork:                   true,

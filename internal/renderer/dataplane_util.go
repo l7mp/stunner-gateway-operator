@@ -6,6 +6,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -14,18 +15,22 @@ import (
 )
 
 // createDeployment creates a new deployment for a managed Gateway. Label selector rules are as follows:
-// - labels and annotations are copied verbatim from the corresponding Dataplane object
-// - all pods for the gateway marked with labels "app=stunner" and ""stunner.l7mp.io/related-gateway-name=<gateway namespace/name>"
+// - deployment labeled with "app=stunner" and annotation "stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>" is set
+// - labels and annotations are merged verbatim on top of this from the corresponding Gateway object
+// - all pods od the deployment are marked with label "app=stunner" AND "stunner.l7mp.io/related-gateway-name=<gateway-name>" (no namespace, as '/' is not allowed in label values)
 // - deployment selector filters on these two labels
 func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
+	if gw == nil {
+		r.log.Info("ERROR: createDeployment called with empty Gateway ref in managed mode")
+		return nil, NewCriticalError(RenderingError)
+	}
 
 	// find the Dataplane CR for this Gateway
 	dataplaneName := opdefault.DefaultDataplaneName
 	if c.gwConf.Spec.Dataplane != nil {
 		dataplaneName = *c.gwConf.Spec.Dataplane
 	}
-
 	dataplane := store.Dataplanes.GetObject(types.NamespacedName{Name: dataplaneName})
 	if dataplane == nil {
 		err := NewCriticalError(InvalidDataplane)
@@ -45,21 +50,18 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 			Annotations: map[string]string{
-				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: appv1.DeploymentSpec{},
 	}
 
 	// copy annotations and labels
-	labs := deployment.GetLabels()
-	for k, v := range dataplane.GetLabels() {
-		labs[k] = v
-	}
+	labs := labels.Merge(deployment.GetLabels(), gw.GetLabels())
 	deployment.SetLabels(labs)
 
 	annotations := deployment.GetAnnotations()
-	for k, v := range dataplane.GetAnnotations() {
+	for k, v := range gw.GetAnnotations() {
 		annotations[k] = v
 	}
 	deployment.SetAnnotations(annotations)
@@ -71,11 +73,11 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 		Operator: metav1.LabelSelectorOpIn,
 		Values:   []string{opdefault.OwnedByLabelValue},
 	}
-	// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway namespace/name>"
+	// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
 	relatedReq := metav1.LabelSelectorRequirement{
-		Key:      opdefault.RelatedGatewayAnnotationKey,
+		Key:      opdefault.RelatedGatewayKey,
 		Operator: metav1.LabelSelectorOpIn,
-		Values:   []string{store.GetObjectKey(gw)},
+		Values:   []string{gw.GetName()},
 	}
 
 	deployment.Spec.Selector = &metav1.LabelSelector{
@@ -95,33 +97,37 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	deployment.Spec.Template = corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.OwnedByLabelKey:   opdefault.OwnedByLabelValue,
+				opdefault.RelatedGatewayKey: gw.GetName(),
 			},
 		},
 	}
 
-	podspec := &deployment.Spec.Template.Spec
+	podSpec := &deployment.Spec.Template.Spec
 
 	// containers verbatim
-	podspec.Containers = make([]corev1.Container, len(dataplane.Spec.Containers))
+	podSpec.Containers = make([]corev1.Container, len(dataplane.Spec.Containers))
 	for i := range dataplane.Spec.Containers {
-		dataplane.Spec.Containers[i].DeepCopyIntoCoreV1(&podspec.Containers[i])
+		dataplane.Spec.Containers[i].DeepCopyIntoCoreV1(&podSpec.Containers[i])
+	}
+
+	// volumes
+	podSpec.Volumes = make([]corev1.Volume, len(dataplane.Spec.Volumes))
+	for i := range dataplane.Spec.Volumes {
+		podSpec.Volumes[i].DeepCopyInto(&dataplane.Spec.Volumes[i])
 	}
 
 	// grace
 	if dataplane.Spec.TerminationGracePeriodSeconds != nil {
-		podspec.TerminationGracePeriodSeconds = dataplane.Spec.TerminationGracePeriodSeconds
+		podSpec.TerminationGracePeriodSeconds = dataplane.Spec.TerminationGracePeriodSeconds
 	}
 
 	// hostnetwork
-	podspec.HostNetwork = dataplane.Spec.HostNetwork
+	podSpec.HostNetwork = dataplane.Spec.HostNetwork
 
 	// affinity
 	if dataplane.Spec.Affinity != nil {
-		podspec.Affinity = dataplane.Spec.Affinity
+		podSpec.Affinity = dataplane.Spec.Affinity
 	}
 
 	// owned by the Gateway
@@ -130,6 +136,8 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 			"reference", store.GetObjectKey(deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
+
+	// fmt.Printf("%#v\n", deployment)
 
 	return deployment, nil
 }

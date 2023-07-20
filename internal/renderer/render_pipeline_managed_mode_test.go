@@ -8,9 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -79,7 +81,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -127,6 +129,157 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					rc.Endpoints[0], "backend-ref")
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// deployment
+				dps := c.update.UpsertQueue.Deployments.Objects()
+				assert.Len(t, dps, 1, "deployment num")
+				deploy, ok := dps[0].(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
+
+				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
+				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
+
+				labs := deploy.GetLabels()
+				assert.Len(t, labs, 2, "labels len")
+				v, ok := labs[opdefault.OwnedByLabelKey]
+				assert.True(t, ok, "labels: owned-by")
+				assert.Equal(t, opdefault.OwnedByLabelValue, v, "owned-by label value")
+				// label from the dataplane object
+				v, ok = labs["dummy-label"]
+				assert.True(t, ok, "labels: dataplane label copied")
+				assert.Equal(t, "dummy-value", v, "copied dataplane label value")
+
+				as = deploy.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				gwName, ok := as[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "annotations: related gw")
+				// annotation is gw-namespace/gw-name
+				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
+
+				// check the label selector
+				labelSelector := deploy.Spec.Selector
+				assert.NotNil(t, labelSelector, "label selector")
+
+				selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+				assert.NoError(t, err, "label selector convert")
+
+				// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
+				// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+				labelToMatch := labels.Merge(
+					labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
+					labels.Set{opdefault.RelatedGatewayKey: gw.GetName()},
+				)
+				assert.True(t, selector.Matches(labelToMatch), "selector matched")
+
+				// spec
+				assert.NotNil(t, deploy.Spec.Replicas, "replicas notnil")
+				assert.Equal(t, int32(3), *deploy.Spec.Replicas, "replicas")
+				assert.NotNil(t, deploy.Spec.Strategy, "strategy notnil")
+				assert.Equal(t, testutils.TestDeployStrategy, deploy.Spec.Strategy, "strategy")
+
+				// pod template spec
+				podTemplate := &deploy.Spec.Template
+				labs = podTemplate.GetLabels()
+				assert.Len(t, labs, 2, "labels len")
+				v, ok = labs[opdefault.OwnedByLabelKey]
+				assert.True(t, ok, "pod labels: owned-by")
+				assert.Equal(t, opdefault.OwnedByLabelValue, v, "pod owned-by label value")
+				v, ok = labs[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "pod related-gw label")
+				assert.Equal(t, gw.GetName(), v, "related-gw label value")
+
+				// deployment selector matches pod template
+				assert.True(t, selector.Matches(labels.Set(labs)), "selector matched")
+
+				podSpec := &podTemplate.Spec
+
+				assert.Len(t, podSpec.Containers, 2, "contianers len")
+
+				container := podSpec.Containers[0]
+
+				assert.Equal(t, "testcontainer-1", container.Name, "container 1 name")
+				assert.Equal(t, "testimage-1", container.Image, "container 1 image")
+				assert.Equal(t, []string{"testcommand-1-1", "testcommand-1-2"}, container.Command, "container 1 command")
+				assert.Equal(t, []string{"testarg-1-1", "testarg-1-2"}, container.Args, "container 1 args")
+
+				ports := container.Ports
+				assert.Len(t, ports, 2, "contianer 1 ports len")
+				port := ports[0]
+				assert.Equal(t, "testport-1-1", port.Name, "container 1 - port 1 - name")
+				assert.Equal(t, int32(1), port.ContainerPort, "container 1 - port 1 - port")
+				assert.Equal(t, corev1.ProtocolUDP, port.Protocol, "container 1 - port 1 - protocol")
+				port = ports[1]
+				assert.Equal(t, "testport-1-2", port.Name, "container 1 - port 2 - name")
+				assert.Equal(t, int32(2), port.ContainerPort, "container 1 - port 2 - port")
+				assert.Equal(t, corev1.ProtocolTCP, port.Protocol, "container 1 - port 2 - protocol")
+
+				assert.Equal(t, []corev1.EnvFromSource{}, container.EnvFrom, "container 1 - envFrom")
+
+				assert.Len(t, container.Env, 2, "container 1 env len")
+				env := container.Env[0]
+				assert.Equal(t, "TEST_ENV_1", env.Name, "container 1 - env 1 - name")
+				assert.Equal(t, "test-env-val", env.Value, "container 1 - env 1 - value")
+				env = container.Env[1]
+				assert.Equal(t, "TEST_ENV_2", env.Name, "container 1 - env 2 - name")
+				assert.NotNil(t, env.ValueFrom, "container 1 - env 2 - valueFrom ptr")
+				assert.Equal(t, testutils.TestEnvEnvVarSource, *env.ValueFrom, "container 1 - env 2 - value")
+
+				assert.Equal(t, testutils.TestResourceLimit, container.Resources.Limits, "container 1 - resource limits")
+				assert.Equal(t, testutils.TestResourceRequest, container.Resources.Requests, "container 1 - resource req")
+
+				assert.Len(t, container.VolumeMounts, 1, "contianer 1 - volume mounts")
+				assert.Equal(t, "testvolume-name", container.VolumeMounts[0].Name, "container 1 - volume mount - name")
+				assert.Equal(t, true, container.VolumeMounts[0].ReadOnly, "container 1 - volume mount - readonly")
+				assert.Equal(t, "/tmp/mount", container.VolumeMounts[0].MountPath, "container 1 - volume mount - mount-path")
+
+				assert.NotNil(t, container.LivenessProbe, "container 1 - liveness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 1 - liveness probe")
+				assert.NotNil(t, container.ReadinessProbe, "container 1 - readiness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 1 - readiness probe")
+
+				assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy, "container 1 - readiness probe")
+				assert.Nil(t, container.SecurityContext, "container 1 - security context")
+
+				container = podSpec.Containers[1]
+
+				assert.Equal(t, "testcontainer-2", container.Name, "container 2 name")
+				assert.Equal(t, "testimage-2", container.Image, "container 2 image")
+				assert.Equal(t, []string{"testcommand-2-1", "testcommand-2-2"}, container.Command, "container 2 command")
+				assert.Equal(t, []string{"testarg-2-1", "testarg-2-2"}, container.Args, "container 2 args")
+
+				ports = container.Ports
+				assert.Len(t, ports, 2, "contianer 2 ports len")
+				port = ports[0]
+				assert.Equal(t, "testport-2-1", port.Name, "container 2 - port 1 - name")
+				assert.Equal(t, int32(1), port.ContainerPort, "container 2 - port 1 - port")
+				assert.Equal(t, corev1.ProtocolUDP, port.Protocol, "container 2 - port 1 - protocol")
+				port = ports[1]
+				assert.Equal(t, "testport-2-2", port.Name, "container 2 - port 2 - name")
+				assert.Equal(t, int32(2), port.ContainerPort, "container 2 - port 2 - port")
+				assert.Equal(t, corev1.ProtocolTCP, port.Protocol, "container 2 - port 2 - protocol")
+
+				assert.Equal(t, []corev1.EnvFromSource{}, container.EnvFrom, "container 2 - envFrom")
+				assert.Equal(t, []corev1.EnvVar{}, container.Env, "container 2 - envFrom")
+
+				assert.NotNil(t, container.LivenessProbe, "container 2 - liveness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 2 - liveness probe")
+				assert.NotNil(t, container.ReadinessProbe, "container 2 - readiness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 2 - readiness probe")
+
+				assert.Len(t, container.VolumeMounts, 0, "contianer 2 - volume mounts")
+				assert.NotNil(t, container.LivenessProbe, "container 2 - liveness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 2 - liveness probe")
+				assert.NotNil(t, container.ReadinessProbe, "container 2 - readiness probe ptr")
+				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 2 - readiness probe")
+
+				assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy, "container 2 - readiness probe")
+				assert.Nil(t, container.SecurityContext, "container 2 - security context")
+
+				// remainder
+				assert.NotNil(t, podSpec.TerminationGracePeriodSeconds, "termination grace ptr")
+				assert.Equal(t, testutils.TestTerminationGrace, *podSpec.TerminationGracePeriodSeconds, "termination grace")
+				assert.True(t, podSpec.HostNetwork, "hostnetwork")
+				assert.Nil(t, podSpec.Affinity, "affinity")
 
 				// gateway status
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
@@ -245,7 +398,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -348,7 +501,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -528,7 +681,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -710,7 +863,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)

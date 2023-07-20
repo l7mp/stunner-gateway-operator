@@ -30,6 +30,10 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 	relatedGateway := store.GetObjectKey(c.gc)
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		gw := c.gws.GetFirst()
+		if gw == nil {
+			r.log.Info("ERROR: renderConfig called with empty Gateway ref in managed mode")
+			return nil, NewCriticalError(RenderingError)
+		}
 		relatedGateway = store.GetObjectKey(gw)
 	}
 
@@ -42,7 +46,7 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 			Annotations: map[string]string{
-				opdefault.RelatedGatewayAnnotationKey: relatedGateway,
+				opdefault.RelatedGatewayKey: relatedGateway,
 			},
 		},
 		Immutable: &immutable,

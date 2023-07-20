@@ -441,6 +441,9 @@ func getTarget(c *RenderContext) (string, string) {
 	case config.DataplaneModeManaged:
 		// assume it exists
 		gw := c.gws.GetFirst()
+		if gw == nil {
+			panic("getTarget called with empty Gateway ref in managed mode")
+		}
 		targetName = gw.GetName()
 		targetNamespace = gw.GetNamespace()
 	}

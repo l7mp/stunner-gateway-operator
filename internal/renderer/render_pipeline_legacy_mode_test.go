@@ -111,7 +111,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -214,7 +214,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -319,7 +319,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -415,7 +415,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -559,7 +559,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -644,7 +644,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -804,7 +804,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -891,7 +891,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -1049,7 +1049,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)
@@ -1137,7 +1137,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as = o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok = o.(*corev1.ConfigMap)
@@ -1248,7 +1248,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)

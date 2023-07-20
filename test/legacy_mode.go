@@ -108,7 +108,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -137,7 +137,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -175,7 +175,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -355,7 +355,7 @@ func testLegacyMode() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")

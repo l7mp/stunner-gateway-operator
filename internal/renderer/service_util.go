@@ -112,7 +112,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
-	v, found := as[opdefault.RelatedGatewayAnnotationKey]
+	v, found := as[opdefault.RelatedGatewayKey]
 	if found && v == namespacedName {
 		// r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
 		// 	"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
@@ -276,7 +276,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 				opdefault.AppLabelKey:     opdefault.AppLabelValue,
 			},
 			Annotations: map[string]string{
-				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: corev1.ServiceSpec{

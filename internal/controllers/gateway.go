@@ -337,7 +337,7 @@ func (r *gatewayReconciler) validateDeploymentForReconcile(obj client.Object) bo
 	gatewayName := store.GetNamespacedName(deployment)
 
 	// is the related-gateway annotation set?
-	val, ok = deployment.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+	val, ok = deployment.GetAnnotations()[opdefault.RelatedGatewayKey]
 	if !ok || val != gatewayName.String() {
 		return false
 	}

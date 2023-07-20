@@ -61,6 +61,13 @@ func (in *Container) DeepCopyInto(out *Container) {
 		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]corev1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe
 		*out = new(corev1.Probe)
@@ -162,6 +169,13 @@ func (in *DataplaneSpec) DeepCopyInto(out *DataplaneSpec) {
 	if in.Containers != nil {
 		in, out := &in.Containers, &out.Containers
 		*out = make([]Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
+		*out = make([]corev1.Volume, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

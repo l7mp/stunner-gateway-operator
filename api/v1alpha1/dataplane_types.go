@@ -65,6 +65,12 @@ type DataplaneSpec struct {
 	// +patchStrategy=merge
 	Containers []Container `json:"containers"`
 
+	// List of volumes that can be mounted by containers belonging to the pod.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge,retainKeys
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
 	// Optional duration in seconds the stunnerd needs to terminate gracefully.  Value must be
 	// non-negative integer. The value zero indicates stop immediately via the kill signal (no
 	// opportunity to shut down).  If this value is nil, the default grace period will be used
@@ -113,6 +119,9 @@ type Container struct {
 	// Compute Resources required by this container.
 	// +optional
 	Resources ResourceRequirements `json:"resources,omitempty"`
+	// Pod volumes to mount into the container's filesystem.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 	// Periodic probe of container liveness.
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
@@ -153,6 +162,8 @@ type DataplaneList struct {
 
 // DeepCopyInto is a deepcopy function, copying and transforming the receiver into a corev1 object.
 func (in *Container) DeepCopyIntoCoreV1(out *corev1.Container) {
+	out.Name = in.Name
+	out.Image = in.Image
 	if in.Command != nil {
 		in, out := &in.Command, &out.Command
 		*out = make([]string, len(*in))
@@ -184,6 +195,11 @@ func (in *Container) DeepCopyIntoCoreV1(out *corev1.Container) {
 	}
 	in.Resources.DeepCopyIntoCoreV1(&out.Resources)
 
+	out.VolumeMounts = make([]corev1.VolumeMount, len(in.VolumeMounts))
+	for i := range in.VolumeMounts {
+		in.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
+	}
+
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe
 		*out = new(corev1.Probe)
@@ -194,6 +210,7 @@ func (in *Container) DeepCopyIntoCoreV1(out *corev1.Container) {
 		*out = new(corev1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
+	out.ImagePullPolicy = in.ImagePullPolicy
 	if in.SecurityContext != nil {
 		in, out := &in.SecurityContext, &out.SecurityContext
 		*out = new(corev1.SecurityContext)
