@@ -799,6 +799,77 @@ var _ = Describe("Integration test:", func() {
 			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
+		It("should retain externally set labels/annotations on the LoadBalancer service", func() {
+			ctrl.Log.Info("re-loading service with new labels/annotations")
+			svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+				Name:      testGw.GetName(),
+				Namespace: testGw.GetNamespace(),
+			}}
+
+			_, err := createOrUpdate(ctx, k8sClient, svc, func() error {
+				// rewrite annotations and labels
+				svc.SetLabels(map[string]string{
+					"someLabel":      "some-label-val",
+					"someOtherLabel": "some-other-label-val",
+					// this cannot be removed, otherwise the watcher ignores the service
+					opdefault.AppLabelKey: opdefault.AppLabelValue,
+				})
+				svc.SetAnnotations(map[string]string{
+					"someNewAnnotation":      "some-ann-val",
+					"someOtherNewAnnotation": "some-other-ann-val",
+				})
+
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			lookupKey := store.GetNamespacedName(testGw)
+			Eventually(func() bool {
+				svc = &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				ls := svc.GetLabels()
+				l1, ok1 := ls["someLabel"]
+				l2, ok2 := ls["someOtherLabel"]
+				l3, ok3 := ls[opdefault.OwnedByLabelKey]
+				l4, ok4 := ls[opdefault.AppLabelKey]
+
+				fmt.Println("++++++++++++++++++++++")
+				fmt.Println(ls)
+
+				if !ok1 || !ok2 || !ok3 || !ok4 {
+					return false
+				}
+
+				if l1 != "some-label-val" || l2 != "some-other-label-val" ||
+					l3 != opdefault.OwnedByLabelValue || l4 != opdefault.AppLabelValue {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as["someNewAnnotation"]
+				a2, ok2 := as["someOtherNewAnnotation"]
+				a3, ok3 := as[opdefault.RelatedGatewayAnnotationKey]
+
+				fmt.Println("++++++++++++++++++++++")
+				fmt.Println(as)
+
+				if !ok1 || !ok2 || !ok3 {
+					return false
+				}
+
+				if a1 != "some-ann-val" || a2 != "some-other-ann-val" ||
+					a3 != store.GetObjectKey(testGw) {
+					return false
+				}
+
+				return true
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should not change NodePort when Gateway annotations are modified", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 
