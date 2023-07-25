@@ -391,6 +391,7 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(ro)
+
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, ClusterIPNotFound), "invalid clusterip error")
@@ -740,7 +741,7 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, err := r.renderCluster(rs[0])
-				// handle non-critical error!
+				// no endpoint for dummy svc: handle non-critical error!
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
@@ -757,6 +758,184 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.1.1.1", "endpoint cluster-ip-1")
 				assert.Contains(t, rc.Endpoints, "2.2.2.2", "endpoint cluster-ip-2")
 				assert.Contains(t, rc.Endpoints, "3.3.3.3", "endpoint cluster-ip-3")
+
+				// restore
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			},
+		},
+		// StaticService
+		{
+			name:  "StaticService ok",
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
+			prep: func(c *renderTestConfig) {
+				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1a2.Kind("StaticService")
+				udp := testutils.TestUDPRoute.DeepCopy()
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-ok",
+					},
+				}}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				rc, err := r.renderCluster(rs[0])
+				assert.NoError(t, err, "render cluster")
+
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 3, "endpoints len")
+				// static svc
+				assert.Contains(t, rc.Endpoints, "10.11.12.13", "StaticService endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "10.11.12.14", "StaticService endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "10.11.12.15", "StaticService endpoint ip-3")
+			},
+		},
+		{
+			name: "No StaticService backend errs",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			prep: func(c *renderTestConfig) {
+				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1a2.Kind("StaticService")
+				udp := testutils.TestUDPRoute.DeepCopy()
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-dummy",
+					},
+				}}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				_, err := r.renderCluster(rs[0])
+				assert.Error(t, err, "render cluster")
+
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
+			},
+		},
+		{
+			name:  "Mixed cluster type errs",
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			eps:   []corev1.Endpoints{testutils.TestEndpoint},
+			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
+			prep: func(c *renderTestConfig) {
+				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1a2.Kind("StaticService")
+				udp := testutils.TestUDPRoute.DeepCopy()
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-ok",
+					},
+				}, {
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Name: "testservice-ok",
+					},
+				}}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				// switch EDS off: would render a DNS cluster plus a STATIC for the
+				// StaticService
+				config.EnableEndpointDiscovery = false
+				config.EnableRelayToClusterIP = false
+
+				_, err := r.renderCluster(rs[0])
+				assert.Error(t, err, "render cluster")
+				assert.True(t, IsNonCritical(err), "critical error")
+				assert.True(t, IsNonCriticalError(err, InconsitentClusterType), "inconsistent type")
+
+				// restore
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			},
+		},
+		{
+			name: "Service (w/ EDS) plus StaticService ok",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1a2.Kind("StaticService")
+				udp := testutils.TestUDPRoute.DeepCopy()
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-ok",
+					},
+				}, {
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice2",
+					},
+				}, {
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Name: "testservice-ok",
+					},
+				}}
+
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
+
+				ssvc2 := testutils.TestStaticSvc.DeepCopy()
+				ssvc2.SetName("teststaticservice2")
+				ssvc2.Spec.Prefixes = []string{"0.0.0.0/1", "128.0.0.0/1"}
+				c.ssvcs = []stnrv1a1.StaticService{testutils.TestStaticSvc, *ssvc2}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = false
+
+				rc, err := r.renderCluster(rs[0])
+				assert.NoError(t, err, "render cluster")
+
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 9, "endpoints len")
+				// static svc
+				assert.Contains(t, rc.Endpoints, "10.11.12.13", "StaticService 1 endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "10.11.12.14", "StaticService 1 endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "10.11.12.15", "StaticService 1 endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "0.0.0.0/1", "StaticService 2 endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "128.0.0.0/1", "StaticService 2 endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "Service endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "Service endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "Service endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "Service endpoint ip-4")
 
 				// restore
 				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery

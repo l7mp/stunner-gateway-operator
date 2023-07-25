@@ -107,8 +107,6 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 	}
 	conf.Auth = *auth
 
-	// all errors from this point are non-critical
-
 	log.V(1).Info("finding gateway objects")
 	conf.Listeners = []stnrconfv1a1.ListenerConfig{}
 	for _, gw := range r.getGateways4Class(c) {
@@ -162,6 +160,8 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 
 			lc, err := r.renderListener(gw, gwConf, &l, rs, ap)
 			if err != nil {
+				// all listener rendering errors are critical: prevent the
+				// rendering of the listener config
 				log.Info("error rendering configuration for listener", "gateway",
 					gw.GetName(), "listener", l.Name, "error", err.Error())
 
@@ -209,13 +209,15 @@ func (r *Renderer) renderGatewayClass(c *RenderContext) error {
 					log.Info("non-critical error rendering cluster", "route",
 						ro.GetName(), "error", err.Error())
 				} else {
-					log.Info("fatal error rendering cluster", "route",
-						ro.GetName(), "error", err.Error())
+					log.Error(err, "fatal error rendering cluster", "route",
+						ro.GetName())
 					continue
 				}
 			}
 
-			conf.Clusters = append(conf.Clusters, *rc)
+			if rc != nil {
+				conf.Clusters = append(conf.Clusters, *rc)
+			}
 		}
 
 		// set status: we can do this only once we know whether (1) the parent accepted the

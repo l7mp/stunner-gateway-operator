@@ -6,6 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -103,12 +104,24 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// for a, v := range svc.GetAnnotations() {
-		// 	metav1.SetMetaDataAnnotation(&current.ObjectMeta, a, v)
-		// }
-		current.SetAnnotations(svc.GetAnnotations())
-		current.SetLabels(svc.GetLabels())
-		current.SetOwnerReferences(svc.GetOwnerReferences())
+		// merge metadata
+		labs := labels.Merge(current.GetLabels(), svc.GetLabels())
+		current.SetLabels(labs)
+
+		annotations := current.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		for k, v := range svc.GetAnnotations() {
+			annotations[k] = v
+		}
+		current.SetAnnotations(annotations)
+
+		if err := addOwnerRef(current, svc); err != nil {
+			return err
+		}
+
+		// rewrite spec
 		svc.Spec.DeepCopyInto(&current.Spec)
 
 		return nil
@@ -170,4 +183,29 @@ func (u *Updater) deleteObject(o client.Object, gen int) error {
 	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
+}
+
+func addOwnerRef(dst, src client.Object) error {
+	ownerRefs := src.GetOwnerReferences()
+	if len(ownerRefs) != 1 {
+		return fmt.Errorf("addOwnerRef: expecting a singleton ownerRef in %q, found %d",
+			store.GetObjectKey(src), len(ownerRefs))
+	}
+	ownerRef := src.GetOwnerReferences()[0]
+
+	for i, ref := range dst.GetOwnerReferences() {
+		if ref.Name == ownerRef.Name && ref.Kind == ownerRef.Kind {
+			ownerRefs = dst.GetOwnerReferences()
+			ownerRef.DeepCopyInto(&ownerRefs[i])
+			dst.SetOwnerReferences(ownerRefs)
+
+			return nil
+		}
+	}
+
+	ownerRefs = dst.GetOwnerReferences()
+	ownerRefs = append(ownerRefs, ownerRef)
+	dst.SetOwnerReferences(ownerRefs)
+
+	return nil
 }
