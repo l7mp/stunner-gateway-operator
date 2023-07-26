@@ -118,6 +118,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 			r.invalidateGatewayClass(c, err)
 			continue
 		}
+		c.gwConf = gwConf
 
 		for _, gw := range r.getGateways4Class(c) {
 			gw := gw
@@ -127,9 +128,6 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 				"gateway", store.GetObjectKey(gw),
 			)
 
-			// recreate context per each gateway
-			c = NewRenderContext(e, r, gc)
-			c.gwConf = gwConf
 			c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
 
 			// render for this gateway
@@ -239,8 +237,6 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			setListenerStatus(gw, &l, true, ready, len(rs))
 		}
 
-		fmt.Println("+++++++++++++++PROGRAMMED+++++++++++++++++++")
-
 		setGatewayStatusProgrammed(gw, nil)
 		gw = pruneGatewayStatusConds(gw)
 
@@ -326,6 +322,11 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		if err != nil {
 			return err
 		}
+
+		// fmt.Println("+++++++++++++++")
+		// fmt.Println(store.DumpObject(dp))
+		// fmt.Println("+++++++++++++++")
+
 		c.update.UpsertQueue.Deployments.Upsert(dp)
 	}
 

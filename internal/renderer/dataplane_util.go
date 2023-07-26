@@ -117,7 +117,7 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	// volumes
 	podSpec.Volumes = make([]corev1.Volume, len(dataplane.Spec.Volumes))
 	for i := range dataplane.Spec.Volumes {
-		podSpec.Volumes[i].DeepCopyInto(&dataplane.Spec.Volumes[i])
+		dataplane.Spec.Volumes[i].DeepCopyInto(&podSpec.Volumes[i])
 	}
 
 	// grace

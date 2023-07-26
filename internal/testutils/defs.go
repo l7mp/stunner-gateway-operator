@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiutil "k8s.io/apimachinery/pkg/util/intstr"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -39,14 +40,31 @@ var (
 	TestEnvEnvVarSource       = corev1.EnvVarSource{FieldRef: &TestFieldSelector}
 	TestConfigMapVolumeSource = corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "testgateway-1"}, Optional: &TestTrue}
 	TestTerminationGrace      = int64(60)
-	TestProbe                 = corev1.Probe{PeriodSeconds: 15, SuccessThreshold: 2, FailureThreshold: 3}
-	TestCPURequest            = resource.NewQuantity(100, resource.DecimalSI)
-	TestMemoryLimit           = resource.NewQuantity(500, resource.DecimalSI)
-	TestResourceRequest       = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceRequestsCPU: *TestCPURequest,
+	TestLivenessProbeAction   = corev1.HTTPGetAction{
+		Path:   "/live",
+		Port:   apiutil.FromInt(8086),
+		Scheme: "HTTP",
+	}
+	TestLivenessProbe = corev1.Probe{
+		ProbeHandler:  corev1.ProbeHandler{HTTPGet: &TestLivenessProbeAction},
+		PeriodSeconds: 15, SuccessThreshold: 1, FailureThreshold: 3, TimeoutSeconds: 1,
+	}
+	TestReadinessProbeAction = corev1.HTTPGetAction{
+		Path:   "/ready",
+		Port:   apiutil.FromInt(8086),
+		Scheme: "HTTP",
+	}
+	TestReadinessProbe = corev1.Probe{
+		ProbeHandler:  corev1.ProbeHandler{HTTPGet: &TestReadinessProbeAction},
+		PeriodSeconds: 15, SuccessThreshold: 1, FailureThreshold: 3, TimeoutSeconds: 1,
+	}
+	TestCPURequest      = resource.MustParse("250m")
+	TestMemoryLimit     = resource.MustParse("10M")
+	TestResourceRequest = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceCPU: TestCPURequest,
 	})
 	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceLimitsMemory: *TestMemoryLimit,
+		corev1.ResourceMemory: TestMemoryLimit,
 	})
 )
 
@@ -285,10 +303,12 @@ var TestDataplane = stnrv1a1.Dataplane{
 				Name:          "testport-1-1",
 				ContainerPort: int32(1),
 				Protocol:      corev1.ProtocolUDP,
+				HostPort:      int32(1),
 			}, {
 				Name:          "testport-1-2",
 				ContainerPort: int32(2),
 				Protocol:      corev1.ProtocolTCP,
+				HostPort:      int32(2),
 			}},
 			EnvFrom: []corev1.EnvFromSource{},
 			Env: []corev1.EnvVar{{
@@ -303,12 +323,12 @@ var TestDataplane = stnrv1a1.Dataplane{
 				Requests: TestResourceRequest,
 			},
 			VolumeMounts: []corev1.VolumeMount{{
-				Name:      "testvolume-name",
+				Name:      "testvolume",
 				ReadOnly:  true,
 				MountPath: "/tmp/mount",
 			}},
-			LivenessProbe:   &TestProbe,
-			ReadinessProbe:  &TestProbe,
+			LivenessProbe:   &TestLivenessProbe,
+			ReadinessProbe:  &TestReadinessProbe,
 			ImagePullPolicy: corev1.PullAlways,
 			SecurityContext: nil,
 		}, {
@@ -318,12 +338,14 @@ var TestDataplane = stnrv1a1.Dataplane{
 			Args:    []string{"testarg-2-1", "testarg-2-2"},
 			Ports: []corev1.ContainerPort{{
 				Name:          "testport-2-1",
-				ContainerPort: int32(1),
+				ContainerPort: int32(3),
 				Protocol:      corev1.ProtocolUDP,
+				HostPort:      int32(3),
 			}, {
 				Name:          "testport-2-2",
-				ContainerPort: int32(2),
+				ContainerPort: int32(4),
 				Protocol:      corev1.ProtocolTCP,
+				HostPort:      int32(4),
 			}},
 			EnvFrom: []corev1.EnvFromSource{},
 			Env:     []corev1.EnvVar{},
@@ -331,13 +353,13 @@ var TestDataplane = stnrv1a1.Dataplane{
 				Limits:   TestResourceLimit,
 				Requests: TestResourceRequest,
 			},
-			LivenessProbe:   &TestProbe,
-			ReadinessProbe:  &TestProbe,
+			LivenessProbe:   &TestLivenessProbe,
+			ReadinessProbe:  &TestReadinessProbe,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			SecurityContext: nil,
 		}},
 		Volumes: []corev1.Volume{{
-			Name: "testvolume-name",
+			Name: "testvolume",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &TestConfigMapVolumeSource,
 			},

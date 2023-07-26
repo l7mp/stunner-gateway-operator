@@ -6,6 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
@@ -55,8 +56,18 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 		},
 	}
 
-	if err := controllerutil.SetOwnerReference(c.gwConf, cm, r.scheme); err != nil {
-		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(c.gc),
+	// owned by the gateway-config in legacy mode
+	var owner client.Object = c.gwConf
+	if config.DataplaneMode == config.DataplaneModeManaged {
+		gw := c.gws.GetFirst()
+		if gw == nil {
+			panic("renderConfig called with empty Gateway ref in managed mode")
+		}
+		owner = gw
+	}
+
+	if err := controllerutil.SetOwnerReference(owner, cm, r.scheme); err != nil {
+		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(owner),
 			"reference", store.GetObjectKey(cm))
 		return nil, NewCriticalError(RenderingError)
 	}

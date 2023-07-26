@@ -106,7 +106,9 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
 		// merge metadata
-		mergeMetadata(current, svc)
+		if err := mergeMetadata(current, svc); err != nil {
+			return nil
+		}
 
 		// rewrite spec
 		svc.Spec.DeepCopyInto(&current.Spec)
@@ -141,7 +143,9 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 
 		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
 
-		mergeMetadata(current, cm)
+		if err := mergeMetadata(current, cm); err != nil {
+			return nil
+		}
 
 		current.Data = make(map[string]string)
 		for k, v := range cm.Data {
@@ -178,7 +182,9 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		// things that might have been changed by the controler: the owner ref,
 		// annotations, labels and the spec
 
-		mergeMetadata(current, dp)
+		if err := mergeMetadata(current, dp); err != nil {
+			return nil
+		}
 
 		current.Spec.Selector = dp.Spec.Selector
 		if dp.Spec.Replicas != nil {

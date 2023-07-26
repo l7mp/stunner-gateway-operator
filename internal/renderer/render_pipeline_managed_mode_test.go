@@ -228,14 +228,14 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, testutils.TestResourceRequest, container.Resources.Requests, "container 1 - resource req")
 
 				assert.Len(t, container.VolumeMounts, 1, "contianer 1 - volume mounts")
-				assert.Equal(t, "testvolume-name", container.VolumeMounts[0].Name, "container 1 - volume mount - name")
+				assert.Equal(t, "testvolume", container.VolumeMounts[0].Name, "container 1 - volume mount - name")
 				assert.Equal(t, true, container.VolumeMounts[0].ReadOnly, "container 1 - volume mount - readonly")
 				assert.Equal(t, "/tmp/mount", container.VolumeMounts[0].MountPath, "container 1 - volume mount - mount-path")
 
 				assert.NotNil(t, container.LivenessProbe, "container 1 - liveness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 1 - liveness probe")
+				assert.Equal(t, testutils.TestLivenessProbe, *container.LivenessProbe, "container 1 - liveness probe")
 				assert.NotNil(t, container.ReadinessProbe, "container 1 - readiness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 1 - readiness probe")
+				assert.Equal(t, testutils.TestReadinessProbe, *container.ReadinessProbe, "container 1 - readiness probe")
 
 				assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy, "container 1 - readiness probe")
 				assert.Nil(t, container.SecurityContext, "container 1 - security context")
@@ -251,26 +251,26 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, ports, 2, "contianer 2 ports len")
 				port = ports[0]
 				assert.Equal(t, "testport-2-1", port.Name, "container 2 - port 1 - name")
-				assert.Equal(t, int32(1), port.ContainerPort, "container 2 - port 1 - port")
+				assert.Equal(t, int32(3), port.ContainerPort, "container 2 - port 1 - port")
 				assert.Equal(t, corev1.ProtocolUDP, port.Protocol, "container 2 - port 1 - protocol")
 				port = ports[1]
 				assert.Equal(t, "testport-2-2", port.Name, "container 2 - port 2 - name")
-				assert.Equal(t, int32(2), port.ContainerPort, "container 2 - port 2 - port")
+				assert.Equal(t, int32(4), port.ContainerPort, "container 2 - port 2 - port")
 				assert.Equal(t, corev1.ProtocolTCP, port.Protocol, "container 2 - port 2 - protocol")
 
 				assert.Equal(t, []corev1.EnvFromSource{}, container.EnvFrom, "container 2 - envFrom")
 				assert.Equal(t, []corev1.EnvVar{}, container.Env, "container 2 - envFrom")
 
 				assert.NotNil(t, container.LivenessProbe, "container 2 - liveness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 2 - liveness probe")
+				assert.Equal(t, testutils.TestLivenessProbe, *container.LivenessProbe, "container 2 - liveness probe")
 				assert.NotNil(t, container.ReadinessProbe, "container 2 - readiness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 2 - readiness probe")
+				assert.Equal(t, testutils.TestReadinessProbe, *container.ReadinessProbe, "container 2 - readiness probe")
 
 				assert.Len(t, container.VolumeMounts, 0, "contianer 2 - volume mounts")
 				assert.NotNil(t, container.LivenessProbe, "container 2 - liveness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.LivenessProbe, "container 2 - liveness probe")
+				assert.Equal(t, testutils.TestLivenessProbe, *container.LivenessProbe, "container 2 - liveness probe")
 				assert.NotNil(t, container.ReadinessProbe, "container 2 - readiness probe ptr")
-				assert.Equal(t, testutils.TestProbe, *container.ReadinessProbe, "container 2 - readiness probe")
+				assert.Equal(t, testutils.TestReadinessProbe, *container.ReadinessProbe, "container 2 - readiness probe")
 
 				assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy, "container 2 - readiness probe")
 				assert.Nil(t, container.SecurityContext, "container 2 - security context")

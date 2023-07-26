@@ -55,7 +55,7 @@ func initGatewayStatus(gw *gwapiv1a2.Gateway, cname string) {
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(gwapiv1b1.GatewayReasonAccepted),
-		Message: fmt.Sprintf("gateway accepted by controller %q",
+		Message: fmt.Sprintf("gateway accepted by controller %s",
 			config.ControllerName),
 	})
 

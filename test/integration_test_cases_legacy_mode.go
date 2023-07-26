@@ -48,14 +48,6 @@ import (
 )
 
 func testLegacyMode() {
-	// this should be kept as the first test
-	Context(`When using the "legacy" dataplane mode`, func() {
-		It(`It should be possible to set the dataplane mode to "legacy"`, func() {
-			// switch EDS off
-			config.DataplaneMode = config.DataplaneModeLegacy
-		})
-	})
-
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
@@ -4168,13 +4160,6 @@ func testLegacyMode() {
 
 			// restore
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
-		})
-	})
-
-	// this should always be the last test
-	Context(`When using the "legacy" dataplane mode`, func() {
-		Context("It should be possible to reset the dataplane mode to the default", func() {
-			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 		})
 	})
 }

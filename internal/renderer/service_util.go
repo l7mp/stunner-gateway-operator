@@ -127,7 +127,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway, addrHint 
 	var ap *addrPort
 
 	own := false
-	if isOwner(gw, svc, "Gateway") {
+	if store.IsOwner(gw, svc, "Gateway") {
 		own = true
 	}
 
@@ -245,18 +245,6 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 	}
 
 	return nil
-}
-
-// taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
-func isOwner(owner, owned metav1.Object, kind string) bool {
-	for _, ownerRef := range owned.GetOwnerReferences() {
-		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
-			ownerRef.Kind == kind {
-			return true
-		}
-	}
-
-	return false
 }
 
 // we always take the FIRST listener port in the gateway: if you want to expose STUNner on multiple

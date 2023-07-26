@@ -26,10 +26,11 @@ func init() {
 	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
 }
 
-//+kubebuilder:object:root=true
-// //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:resource:categories=stunner,shortName=dps
+// +genclient
+// +genclient:nonNamespaced
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=stunner,scope=Cluster,shortName=dps
+// +kubebuilder:storageversion
 
 // Dataplane is a collection of configuration parameters that can be used for spawning a `stunnerd`
 // instance for a Gateway. Labels and annotations on the Dataplane object will be copied verbatim

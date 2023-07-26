@@ -101,6 +101,7 @@ var (
 	testSecret     = testutils.TestSecret.DeepCopy()
 	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
 	testStaticSvc  = testutils.TestStaticSvc.DeepCopy()
+	testDataplane  = testutils.TestDataplane.DeepCopy()
 	newCert64      = "bmV3Y2VydA=="                 // newcert
 	newKey64       = "bmV3a2V5"                     // newkey
 	_              = fmt.Sprintf("whatever: %d", 1) // make sure we use fmt
@@ -360,5 +361,33 @@ func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f c
 }
 
 var _ = Describe("Integration test:", func() {
-	testLegacyMode()
+	// // LEGACY
+	// Context(`When using the "legacy" dataplane mode`, func() {
+	// 	It(`It should be possible to set the dataplane mode to "legacy"`, func() {
+	// 		config.DataplaneMode = config.DataplaneModeLegacy
+	// 	})
+	// })
+
+	// testLegacyMode()
+
+	// Context(`When using the "legacy" dataplane mode`, func() {
+	// 	Context("It should be possible to reset the dataplane mode to the default", func() {
+	// 		config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+	// 	})
+	// })
+
+	// MANAGED
+	Context(`When using the "managed" dataplane mode`, func() {
+		It(`It should be possible to set the dataplane mode to "managed"`, func() {
+			config.DataplaneMode = config.DataplaneModeManaged
+		})
+	})
+
+	testManagedMode()
+
+	Context(`When using the "managed" dataplane mode`, func() {
+		Context("It should be possible to reset the dataplane mode to the default", func() {
+			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+		})
+	})
 })
