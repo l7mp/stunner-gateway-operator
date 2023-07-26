@@ -1457,7 +1457,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "public address hint in GateWay Spec",
+			name: "public address hint in Gateway Spec",
 			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
@@ -1467,6 +1467,10 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				at := gwapiv1a2.IPAddressType
 				gw.Spec.Addresses = []gwapiv1a2.GatewayAddress{
+					{
+						Type:  &at,
+						Value: "1.1.1.1",
+					},
 					{
 						Type:  &at,
 						Value: "1.2.3.4",
@@ -1489,7 +1493,9 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
-				assert.Equal(t, s.Spec.LoadBalancerIP, "1.2.3.4", "svc address")
+				assert.Equal(t, s.Spec.LoadBalancerIP, "1.1.1.1", "svc loadbalancerip")
+				assert.Equal(t, len(s.Spec.ExternalIPs), 1, "svc externalips list length")
+				assert.Equal(t, s.Spec.ExternalIPs[0], "1.1.1.1", "svc externalips")
 			},
 		},
 	})
