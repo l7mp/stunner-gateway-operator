@@ -1313,5 +1313,93 @@ func TestRenderPipeline(t *testing.T) {
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 			},
 		},
+		{
+			name: "Address hint set in Gw.spec.addresses",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				at := gwapiv1a2.IPAddressType
+				gw.Spec.Addresses = []gwapiv1a2.GatewayAddress{
+					{
+						Type:  &at,
+						Value: "1.1.1.1",
+					},
+				}
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				err = r.renderGatewayClass(c)
+				assert.NoError(t, err, "render success")
+
+				// configmap
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+				o := cms[0]
+
+				// objectmeta
+				assert.Equal(t, o.GetName(), testutils.TestStunnerConfig,
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(),
+					"testnamespace", "configmap namespace")
+
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				assert.True(t, ok, "annotations: related gw")
+
+				cm, ok := o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, err := store.UnpackConfigMap(cm)
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
+
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
+					conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc := conf.Listeners[0]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
+				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
+				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+			},
+		},
 	})
 }
