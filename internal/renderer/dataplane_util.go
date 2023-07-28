@@ -4,12 +4,11 @@ import (
 	// "fmt"
 
 	appv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -19,7 +18,7 @@ import (
 // - labels and annotations are merged verbatim on top of this from the corresponding Gateway object
 // - all pods od the deployment are marked with label "app=stunner" AND "stunner.l7mp.io/related-gateway-name=<gateway-name>" (no namespace, as '/' is not allowed in label values)
 // - deployment selector filters on these two labels
-func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*appv1.Deployment, error) {
+func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
 	if gw == nil {
 		r.log.Info("ERROR: createDeployment called with empty Gateway ref in managed mode")
@@ -42,19 +41,7 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 		return nil, err
 	}
 
-	deployment := &appv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
-			},
-		},
-		Spec: appv1.DeploymentSpec{},
-	}
+	deployment := config.DataplaneTemplate(gw)
 
 	// copy annotations and labels
 	labs := labels.Merge(deployment.GetLabels(), gw.GetLabels())
@@ -69,60 +56,47 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	}
 	deployment.SetAnnotations(annotations)
 
-	// prepare label selector
-	// Like `kubectl label ... -l "app=stunner"
-	appReq := metav1.LabelSelectorRequirement{
-		Key:      opdefault.OwnedByLabelKey,
-		Operator: metav1.LabelSelectorOpIn,
-		Values:   []string{opdefault.OwnedByLabelValue},
-	}
-	// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
-	relatedReq := metav1.LabelSelectorRequirement{
-		Key:      opdefault.RelatedGatewayKey,
-		Operator: metav1.LabelSelectorOpIn,
-		Values:   []string{gw.GetName()},
-	}
-
-	deployment.Spec.Selector = &metav1.LabelSelector{
-		MatchExpressions: []metav1.LabelSelectorRequirement{appReq, relatedReq},
-	}
-
 	// copy spec
 	if dataplane.Spec.Replicas != nil {
 		deployment.Spec.Replicas = dataplane.Spec.Replicas
 	}
 
-	if dataplane.Spec.Strategy != nil {
-		deployment.Spec.Strategy = *dataplane.Spec.Strategy
-	}
-
-	// copy pod template spec
-	deployment.Spec.Template = corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey:   opdefault.OwnedByLabelValue,
-				opdefault.RelatedGatewayKey: gw.GetName(),
-			},
-		},
-	}
-
-	podSpec := &deployment.Spec.Template.Spec
-
-	// containers verbatim
-	podSpec.Containers = make([]corev1.Container, len(dataplane.Spec.Containers))
-	for i := range dataplane.Spec.Containers {
-		dataplane.Spec.Containers[i].DeepCopyInto(&podSpec.Containers[i])
-	}
-
-	// volumes
-	podSpec.Volumes = make([]corev1.Volume, len(dataplane.Spec.Volumes))
-	for i := range dataplane.Spec.Volumes {
-		dataplane.Spec.Volumes[i].DeepCopyInto(&podSpec.Volumes[i])
-	}
-
 	// grace
+	podSpec := &deployment.Spec.Template.Spec
 	if dataplane.Spec.TerminationGracePeriodSeconds != nil {
 		podSpec.TerminationGracePeriodSeconds = dataplane.Spec.TerminationGracePeriodSeconds
+	}
+
+	// resource
+	found := false
+	for i := range podSpec.Containers {
+		if podSpec.Containers[i].Name == opdefault.DefaultStunnerdInstanceName {
+			found = true
+			c := &podSpec.Containers[i]
+			if dataplane.Spec.Image != "" {
+				c.Image = dataplane.Spec.Image
+			}
+			if dataplane.Spec.ImagePullPolicy != nil {
+				c.ImagePullPolicy = *dataplane.Spec.ImagePullPolicy
+			}
+			if len(dataplane.Spec.Command) != 0 {
+				c.Command = make([]string, len(dataplane.Spec.Command))
+				copy(c.Command, dataplane.Spec.Command)
+			}
+			if len(dataplane.Spec.Args) != 0 {
+				c.Args = make([]string, len(dataplane.Spec.Args))
+				copy(c.Args, dataplane.Spec.Args)
+			}
+			if dataplane.Spec.Resources != nil {
+				dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
+			}
+		}
+	}
+
+	if !found {
+		r.log.Info("cannot find stunnerd container in dataplane Deployment template",
+			"deployment", store.DumpObject(&deployment))
+		return nil, NewCriticalError(RenderingError)
 	}
 
 	// hostnetwork
@@ -134,13 +108,19 @@ func (r *Renderer) createDeployment(c *RenderContext, name, namespace string) (*
 	}
 
 	// owned by the Gateway
-	if err := controllerutil.SetOwnerReference(gw, deployment, r.scheme); err != nil {
+	if err := controllerutil.SetOwnerReference(gw, &deployment, r.scheme); err != nil {
 		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gw),
-			"reference", store.GetObjectKey(deployment))
+			"reference", store.GetObjectKey(&deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
 
-	// fmt.Printf("%#v\n", deployment)
+	r.log.V(2).Info("createDeployment: ready",
+		"gateway-class", store.GetObjectKey(c.gc),
+		"gateway-config", store.GetObjectKey(c.gwConf),
+		"gateway", store.GetObjectKey(gw),
+		"dataplane", store.GetObjectKey(dataplane),
+		"deployment", store.DumpObject(&deployment),
+	)
 
-	return deployment, nil
+	return &deployment, nil
 }

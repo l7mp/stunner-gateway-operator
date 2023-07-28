@@ -222,8 +222,11 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		return nil
 	})
 
+	// u.log.V(4).Info("upserting deployment", "resource", store.GetObjectKey(dp), "generation",
+	// 	gen, "deployment", store.DumpObject(dp))
+
 	if err != nil {
-		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert deployment-map %q: %w",
+		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert deployment %q: %w",
 			store.GetObjectKey(dp), err)
 	}
 

@@ -22,8 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
@@ -94,24 +93,25 @@ func (in *DataplaneSpec) DeepCopyInto(out *DataplaneSpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.Strategy != nil {
-		in, out := &in.Strategy, &out.Strategy
-		*out = new(v1.DeploymentStrategy)
+	if in.ImagePullPolicy != nil {
+		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
+		*out = new(v1.PullPolicy)
+		**out = **in
+	}
+	if in.Command != nil {
+		in, out := &in.Command, &out.Command
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Args != nil {
+		in, out := &in.Args, &out.Args
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.Containers != nil {
-		in, out := &in.Containers, &out.Containers
-		*out = make([]corev1.Container, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]corev1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
 	}
 	if in.TerminationGracePeriodSeconds != nil {
 		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
@@ -120,7 +120,7 @@ func (in *DataplaneSpec) DeepCopyInto(out *DataplaneSpec) {
 	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
-		*out = new(corev1.Affinity)
+		*out = new(v1.Affinity)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -348,7 +348,7 @@ func (in *StaticServiceSpec) DeepCopyInto(out *StaticServiceSpec) {
 	*out = *in
 	if in.Ports != nil {
 		in, out := &in.Ports, &out.Ports
-		*out = make([]corev1.ServicePort, len(*in))
+		*out = make([]v1.ServicePort, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

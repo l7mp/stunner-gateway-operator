@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrv1a1.GatewayConfig, error) {
-	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
+	// r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	// ref already checked
 	ref := c.gc.Spec.ParametersRef

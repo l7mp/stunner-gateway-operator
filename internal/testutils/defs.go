@@ -3,12 +3,9 @@ package testutils
 import (
 	"fmt"
 
-	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apiutil "k8s.io/apimachinery/pkg/util/intstr"
-	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -17,55 +14,38 @@ import (
 )
 
 var (
-	TestTrue                  = true
-	TestNsName                = gwapiv1a2.Namespace("testnamespace")
-	TestStunnerConfig         = "stunner-config"
-	TestRealm                 = "testrealm"
-	TestMetricsEndpoint       = "testmetrics"
-	TestHealthCheckEndpoint   = "testhealth"
-	TestAuthType              = "plaintext"
-	TestUsername              = "testuser"
-	TestPassword              = "testpass"
-	TestLogLevel              = "testloglevel"
-	TestMinPort               = int32(1)
-	TestMaxPort               = int32(2)
-	TestLabelName             = "testlabel"
-	TestLabelValue            = "testvalue"
-	TestSectionName           = gwapiv1a2.SectionName("gateway-1-listener-udp")
-	TestCert64                = "dGVzdGNlcnQ=" // "testcert"
-	TestKey64                 = "dGVzdGtleQ==" // "testkey"
-	TestReplicas              = int32(3)
-	TestDeployStrategy        = appv1.DeploymentStrategy{Type: appv1.RecreateDeploymentStrategyType, RollingUpdate: nil}
-	TestFieldSelector         = corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
-	TestEnvEnvVarSource       = corev1.EnvVarSource{FieldRef: &TestFieldSelector}
-	TestConfigMapVolumeSource = corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "testgateway-1"}, Optional: &TestTrue}
-	TestTerminationGrace      = int64(60)
-	TestLivenessProbeAction   = corev1.HTTPGetAction{
-		Path:   "/live",
-		Port:   apiutil.FromInt(8086),
-		Scheme: "HTTP",
-	}
-	TestLivenessProbe = corev1.Probe{
-		ProbeHandler:  corev1.ProbeHandler{HTTPGet: &TestLivenessProbeAction},
-		PeriodSeconds: 15, SuccessThreshold: 1, FailureThreshold: 3, TimeoutSeconds: 1,
-	}
-	TestReadinessProbeAction = corev1.HTTPGetAction{
-		Path:   "/ready",
-		Port:   apiutil.FromInt(8086),
-		Scheme: "HTTP",
-	}
-	TestReadinessProbe = corev1.Probe{
-		ProbeHandler:  corev1.ProbeHandler{HTTPGet: &TestReadinessProbeAction},
-		PeriodSeconds: 15, SuccessThreshold: 1, FailureThreshold: 3, TimeoutSeconds: 1,
-	}
-	TestCPURequest      = resource.MustParse("250m")
-	TestMemoryLimit     = resource.MustParse("10M")
-	TestResourceRequest = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+	TestTrue                = true
+	TestNsName              = gwapiv1a2.Namespace("testnamespace")
+	TestStunnerConfig       = "stunner-config"
+	TestRealm               = "testrealm"
+	TestMetricsEndpoint     = "testmetrics"
+	TestHealthCheckEndpoint = "testhealth"
+	TestAuthType            = "plaintext"
+	TestUsername            = "testuser"
+	TestPassword            = "testpass"
+	TestLogLevel            = "testloglevel"
+	TestMinPort             = int32(1)
+	TestMaxPort             = int32(2)
+	TestLabelName           = "testlabel"
+	TestLabelValue          = "testvalue"
+	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
+	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
+	TestKey64               = "dGVzdGtleQ==" // "testkey"
+	TestReplicas            = int32(3)
+	TestTerminationGrace    = int64(60)
+	TestImagePullPolicy     = corev1.PullAlways
+	TestCPURequest          = resource.MustParse("250m")
+	TestMemoryLimit         = resource.MustParse("10M")
+	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceCPU: TestCPURequest,
 	})
 	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceMemory: TestMemoryLimit,
 	})
+	TestResourceRequirements = corev1.ResourceRequirements{
+		Limits:   TestResourceLimit,
+		Requests: TestResourceRequest,
+	}
 )
 
 // Namespace
@@ -292,79 +272,13 @@ var TestDataplane = stnrv1a1.Dataplane{
 		Name: opdefault.DefaultDataplaneName,
 	},
 	Spec: stnrv1a1.DataplaneSpec{
-		Replicas: &TestReplicas,
-		Strategy: &TestDeployStrategy,
-		Containers: []corev1.Container{{
-			Name:    "testcontainer-1",
-			Image:   "testimage-1",
-			Command: []string{"testcommand-1-1", "testcommand-1-2"},
-			Args:    []string{"testarg-1-1", "testarg-1-2"},
-			Ports: []corev1.ContainerPort{{
-				Name:          "testport-1-1",
-				ContainerPort: int32(1),
-				Protocol:      corev1.ProtocolUDP,
-				HostPort:      int32(1),
-			}, {
-				Name:          "testport-1-2",
-				ContainerPort: int32(2),
-				Protocol:      corev1.ProtocolTCP,
-				HostPort:      int32(2),
-			}},
-			EnvFrom: []corev1.EnvFromSource{},
-			Env: []corev1.EnvVar{{
-				Name:  "TEST_ENV_1",
-				Value: "test-env-val",
-			}, {
-				Name:      "TEST_ENV_2",
-				ValueFrom: &TestEnvEnvVarSource,
-			}},
-			Resources: corev1.ResourceRequirements{
-				Limits:   TestResourceLimit,
-				Requests: TestResourceRequest,
-			},
-			VolumeMounts: []corev1.VolumeMount{{
-				Name:      "testvolume",
-				ReadOnly:  true,
-				MountPath: "/tmp/mount",
-			}},
-			LivenessProbe:   &TestLivenessProbe,
-			ReadinessProbe:  &TestReadinessProbe,
-			ImagePullPolicy: corev1.PullAlways,
-			SecurityContext: nil,
-		}, {
-			Name:    "testcontainer-2",
-			Image:   "testimage-2",
-			Command: []string{"testcommand-2-1", "testcommand-2-2"},
-			Args:    []string{"testarg-2-1", "testarg-2-2"},
-			Ports: []corev1.ContainerPort{{
-				Name:          "testport-2-1",
-				ContainerPort: int32(3),
-				Protocol:      corev1.ProtocolUDP,
-				HostPort:      int32(3),
-			}, {
-				Name:          "testport-2-2",
-				ContainerPort: int32(4),
-				Protocol:      corev1.ProtocolTCP,
-				HostPort:      int32(4),
-			}},
-			EnvFrom: []corev1.EnvFromSource{},
-			Env:     []corev1.EnvVar{},
-			Resources: corev1.ResourceRequirements{
-				Limits:   TestResourceLimit,
-				Requests: TestResourceRequest,
-			},
-			LivenessProbe:   &TestLivenessProbe,
-			ReadinessProbe:  &TestReadinessProbe,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			SecurityContext: nil,
-		}},
-		Volumes: []corev1.Volume{{
-			Name: "testvolume",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &TestConfigMapVolumeSource,
-			},
-		}},
+		Replicas:                      &TestReplicas,
+		Image:                         "testimage-1",
+		Command:                       []string{"testcommand-1"},
+		Args:                          []string{"arg-1", "arg-2"},
+		ImagePullPolicy:               &TestImagePullPolicy,
 		TerminationGracePeriodSeconds: &TestTerminationGrace,
+		Resources:                     &TestResourceRequirements,
 		HostNetwork:                   true,
 		Affinity:                      nil,
 	},

@@ -18,7 +18,7 @@ package integration
 
 import (
 	// "context"
-	// "time"
+	"time"
 	// "reflect"
 	// "testing"
 	// "fmt"
@@ -55,6 +55,9 @@ func testManagedMode() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
+			// enable envtest-compatibility model
+			config.EnvTestCompatibilityMode = true
+
 			// switch EDS on
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
@@ -69,16 +72,11 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testGw)).Should(Succeed())
 
 			ctrl.Log.Info("loading default Dataplane")
-			// remove volumes: this is to work around an envtest bug where it does not
-			// allow to load a deployment with ConfigMap volumes in them
 			current := &stnrv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: testDataplane.GetName(),
 			}}
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
 				testDataplane.Spec.DeepCopyInto(&current.Spec)
-				current.Spec.Volumes = []corev1.Volume{}
-				current.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{}
-				current.Spec.Containers[1].VolumeMounts = []corev1.VolumeMount{}
 				return nil
 			})
 			Expect(err).Should(Succeed())
@@ -679,32 +677,16 @@ func testManagedMode() {
 
 			// unit tests check the rest: only test the basics here
 			podSpec := &podTemplate.Spec
-			Expect(podSpec.Containers).To(HaveLen(2))
+			Expect(podSpec.Containers).To(HaveLen(1))
 			container := podSpec.Containers[0]
-			Expect(container.Name).Should(Equal("testcontainer-1"))
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
 			Expect(container.Image).Should(Equal("testimage-1"))
-			Expect(container.Env).To(HaveLen(2))
 			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
 			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
 
 			// Expect(container.VolumeMounts).To(HaveLen(1))
 
-			Expect(container.LivenessProbe).NotTo(BeNil())
-			Expect(*container.LivenessProbe).Should(Equal(testutils.TestLivenessProbe))
-			Expect(container.ReadinessProbe).NotTo(BeNil())
-			Expect(*container.ReadinessProbe).Should(Equal(testutils.TestReadinessProbe))
-
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
-
-			container = podSpec.Containers[1]
-
-			Expect(container.Name).Should(Equal("testcontainer-2"))
-			Expect(container.Image).Should(Equal("testimage-2"))
-			Expect(container.Command).Should(Equal([]string{"testcommand-2-1", "testcommand-2-2"}))
-			Expect(container.Args).Should(Equal([]string{"testarg-2-1", "testarg-2-2"}))
-
-			Expect(container.VolumeMounts).To(BeEmpty())
-			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
@@ -722,16 +704,9 @@ func testManagedMode() {
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
 				testDataplane.Spec.DeepCopyInto(&current.Spec)
 
-				current.Spec.Containers[0].Image = "dummy-image"
-				current.Spec.Containers[0].Env[0].Value = "dummy-env-value"
-				current.Spec.Containers[1].Command[0] = "dummy-command"
-				current.Spec.Containers[1].Args[1] = "dummy-arg"
-
-				// remove volumes: this is to work around an envtest bug where it does not
-				// allow to load a deployment with ConfigMap volumes in them
-				current.Spec.Volumes = []corev1.Volume{}
-				current.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{}
-				current.Spec.Containers[1].VolumeMounts = []corev1.VolumeMount{}
+				current.Spec.Image = "dummy-image"
+				current.Spec.Command[0] = "dummy-command"
+				current.Spec.Args[1] = "dummy-arg"
 
 				current.Spec.HostNetwork = false
 				return nil
@@ -770,29 +745,18 @@ func testManagedMode() {
 			podTemplate := &deploy.Spec.Template
 			podSpec := &podTemplate.Spec
 
-			Expect(podSpec.Containers).To(HaveLen(2))
+			Expect(podSpec.Containers).To(HaveLen(1))
 
 			container := podSpec.Containers[0]
-			Expect(container.Name).Should(Equal("testcontainer-1"))
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
 			Expect(container.Image).Should(Equal("dummy-image"))
-			Expect(container.Env).To(HaveLen(2))
-			Expect(container.Env[0].Value).Should(Equal("dummy-env-value"))
+			Expect(container.Command[0]).Should(Equal("dummy-command"))
+			Expect(container.Args[1]).Should(Equal("dummy-arg"))
+
 			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
 			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
 			// Expect(container.VolumeMounts).To(HaveLen(1))
-			Expect(container.LivenessProbe).NotTo(BeNil())
-			Expect(*container.LivenessProbe).Should(Equal(testutils.TestLivenessProbe))
-			Expect(container.ReadinessProbe).NotTo(BeNil())
-			Expect(*container.ReadinessProbe).Should(Equal(testutils.TestReadinessProbe))
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
-
-			container = podSpec.Containers[1]
-			Expect(container.Name).Should(Equal("testcontainer-2"))
-			Expect(container.Image).Should(Equal("testimage-2"))
-			Expect(container.Command).Should(Equal([]string{"dummy-command", "testcommand-2-2"}))
-			Expect(container.Args).Should(Equal([]string{"testarg-2-1", "dummy-arg"}))
-			Expect(container.VolumeMounts).To(BeEmpty())
-			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
@@ -1030,7 +994,6 @@ func testManagedMode() {
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
-
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
@@ -1193,7 +1156,7 @@ func testManagedMode() {
 				}
 
 				// conf should have valid listener confs
-				if len(c.Listeners) == 1 && len(c.Clusters) == 1 {
+				if len(c.Listeners) == 1 && len(c.Listeners[0].Routes) == 1 && len(c.Clusters) == 1 {
 					conf = &c
 					return true
 				}
@@ -1542,33 +1505,15 @@ func testManagedMode() {
 
 			// unit tests check the rest: only test the basics here
 			podSpec := &podTemplate.Spec
-			Expect(podSpec.Containers).To(HaveLen(2))
+			Expect(podSpec.Containers).To(HaveLen(1))
 			container := podSpec.Containers[0]
-			Expect(container.Name).Should(Equal("testcontainer-1"))
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
 			Expect(container.Image).Should(Equal("dummy-image"))
-			Expect(container.Env).To(HaveLen(2))
-			Expect(container.Env[0].Value).Should(Equal("dummy-env-value"))
+			Expect(container.Command[0]).Should(Equal("dummy-command"))
+			Expect(container.Args[1]).Should(Equal("dummy-arg"))
 			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
 			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
-
-			// Expect(container.VolumeMounts).To(HaveLen(1))
-
-			Expect(container.LivenessProbe).NotTo(BeNil())
-			Expect(*container.LivenessProbe).Should(Equal(testutils.TestLivenessProbe))
-			Expect(container.ReadinessProbe).NotTo(BeNil())
-			Expect(*container.ReadinessProbe).Should(Equal(testutils.TestReadinessProbe))
-
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
-
-			container = podSpec.Containers[1]
-
-			Expect(container.Name).Should(Equal("testcontainer-2"))
-			Expect(container.Image).Should(Equal("testimage-2"))
-			Expect(container.Command).Should(Equal([]string{"dummy-command", "testcommand-2-2"}))
-			Expect(container.Args).Should(Equal([]string{"testarg-2-1", "dummy-arg"}))
-
-			Expect(container.VolumeMounts).To(BeEmpty())
-			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
@@ -1642,32 +1587,13 @@ func testManagedMode() {
 
 			// unit tests check the rest: only test the basics here
 			podSpec := &podTemplate.Spec
-			Expect(podSpec.Containers).To(HaveLen(2))
+			Expect(podSpec.Containers).To(HaveLen(1))
 			container := podSpec.Containers[0]
-			Expect(container.Name).Should(Equal("testcontainer-1"))
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
 			Expect(container.Image).Should(Equal("dummy-image"))
-			Expect(container.Env).To(HaveLen(2))
 			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
 			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
-
-			// Expect(container.VolumeMounts).To(HaveLen(1))
-
-			Expect(container.LivenessProbe).NotTo(BeNil())
-			Expect(*container.LivenessProbe).Should(Equal(testutils.TestLivenessProbe))
-			Expect(container.ReadinessProbe).NotTo(BeNil())
-			Expect(*container.ReadinessProbe).Should(Equal(testutils.TestReadinessProbe))
-
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
-
-			container = podSpec.Containers[1]
-
-			Expect(container.Name).Should(Equal("testcontainer-2"))
-			Expect(container.Image).Should(Equal("testimage-2"))
-			Expect(container.Command).Should(Equal([]string{"dummy-command", "testcommand-2-2"}))
-			Expect(container.Args).Should(Equal([]string{"testarg-2-1", "dummy-arg"}))
-
-			Expect(container.VolumeMounts).To(BeEmpty())
-			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
@@ -1768,6 +1694,723 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
+	})
+
+	// MULTI-GATEWAYCLASS
+	Context("When creating 2 GatewayClasses and Gateways", func() {
+		conf := &stunnerconfv1alpha1.StunnerConfig{}
+
+		It("should survive loading all resources", func() {
+			// switch EDS on
+			config.EnableEndpointDiscovery = true
+			config.EnableRelayToClusterIP = true
+
+			ctrl.Log.Info("loading GatewayClass 2")
+			gc2 := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+				Name: "gateway-class-2",
+			}}
+			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, gc2, func() error {
+				testGwClass.Spec.DeepCopyInto(&gc2.Spec)
+				gc2.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
+					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+					Name:      "gateway-config-2",
+					Namespace: &testutils.TestNsName,
+				}
+
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("loading GatewayConfig 2")
+			realm := "testrealm-2"
+			dataplane := "dataplane-2"
+			gwConf2 := &stnrv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-config-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			_, err = ctrlutil.CreateOrUpdate(ctx, k8sClient, gwConf2, func() error {
+				testGwConfig.Spec.DeepCopyInto(&gwConf2.Spec)
+				gwConf2.Spec.Realm = &realm
+				gwConf2.Spec.Dataplane = &dataplane
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("loading  Dataplane 2")
+			dp2 := &stnrv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+				Name: dataplane,
+			}}
+			pullPolicy := corev1.PullNever
+			_, err = ctrlutil.CreateOrUpdate(ctx, k8sClient, dp2, func() error {
+				testDataplane.Spec.DeepCopyInto(&dp2.Spec)
+				dp2.Spec.Image = "testimage-2"
+				dp2.Spec.Command = []string{"testcommand-2"}
+				dp2.Spec.Args = []string{"arg-1", "arg-2"}
+				dp2.Spec.ImagePullPolicy = &pullPolicy
+				dp2.Spec.HostNetwork = true
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("loading Gateway 2")
+			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			_, err = ctrlutil.CreateOrUpdate(ctx, k8sClient, gw2, func() error {
+				testGw.Spec.DeepCopyInto(&gw2.Spec)
+				gw2.Spec.GatewayClassName = gwapiv1a2.ObjectName("gateway-class-2")
+				gw2.Spec.Listeners = []gwapiv1a2.Listener{{
+					Name:     gwapiv1a2.SectionName("gateway-2-listener-udp"),
+					Port:     gwapiv1a2.PortNumber(10),
+					Protocol: gwapiv1a2.ProtocolType("UDP"),
+				}}
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			// UDPRoute: both gateways are parents
+			ctrl.Log.Info("updating UDPRoute")
+			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
+				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
+					ParentRefs: []gwapiv1a2.ParentReference{{
+						Name:        "gateway-1",
+						SectionName: &testutils.TestSectionName,
+					}, {
+						Name: "gateway-2",
+					}},
+				}
+			})
+		})
+
+		It("should render a STUNner config for Gateway 1", func() {
+			// retry, but also try to unpack inside Eventually
+			lookupKey := store.GetNamespacedName(testGw)
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				// conf should have valid listener confs
+				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
+					conf = &c
+					return true
+				}
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			Expect(v).Should(Equal(store.GetObjectKey(testGw)))
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).Should(BeEmpty())
+
+			Expect(conf.Clusters).To(HaveLen(1))
+
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
+		It("should render a STUNner config for Gateway 2", func() {
+			// retry, but also try to unpack inside Eventually
+			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			cm := &corev1.ConfigMap{}
+			lookupKey := store.GetNamespacedName(gw2)
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				// conf should have valid listener confs
+				if len(c.Listeners) == 1 && len(c.Clusters) == 1 {
+					conf = &c
+					return true
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
+			Expect(v).Should(Equal(store.GetObjectKey(gw2)))
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+
+			Expect(conf.Listeners).To(HaveLen(1))
+
+			l := conf.Listeners[0]
+			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Port).Should(Equal(10))
+			Expect(l.MinRelayPort).Should(Equal(1))
+			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+			c := conf.Clusters[0]
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
+		It("should set the status of GatewayClass 1", func() {
+			gc := &gwapiv1a2.GatewayClass{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
+				gc)).Should(Succeed())
+
+			Expect(gc.Status.Conditions).To(HaveLen(1))
+
+			s := meta.FindStatusCondition(gc.Status.Conditions,
+				string(gwapiv1b1.GatewayClassConditionStatusAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayClassConditionStatusAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(
+				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
+		})
+
+		It("should set the status of GatewayClass 2", func() {
+			gc := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+				Name: "gateway-class-2",
+			}}
+			// wait until status gets updated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(gc), gc)
+				if err != nil || gc == nil {
+					return false
+				}
+
+				s := meta.FindStatusCondition(gc.Status.Conditions,
+					string(gwapiv1b1.GatewayClassConditionStatusAccepted))
+				if s != nil && s.Status == metav1.ConditionTrue {
+					return true
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(gc.Status.Conditions).To(HaveLen(1))
+			s := meta.FindStatusCondition(gc.Status.Conditions,
+				string(gwapiv1b1.GatewayClassConditionStatusAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayClassConditionStatusAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(
+				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
+		})
+
+		It("should set the status of Gateway 1", func() {
+			gw := &gwapiv1a2.Gateway{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(testGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(gw.Status.Conditions).To(HaveLen(2))
+
+			s := meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1b1.GatewayConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1b1.GatewayConditionProgrammed))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// listeners: no public gateway address so Ready status is False
+			Expect(gw.Status.Listeners).To(HaveLen(3))
+
+			// listener[0]: OK
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+
+			// listeners[1]: detached
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+
+			// listeners[2]: ok
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+
+		})
+
+		It("should set the status of Gateway 2", func() {
+			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(gw2), gw2)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw2.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				if s == nil || s.Status != metav1.ConditionTrue {
+					return false
+				}
+				// should get a public IP
+				listenerStatuses := gw2.Status.Listeners
+				if len(listenerStatuses) != 1 || listenerStatuses[0].Name != "gateway-2-listener-udp" {
+					return false
+				}
+
+				s = meta.FindStatusCondition(listenerStatuses[0].Conditions,
+					string(gwapiv1b1.GatewayConditionReady))
+				if s == nil || s.Status != metav1.ConditionTrue {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(gw2.Status.Conditions).To(HaveLen(2))
+
+			s := meta.FindStatusCondition(gw2.Status.Conditions,
+				string(gwapiv1b1.GatewayConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(gw2.Status.Conditions,
+				string(gwapiv1b1.GatewayConditionProgrammed))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			Expect(gw2.Status.Listeners).To(HaveLen(1))
+
+			// listener[0]: OK
+			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
+				string(gwapiv1b1.ListenerConditionReady))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1b1.ListenerConditionReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+		})
+
+		It("should set the Route status", func() {
+			ro := &gwapiv1a2.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				ro)).Should(Succeed())
+
+			Expect(ro.Status.Parents).To(HaveLen(2))
+
+			ps := ro.Status.Parents[0]
+			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-1") {
+				ps = ro.Status.Parents[1]
+			}
+
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+
+			s := meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1a2.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1a2.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			ps = ro.Status.Parents[1]
+			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-2") {
+				ps = ro.Status.Parents[0]
+			}
+
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-2")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1a2.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1a2.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+		})
+
+		It("should create a Deployment for Gateway 1", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+			deploy := &appv1.Deployment{}
+
+			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, deploy)
+				return err == nil && deploy != nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
+
+			// metadata
+			gwName, ok := deploy.GetAnnotations()[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "Gateway label")
+			Expect(gwName).Should(Equal(store.GetObjectKey(testGw)), "Gateway label value")
+
+			labs := deploy.GetLabels()
+			v, ok := labs[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+
+			v, ok = labs["dummy-label"] // comes from testGw
+			Expect(ok).Should(BeTrue(), "gw label")
+			Expect(v).Should(Equal("dummy-value"))
+
+			Expect(store.IsOwner(testGw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+
+			// check the label selector
+			labelSelector := deploy.Spec.Selector
+			Expect(labelSelector).NotTo(BeNil(), "selector set")
+
+			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+			Expect(err).To(Succeed())
+
+			// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
+			// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+			labelToMatch := labels.Merge(
+				labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
+				labels.Set{opdefault.RelatedGatewayKey: testGw.GetName()},
+			)
+			Expect(selector.Matches(labelToMatch)).Should(BeTrue(), "selector matches")
+
+			podTemplate := &deploy.Spec.Template
+			labs = podTemplate.GetLabels()
+			Expect(labs).To(HaveLen(2))
+			v, ok = labs[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			v, ok = labs[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(testGw.GetName()))
+
+			// deployment selector matches pod template
+			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())
+
+			// unit tests check the rest: only test the basics here
+			podSpec := &podTemplate.Spec
+			Expect(podSpec.Containers).To(HaveLen(1))
+			container := podSpec.Containers[0]
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
+			Expect(container.Image).Should(Equal("dummy-image"))
+			Expect(container.Command[0]).Should(Equal("dummy-command"))
+			Expect(container.Args[1]).Should(Equal("dummy-arg"))
+			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
+			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
+			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
+
+			// remainder
+			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
+			Expect(*podSpec.TerminationGracePeriodSeconds).Should(Equal(testutils.TestTerminationGrace))
+			Expect(podSpec.HostNetwork).Should(BeFalse())
+			Expect(podSpec.Affinity).To(BeNil())
+		})
+
+		It("should create a Deployment for Gateway 2", func() {
+			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+
+			ctrl.Log.Info("trying to Get Deployment", "resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), deploy)
+				return err == nil && deploy != nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
+
+			// metadata
+			gwName, ok := deploy.GetAnnotations()[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "Gateway label")
+			Expect(gwName).Should(Equal(store.GetObjectKey(gw2)), "Gateway label value")
+
+			labs := deploy.GetLabels()
+			v, ok := labs[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+
+			_, ok = labs["dummy-label"] // testGw has it, hw2 doesn't
+			Expect(ok).Should(BeFalse(), "gw label")
+
+			// Get gw2 so that the owner-ref UID is filled in
+			Expect(k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)).Should(Succeed())
+			Expect(store.IsOwner(gw2, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+
+			// check the label selector
+			labelSelector := deploy.Spec.Selector
+			Expect(labelSelector).NotTo(BeNil(), "selector set")
+
+			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+			Expect(err).To(Succeed())
+
+			// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
+			// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+			labelToMatch := labels.Merge(
+				labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
+				labels.Set{opdefault.RelatedGatewayKey: gw2.GetName()},
+			)
+			Expect(selector.Matches(labelToMatch)).Should(BeTrue(), "selector matches")
+
+			podTemplate := &deploy.Spec.Template
+			labs = podTemplate.GetLabels()
+			Expect(labs).To(HaveLen(2))
+			v, ok = labs[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			v, ok = labs[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(gw2.GetName()))
+
+			// deployment selector matches pod template
+			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())
+
+			// unit tests check the rest: only test the basics here
+			podSpec := &podTemplate.Spec
+			Expect(podSpec.Containers).To(HaveLen(1))
+			container := podSpec.Containers[0]
+			Expect(container.Name).Should(Equal(opdefault.DefaultStunnerdInstanceName))
+			Expect(container.Image).Should(Equal("testimage-2"))
+			Expect(container.Command).Should(Equal([]string{"testcommand-2"}))
+			Expect(container.Args).Should(Equal([]string{"arg-1", "arg-2"}))
+			Expect(container.Resources.Limits).Should(Equal(testutils.TestResourceLimit))
+			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
+			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullNever))
+
+			// remainder
+			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
+			Expect(*podSpec.TerminationGracePeriodSeconds).Should(Equal(testutils.TestTerminationGrace))
+			Expect(podSpec.HostNetwork).Should(BeTrue())
+			Expect(podSpec.Affinity).To(BeNil())
+		})
+
+		It("should update only Gateway 2 when Dataplane 2 changes", func() {
+			ctrl.Log.Info("updating  Dataplane 2")
+			dp2 := &stnrv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+				Name: "dataplane-2",
+			}}
+			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, dp2, func() error {
+				testDataplane.Spec.DeepCopyInto(&dp2.Spec)
+				dp2.Spec.Image = "testimage-3"
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-1",
+				Namespace: string(testutils.TestNsName),
+			}}
+			ctrl.Log.Info("trying to Get Deployment for Gateway 1", "resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				if err != nil || deploy == nil {
+					return false
+				}
+
+				podSpec := &deploy.Spec.Template.Spec
+				if len(podSpec.Containers) == 0 || podSpec.Containers[0].Image != "dummy-image" {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			deploy = &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			ctrl.Log.Info("trying to Get Deployment for Gateway 2", "resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				if err != nil || deploy == nil {
+					return false
+				}
+
+				podSpec := &deploy.Spec.Template.Spec
+				if len(podSpec.Containers) == 0 || podSpec.Containers[0].Image != "testimage-3" {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should survive a full cleanup", func() {
 			ctrl.Log.Info("deleting GatewayClass")
 			Expect(k8sClient.Delete(ctx, testGwClass)).Should(Succeed())
@@ -1792,6 +2435,11 @@ func testManagedMode() {
 
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			config.EnvTestCompatibilityMode = false
+
+			// Make sure all reconcile and update events are processed before channels
+			// are closed (which would lead to a panic)
+			time.Sleep(1 * time.Second)
 		})
 	})
 }

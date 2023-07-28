@@ -136,6 +136,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 					"gateway-class", store.GetObjectKey(gc),
 					"gateway", store.GetObjectKey(gw),
 				)
+				// FIXME invalidate Gateway
 				// r.invalidateGateway(c, err)
 			}
 		}
@@ -318,7 +319,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 
 	if config.DataplaneMode == config.DataplaneModeManaged {
-		dp, err := r.createDeployment(c, targetName, targetNamespace)
+		dp, err := r.createDeployment(c)
 		if err != nil {
 			return err
 		}
