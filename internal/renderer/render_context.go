@@ -30,5 +30,34 @@ func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1a2.GatewayCl
 		gws:    store.NewGatewayStore(),
 		log:    r.log.WithValues("gateway-class", gc.GetName()),
 	}
+}
 
+// Merge merges the update queues of two rendering contexts.
+func (r *RenderContext) Merge(mergeable *RenderContext) {
+	if store.GetObjectKey(r.gc) != store.GetObjectKey(mergeable.gc) ||
+		store.GetObjectKey(r.gwConf) != store.GetObjectKey(mergeable.gwConf) {
+		panic("MergeUpdateQueue: trying to merge incompatible render contexts")
+	}
+
+	// MUST BE KEPT IN SYNC WITH EventUpdate
+
+	// merge upsert queues
+	upsertQueue1 := &r.update.UpsertQueue
+	upsertQueue2 := mergeable.update.UpsertQueue
+	store.Merge(upsertQueue1.GatewayClasses, upsertQueue2.GatewayClasses)
+	store.Merge(upsertQueue1.Gateways, upsertQueue2.Gateways)
+	store.Merge(upsertQueue1.UDPRoutes, upsertQueue2.UDPRoutes)
+	store.Merge(upsertQueue1.Services, upsertQueue2.Services)
+	store.Merge(upsertQueue1.ConfigMaps, upsertQueue2.ConfigMaps)
+	store.Merge(upsertQueue1.Deployments, upsertQueue2.Deployments)
+
+	// merge delete queues
+	deleteQueue1 := &r.update.DeleteQueue
+	deleteQueue2 := mergeable.update.DeleteQueue
+	store.Merge(deleteQueue1.GatewayClasses, deleteQueue2.GatewayClasses)
+	store.Merge(deleteQueue1.Gateways, deleteQueue2.Gateways)
+	store.Merge(deleteQueue1.UDPRoutes, deleteQueue2.UDPRoutes)
+	store.Merge(deleteQueue1.Services, deleteQueue2.Services)
+	store.Merge(deleteQueue1.ConfigMaps, deleteQueue2.ConfigMaps)
+	store.Merge(deleteQueue1.Deployments, deleteQueue2.Deployments)
 }

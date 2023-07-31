@@ -236,8 +236,21 @@ func testManagedMode() {
 				// should be programmed
 				s := meta.FindStatusCondition(gw.Status.Conditions,
 					string(gwapiv1b1.GatewayConditionProgrammed))
-				return s.Status == metav1.ConditionTrue
+				if s == nil || s.Status != metav1.ConditionTrue {
+					return false
+				}
 
+				if len(gw.Status.Listeners) != 3 {
+					return false
+				}
+
+				s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1b1.ListenerConditionReady))
+				if s == nil || s.Status != metav1.ConditionTrue {
+					return false
+				}
+
+				return true
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
@@ -279,8 +292,8 @@ func testManagedMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -302,8 +315,8 @@ func testManagedMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -325,8 +338,8 @@ func testManagedMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
 
 		})
 
@@ -451,10 +464,10 @@ func testManagedMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			Expect(k8sClient.Create(ctx, testNode)).Should(Succeed())
+			createOrUpdateNode(&testutils.TestNode, nil)
 
 			lookupKey := store.GetNamespacedName(testGw)
 			cm := &corev1.ConfigMap{}
@@ -490,10 +503,10 @@ func testManagedMode() {
 
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
-			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
+			createOrUpdateSecret(&testutils.TestSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
@@ -571,7 +584,7 @@ func testManagedMode() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -770,10 +783,10 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
 
 			ctrl.Log.Info("reseting gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("updating Route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
 				kind := gwapiv1a2.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
@@ -1044,7 +1057,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
 					ParentRefs: []gwapiv1a2.ParentReference{{
@@ -1772,7 +1785,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
 					ParentRefs: []gwapiv1a2.ParentReference{{

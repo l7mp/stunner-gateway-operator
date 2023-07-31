@@ -442,7 +442,7 @@ func testLegacyMode() {
 
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				addr := gwapiv1a2.IPAddressType
 				current.Spec.Addresses = []gwapiv1a2.GatewayAddress{{
 					Type:  &addr,
@@ -491,10 +491,10 @@ func testLegacyMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			Expect(k8sClient.Create(ctx, testNode)).Should(Succeed())
+			createOrUpdateNode(&testutils.TestNode, nil)
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
@@ -666,7 +666,7 @@ func testLegacyMode() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
@@ -709,7 +709,7 @@ func testLegacyMode() {
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "NodePort"})
 			})
 
@@ -751,7 +751,7 @@ func testLegacyMode() {
 
 		It("should add annotations from Gateway", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "dummy-1",
@@ -866,7 +866,7 @@ func testLegacyMode() {
 			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "new-dummy-1",
@@ -914,7 +914,7 @@ func testLegacyMode() {
 			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
@@ -995,7 +995,7 @@ func testLegacyMode() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -1046,7 +1046,7 @@ func testLegacyMode() {
 
 		It("should update TLS key when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
 				current.Data["tls.key"] = []byte("newkey")
 			})
 
@@ -1097,10 +1097,10 @@ func testLegacyMode() {
 
 		It("should not install TLS cert/key unless listener protocol is TLS or DTLS", func() {
 			ctrl.Log.Info("re-loading TLS Secret with restored cert/key")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {})
+			createOrUpdateSecret(&testutils.TestSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 1st listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
@@ -1193,10 +1193,10 @@ func testLegacyMode() {
 			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
 
 			ctrl.Log.Info("reseting gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
 
 			ctrl.Log.Info("updating Route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
 				kind := gwapiv1a2.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
@@ -1530,10 +1530,10 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 
 			ctrl.Log.Info("re-loading Gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
 			lookupKey := types.NamespacedName{
 				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
@@ -1554,12 +1554,22 @@ func testLegacyMode() {
 				}
 
 				// conf should have valid listener confs
-				if len(c.Listeners) == 2 && len(c.Clusters) == 1 {
-					conf = &c
-					return true
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
 				}
-				return false
 
+				conf = &c
+
+				l := conf.Listeners[0]
+				if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+					l = conf.Listeners[1]
+				}
+
+				if len(l.Routes) != 1 {
+					return false
+				}
+
+				return true
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
@@ -1751,7 +1761,7 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading UDPRoute")
 
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -1985,7 +1995,7 @@ func testLegacyMode() {
 			})).Should(Succeed())
 
 			ctrl.Log.Info("recreating UDPRoute with open listener attachment")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 			})
 
@@ -2077,7 +2087,7 @@ func testLegacyMode() {
 			Expect(c.Endpoints[0]).Should(Equal("testservice-ok.testnamespace.svc.cluster.local"))
 		})
 
-		It("should reset status on all resources", func() {
+		It("should reset Gateway statuses", func() {
 			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
 			Eventually(func() bool {
@@ -2180,11 +2190,20 @@ func testLegacyMode() {
 				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+		})
 
+		It("should reset Route statuses", func() {
 			// the original UDPRoute
 			ro := &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				return len(ro.Status.Parents) == 1
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
@@ -2198,7 +2217,7 @@ func testLegacyMode() {
 			Expect(ps.ParentRef.SectionName).To(BeNil())
 			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
 
-			s = meta.FindStatusCondition(ps.Conditions,
+			s := meta.FindStatusCondition(ps.Conditions,
 				string(gwapiv1a2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -2214,9 +2233,17 @@ func testLegacyMode() {
 
 			// the new UDPRoute in the dummy-namespace
 			ro = &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx,
-				types.NamespacedName{Namespace: "dummy-namespace", Name: "dummy-namespace-route"},
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: "dummy-namespace",
+					Name:      "dummy-namespace-route",
+				}, ro); err != nil {
+					return false
+				}
+
+				// should be programmed
+				return len(ro.Status.Parents) == 1
+			}, timeout, interval).Should(BeTrue())
 
 			// no listener accepts the route
 			Expect(ro.Status.Parents).To(HaveLen(1))
@@ -2253,7 +2280,7 @@ func testLegacyMode() {
 			allowedRoutes := gwapiv1a2.AllowedRoutes{
 				Namespaces: &routeNamespaces,
 			}
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes
 			})
 		})
@@ -2516,7 +2543,7 @@ func testLegacyMode() {
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
 			sn := gwapiv1a2.SectionName("gateway-1-listener-tcp")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{
 					{
 						Name:        "gateway-1",
@@ -2558,7 +2585,7 @@ func testLegacyMode() {
 			allowedRoutes2 := gwapiv1a2.AllowedRoutes{
 				Namespaces: &routeNamespaces2,
 			}
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = &allowedRoutes1
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes2
 			})
@@ -2849,12 +2876,12 @@ func testLegacyMode() {
 
 		It("should be possible to remove the new route and the namespace", func() {
 			// reset gw
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = nil
 				current.Spec.Listeners[1].AllowedRoutes = nil
 				current.Spec.Listeners[2].AllowedRoutes = nil
 			})
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 			Expect(k8sClient.Delete(ctx, &gwapiv1a2.UDPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dummy-namespace-route",
@@ -2874,7 +2901,7 @@ func testLegacyMode() {
 
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				sn := gwapiv1a2.SectionName("dummy")
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 				// gwapiv1a2.ObjectName("dummy")
@@ -2990,12 +3017,12 @@ func testLegacyMode() {
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 			})
 
 			ctrl.Log.Info("re-loading gateway-config")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
 			})
@@ -3039,7 +3066,7 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> longterm
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3086,7 +3113,7 @@ func testLegacyMode() {
 		It("external auth refs override inline auth", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "longterm"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3134,7 +3161,7 @@ func testLegacyMode() {
 
 		It("updating the external auth ref should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
-			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestAuthSecret, func(current *corev1.Secret) {
 				current.Data["username"] = []byte("new-user")
 			})
 
@@ -3174,7 +3201,7 @@ func testLegacyMode() {
 
 		It("cnanging the external auth ref type should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
-			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestAuthSecret, func(current *corev1.Secret) {
 				current.Data["type"] = []byte("ephemeral")
 				current.Data["secret"] = []byte("dummy")
 				delete(current.Data, "username")
@@ -3243,7 +3270,7 @@ func testLegacyMode() {
 
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> longterm
 				secret := "dummy"
 				current.Spec.AuthType = &atype
@@ -3287,7 +3314,7 @@ func testLegacyMode() {
 			// the client may overwrite our objects, recreate!
 
 			ctrl.Log.Info("re-loading gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
 			})
 
@@ -3323,7 +3350,7 @@ func testLegacyMode() {
 
 		It("changing a route target", func() {
 			ctrl.Log.Info("re-loading route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1a2.ObjectName("dummy")
 			})
@@ -3362,7 +3389,7 @@ func testLegacyMode() {
 
 		It("adding a new route", func() {
 			ctrl.Log.Info("re-loading the test route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {})
 
 			ctrl.Log.Info("adding a new route")
 			current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -3513,7 +3540,7 @@ func testLegacyMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("re-loading the test gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
 			})
 
@@ -3704,8 +3731,8 @@ func testLegacyMode() {
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = false
 
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
 			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
@@ -3834,7 +3861,7 @@ func testLegacyMode() {
 
 			// need to trigger a re-render: delete the invalid Gateway listener
 			ctrl.Log.Info("re-loading Gateway with 1 valid listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners = []gwapiv1a2.Listener{
 					current.Spec.Listeners[0], current.Spec.Listeners[1]}
 			})
@@ -3914,10 +3941,10 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway with 2 valid listeners")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 

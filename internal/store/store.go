@@ -31,6 +31,13 @@ type Store interface {
 	String() string
 }
 
+// Merge merges a store with another one.
+func Merge(dst, src Store) {
+	for _, o := range src.Objects() {
+		dst.Upsert(o)
+	}
+}
+
 type storeImpl struct {
 	lock    sync.RWMutex
 	objects map[string]client.Object

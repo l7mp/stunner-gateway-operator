@@ -110,17 +110,19 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 
-		c := NewRenderContext(e, r, gc)
-		gwConf, err := r.getGatewayConfig4Class(c)
+		gcCtx := NewRenderContext(e, r, gc)
+		gwConf, err := r.getGatewayConfig4Class(gcCtx)
 		if err != nil {
 			r.log.Error(err, "error obtaining gateway-config",
 				"gateway-class", gc.GetName())
-			r.invalidateGatewayClass(c, err)
+			r.invalidateGatewayClass(gcCtx, err)
+			r.operatorCh <- gcCtx.update
+
 			continue
 		}
-		c.gwConf = gwConf
+		gcCtx.gwConf = gwConf
 
-		for _, gw := range r.getGateways4Class(c) {
+		for _, gw := range r.getGateways4Class(gcCtx) {
 			gw := gw
 
 			r.log.V(1).Info("rendering for gateway",
@@ -128,23 +130,26 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 				"gateway", store.GetObjectKey(gw),
 			)
 
-			c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+			gwCtx := NewRenderContext(e, r, gc)
+			gwCtx.gwConf = gcCtx.gwConf
+			gwCtx.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
 
 			// render for this gateway
-			if err := r.renderForGateways(c); err != nil {
+			if err := r.renderForGateways(gwCtx); err != nil {
 				r.log.Error(err, "rendering",
 					"gateway-class", store.GetObjectKey(gc),
 					"gateway", store.GetObjectKey(gw),
 				)
 				// FIXME invalidate Gateway
 				// r.invalidateGateway(c, err)
+				continue
 			}
+			gcCtx.Merge(gwCtx)
 		}
 
 		setGatewayClassStatusAccepted(gc, nil)
 
-		// send the update back to the operator
-		r.operatorCh <- c.update
+		r.operatorCh <- gcCtx.update
 	}
 }
 
@@ -342,7 +347,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
 
-	if c.gwConf == nil {
+	if config.DataplaneMode == config.DataplaneModeLegacy && c.gwConf == nil {
 		// this is the killer case: we have most probably lost our gatewayconfig and we
 		// don't know which stunner config to invalidate; for now warn, later eliminate
 		// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
@@ -410,12 +415,9 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
 	}
 
-	// fmt.Printf("target: %s, conf: %#v\n", target, conf)
-
 	// schedule for update
 	if c.gwConf != nil {
 		targetName, targetNamespace := getTarget(c)
-
 		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target",
@@ -430,6 +432,17 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
+	// else {
+	// 	// we are invalidating the entire gatewayClass because there is no gatewayconfig or
+	// 	// dataplane: delete the target if we know we can
+	// 	cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
+	// 	if err != nil {
+	// 		log.Error(err, "error deleting ConfigMap", "target",
+	// 			fmt.Sprintf("%s/%s", targetNamespace, targetName))
+	// 		return
+	// 	}
+	// 	c.update.DeleteQueue.ConfigMaps.Upsert(cm)
+	// }
 }
 
 func getTarget(c *RenderContext) (string, string) {
