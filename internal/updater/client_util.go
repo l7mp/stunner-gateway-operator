@@ -105,7 +105,6 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// merge metadata
 		if err := mergeMetadata(current, svc); err != nil {
 			return nil
 		}
@@ -179,9 +178,6 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 
 	// use CreateOrPatch: hopefully more clever than CreateOrUpdate
 	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
-		// things that might have been changed by the controler: the owner ref,
-		// annotations, labels and the spec
-
 		if err := mergeMetadata(current, dp); err != nil {
 			return nil
 		}
@@ -191,25 +187,24 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 			current.Spec.Replicas = dp.Spec.Replicas
 		}
 
-		current.Spec.Strategy = dp.Spec.Strategy
-
+		// the pod template is copied verbatim
 		dp.Spec.Template.ObjectMeta.DeepCopyInto(&current.Spec.Template.ObjectMeta)
-
-		currentspec := &current.Spec.Template.Spec
 		dpspec := &dp.Spec.Template.Spec
-
-		// containers verbatim
+		currentspec := &current.Spec.Template.Spec
 		currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
 		for i := range dpspec.Containers {
 			dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
 		}
+		currentspec.Volumes = make([]corev1.Volume, len(dpspec.Volumes))
+		for i := range dpspec.Volumes {
+			dpspec.Volumes[i].DeepCopyInto(&currentspec.Volumes[i])
+		}
 
-		// grace
+		// rest is optional
 		if dpspec.TerminationGracePeriodSeconds != nil {
 			currentspec.TerminationGracePeriodSeconds = dpspec.TerminationGracePeriodSeconds
 		}
 
-		// hostnetwork
 		currentspec.HostNetwork = dpspec.HostNetwork
 
 		// affinity

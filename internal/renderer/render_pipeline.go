@@ -122,6 +122,18 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		}
 		gcCtx.gwConf = gwConf
 
+		// don't even start rendering if Dataplane is not available
+		if _, err := r.getDataplane(gcCtx); err != nil {
+			r.log.Error(err, "error obtaining Dataplane",
+				"gateway-class", store.GetObjectKey(gc),
+				"gateway-config", store.GetObjectKey(gwConf),
+			)
+			r.invalidateGatewayClass(gcCtx, err)
+			r.operatorCh <- gcCtx.update
+
+			continue
+		}
+
 		for _, gw := range r.getGateways4Class(gcCtx) {
 			gw := gw
 
@@ -140,8 +152,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 					"gateway-class", store.GetObjectKey(gc),
 					"gateway", store.GetObjectKey(gw),
 				)
-				// FIXME invalidate Gateway
-				// r.invalidateGateway(c, err)
+				r.invalidateGateways(gwCtx, err)
 				continue
 			}
 			gcCtx.Merge(gwCtx)
@@ -328,11 +339,6 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		if err != nil {
 			return err
 		}
-
-		// fmt.Println("+++++++++++++++")
-		// fmt.Println(store.DumpObject(dp))
-		// fmt.Println("+++++++++++++++")
-
 		c.update.UpsertQueue.Deployments.Upsert(dp)
 	}
 
@@ -361,8 +367,8 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 
 	log.V(1).Info("invalidating all gateway objects in gateway-class",
 		"gateway-class", gc.GetName())
-	c.gws.ResetGateways(r.getGateways4Class(c))
 
+	c.gws.ResetGateways(r.getGateways4Class(c))
 	r.invalidateGateways(c, reason)
 }
 
@@ -418,11 +424,28 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 	// schedule for update
 	if c.gwConf != nil {
 		targetName, targetNamespace := getTarget(c)
+		if targetName == "" {
+			// we didn't find any ConfigMaps, give up
+			log.V(2).Info("could not invalidate ConfigMap: Could not identify ConfigMap namespace/name",
+				"gateway-class", store.GetObjectKey(gc))
+			return
+		}
 		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target",
 				fmt.Sprintf("%s/%s", targetNamespace, targetName))
+			if !IsNonCritical(err) && config.DataplaneMode == config.DataplaneModeManaged {
+				// critical error: we could not render a valid configuration so
+				// remove deployment
+				gw := c.gws.GetFirst()
+				if gw == nil {
+					return
+				}
+				dp := config.DataplaneTemplate(gw)
+				c.update.DeleteQueue.Deployments.Upsert(&dp)
+			}
 			return
+
 		}
 
 		if err := controllerutil.SetOwnerReference(c.gwConf, cm, r.scheme); err != nil {
@@ -432,17 +455,6 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
-	// else {
-	// 	// we are invalidating the entire gatewayClass because there is no gatewayconfig or
-	// 	// dataplane: delete the target if we know we can
-	// 	cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
-	// 	if err != nil {
-	// 		log.Error(err, "error deleting ConfigMap", "target",
-	// 			fmt.Sprintf("%s/%s", targetNamespace, targetName))
-	// 		return
-	// 	}
-	// 	c.update.DeleteQueue.ConfigMaps.Upsert(cm)
-	// }
 }
 
 func getTarget(c *RenderContext) (string, string) {
@@ -459,7 +471,7 @@ func getTarget(c *RenderContext) (string, string) {
 		// assume it exists
 		gw := c.gws.GetFirst()
 		if gw == nil {
-			panic("getTarget called with empty Gateway ref in managed mode")
+			return "", ""
 		}
 		targetName = gw.GetName()
 		targetNamespace = gw.GetNamespace()

@@ -38,9 +38,4 @@ var (
 	// throttle timeout the slower the controller and the smaller the operator CPU
 	// consumption. Default is 250 msec.
 	ThrottleTimeout = opdefault.DefaultThrottleTimeout
-
-	// EnvTestCompatibilityMode enables various optimizations that make it possible to test the
-	// operator under EnvTest:
-	// - Volume/VolumeMount
-	EnvTestCompatibilityMode = false
 )

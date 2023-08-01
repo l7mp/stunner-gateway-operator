@@ -55,10 +55,13 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
 
 				labs := deploy.GetLabels()
-				assert.Len(t, labs, 3, "labels len")
+				assert.Len(t, labs, 4, "labels len")
 				v, ok := labs[opdefault.OwnedByLabelKey]
 				assert.True(t, ok, "labels: owned-by")
 				assert.Equal(t, opdefault.OwnedByLabelValue, v, "owned-by label value")
+				v, ok = labs[opdefault.AppLabelKey]
+				assert.True(t, ok, "labels: app")
+				assert.Equal(t, opdefault.AppLabelValue, v, "app label value")
 				v, ok = labs[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "labels: related")
 				assert.Equal(t, gw.GetName(), v, "related-gw label value")

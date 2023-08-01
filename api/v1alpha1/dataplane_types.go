@@ -43,6 +43,8 @@ type Dataplane struct {
 	Spec DataplaneSpec `json:"spec,omitempty"`
 }
 
+// this must be kept in sync with Renderer.createDeployment and Updater.upsertDeployment
+
 // DataplaneSpec describes the prefixes reachable via a Dataplane.
 type DataplaneSpec struct {
 	// Number of desired pods. This is a pointer to distinguish between explicit zero and not

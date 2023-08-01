@@ -16,6 +16,7 @@ import (
 
 var (
 	StunnerdImage       = "l7mp/stunnerd:latest"
+	ConfigVolumeName    = "stunnerd-config-volume"
 	TerminationGrace    = int64(3600)
 	LivenessProbeAction = corev1.HTTPGetAction{
 		Path:   "/live",
@@ -50,9 +51,9 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			// Like `kubectl label ... -l "app=stunner"
 			{
-				Key:      opdefault.OwnedByLabelKey,
+				Key:      opdefault.AppLabelKey,
 				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{opdefault.OwnedByLabelValue},
+				Values:   []string{opdefault.AppLabelValue},
 			},
 			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
 			{
@@ -74,21 +75,18 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 	podIPFieldSelector := corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
 	podIPEnvVarSource := corev1.EnvVarSource{FieldRef: &podIPFieldSelector}
 
-	volumeMounts := []corev1.VolumeMount{}
-	if !EnvTestCompatibilityMode {
-		// VolumeMounts are rejected by EnvTest
-		volumeMounts = []corev1.VolumeMount{{
-			Name:      "stunnerd-config-volume",
-			MountPath: "/etc/stunnerd",
-			ReadOnly:  true,
-		}}
-	}
+	volumeMounts := []corev1.VolumeMount{{
+		Name:      ConfigVolumeName,
+		MountPath: "/etc/stunnerd",
+		ReadOnly:  true,
+	}}
 
 	return appv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      gateway.GetName(),
 			Namespace: gateway.GetNamespace(),
 			Labels: map[string]string{
+				opdefault.AppLabelKey:       opdefault.AppLabelValue,
 				opdefault.OwnedByLabelKey:   opdefault.OwnedByLabelValue,
 				opdefault.RelatedGatewayKey: gateway.GetName(),
 			},
@@ -104,7 +102,7 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						opdefault.OwnedByLabelKey:   opdefault.OwnedByLabelValue,
+						opdefault.AppLabelKey:       opdefault.AppLabelValue,
 						opdefault.RelatedGatewayKey: gateway.GetName(),
 					},
 					Annotations: map[string]string{
@@ -134,7 +132,7 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 						ImagePullPolicy: corev1.PullAlways,
 					}},
 					Volumes: []corev1.Volume{{
-						Name: "stunnerd-config-volume",
+						Name: ConfigVolumeName,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &configMapVolumeSource,
 						},

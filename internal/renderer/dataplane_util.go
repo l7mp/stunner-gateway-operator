@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -25,19 +26,8 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		return nil, NewCriticalError(RenderingError)
 	}
 
-	// find the Dataplane CR for this Gateway
-	dataplaneName := opdefault.DefaultDataplaneName
-	if c.gwConf.Spec.Dataplane != nil {
-		dataplaneName = *c.gwConf.Spec.Dataplane
-	}
-	dataplane := store.Dataplanes.GetObject(types.NamespacedName{Name: dataplaneName})
-	if dataplane == nil {
-		err := NewCriticalError(InvalidDataplane)
-		r.log.Error(err, "cannot find Dataplane for Gateway",
-			"gateway-config", store.GetObjectKey(c.gwConf),
-			"gateway", store.GetObjectKey(gw),
-			"dataplane", dataplaneName,
-		)
+	dataplane, err := r.getDataplane(c)
+	if err != nil {
 		return nil, err
 	}
 
@@ -67,7 +57,6 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		podSpec.TerminationGracePeriodSeconds = dataplane.Spec.TerminationGracePeriodSeconds
 	}
 
-	// resource
 	found := false
 	for i := range podSpec.Containers {
 		if podSpec.Containers[i].Name == opdefault.DefaultStunnerdInstanceName {
@@ -123,4 +112,22 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	)
 
 	return &deployment, nil
+}
+
+func (r *Renderer) getDataplane(c *RenderContext) (*stnrv1a1.Dataplane, error) {
+	dataplaneName := opdefault.DefaultDataplaneName
+	if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
+		dataplaneName = *c.gwConf.Spec.Dataplane
+	}
+	dataplane := store.Dataplanes.GetObject(types.NamespacedName{Name: dataplaneName})
+	if dataplane == nil {
+		err := NewCriticalError(InvalidDataplane)
+		r.log.Error(err, "cannot find Dataplane for Gateway",
+			"gateway-config", store.GetObjectKey(c.gwConf),
+			"dataplane", dataplaneName,
+		)
+		return nil, err
+	}
+
+	return dataplane, nil
 }

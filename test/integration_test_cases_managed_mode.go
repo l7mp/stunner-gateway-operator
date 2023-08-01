@@ -55,9 +55,6 @@ func testManagedMode() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
-			// enable envtest-compatibility model
-			config.EnvTestCompatibilityMode = true
-
 			// switch EDS on
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
@@ -2448,7 +2445,6 @@ func testManagedMode() {
 
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
-			config.EnvTestCompatibilityMode = false
 
 			// Make sure all reconcile and update events are processed before channels
 			// are closed (which would lead to a panic)
