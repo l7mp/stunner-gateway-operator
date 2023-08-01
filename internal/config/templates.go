@@ -86,9 +86,9 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 			Name:      gateway.GetName(),
 			Namespace: gateway.GetNamespace(),
 			Labels: map[string]string{
-				opdefault.AppLabelKey:       opdefault.AppLabelValue,
-				opdefault.OwnedByLabelKey:   opdefault.OwnedByLabelValue,
-				opdefault.RelatedGatewayKey: gateway.GetName(),
+				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+				opdefault.RelatedGatewayKey:       gateway.GetName(),
+				opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
 			},
 			Annotations: map[string]string{
 				opdefault.RelatedGatewayKey: types.NamespacedName{

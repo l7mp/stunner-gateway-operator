@@ -55,11 +55,8 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
 
 				labs := deploy.GetLabels()
-				assert.Len(t, labs, 4, "labels len")
-				v, ok := labs[opdefault.OwnedByLabelKey]
-				assert.True(t, ok, "labels: owned-by")
-				assert.Equal(t, opdefault.OwnedByLabelValue, v, "owned-by label value")
-				v, ok = labs[opdefault.AppLabelKey]
+				assert.Len(t, labs, 3, "labels len")
+				v, ok := labs[opdefault.AppLabelKey]
 				assert.True(t, ok, "labels: app")
 				assert.Equal(t, opdefault.AppLabelValue, v, "app label value")
 				v, ok = labs[opdefault.RelatedGatewayKey]
@@ -84,11 +81,12 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				selector, err := metav1.LabelSelectorAsSelector(labelSelector)
 				assert.NoError(t, err, "label selector convert")
 
-				// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
-				// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
 				labelToMatch := labels.Merge(
-					labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
-					labels.Set{opdefault.RelatedGatewayKey: gw.GetName()},
+					labels.Merge(
+						labels.Set{opdefault.AppLabelKey: opdefault.AppLabelValue},
+						labels.Set{opdefault.RelatedGatewayKey: gw.GetName()},
+					),
+					labels.Set{opdefault.RelatedGatewayNamespace: gw.GetNamespace()},
 				)
 				assert.True(t, selector.Matches(labelToMatch), "selector matched")
 
@@ -99,13 +97,16 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				// pod template spec
 				podTemplate := &deploy.Spec.Template
 				labs = podTemplate.GetLabels()
-				assert.Len(t, labs, 2, "labels len")
-				v, ok = labs[opdefault.OwnedByLabelKey]
+				assert.Len(t, labs, 3, "labels len")
+				v, ok = labs[opdefault.AppLabelKey]
 				assert.True(t, ok, "pod labels: owned-by")
-				assert.Equal(t, opdefault.OwnedByLabelValue, v, "pod owned-by label value")
+				assert.Equal(t, opdefault.AppLabelValue, v, "pod owned-by label value")
 				v, ok = labs[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "pod related-gw label")
 				assert.Equal(t, gw.GetName(), v, "related-gw label value")
+				v, ok = labs[opdefault.RelatedGatewayNamespace]
+				assert.True(t, ok, "pod related-gw-namespace label")
+				assert.Equal(t, gw.GetNamespace(), v, "related-gw-namespace label value")
 
 				// deployment selector matches pod template
 				assert.True(t, selector.Matches(labels.Set(labs)), "selector matched")

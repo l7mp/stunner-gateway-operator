@@ -4,6 +4,7 @@ import (
 	// "fmt"
 
 	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -76,6 +77,15 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 				c.Args = make([]string, len(dataplane.Spec.Args))
 				copy(c.Args, dataplane.Spec.Args)
 			}
+			if len(dataplane.Spec.Env) != 0 {
+				// append
+				if c.Env == nil {
+					c.Env = []corev1.EnvVar{}
+				}
+				for _, env := range dataplane.Spec.Env {
+					c.Env = append(c.Env, env)
+				}
+			}
 			if dataplane.Spec.Resources != nil {
 				dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
 			}
@@ -94,6 +104,16 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	// affinity
 	if dataplane.Spec.Affinity != nil {
 		podSpec.Affinity = dataplane.Spec.Affinity
+	}
+
+	// tolerations
+	if dataplane.Spec.Tolerations != nil {
+		podSpec.Tolerations = dataplane.Spec.Tolerations
+	}
+
+	// security context
+	if dataplane.Spec.SecurityContext != nil {
+		podSpec.SecurityContext = dataplane.Spec.SecurityContext
 	}
 
 	// owned by the Gateway

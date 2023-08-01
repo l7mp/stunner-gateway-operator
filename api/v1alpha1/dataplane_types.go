@@ -68,6 +68,10 @@ type DataplaneSpec struct {
 	// +optional
 	Args []string `json:"args,omitempty"`
 
+	// List of environment variables to set in the stunnerd container.
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
 	// Resources required by stunnerd.
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -84,6 +88,15 @@ type DataplaneSpec struct {
 	// Scheduling constraints.
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// SecurityContext holds pod-level security attributes and common container settings.
+	//
+	// +optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	// If specified, the pod's tolerations.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // +kubebuilder:object:root=true

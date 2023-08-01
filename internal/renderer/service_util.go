@@ -13,6 +13,7 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -260,8 +261,9 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
 			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-				opdefault.AppLabelKey:     opdefault.AppLabelValue,
+				opdefault.AppLabelKey:             opdefault.AppLabelValue,
+				opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+				opdefault.RelatedGatewayKey:       gw.GetName(),
 			},
 			Annotations: map[string]string{
 				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
@@ -269,9 +271,25 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     opdefault.DefaultServiceType,
-			Selector: map[string]string{opdefault.AppLabelKey: opdefault.AppLabelValue},
+			Selector: map[string]string{},
 			Ports:    []corev1.ServicePort{},
 		},
+	}
+
+	// set labels
+	switch config.DataplaneMode {
+	case config.DataplaneModeLegacy:
+		// legacy mode: note that this may break for multiple gateway hierarchies but we
+		// leave it as is for compatibility
+		svc.Spec.Selector = map[string]string{
+			opdefault.AppLabelKey: opdefault.AppLabelValue,
+		}
+	case config.DataplaneModeManaged:
+		svc.Spec.Selector = map[string]string{
+			opdefault.AppLabelKey:             opdefault.AppLabelValue,
+			opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+			opdefault.RelatedGatewayKey:       gw.GetName(),
+		}
 	}
 
 	// update service type if necessary

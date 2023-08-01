@@ -19,13 +19,18 @@ const (
 	DefaultDataplaneMode = "legacy"
 	// DefaultDataplaneMode = "managed"
 
-	// RelatedGatewayKey is the name of the annotation that is used to tie a
-	// LoadBalancer service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in
-	// managed mode) to a Gateway. The value is either a singular pair of a namespace and name
-	// when of the related Gateway (in the form "namespace/name", mostly used for associating a
-	// LB Service to a Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane
-	// configs in legacy mode, which usually belong to multiple Gateways).
+	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
+	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
+	// Gateway. The value is either a singular pair of a namespace and name when of the related
+	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
+	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
+	// legacy mode, which usually belong to multiple Gateways).
 	RelatedGatewayKey = "stunner.l7mp.io/related-gateway-name"
+
+	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
+	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
+	// Gateway. The value is the namespace of the related Gateway.
+	RelatedGatewayNamespace = "stunner.l7mp.io/related-gateway-namespace"
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
 	AppLabelKey = "app"

@@ -212,6 +212,16 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 			currentspec.Affinity = dpspec.Affinity
 		}
 
+		// tolerations
+		if dpspec.Tolerations != nil {
+			currentspec.Tolerations = dpspec.Tolerations
+		}
+
+		// security context
+		if dpspec.SecurityContext != nil {
+			currentspec.SecurityContext = dpspec.SecurityContext
+		}
+
 		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))
 
 		return nil
