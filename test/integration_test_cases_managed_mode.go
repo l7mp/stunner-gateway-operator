@@ -735,7 +735,7 @@ func testManagedMode() {
 			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, deploy)
-				return err == nil && deploy != nil && deploy.Spec.Template.Spec.HostNetwork == false
+				return err == nil && deploy != nil && !deploy.Spec.Template.Spec.HostNetwork
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")

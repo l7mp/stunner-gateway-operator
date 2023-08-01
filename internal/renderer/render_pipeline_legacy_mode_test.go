@@ -1473,18 +1473,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			},
 			tester: func(t *testing.T, r *Renderer) {
 
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
-					"gatewayconfig name")
+				gcs := r.getGatewayClasses()
+				assert.Len(t, gcs, 1, "gw-classes found")
 
+				// render our own gatewayclass
+				c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: logr.Discard()}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				err = r.renderGatewayClass(c)
+				gwConf, err := r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gateway-conf obtained")
+				c.gwConf = gwConf
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+				c.gws.ResetGateways(r.getGateways4Class(c))
+
+				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
 				// configmap
@@ -1501,7 +1505,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// related gw
 				as := o.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayAnnotationKey]
+				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
 				cm, ok := o.(*corev1.ConfigMap)

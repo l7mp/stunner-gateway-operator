@@ -82,9 +82,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 				if c.Env == nil {
 					c.Env = []corev1.EnvVar{}
 				}
-				for _, env := range dataplane.Spec.Env {
-					c.Env = append(c.Env, env)
-				}
+				c.Env = append(c.Env, dataplane.Spec.Env...)
 			}
 			if dataplane.Spec.Resources != nil {
 				dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
