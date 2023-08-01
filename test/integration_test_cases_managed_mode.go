@@ -111,9 +111,9 @@ func testManagedMode() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a ConfigMap that can be successfully unpacked", func() {
@@ -137,9 +137,9 @@ func testManagedMode() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
@@ -172,9 +172,9 @@ func testManagedMode() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -376,9 +376,9 @@ func testManagedMode() {
 
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
@@ -645,9 +645,9 @@ func testManagedMode() {
 			Expect(gwName).Should(Equal(store.GetObjectKey(testGw)), "Gateway label value")
 
 			labs := deploy.GetLabels()
-			v, ok := labs[opdefault.AppLabelKey]
+			v, ok := labs[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			v, ok = labs["dummy-label"] // comes from testGw
 			Expect(ok).Should(BeTrue(), "gw label")
@@ -677,7 +677,7 @@ func testManagedMode() {
 
 			podTemplate := &deploy.Spec.Template
 			labs = podTemplate.GetLabels()
-			Expect(labs).To(HaveLen(2))
+			Expect(labs).To(HaveLen(3))
 			v, ok = labs[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue())
 			Expect(v).Should(Equal(opdefault.AppLabelValue))
@@ -746,9 +746,9 @@ func testManagedMode() {
 			Expect(gwName).Should(Equal(store.GetObjectKey(testGw)), "Gateway label value")
 
 			labs := deploy.GetLabels()
-			v, ok := labs[opdefault.AppLabelKey]
+			v, ok := labs[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			v, ok = labs["dummy-label"] // comes from testGw
 			Expect(ok).Should(BeTrue(), "gw label")
@@ -1104,9 +1104,9 @@ func testManagedMode() {
 			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			Expect(v).Should(Equal(store.GetObjectKey(testGw)))
-			v, ok = cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			Expect(conf.Listeners).To(HaveLen(2))
 
@@ -1183,9 +1183,9 @@ func testManagedMode() {
 			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			Expect(v).Should(Equal(store.GetObjectKey(gw2)))
-			v, ok = cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			Expect(conf.Listeners).To(HaveLen(1))
 
@@ -1481,9 +1481,9 @@ func testManagedMode() {
 			Expect(gwName).Should(Equal(store.GetObjectKey(testGw)), "Gateway label value")
 
 			labs := deploy.GetLabels()
-			v, ok := labs[opdefault.AppLabelKey]
+			v, ok := labs[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			v, ok = labs["dummy-label"] // comes from testGw
 			Expect(ok).Should(BeTrue(), "gw label")
@@ -1568,9 +1568,9 @@ func testManagedMode() {
 			Expect(gwName).Should(Equal(store.GetObjectKey(gw2)), "Gateway label value")
 
 			labs := deploy.GetLabels()
-			v, ok := labs[opdefault.AppLabelKey]
+			v, ok := labs[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			_, ok = labs["dummy-label"] // testGw has it, hw2 doesn't
 			Expect(ok).Should(BeFalse(), "gw label")
@@ -1599,7 +1599,7 @@ func testManagedMode() {
 
 			podTemplate := &deploy.Spec.Template
 			labs = podTemplate.GetLabels()
-			Expect(labs).To(HaveLen(4))
+			Expect(labs).To(HaveLen(3))
 			v, ok = labs[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue())
 			Expect(v).Should(Equal(opdefault.AppLabelValue))
@@ -1844,9 +1844,9 @@ func testManagedMode() {
 			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			Expect(v).Should(Equal(store.GetObjectKey(testGw)))
-			v, ok = cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			Expect(conf.Listeners).To(HaveLen(2))
 
@@ -1923,9 +1923,9 @@ func testManagedMode() {
 			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			Expect(v).Should(Equal(store.GetObjectKey(gw2)))
-			v, ok = cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			Expect(conf.Listeners).To(HaveLen(1))
 
@@ -2251,9 +2251,9 @@ func testManagedMode() {
 			Expect(gwName).Should(Equal(store.GetObjectKey(testGw)), "Gateway label value")
 
 			labs := deploy.GetLabels()
-			v, ok := labs[opdefault.AppLabelKey]
+			v, ok := labs[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 
 			v, ok = labs["dummy-label"] // comes from testGw
 			Expect(ok).Should(BeTrue(), "gw label")
@@ -2271,20 +2271,26 @@ func testManagedMode() {
 			// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
 			// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
 			labelToMatch := labels.Merge(
-				labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
-				labels.Set{opdefault.RelatedGatewayKey: testGw.GetName()},
+				labels.Merge(
+					labels.Set{opdefault.AppLabelKey: opdefault.AppLabelValue},
+					labels.Set{opdefault.RelatedGatewayKey: testGw.GetName()},
+				),
+				labels.Set{opdefault.RelatedGatewayNamespace: testGw.GetNamespace()},
 			)
 			Expect(selector.Matches(labelToMatch)).Should(BeTrue(), "selector matches")
 
 			podTemplate := &deploy.Spec.Template
 			labs = podTemplate.GetLabels()
-			Expect(labs).To(HaveLen(2))
-			v, ok = labs[opdefault.OwnedByLabelKey]
+			Expect(labs).To(HaveLen(3))
+			v, ok = labs[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue())
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
 			v, ok = labs[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue())
 			Expect(v).Should(Equal(testGw.GetName()))
+			v, ok = labs[opdefault.RelatedGatewayNamespace]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(testGw.GetNamespace()))
 
 			// deployment selector matches pod template
 			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())
@@ -2353,20 +2359,26 @@ func testManagedMode() {
 			// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
 			// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
 			labelToMatch := labels.Merge(
-				labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue},
-				labels.Set{opdefault.RelatedGatewayKey: gw2.GetName()},
+				labels.Merge(
+					labels.Set{opdefault.AppLabelKey: opdefault.AppLabelValue},
+					labels.Set{opdefault.RelatedGatewayKey: gw2.GetName()},
+				),
+				labels.Set{opdefault.RelatedGatewayNamespace: gw2.GetNamespace()},
 			)
 			Expect(selector.Matches(labelToMatch)).Should(BeTrue(), "selector matches")
 
 			podTemplate := &deploy.Spec.Template
 			labs = podTemplate.GetLabels()
-			Expect(labs).To(HaveLen(2))
-			v, ok = labs[opdefault.OwnedByLabelKey]
+			Expect(labs).To(HaveLen(3))
+			v, ok = labs[opdefault.AppLabelKey]
 			Expect(ok).Should(BeTrue())
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
 			v, ok = labs[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue())
 			Expect(v).Should(Equal(gw2.GetName()))
+			v, ok = labs[opdefault.RelatedGatewayNamespace]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(gw2.GetNamespace()))
 
 			// deployment selector matches pod template
 			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())

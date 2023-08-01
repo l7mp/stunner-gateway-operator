@@ -61,6 +61,12 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 				Operator: metav1.LabelSelectorOpIn,
 				Values:   []string{gateway.GetName()},
 			},
+			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>"
+			{
+				Key:      opdefault.RelatedGatewayNamespace,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{gateway.GetNamespace()},
+			},
 		},
 	}
 
@@ -102,8 +108,9 @@ func DataplaneTemplate(gateway client.Object) appv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						opdefault.AppLabelKey:       opdefault.AppLabelValue,
-						opdefault.RelatedGatewayKey: gateway.GetName(),
+						opdefault.AppLabelKey:             opdefault.AppLabelValue,
+						opdefault.RelatedGatewayKey:       gateway.GetName(),
+						opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
 					},
 					Annotations: map[string]string{
 						opdefault.RelatedGatewayKey: types.NamespacedName{

@@ -8,6 +8,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Labeling rules
+// - all top-level resources (Service, Deployment, ConfigMap) are labeled with "OwnedByLabelKey:OwnedByLabelValue"
+// - additional labels are "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+// - Deployment pods are labeled with "AppLabelKey:AppLabelValue" and "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"

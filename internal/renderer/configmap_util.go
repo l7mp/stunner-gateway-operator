@@ -64,6 +64,12 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 			panic("renderConfig called with empty Gateway ref in managed mode")
 		}
 		owner = gw
+
+		// add also the missing labels
+		labels := cm.GetLabels()
+		labels[opdefault.RelatedGatewayKey] = gw.GetName()
+		labels[opdefault.RelatedGatewayNamespace] = gw.GetNamespace()
+		cm.SetLabels(labels)
 	}
 
 	if err := controllerutil.SetOwnerReference(owner, cm, r.scheme); err != nil {

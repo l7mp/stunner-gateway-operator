@@ -261,7 +261,7 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
 			Labels: map[string]string{
-				opdefault.AppLabelKey:             opdefault.AppLabelValue,
+				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
 				opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
 				opdefault.RelatedGatewayKey:       gw.GetName(),
 			},

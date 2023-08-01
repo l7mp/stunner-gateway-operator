@@ -102,9 +102,9 @@ func testLegacyMode() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a ConfigMap that can be successfully unpacked", func() {
@@ -131,9 +131,9 @@ func testLegacyMode() {
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
@@ -169,9 +169,9 @@ func testLegacyMode() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -360,9 +360,9 @@ func testLegacyMode() {
 
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.AppLabelKey]
+			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
@@ -781,9 +781,9 @@ func testLegacyMode() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should retain externally set labels/annotations on the LoadBalancer service", func() {
@@ -799,7 +799,7 @@ func testLegacyMode() {
 					"someLabel":      "some-label-val",
 					"someOtherLabel": "some-other-label-val",
 					// this cannot be removed, otherwise the watcher ignores the service
-					opdefault.AppLabelKey: opdefault.AppLabelValue,
+					opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 				})
 				svc.SetAnnotations(map[string]string{
 					"someNewAnnotation":      "some-ann-val",
@@ -820,14 +820,14 @@ func testLegacyMode() {
 				ls := svc.GetLabels()
 				l1, ok1 := ls["someLabel"]
 				l2, ok2 := ls["someOtherLabel"]
-				l3, ok3 := ls[opdefault.AppLabelKey]
+				l3, ok3 := ls[opdefault.OwnedByLabelKey]
 
 				if !ok1 || !ok2 || !ok3 {
 					return false
 				}
 
 				if l1 != "some-label-val" || l2 != "some-other-label-val" ||
-					l3 != opdefault.OwnedByLabelValue || l4 != opdefault.AppLabelValue {
+					l3 != opdefault.OwnedByLabelValue {
 					return false
 				}
 
@@ -897,9 +897,9 @@ func testLegacyMode() {
 			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
 			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
 
-			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should install TLS cert/keys", func() {

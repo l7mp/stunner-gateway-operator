@@ -83,7 +83,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 				// LB services have both "app:stunner" and
 				// "stunner.l7mp.io/owned-by:stunner" labels set, we use the app
 				// label here
-				opdefault.AppLabelKey: opdefault.AppLabelValue,
+				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 		})
 	if err != nil {
@@ -144,7 +144,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
 	svcs := &corev1.ServiceList{}
-	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.AppLabelKey: opdefault.AppLabelValue})
+	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	if err == nil {
 		for _, svc := range svcs.Items {
 			svc := svc
