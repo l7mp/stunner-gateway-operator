@@ -1480,5 +1480,47 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
 			},
 		},
+		{
+			name: "public address hint in Gateway Spec",
+			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				at := gwapiv1a2.IPAddressType
+				gw.Spec.Addresses = []gwapiv1a2.GatewayAddress{
+					{
+						Type:  &at,
+						Value: "1.1.1.1",
+					},
+					{
+						Type:  &at,
+						Value: "1.2.3.4",
+					},
+				}
+				c.gws = []gwapiv1a2.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+				assert.Equal(t, s.Spec.LoadBalancerIP, "1.1.1.1", "svc loadbalancerip")
+				assert.Equal(t, len(s.Spec.ExternalIPs), 1, "svc externalips list length")
+				assert.Equal(t, s.Spec.ExternalIPs[0], "1.1.1.1", "svc externalips")
+			},
+		},
 	})
 }

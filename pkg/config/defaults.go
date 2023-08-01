@@ -66,7 +66,7 @@ const (
 	// // the gateway controller.
 	// GatewayManagedLabelValue = "gateway"
 
-	// DefaultStunnerConfigMapName names a ConfigMap by the operator to render the stunnerd
+	// DefaultConfigMapName names a ConfigMap by the operator to render the stunnerd
 	// config file.
 	DefaultConfigMapName = "stunnerd-config"
 
@@ -82,7 +82,7 @@ const (
 	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints.
 	DefaultEnableEndpointDiscovery = true
 
-	// EnableRelayToClusterIP allows clients to create transport relay connections to the
+	// DefaultEnableRelayToClusterIP allows clients to create transport relay connections to the
 	// ClusterIP of a service.
 	DefaultEnableRelayToClusterIP = true
 
