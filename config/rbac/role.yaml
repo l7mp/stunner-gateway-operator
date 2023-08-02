@@ -83,6 +83,7 @@ rules:
 - apiGroups:
   - stunner.l7mp.io
   resources:
+  - dataplanes
   - gatewayconfigs
   - staticservices
   verbs:
@@ -94,6 +95,7 @@ rules:
 - apiGroups:
   - stunner.l7mp.io
   resources:
+  - dataplanes/finalizers
   - gatewayconfigs/finalizers
   - staticservices/finalizers
   verbs:
