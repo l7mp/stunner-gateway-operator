@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/types"
-	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -15,6 +14,7 @@ import (
 )
 
 var (
+	TestTrue                = true
 	TestNsName              = gwapiv1a2.Namespace("testnamespace")
 	TestStunnerConfig       = "stunner-config"
 	TestRealm               = "testrealm"
@@ -31,6 +31,21 @@ var (
 	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
 	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
 	TestKey64               = "dGVzdGtleQ==" // "testkey"
+	TestReplicas            = int32(3)
+	TestTerminationGrace    = int64(60)
+	TestImagePullPolicy     = corev1.PullAlways
+	TestCPURequest          = resource.MustParse("250m")
+	TestMemoryLimit         = resource.MustParse("10M")
+	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceCPU: TestCPURequest,
+	})
+	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceMemory: TestMemoryLimit,
+	})
+	TestResourceRequirements = corev1.ResourceRequirements{
+		Limits:   TestResourceLimit,
+		Requests: TestResourceRequest,
+	}
 )
 
 // Namespace
@@ -92,6 +107,7 @@ var TestGw = gwapiv1a2.Gateway{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gateway-1",
 		Namespace: "testnamespace",
+		Labels:    map[string]string{"dummy-label": "dummy-value"},
 	},
 	Spec: gwapiv1a2.GatewaySpec{
 		GatewayClassName: "gatewayclass-ok",
@@ -140,7 +156,7 @@ var TestSvc = corev1.Service{
 		Namespace: "testnamespace",
 		Name:      "testservice-ok",
 		Annotations: map[string]string{
-			opdefault.RelatedGatewayAnnotationKey: "testnamespace/gateway-1",
+			opdefault.RelatedGatewayKey: "testnamespace/gateway-1",
 		},
 	},
 	Spec: corev1.ServiceSpec{
@@ -247,5 +263,23 @@ var TestStaticSvc = stnrv1a1.StaticService{
 	},
 	Spec: stnrv1a1.StaticServiceSpec{
 		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
+	},
+}
+
+// Dataplane
+var TestDataplane = stnrv1a1.Dataplane{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: opdefault.DefaultDataplaneName,
+	},
+	Spec: stnrv1a1.DataplaneSpec{
+		Replicas:                      &TestReplicas,
+		Image:                         "testimage-1",
+		Command:                       []string{"testcommand-1"},
+		Args:                          []string{"arg-1", "arg-2"},
+		ImagePullPolicy:               &TestImagePullPolicy,
+		TerminationGracePeriodSeconds: &TestTerminationGrace,
+		Resources:                     &TestResourceRequirements,
+		HostNetwork:                   true,
+		Affinity:                      nil,
 	},
 }

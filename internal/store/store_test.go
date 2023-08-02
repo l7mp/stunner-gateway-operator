@@ -8,15 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// "k8s.io/apimachinery/pkg/types"
-	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// "github.com/go-logr/zapr"
-	// "go.uber.org/zap"
-	// "go.uber.org/zap/zapcore"
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	// // "github.com/l7mp/stunner-gateway-operator/internal/event"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
-	// stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // for debugging

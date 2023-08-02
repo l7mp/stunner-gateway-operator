@@ -2,11 +2,7 @@ package renderer
 
 import (
 	"fmt"
-	// "github.com/go-logr/logr"
-	// apiv1 "k8s.io/api/core/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
+
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -14,14 +10,12 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stunnerctrl "github.com/l7mp/stunner-gateway-operator/controllers"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 func (r *Renderer) getGatewayClasses() []*gwapiv1a2.GatewayClass {
-	r.log.V(4).Info("getGatewayClasses")
+	// r.log.V(4).Info("getGatewayClasses")
 	ret := []*gwapiv1a2.GatewayClass{}
 
 	for _, gc := range store.GatewayClasses.GetAll() {
@@ -39,7 +33,7 @@ func (r *Renderer) getGatewayClasses() []*gwapiv1a2.GatewayClass {
 }
 
 func (r *Renderer) validateGatewayClass(gc *gwapiv1a2.GatewayClass) error {
-	r.log.V(4).Info("validateGatewayClass")
+	// r.log.V(4).Info("validateGatewayClass")
 
 	// play it safe
 	if string(gc.Spec.ControllerName) != config.ControllerName {

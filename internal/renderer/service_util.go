@@ -7,18 +7,13 @@ import (
 	"strconv"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/types"
-	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	// "github.com/go-logr/logr"
-	// apiv1 "k8s.io/api/core/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -118,7 +113,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
-	v, found := as[opdefault.RelatedGatewayAnnotationKey]
+	v, found := as[opdefault.RelatedGatewayKey]
 	if found && v == namespacedName {
 		// r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
 		// 	"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
@@ -133,7 +128,7 @@ func getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway, addrHint 
 	var ap *addrPort
 
 	own := false
-	if isOwner(gw, svc, "Gateway") {
+	if store.IsOwner(gw, svc, "Gateway") {
 		own = true
 	}
 
@@ -253,18 +248,6 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 	return nil
 }
 
-// taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
-func isOwner(owner, owned metav1.Object, kind string) bool {
-	for _, ownerRef := range owned.GetOwnerReferences() {
-		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
-			ownerRef.Kind == kind {
-			return true
-		}
-	}
-
-	return false
-}
-
 // we always take the FIRST listener port in the gateway: if you want to expose STUNner on multiple
 // ports, use separate Gateways!
 func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Service {
@@ -278,18 +261,35 @@ func createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Se
 			Namespace: gw.GetNamespace(),
 			Name:      gw.GetName(),
 			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-				opdefault.AppLabelKey:     opdefault.AppLabelValue,
+				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+				opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+				opdefault.RelatedGatewayKey:       gw.GetName(),
 			},
 			Annotations: map[string]string{
-				opdefault.RelatedGatewayAnnotationKey: store.GetObjectKey(gw),
+				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     opdefault.DefaultServiceType,
-			Selector: map[string]string{opdefault.AppLabelKey: opdefault.AppLabelValue},
+			Selector: map[string]string{},
 			Ports:    []corev1.ServicePort{},
 		},
+	}
+
+	// set labels
+	switch config.DataplaneMode {
+	case config.DataplaneModeLegacy:
+		// legacy mode: note that this may break for multiple gateway hierarchies but we
+		// leave it as is for compatibility
+		svc.Spec.Selector = map[string]string{
+			opdefault.AppLabelKey: opdefault.AppLabelValue,
+		}
+	case config.DataplaneModeManaged:
+		svc.Spec.Selector = map[string]string{
+			opdefault.AppLabelKey:             opdefault.AppLabelValue,
+			opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+			opdefault.RelatedGatewayKey:       gw.GetName(),
+		}
 	}
 
 	// update service type if necessary

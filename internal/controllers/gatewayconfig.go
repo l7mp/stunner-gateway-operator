@@ -33,10 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 const secretGatewayConfigIndex = "secretGatewayConfigIndex"
@@ -63,7 +62,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 	r.log.Info("created gatewayconfig controller")
 
 	if err := c.Watch(
-		&source.Kind{Type: &stnrv1a1.GatewayConfig{}},
+		source.Kind(mgr.GetCache(), &stnrv1a1.GatewayConfig{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when the GatewayConfig spec changes
 		predicate.GenerationChangedPredicate{},
@@ -78,9 +77,9 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 		return err
 	}
 
-	// watch Secret objects referenced by one of our Gateways
+	// watch Secret objects referenced by one of our GatewayConfigs
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {

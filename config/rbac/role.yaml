@@ -26,25 +26,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - endpoints
-  - namespaces
-  - nodes
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - endpoints/status
-  - nodes/status
-  - services/status
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
+  - deployments
   - services
   verbs:
   - create
@@ -53,6 +35,29 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - deployments/finalizers
+  - deployments/status
+  - endpoints/status
+  - nodes/status
+  - services/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - namespaces
+  - nodes
+  - secrets
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - gateway.networking.k8s.io

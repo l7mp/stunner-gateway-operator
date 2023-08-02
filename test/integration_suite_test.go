@@ -56,20 +56,32 @@ import (
 
 var _ = fmt.Sprintf("%d", 1)
 
-func init() {
-	os.Setenv("ACK_GINKGO_DEPRECATIONS", "1.16.5")
-}
-
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	timeout = time.Second * 10
+	newCert64 = "bmV3Y2VydA==" // newcert
+	newKey64  = "bmV3a2V5"     // newkey
+	timeout   = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
-	//loglevel = -4
-	loglevel = -1
+	loglevel = -4
+	//loglevel = -1
 )
 
 var (
+	// Resources
+	testNs         *corev1.Namespace
+	testGwClass    *gwapiv1a2.GatewayClass
+	testGwConfig   *stnrgwv1a1.GatewayConfig
+	testGw         *gwapiv1a2.Gateway
+	testUDPRoute   *gwapiv1a2.UDPRoute
+	testSvc        *corev1.Service
+	testEndpoint   *corev1.Endpoints
+	testNode       *corev1.Node
+	testSecret     *corev1.Secret
+	testAuthSecret *corev1.Secret
+	testStaticSvc  *stnrgwv1a1.StaticService
+	testDataplane  *stnrgwv1a1.Dataplane
+	// Globals
 	cfg       *rest.Config
 	k8sClient client.Client
 	testEnv   *envtest.Environment
@@ -88,6 +100,26 @@ var (
 	// 	},
 	// }
 )
+
+func init() {
+	os.Setenv("ACK_GINKGO_DEPRECATIONS", "1.16.5")
+	os.Setenv("ACK_GINKGO_RC", "true")
+}
+
+func InitResources() {
+	testNs = testutils.TestNs.DeepCopy()
+	testGwClass = testutils.TestGwClass.DeepCopy()
+	testGwConfig = testutils.TestGwConfig.DeepCopy()
+	testGw = testutils.TestGw.DeepCopy()
+	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
+	testSvc = testutils.TestSvc.DeepCopy()
+	testEndpoint = testutils.TestEndpoint.DeepCopy()
+	testNode = testutils.TestNode.DeepCopy()
+	testSecret = testutils.TestSecret.DeepCopy()
+	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
+	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
+	testDataplane = testutils.TestDataplane.DeepCopy()
+}
 
 func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(time.RFC3339Nano))
@@ -118,6 +150,7 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.Background())
 
 	By("bootstrapping test environment")
+	InitResources()
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
@@ -223,15 +256,17 @@ var _ = AfterSuite(func() {
 
 type UDPRouteMutator func(current *gwapiv1a2.UDPRoute)
 
-func recreateOrUpdateUDPRoute(f UDPRouteMutator) {
+func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
 	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
-		Name:      testUDPRoute.GetName(),
-		Namespace: testUDPRoute.GetNamespace(),
+		Name:      template.GetName(),
+		Namespace: template.GetNamespace(),
 	}}
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
-		f(current)
+		template.Spec.DeepCopyInto(&current.Spec)
+		if f != nil {
+			f(current)
+		}
 		return nil
 	})
 	Expect(err).Should(Succeed())
@@ -239,15 +274,17 @@ func recreateOrUpdateUDPRoute(f UDPRouteMutator) {
 
 type GatewayMutator func(current *gwapiv1a2.Gateway)
 
-func recreateOrUpdateGateway(f GatewayMutator) {
+func createOrUpdateGateway(template *gwapiv1a2.Gateway, f GatewayMutator) {
 	current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
-		Name:      testGw.GetName(),
-		Namespace: testGw.GetNamespace(),
+		Name:      template.GetName(),
+		Namespace: template.GetNamespace(),
 	}}
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		testutils.TestGw.Spec.DeepCopyInto(&current.Spec)
-		f(current)
+		template.Spec.DeepCopyInto(&current.Spec)
+		if f != nil {
+			f(current)
+		}
 		return nil
 	})
 	Expect(err).Should(Succeed())
@@ -255,15 +292,17 @@ func recreateOrUpdateGateway(f GatewayMutator) {
 
 type GatewayConfigMutator func(current *stnrgwv1a1.GatewayConfig)
 
-func recreateOrUpdateGatewayConfig(f GatewayConfigMutator) {
+func createOrUpdateGatewayConfig(template *stnrgwv1a1.GatewayConfig, f GatewayConfigMutator) {
 	current := &stnrgwv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
-		Name:      testGwConfig.GetName(),
-		Namespace: testGwConfig.GetNamespace(),
+		Name:      template.GetName(),
+		Namespace: template.GetNamespace(),
 	}}
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		testutils.TestGwConfig.Spec.DeepCopyInto(&current.Spec)
-		f(current)
+		template.Spec.DeepCopyInto(&current.Spec)
+		if f != nil {
+			f(current)
+		}
 		return nil
 	})
 	Expect(err).Should(Succeed())
@@ -271,37 +310,21 @@ func recreateOrUpdateGatewayConfig(f GatewayConfigMutator) {
 
 type SecretMutator func(current *corev1.Secret)
 
-func recreateOrUpdateSecret(f SecretMutator) {
+func createOrUpdateSecret(template *corev1.Secret, f SecretMutator) {
 	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      testSecret.GetName(),
-		Namespace: testSecret.GetNamespace(),
+		Name:      template.GetName(),
+		Namespace: template.GetNamespace(),
 	}}
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		current.Type = testSecret.Type
+		current.Type = template.Type
 		current.Data = make(map[string][]byte)
-		for k, v := range testSecret.Data {
+		for k, v := range template.Data {
 			current.Data[k] = v
 		}
-		f(current)
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
-func recreateOrUpdateAuthSecret(f SecretMutator) {
-	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      testAuthSecret.GetName(),
-		Namespace: testAuthSecret.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		current.Type = testAuthSecret.Type
-		current.Data = make(map[string][]byte)
-		for k, v := range testAuthSecret.Data {
-			current.Data[k] = v
+		if f != nil {
+			f(current)
 		}
-		f(current)
 		return nil
 	})
 	Expect(err).Should(Succeed())
@@ -317,8 +340,31 @@ func statusUpdateNode(name string, f NodeMutator) {
 	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current)
 	Expect(err).Should(Succeed())
 
-	f(current)
+	if f != nil {
+		f(current)
+	}
 
+	err = k8sClient.Status().Update(ctx, current)
+	Expect(err).Should(Succeed())
+}
+
+// also updates status
+func createOrUpdateNode(template *corev1.Node, f NodeMutator) {
+	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:      template.GetName(),
+		Namespace: template.GetNamespace(),
+	}}
+
+	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
+		template.Spec.DeepCopyInto(&current.Spec)
+		if f != nil {
+			f(current)
+		}
+		return nil
+	})
+	Expect(err).Should(Succeed())
+
+	template.Status.DeepCopyInto(&current.Status)
 	err = k8sClient.Status().Update(ctx, current)
 	Expect(err).Should(Succeed())
 }
@@ -341,3 +387,37 @@ func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f c
 
 	return res, err
 }
+
+var _ = Describe("Integration test:", func() {
+	// LEGACY
+	Context(`When using the "legacy" dataplane mode`, func() {
+		It(`It should be possible to set the dataplane mode to "legacy"`, func() {
+			InitResources()
+			config.DataplaneMode = config.DataplaneModeLegacy
+		})
+	})
+
+	testLegacyMode()
+
+	Context(`When using the "legacy" dataplane mode`, func() {
+		Context("It should be possible to reset the dataplane mode to the default", func() {
+			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+		})
+	})
+
+	// MANAGED
+	Context(`When using the "managed" dataplane mode`, func() {
+		It(`It should be possible to set the dataplane mode to "managed"`, func() {
+			InitResources()
+			config.DataplaneMode = config.DataplaneModeManaged
+		})
+	})
+
+	testManagedMode()
+
+	Context(`When using the "managed" dataplane mode`, func() {
+		Context("It should be possible to reset the dataplane mode to the default", func() {
+			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+		})
+	})
+})

@@ -4,6 +4,7 @@ package updater
 import (
 	"fmt"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -104,21 +105,8 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// merge metadata
-		labs := labels.Merge(current.GetLabels(), svc.GetLabels())
-		current.SetLabels(labs)
-
-		annotations := current.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		for k, v := range svc.GetAnnotations() {
-			annotations[k] = v
-		}
-		current.SetAnnotations(annotations)
-
-		if err := addOwnerRef(current, svc); err != nil {
-			return err
+		if err := mergeMetadata(current, svc); err != nil {
+			return nil
 		}
 
 		// rewrite spec
@@ -154,9 +142,9 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 
 		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
 
-		current.SetOwnerReferences(cm.GetOwnerReferences())
-		current.SetAnnotations(cm.GetAnnotations())
-		current.SetLabels(cm.GetLabels())
+		if err := mergeMetadata(current, cm); err != nil {
+			return nil
+		}
 
 		current.Data = make(map[string]string)
 		for k, v := range cm.Data {
@@ -179,10 +167,100 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	return op, nil
 }
 
+func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("upsert deployment", "resource", store.GetObjectKey(dp), "generation", gen)
+
+	client := u.manager.GetClient()
+	current := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Name:      dp.GetName(),
+		Namespace: dp.GetNamespace(),
+	}}
+
+	// use CreateOrPatch: hopefully more clever than CreateOrUpdate
+	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
+		if err := mergeMetadata(current, dp); err != nil {
+			return nil
+		}
+
+		current.Spec.Selector = dp.Spec.Selector
+		if dp.Spec.Replicas != nil {
+			current.Spec.Replicas = dp.Spec.Replicas
+		}
+
+		// the pod template is copied verbatim
+		dp.Spec.Template.ObjectMeta.DeepCopyInto(&current.Spec.Template.ObjectMeta)
+		dpspec := &dp.Spec.Template.Spec
+		currentspec := &current.Spec.Template.Spec
+		currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
+		for i := range dpspec.Containers {
+			dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
+		}
+		currentspec.Volumes = make([]corev1.Volume, len(dpspec.Volumes))
+		for i := range dpspec.Volumes {
+			dpspec.Volumes[i].DeepCopyInto(&currentspec.Volumes[i])
+		}
+
+		// rest is optional
+		if dpspec.TerminationGracePeriodSeconds != nil {
+			currentspec.TerminationGracePeriodSeconds = dpspec.TerminationGracePeriodSeconds
+		}
+
+		currentspec.HostNetwork = dpspec.HostNetwork
+
+		// affinity
+		if dpspec.Affinity != nil {
+			currentspec.Affinity = dpspec.Affinity
+		}
+
+		// tolerations
+		if dpspec.Tolerations != nil {
+			currentspec.Tolerations = dpspec.Tolerations
+		}
+
+		// security context
+		if dpspec.SecurityContext != nil {
+			currentspec.SecurityContext = dpspec.SecurityContext
+		}
+
+		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))
+
+		return nil
+	})
+
+	// u.log.V(4).Info("upserting deployment", "resource", store.GetObjectKey(dp), "generation",
+	// 	gen, "deployment", store.DumpObject(dp))
+
+	if err != nil {
+		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert deployment %q: %w",
+			store.GetObjectKey(dp), err)
+	}
+
+	u.log.V(1).Info("deployment upserted", "resource", store.GetObjectKey(dp), "generation",
+		gen, "result", store.DumpObject(current))
+
+	return op, nil
+}
+
 func (u *Updater) deleteObject(o client.Object, gen int) error {
 	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
+}
+
+func mergeMetadata(dst, src client.Object) error {
+	labs := labels.Merge(dst.GetLabels(), src.GetLabels())
+	dst.SetLabels(labs)
+
+	annotations := dst.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	for k, v := range src.GetAnnotations() {
+		annotations[k] = v
+	}
+	dst.SetAnnotations(annotations)
+
+	return addOwnerRef(dst, src)
 }
 
 func addOwnerRef(dst, src client.Object) error {

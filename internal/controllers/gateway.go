@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -27,10 +28,10 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 const (
@@ -61,7 +62,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch GatewayClass objects that match this controller name
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.GatewayClass{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when the spec changes on a GatewayClass we manage
 		predicate.And(
@@ -75,7 +76,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch Gateway objects that match the controller name
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.Gateway{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.Gateway{}),
 		&handler.EnqueueRequestForObject{},
 		//trigger when the Spec or an annotation changes on a Gateway we manage
 		predicate.And(
@@ -104,13 +105,25 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	// watch Secret objects referenced by one of our Gateways
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {
 		return err
 	}
 	r.log.Info("watching secret objects")
+
+	if config.DataplaneMode == config.DataplaneModeManaged {
+		// watch Deployment objects referenced by one of our Gateways
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &appv1.Deployment{}),
+			&handler.EnqueueRequestForObject{},
+			predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+		); err != nil {
+			return err
+		}
+		r.log.Info("watching deployment objects")
+	}
 
 	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
 	// with backend Services)
@@ -127,6 +140,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	gatewayClassList := []client.Object{}
 	gatewayList := []client.Object{}
 	secretList := []client.Object{}
+	deploymentList := []client.Object{}
 
 	// find Gateways managed by this controller
 	gwClasses := &gwapiv1a2.GatewayClassList{}
@@ -212,6 +226,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 					secretList = append(secretList, &secret)
 				}
 			}
+
+			if config.DataplaneMode == config.DataplaneModeManaged {
+				deploymentName := store.GetNamespacedName(&gw)
+
+				// does the gateway actually exist?
+				dp := &appv1.Deployment{}
+				if err := r.Get(context.Background(), deploymentName, dp); err == nil {
+					deploymentList = append(deploymentList, dp)
+				}
+			}
 		}
 	}
 
@@ -224,6 +248,9 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 	store.Secrets.Reset(secretList)
 	r.log.V(2).Info("reset Secret store", "secrets", store.Secrets.String())
+
+	store.Deployments.Reset(deploymentList)
+	r.log.V(2).Info("reset Deployment store", "deployments", store.Deployments.String())
 
 	r.eventCh <- event.NewEventRender()
 
@@ -288,6 +315,45 @@ func (r *gatewayReconciler) validateSecretForReconcile(obj client.Object) bool {
 	}
 
 	return false
+}
+
+// validateDeploymentForReconcile checks whether there is a Gateway with the same name as the
+// Deployment and the Deployment is owned by us.
+func (r *gatewayReconciler) validateDeploymentForReconcile(obj client.Object) bool {
+	// we don't watch Deployments in legacy mode
+	if config.DataplaneMode != config.DataplaneModeManaged {
+		return false
+	}
+
+	deployment := obj.(*appv1.Deployment)
+
+	// is deployment owned by us?
+	val, ok := deployment.GetLabels()[opdefault.OwnedByLabelKey]
+	if !ok || val != opdefault.OwnedByLabelValue {
+		return false
+	}
+
+	// gateway has the same name as the deployment
+	gatewayName := store.GetNamespacedName(deployment)
+
+	// is the related-gateway annotation set?
+	val, ok = deployment.GetAnnotations()[opdefault.RelatedGatewayKey]
+	if !ok || val != gatewayName.String() {
+		return false
+	}
+
+	// does the gateway actually exist?
+	gw := &gwapiv1a2.Gateway{}
+	if err := r.Get(context.Background(), gatewayName, gw); err != nil {
+		return false
+	}
+
+	// are we managing the gateway?
+	if !r.validateGatewayForReconcile(gw) {
+		return false
+	}
+
+	return true
 }
 
 // validateGatewayClass checks whether the ParametersReference ref points to an actual

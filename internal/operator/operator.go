@@ -10,10 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
 	// gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -73,6 +74,11 @@ func (o *Operator) Start(ctx context.Context) error {
 	log.V(3).Info("starting GatewayConfig controller")
 	if err := controllers.RegisterGatewayConfigController(o.mgr, o.operatorCh, o.logger); err != nil {
 		return fmt.Errorf("cannot register gatewayconfig controller: %w", err)
+	}
+
+	log.V(3).Info("starting Dataplane controller")
+	if err := controllers.RegisterDataplaneController(o.mgr, o.operatorCh, o.logger); err != nil {
+		return fmt.Errorf("cannot register dataplane controller: %w", err)
 	}
 
 	log.V(3).Info("starting Gateway controller")

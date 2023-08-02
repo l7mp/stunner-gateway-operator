@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,7 +15,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -75,33 +75,113 @@ func DumpObject(o client.Object) string {
 	// copy
 	ro := o.DeepCopyObject()
 
-	var tmp client.Object
 	switch ro := ro.(type) {
 	case *gwapiv1a2.GatewayClass:
-		tmp = ro
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *gwapiv1a2.Gateway:
-		tmp = ro
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *gwapiv1a2.UDPRoute:
-		tmp = ro
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *corev1.Service:
-		tmp = ro
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
+	case *appv1.Deployment:
+		if json, err := json.Marshal(strip(ro).(*appv1.Deployment)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *stnrv1a1.GatewayConfig:
-		tmp = ro
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
+	case *stnrv1a1.StaticService:
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
+	case *stnrv1a1.Dataplane:
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *corev1.ConfigMap:
-		tmp = stripCM(ro)
+		if json, err := json.Marshal(strip(stripCM(ro))); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	default:
 		// this is not fatal
 		return output
 	}
 
-	// remove cruft
-	tmp = strip(tmp)
-
-	if json, err := json.Marshal(tmp); err == nil {
-		output = string(json)
-	}
 	return output
 }
+
+// // DumpObject convers an object into a human-readable form for logging.
+// func DumpObject(o client.Object) string {
+// 	// default dump
+// 	output := fmt.Sprintf("%#v", o)
+
+// 	// copy
+// 	ro := o.DeepCopyObject()
+
+// 	var tmp client.Object
+// 	switch ro := ro.(type) {
+// 	case *gwapiv1a2.GatewayClass:
+// 		tmp = ro
+// 	case *gwapiv1a2.Gateway:
+// 		tmp = ro
+// 	case *gwapiv1a2.UDPRoute:
+// 		tmp = ro
+// 	case *corev1.Service:
+// 		tmp = ro
+// 	case *appv1.Deployment:
+// 		tmp = ro
+// 	case *stnrv1a1.GatewayConfig:
+// 		tmp = ro
+// 	case *stnrv1a1.StaticService:
+// 		tmp = ro
+// 	case *stnrv1a1.Dataplane:
+// 		tmp = ro
+// 	case *corev1.ConfigMap:
+// 		tmp = stripCM(ro)
+// 	default:
+// 		// this is not fatal
+// 		return output
+// 	}
+
+// 	// remove cruft
+// 	tmp = strip(tmp)
+
+// 	if json, err := json.Marshal(tmp); err != nil {
+// 		fmt.Printf("---------------ERROR-----------: %s\n", err)
+// 		return output
+// 	} else {
+// 		output = string(json)
+// 	}
+// 	return output
+// }
 
 func strip(o client.Object) client.Object {
 	as := o.GetAnnotations()
@@ -177,4 +257,16 @@ func IsReferenceStaticService(ref *gwapiv1a2.BackendRef) bool {
 	}
 
 	return true
+}
+
+// taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
+func IsOwner(owner, owned metav1.Object, kind string) bool {
+	for _, ownerRef := range owned.GetOwnerReferences() {
+		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
+			ownerRef.Kind == kind {
+			return true
+		}
+	}
+
+	return false
 }

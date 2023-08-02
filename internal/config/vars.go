@@ -14,6 +14,11 @@ var (
 	// ControllerName is the current controller name which indicates this operator's name
 	ControllerName = opdefault.DefaultControllerName
 
+	// DataplaneMode is the "managed dataplane" mode. When set to "managed", the operator takes
+	// care of providing the stunnerd pods for each Gateway. In "legacy" mode, the dataplanes
+	// must be provided by the user.
+	DataplaneMode = NewDataplaneMode(opdefault.DefaultDataplaneMode)
+
 	// ConfigMapName names a ConfigMap the operator renders the stunnerd config file into
 	ConfigMapName = opdefault.DefaultConfigMapName
 

@@ -45,7 +45,7 @@ func RegisterNodeController(mgr manager.Manager, ch chan event.Event, log logr.L
 	r.log.Info("created node controller")
 
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
+		source.Kind(mgr.GetCache(), &corev1.Node{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.ResourceVersionChangedPredicate{},
 	); err != nil {

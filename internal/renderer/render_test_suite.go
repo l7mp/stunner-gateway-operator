@@ -20,16 +20,15 @@ import (
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	// "github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	// "github.com/l7mp/stunner-gateway-operator/internal/operator"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-// var testerLogLevel = zapcore.Level(-4)
+var testerLogLevel = zapcore.Level(-4)
+
 // var testerLogLevel = zapcore.DebugLevel
-var testerLogLevel = zapcore.ErrorLevel
+//var testerLogLevel = zapcore.ErrorLevel
 
 var (
 	scheme = runtime.NewScheme()
@@ -54,6 +53,7 @@ type renderTestConfig struct {
 	ascrts []corev1.Secret
 	nss    []corev1.Namespace
 	ssvcs  []stnrv1a1.StaticService
+	dps    []stnrv1a1.Dataplane
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -134,6 +134,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.StaticServices.Flush()
 			for i := range c.ssvcs {
 				store.StaticServices.Upsert(&c.ssvcs[i])
+			}
+
+			store.Dataplanes.Flush()
+			for i := range c.dps {
+				store.Dataplanes.Upsert(&c.dps[i])
 			}
 
 			log.V(1).Info("starting renderer thread")

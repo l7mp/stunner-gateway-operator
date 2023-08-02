@@ -8,17 +8,34 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Labeling rules
+// - all top-level resources (Service, Deployment, ConfigMap) are labeled with "OwnedByLabelKey:OwnedByLabelValue"
+// - additional labels are "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+// - Deployment pods are labeled with "AppLabelKey:AppLabelValue" and "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
 	DefaultControllerName = "stunner.l7mp.io/gateway-operator"
 
-	// RelatedGatewayAnnotationKey is the name of the annotation that is used to tie a
-	// LoadBalancer service and a STUNner dataplane ConfigMap to a Gateway. The value is either
-	// a singular pair of a namespace and name when of the related Gateway (in the form
-	// "namespace/name", mostly used for associating a LB Service to a Gateway) or
-	// GatewayConfig (used for ConfigMaps storing STUNner dataplane configs, which usually
-	// belong to multiple Gateways).
-	RelatedGatewayAnnotationKey = "stunner.l7mp.io/related-gateway-name"
+	// DefaultDataplaneName is the name of the default Dataplane to use when no dataplane is specified explicitly.
+	DefaultDataplaneName = "default"
+
+	// DefaultDataplaneMode is the default dataplane" mode.
+	DefaultDataplaneMode = "legacy"
+	// DefaultDataplaneMode = "managed"
+
+	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
+	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
+	// Gateway. The value is either a singular pair of a namespace and name when of the related
+	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
+	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
+	// legacy mode, which usually belong to multiple Gateways).
+	RelatedGatewayKey = "stunner.l7mp.io/related-gateway-name"
+
+	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
+	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
+	// Gateway. The value is the namespace of the related Gateway.
+	RelatedGatewayNamespace = "stunner.l7mp.io/related-gateway-namespace"
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
 	AppLabelKey = "app"

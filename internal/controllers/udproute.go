@@ -56,7 +56,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch UDPRoute objects
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.UDPRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
@@ -83,7 +83,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 				// LB services have both "app:stunner" and
 				// "stunner.l7mp.io/owned-by:stunner" labels set, we use the app
 				// label here
-				opdefault.AppLabelKey: opdefault.AppLabelValue,
+				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 		})
 	if err != nil {
@@ -92,7 +92,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch Service objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Service{}},
+		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when either a gateway-loadbalancer service (svc annotated as a
 		// related-service for a gateway) or a backend-service changes
@@ -108,7 +108,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 	// watch EndPoints object references by one of the ref'd Services
 	if config.EnableEndpointDiscovery {
 		if err := c.Watch(
-			&source.Kind{Type: &corev1.Endpoints{}},
+			source.Kind(mgr.GetCache(), &corev1.Endpoints{}),
 			&handler.EnqueueRequestForObject{},
 			predicate.NewPredicateFuncs(r.validateBackendForReconcile),
 		); err != nil {
@@ -119,7 +119,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch StaticService objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		&source.Kind{Type: &stnrv1a1.StaticService{}},
+		source.Kind(mgr.GetCache(), &stnrv1a1.StaticService{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateStaticServiceForReconcile),
 	); err != nil {
@@ -144,7 +144,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
 	svcs := &corev1.ServiceList{}
-	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.AppLabelKey: opdefault.AppLabelValue})
+	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	if err == nil {
 		for _, svc := range svcs.Items {
 			svc := svc

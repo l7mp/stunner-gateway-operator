@@ -21,7 +21,7 @@ import (
 	// "time"
 	// "reflect"
 	// "testing"
-	"fmt"
+	// "fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,28 +47,7 @@ import (
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-var (
-	testNs         = testutils.TestNs.DeepCopy()
-	testGwClass    = testutils.TestGwClass.DeepCopy()
-	testGwConfig   = testutils.TestGwConfig.DeepCopy()
-	testGw         = testutils.TestGw.DeepCopy()
-	testUDPRoute   = testutils.TestUDPRoute.DeepCopy()
-	testSvc        = testutils.TestSvc.DeepCopy()
-	testEndpoint   = testutils.TestEndpoint.DeepCopy()
-	testNode       = testutils.TestNode.DeepCopy()
-	testSecret     = testutils.TestSecret.DeepCopy()
-	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
-	testStaticSvc  = testutils.TestStaticSvc.DeepCopy()
-	newCert64      = "bmV3Y2VydA=="                 // newcert
-	newKey64       = "bmV3a2V5"                     // newkey
-	_              = fmt.Sprintf("whatever: %d", 1) // make sure we use fmt
-)
-
-// GatewayClass + GatewayConfig + Gateway should be enough to render a valid STUNner conf
-var _ = Describe("Integration test:", func() {
-	// fmt.Printf("%#v\n", testUDPRoute)
-	// fmt.Printf("%#v\n", testSvc)
-
+func testLegacyMode() {
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
@@ -121,7 +100,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -150,7 +129,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -188,7 +167,7 @@ var _ = Describe("Integration test:", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -240,9 +219,20 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should set the Gateway status", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -368,7 +358,7 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayAnnotationKey]
+			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
 			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
 			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
@@ -452,7 +442,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				addr := gwapiv1a2.IPAddressType
 				current.Spec.Addresses = []gwapiv1a2.GatewayAddress{{
 					Type:  &addr,
@@ -501,10 +491,10 @@ var _ = Describe("Integration test:", func() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			Expect(k8sClient.Create(ctx, testNode)).Should(Succeed())
+			createOrUpdateNode(&testutils.TestNode, nil)
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
@@ -676,7 +666,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
@@ -719,7 +709,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "NodePort"})
 			})
 
@@ -761,7 +751,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should add annotations from Gateway", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "dummy-1",
@@ -791,10 +781,7 @@ var _ = Describe("Integration test:", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
-			v, ok = svc.GetLabels()[opdefault.OwnedByLabelKey]
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
 			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
@@ -812,7 +799,7 @@ var _ = Describe("Integration test:", func() {
 					"someLabel":      "some-label-val",
 					"someOtherLabel": "some-other-label-val",
 					// this cannot be removed, otherwise the watcher ignores the service
-					opdefault.AppLabelKey: opdefault.AppLabelValue,
+					opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 				})
 				svc.SetAnnotations(map[string]string{
 					"someNewAnnotation":      "some-ann-val",
@@ -834,27 +821,20 @@ var _ = Describe("Integration test:", func() {
 				l1, ok1 := ls["someLabel"]
 				l2, ok2 := ls["someOtherLabel"]
 				l3, ok3 := ls[opdefault.OwnedByLabelKey]
-				l4, ok4 := ls[opdefault.AppLabelKey]
 
-				fmt.Println("++++++++++++++++++++++")
-				fmt.Println(ls)
-
-				if !ok1 || !ok2 || !ok3 || !ok4 {
+				if !ok1 || !ok2 || !ok3 {
 					return false
 				}
 
 				if l1 != "some-label-val" || l2 != "some-other-label-val" ||
-					l3 != opdefault.OwnedByLabelValue || l4 != opdefault.AppLabelValue {
+					l3 != opdefault.OwnedByLabelValue {
 					return false
 				}
 
 				as := svc.GetAnnotations()
 				a1, ok1 := as["someNewAnnotation"]
 				a2, ok2 := as["someOtherNewAnnotation"]
-				a3, ok3 := as[opdefault.RelatedGatewayAnnotationKey]
-
-				fmt.Println("++++++++++++++++++++++")
-				fmt.Println(as)
+				a3, ok3 := as[opdefault.RelatedGatewayKey]
 
 				if !ok1 || !ok2 || !ok3 {
 					return false
@@ -882,7 +862,7 @@ var _ = Describe("Integration test:", func() {
 			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "new-dummy-1",
@@ -917,10 +897,7 @@ var _ = Describe("Integration test:", func() {
 			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
 			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
 
-			v, ok := svc.GetLabels()[opdefault.AppLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.AppLabelValue))
-			v, ok = svc.GetLabels()[opdefault.OwnedByLabelKey]
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
 			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
@@ -930,7 +907,7 @@ var _ = Describe("Integration test:", func() {
 			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
@@ -1011,7 +988,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -1062,7 +1039,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("should update TLS key when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
 				current.Data["tls.key"] = []byte("newkey")
 			})
 
@@ -1113,10 +1090,10 @@ var _ = Describe("Integration test:", func() {
 
 		It("should not install TLS cert/key unless listener protocol is TLS or DTLS", func() {
 			ctrl.Log.Info("re-loading TLS Secret with restored cert/key")
-			recreateOrUpdateSecret(func(current *corev1.Secret) {})
+			createOrUpdateSecret(&testutils.TestSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 1st listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
 				ns := gwapiv1a2.Namespace("testnamespace")
 				tls := gwapiv1a2.GatewayTLSConfig{
@@ -1209,10 +1186,10 @@ var _ = Describe("Integration test:", func() {
 			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
 
 			ctrl.Log.Info("reseting gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
 
 			ctrl.Log.Info("updating Route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
 				kind := gwapiv1a2.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
@@ -1258,7 +1235,8 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") {
+				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
+					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
 					conf = &c
 					return true
 				}
@@ -1325,9 +1303,20 @@ var _ = Describe("Integration test:", func() {
 			Expect(s.Reason).Should(
 				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
 
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -1534,10 +1523,10 @@ var _ = Describe("Integration test:", func() {
 		It("should render a valid STUNner config", func() {
 
 			ctrl.Log.Info("re-loading Gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
 			lookupKey := types.NamespacedName{
 				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
@@ -1558,12 +1547,22 @@ var _ = Describe("Integration test:", func() {
 				}
 
 				// conf should have valid listener confs
-				if len(c.Listeners) == 2 && len(c.Clusters) == 1 {
-					conf = &c
-					return true
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
 				}
-				return false
 
+				conf = &c
+
+				l := conf.Listeners[0]
+				if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+					l = conf.Listeners[1]
+				}
+
+				if len(l.Routes) != 1 {
+					return false
+				}
+
+				return true
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
@@ -1609,9 +1608,20 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
@@ -1744,7 +1754,7 @@ var _ = Describe("Integration test:", func() {
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading UDPRoute")
 
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -1819,9 +1829,21 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -1966,7 +1988,7 @@ var _ = Describe("Integration test:", func() {
 			})).Should(Succeed())
 
 			ctrl.Log.Info("recreating UDPRoute with open listener attachment")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 			})
 
@@ -2058,10 +2080,22 @@ var _ = Describe("Integration test:", func() {
 			Expect(c.Endpoints[0]).Should(Equal("testservice-ok.testnamespace.svc.cluster.local"))
 		})
 
-		It("should reset status on all resources", func() {
+		It("should reset Gateway statuses", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2149,11 +2183,20 @@ var _ = Describe("Integration test:", func() {
 				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+		})
 
+		It("should reset Route statuses", func() {
 			// the original UDPRoute
 			ro := &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				return len(ro.Status.Parents) == 1
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
@@ -2167,7 +2210,7 @@ var _ = Describe("Integration test:", func() {
 			Expect(ps.ParentRef.SectionName).To(BeNil())
 			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
 
-			s = meta.FindStatusCondition(ps.Conditions,
+			s := meta.FindStatusCondition(ps.Conditions,
 				string(gwapiv1a2.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -2183,9 +2226,17 @@ var _ = Describe("Integration test:", func() {
 
 			// the new UDPRoute in the dummy-namespace
 			ro = &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx,
-				types.NamespacedName{Namespace: "dummy-namespace", Name: "dummy-namespace-route"},
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: "dummy-namespace",
+					Name:      "dummy-namespace-route",
+				}, ro); err != nil {
+					return false
+				}
+
+				// should be programmed
+				return len(ro.Status.Parents) == 1
+			}, timeout, interval).Should(BeTrue())
 
 			// no listener accepts the route
 			Expect(ro.Status.Parents).To(HaveLen(1))
@@ -2222,7 +2273,7 @@ var _ = Describe("Integration test:", func() {
 			allowedRoutes := gwapiv1a2.AllowedRoutes{
 				Namespaces: &routeNamespaces,
 			}
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes
 			})
 		})
@@ -2314,9 +2365,21 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2473,7 +2536,7 @@ var _ = Describe("Integration test:", func() {
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
 			sn := gwapiv1a2.SectionName("gateway-1-listener-tcp")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{
 					{
 						Name:        "gateway-1",
@@ -2515,7 +2578,7 @@ var _ = Describe("Integration test:", func() {
 			allowedRoutes2 := gwapiv1a2.AllowedRoutes{
 				Namespaces: &routeNamespaces2,
 			}
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = &allowedRoutes1
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes2
 			})
@@ -2607,9 +2670,21 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -2794,12 +2869,12 @@ var _ = Describe("Integration test:", func() {
 
 		It("should be possible to remove the new route and the namespace", func() {
 			// reset gw
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = nil
 				current.Spec.Listeners[1].AllowedRoutes = nil
 				current.Spec.Listeners[2].AllowedRoutes = nil
 			})
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 			Expect(k8sClient.Delete(ctx, &gwapiv1a2.UDPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dummy-namespace-route",
@@ -2818,10 +2893,11 @@ var _ = Describe("Integration test:", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
-			ctrl.Log.Info("re-loading UDPRoute: ParentRef = dummy")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
-				current.Spec.CommonRouteSpec.ParentRefs[0].Name =
-					gwapiv1a2.ObjectName("dummy")
+			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+				sn := gwapiv1a2.SectionName("dummy")
+				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
+				// gwapiv1a2.ObjectName("dummy")
 			})
 
 			lookupKey := types.NamespacedName{
@@ -2842,7 +2918,8 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				if len(c.Listeners) != 2 || len(c.Clusters) == 0 {
+				if len(c.Listeners) > 0 && len(c.Listeners) != 2 ||
+					len(c.Clusters) == 0 && len(c.Listeners[0].Routes) == 0 {
 					conf = &c
 					return true
 				}
@@ -2881,13 +2958,35 @@ var _ = Describe("Integration test:", func() {
 			Expect(conf.Clusters).To(HaveLen(0))
 
 			ro := &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			// wait until status gets updated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || ro == nil {
+					return false
+				}
+
+				if len(ro.Status.Parents) != 1 {
+					return false
+				}
+
+				if ro.Status.Parents[0].ParentRef.SectionName != nil &&
+					*ro.Status.Parents[0].ParentRef.SectionName == gwapiv1a2.SectionName("dummy") {
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			// Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+			// 	ro)).Should(Succeed())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("dummy")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).NotTo(BeNil())
+			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1a2.SectionName("dummy")))
 			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
@@ -2911,12 +3010,12 @@ var _ = Describe("Integration test:", func() {
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 			})
 
 			ctrl.Log.Info("re-loading gateway-config")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
 			})
@@ -2960,7 +3059,7 @@ var _ = Describe("Integration test:", func() {
 
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> longterm
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3007,7 +3106,7 @@ var _ = Describe("Integration test:", func() {
 		It("external auth refs override inline auth", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "longterm"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3055,7 +3154,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("updating the external auth ref should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
-			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestAuthSecret, func(current *corev1.Secret) {
 				current.Data["username"] = []byte("new-user")
 			})
 
@@ -3095,7 +3194,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("cnanging the external auth ref type should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
-			recreateOrUpdateAuthSecret(func(current *corev1.Secret) {
+			createOrUpdateSecret(&testutils.TestAuthSecret, func(current *corev1.Secret) {
 				current.Data["type"] = []byte("ephemeral")
 				current.Data["secret"] = []byte("dummy")
 				delete(current.Data, "username")
@@ -3164,7 +3263,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
-			recreateOrUpdateGatewayConfig(func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> longterm
 				secret := "dummy"
 				current.Spec.AuthType = &atype
@@ -3208,7 +3307,7 @@ var _ = Describe("Integration test:", func() {
 			// the client may overwrite our objects, recreate!
 
 			ctrl.Log.Info("re-loading gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
 			})
 
@@ -3244,7 +3343,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("changing a route target", func() {
 			ctrl.Log.Info("re-loading route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1a2.ObjectName("dummy")
 			})
@@ -3283,7 +3382,7 @@ var _ = Describe("Integration test:", func() {
 
 		It("adding a new route", func() {
 			ctrl.Log.Info("re-loading the test route")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {})
 
 			ctrl.Log.Info("adding a new route")
 			current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -3434,7 +3533,7 @@ var _ = Describe("Integration test:", func() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("re-loading the test gateway")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
 			})
 
@@ -3625,8 +3724,8 @@ var _ = Describe("Integration test:", func() {
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = false
 
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
 			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
@@ -3650,7 +3749,8 @@ var _ = Describe("Integration test:", func() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
 					conf = &c
 					return true
 				}
@@ -3754,7 +3854,7 @@ var _ = Describe("Integration test:", func() {
 
 			// need to trigger a re-render: delete the invalid Gateway listener
 			ctrl.Log.Info("re-loading Gateway with 1 valid listener")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
 				current.Spec.Listeners = []gwapiv1a2.Listener{
 					current.Spec.Listeners[0], current.Spec.Listeners[1]}
 			})
@@ -3834,10 +3934,10 @@ var _ = Describe("Integration test:", func() {
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway with 2 valid listeners")
-			recreateOrUpdateGateway(func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			recreateOrUpdateUDPRoute(func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -3919,9 +4019,21 @@ var _ = Describe("Integration test:", func() {
 		})
 
 		It("should reset status on all resources", func() {
+			// wait until gateway is programmed
 			gw := &gwapiv1a2.Gateway{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw),
-				gw)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1b1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(gw.Status.Conditions).To(HaveLen(2))
 
 			s := meta.FindStatusCondition(gw.Status.Conditions,
@@ -4070,4 +4182,4 @@ var _ = Describe("Integration test:", func() {
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 		})
 	})
-})
+}
