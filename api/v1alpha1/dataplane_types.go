@@ -47,45 +47,64 @@ type Dataplane struct {
 
 // DataplaneSpec describes the prefixes reachable via a Dataplane.
 type DataplaneSpec struct {
+	// Dataplane template. The `default` template spawns a single stunnerd container with the
+	// running config mapped into the pod from the ConfigMap. The `config-watcher` template
+	// uses a separate sidecar container to watch the ConfigMap, which can be faster than the
+	// default but requires additional RBAC permissions.
+	//
+	// +optional
+	// +kubebuilder:default:="default"
+	Template string `json:"template,omitempty"`
+
 	// Number of desired pods. This is a pointer to distinguish between explicit zero and not
 	// specified. Defaults to 1.
+	//
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// Container image name.
+	//
 	// +optional
 	Image string `json:"image,omitempty"`
 
 	// Image pull policy. One of Always, Never, IfNotPresent.
+	//
 	// +optional
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// Entrypoint array. Defaults: "stunnerd".
+	//
 	// +optional
 	Command []string `json:"command,omitempty"`
 
 	// Arguments to the entrypoint.
+	//
 	// +optional
 	Args []string `json:"args,omitempty"`
 
 	// List of environment variables to set in the stunnerd container.
+	//
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	// Resources required by stunnerd.
+	//
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// Optional duration in seconds the stunnerd needs to terminate gracefully. Defaults to 3600 seconds.
+	//
 	// +optional
 	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 
 	// Host networking requested for the stunnerd pod to use the host's network namespace.
 	// Can be used to implement public TURN servers with Kubernetes.  Defaults to false.
+	//
 	// +optional
 	HostNetwork bool `json:"hostNetwork,omitempty"`
 
 	// Scheduling constraints.
+	//
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
@@ -95,6 +114,7 @@ type DataplaneSpec struct {
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 
 	// If specified, the pod's tolerations.
+	//
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }

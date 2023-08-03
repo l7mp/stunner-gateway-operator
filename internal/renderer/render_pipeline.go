@@ -442,7 +442,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 				if gw == nil {
 					return
 				}
-				dp := config.DataplaneTemplate(gw)
+				dp := defaultDeploymentSkeleton(gw)
 				c.update.DeleteQueue.Deployments.Upsert(&dp)
 			}
 			return

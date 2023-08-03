@@ -10,8 +10,9 @@ import (
 
 // Labeling rules
 // - all top-level resources (Service, Deployment, ConfigMap) are labeled with "OwnedByLabelKey:OwnedByLabelValue"
-// - additional labels are "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+// - additional mandatory labels are "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
 // - Deployment pods are labeled with "AppLabelKey:AppLabelValue" and "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
+// - all resources must have an owner-reference to a Gateway or a GatewayConfig (stunnerd-config ConfigMap in legacy dataplane mode) for the operator to pick them up
 
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
@@ -23,6 +24,16 @@ const (
 	// DefaultDataplaneMode is the default dataplane" mode.
 	DefaultDataplaneMode = "legacy"
 	// DefaultDataplaneMode = "managed"
+
+	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
+	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
+	// that the Deployments and Services created by the operator will have both the AppLabelKey
+	// and the OwnedByLabelKey labels set.
+	OwnedByLabelKey = "stunner.l7mp.io/owned-by"
+
+	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
+	// maintained by the operator.
+	OwnedByLabelValue = "stunner"
 
 	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
 	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
@@ -42,16 +53,6 @@ const (
 
 	// AppLabelValue defines the label value used to mark the pods of the stunnerd deployment.
 	AppLabelValue = "stunner"
-
-	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
-	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
-	// that the Deployments and Services created by the operator will have both the AppLabelKey
-	// and the OwnedByLabelKey labels set.
-	OwnedByLabelKey = "stunner.l7mp.io/owned-by"
-
-	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
-	// maintained by the operator.
-	OwnedByLabelValue = "stunner"
 
 	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,

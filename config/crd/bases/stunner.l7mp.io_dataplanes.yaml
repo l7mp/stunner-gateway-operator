@@ -1222,6 +1222,14 @@ spec:
                         type: string
                     type: object
                 type: object
+              template:
+                default: default
+                description: Dataplane template. The `default` template spawns a single
+                  stunnerd container with the running config mapped into the pod from
+                  the ConfigMap. The `config-watcher` template uses a separate sidecar
+                  container to watch the ConfigMap, which can be faster than the default
+                  but requires additional RBAC permissions.
+                type: string
               terminationGracePeriodSeconds:
                 description: Optional duration in seconds the stunnerd needs to terminate
                   gracefully. Defaults to 3600 seconds.
