@@ -19,14 +19,13 @@ func stnrListenerName(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1a2.Listener, rs []*gwapiv1a2.UDPRoute, ap *addrPort) (*stnrconfv1a1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1a2.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1a1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
-		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr",
-		fmt.Sprintf("%#v", ap))
+		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
 	proto, err := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
 	if err != nil {
-		return nil, err
+		return nil, NewNonCriticalError(InvalidProtocol)
 	}
 
 	minPort, maxPort := stnrconfv1a1.DefaultMinRelayPort,

@@ -230,7 +230,9 @@ func testLegacyMode() {
 				// should be programmed
 				s := meta.FindStatusCondition(gw.Status.Conditions,
 					string(gwapiv1b1.GatewayConditionProgrammed))
-				return s.Status == metav1.ConditionTrue
+				// no public IP yet
+				return s != nil && s.Status == metav1.ConditionFalse &&
+					s.Reason == string(gwapiv1b1.GatewayReasonAddressNotAssigned)
 
 			}, timeout, interval).Should(BeTrue())
 
@@ -248,7 +250,7 @@ func testLegacyMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1b1.GatewayConditionProgrammed)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			// listeners: no public gateway address so Ready status is False
 			Expect(gw.Status.Listeners).To(HaveLen(3))
@@ -269,12 +271,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -292,12 +292,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -315,13 +313,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
-
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should survive the event of adding a route", func() {
@@ -739,7 +734,7 @@ func testLegacyMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[0].PublicAddr == "" {
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
 					conf = &c
 					return true
 				}
@@ -1354,12 +1349,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -1377,12 +1370,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -1400,12 +1391,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -1523,7 +1512,11 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 
 			ctrl.Log.Info("re-loading Gateway")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+				})
+			})
 
 			ctrl.Log.Info("re-loading UDPRoute")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
@@ -1658,12 +1651,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -1681,12 +1672,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -1704,12 +1693,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -1879,12 +1866,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -1902,12 +1887,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -1925,12 +1908,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -1941,12 +1922,6 @@ func testLegacyMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
-
-			// Expect(ps.ParentRef.Group).To(BeNil())
-			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(sn)))
@@ -2131,12 +2106,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -2154,12 +2127,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -2177,12 +2148,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should reset Route statuses", func() {
@@ -2415,12 +2384,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -2438,12 +2405,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -2461,12 +2426,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// the original UDPRoute
 			ro := &gwapiv1a2.UDPRoute{}
@@ -2720,12 +2683,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -2743,12 +2704,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -2766,12 +2725,10 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonPending)))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// the original UDPRoute
 			ro := &gwapiv1a2.UDPRoute{}
@@ -3501,7 +3458,7 @@ func testLegacyMode() {
 				Namespace: testUDPRoute.GetNamespace(),
 			}}
 
-			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, ro, func() error {
+			_, err := createOrUpdate(ctx, k8sClient, ro, func() error {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&ro.Spec)
 
 				ro.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
@@ -4068,14 +4025,11 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
-			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -4092,14 +4046,11 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
-			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -4116,14 +4067,11 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
-			// public address is available: Ready status should be true
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -4134,12 +4082,6 @@ func testLegacyMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
-
-			// Expect(ps.ParentRef.Group).To(BeNil())
-			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(sn)))

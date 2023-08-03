@@ -74,7 +74,17 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
+			prep: func(c *renderTestConfig) {
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
@@ -177,6 +187,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				// update owner ref so that we accept the public IP
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -282,6 +299,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				// update owner ref so that we accept the public IP
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -513,6 +537,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				// update owner ref so that we accept the public IP
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				dummySvc := testutils.TestSvc.DeepCopy()
 				dummySvc.SetName("dummy-service")
 				c.svcs = []corev1.Service{*s, *dummySvc}
@@ -746,6 +777,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				// update owner ref so that we accept the public IP
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				dummySvc := testutils.TestSvc.DeepCopy()
 				dummySvc.SetName("dummy-service")
 				c.svcs = []corev1.Service{*s, *dummySvc}
@@ -991,6 +1029,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				// update owner ref so that we accept the public IP
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				dummySvc := testutils.TestSvc.DeepCopy()
 				dummySvc.SetName("dummy-service")
 				c.svcs = []corev1.Service{*s, *dummySvc}
@@ -1201,6 +1246,16 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			svcs:  []corev1.Service{testutils.TestSvc},
 			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
 			prep: func(c *renderTestConfig) {
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+
 				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
 				kind := gwapiv1a2.Kind("StaticService")
 				udp := testutils.TestUDPRoute.DeepCopy()
@@ -1461,6 +1516,16 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+
 				gw := testutils.TestGw.DeepCopy()
 				at := gwapiv1a2.IPAddressType
 				gw.Spec.Addresses = []gwapiv1a2.GatewayAddress{

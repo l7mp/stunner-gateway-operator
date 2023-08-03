@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,7 +32,17 @@ func TestRenderServiceUtil(t *testing.T) {
 			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
+			prep: func(c *renderTestConfig) {
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
@@ -42,7 +53,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := gws[0]
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "owner ref not found")
+				assert.NoError(t, err, "owner ref found")
 				assert.NotNil(t, addr, "public addr-port found")
 				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
 				assert.Equal(t, 1, addr.port, "public port ok")
@@ -58,6 +69,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				s1.Status.LoadBalancer.Ingress[0].IP = ""
 				s1.Status.LoadBalancer.Ingress[0].Hostname = "dummy-hostname"
 				c.svcs = []corev1.Service{*s1}
@@ -72,7 +89,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := gws[0]
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "owner ref not found")
+				assert.NoError(t, err, "owner ref found")
 				assert.NotNil(t, addr, "public hostname found")
 				assert.Equal(t, 1, addr.port, "public port ok")
 				assert.Equal(t, "dummy-hostname", addr.addr, "public addr ok")
@@ -89,6 +106,12 @@ func TestRenderServiceUtil(t *testing.T) {
 				s1 := testutils.TestSvc.DeepCopy()
 				delete(s1.ObjectMeta.Annotations, opdefault.RelatedGatewayKey)
 				s1.ObjectMeta.Annotations["dummy"] = "dummy"
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -102,7 +125,6 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				_, err = r.getPublicAddrPort4Gateway(gw)
 				assert.Error(t, err, "public addr-port found")
-
 			},
 		},
 		{
@@ -115,6 +137,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.ObjectMeta.Annotations[opdefault.RelatedGatewayKey] = "dummy"
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -131,6 +159,40 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name:  "no owner-ref errs",
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{},
+			nodes: []corev1.Node{testutils.TestNode},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				// no owner-ref
+				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
+				s1.Spec.Ports = []corev1.ServicePort{{
+					Name:     "udp-ok",
+					Protocol: corev1.ProtocolUDP,
+					Port:     1,
+					NodePort: 1234,
+				}}
+				s1.Status = corev1.ServiceStatus{}
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				_, err = r.getPublicAddrPort4Gateway(gw)
+				assert.Error(t, err, "owner ref not found")
+			},
+		},
+		{
 			name: "wrong proto errs",
 			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
@@ -140,6 +202,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -166,6 +234,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Port = 12
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -179,7 +253,6 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				_, err = r.getPublicAddrPort4Gateway(gw)
 				assert.Error(t, err, "public addr-port found")
-
 			},
 		},
 		{
@@ -191,6 +264,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				s1.Status = corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{{
@@ -209,7 +288,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := gws[0]
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "owner ref not found")
+				assert.NoError(t, err, "owner ref found")
 				assert.NotNil(t, addr, "public addr-port found")
 				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
 				assert.Equal(t, 1, addr.port, "public port ok")
@@ -225,6 +304,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1a2.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
 				s1.Spec.Ports = append(s1.Spec.Ports, corev1.ServicePort{
 					Name:     "tcp-ok",
 					Protocol: corev1.ProtocolTCP,
@@ -261,55 +346,20 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := gws[0]
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "owner ref not found")
+				assert.NoError(t, err, "owner ref found")
 				assert.NotNil(t, addr, "public addr-port found")
 				assert.Equal(t, "5.6.7.8", addr.addr, "public addr ok")
 				assert.Equal(t, 2, addr.port, "public port ok")
 			},
 		},
 		{
-			name: "nodeport public-port ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				s1 := testutils.TestSvc.DeepCopy()
-				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
-				s1.Spec.Ports = []corev1.ServicePort{{
-					Name:     "udp-ok",
-					Protocol: corev1.ProtocolUDP,
-					Port:     1,
-					NodePort: 1234,
-				}}
-				s1.Status = corev1.ServiceStatus{}
-				c.svcs = []corev1.Service{*s1}
-			},
-			tester: func(t *testing.T, r *Renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gateways for class")
-				gw := gws[0]
-
-				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "owner ref not found")
-				assert.NotNil(t, addr, "public addr-port found")
-				// FIXME: add the public IP from nodeports!
-				// assert.Equal(t, "5.6.7.8", addr.addr, "public addr ok")
-				assert.Equal(t, 1234, addr.port, "public port ok")
-			},
-		},
-		{
-			name: "owner-status found",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
-			svcs: []corev1.Service{testutils.TestSvc},
+			name:  "nodeport IP OK",
+			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			rs:    []gwapiv1a2.UDPRoute{},
+			nodes: []corev1.Node{testutils.TestNode},
+			svcs:  []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.SetUID(types.UID("uid"))
@@ -334,7 +384,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				store.Services.Upsert(svc)
 
 				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.NoError(t, err, "owner ref not found")
+				assert.NoError(t, err, "owner ref found")
 				assert.NotNil(t, addr, "public addr-port found")
 				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
 				assert.Equal(t, 1, addr.port, "public port ok")
@@ -368,7 +418,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -426,7 +476,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -484,7 +534,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.Nil(t, s, "svc create")
 			},
 		},
@@ -511,7 +561,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -567,7 +617,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -625,7 +675,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -690,7 +740,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -752,7 +802,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -821,7 +871,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -881,7 +931,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -946,7 +996,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1008,7 +1058,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1070,7 +1120,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1129,7 +1179,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1195,7 +1245,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1257,7 +1307,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1307,7 +1357,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
@@ -1337,7 +1387,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1369,7 +1419,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1402,7 +1452,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1439,7 +1489,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1472,7 +1522,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
@@ -1513,7 +1563,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				s := createLbService4Gateway(c, gw)
+				s := r.createLbService4Gateway(c, gw)
 				assert.NotNil(t, s, "svc create")
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")

@@ -20,6 +20,7 @@ import (
 	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 type UpdaterConfig struct {
@@ -87,42 +88,48 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	q := e.UpsertQueue
 	for _, gc := range q.GatewayClasses.GetAll() {
 		if err := u.updateGatewayClass(gc, gen); err != nil {
-			u.log.Error(err, "cannot update gateway-class")
+			u.log.Error(err, "cannot update gateway-class",
+				"gateway-class", store.DumpObject(gc))
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.GetAll() {
 		if err := u.updateGateway(gw, gen); err != nil {
-			u.log.Error(err, "cannot update gateway")
+			u.log.Error(err, "cannot update gateway",
+				"gateway", store.DumpObject(gw))
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.GetAll() {
 		if err := u.updateUDPRoute(ro, gen); err != nil {
-			u.log.Error(err, "cannot update UDP route")
+			u.log.Error(err, "cannot update UDP route",
+				"route", store.DumpObject(ro))
 			continue
 		}
 	}
 
 	for _, svc := range q.Services.GetAll() {
 		if op, err := u.upsertService(svc, gen); err != nil {
-			u.log.Error(err, "cannot update service", "operation", op)
+			u.log.Error(err, "cannot update service", "operation", op,
+				"service", store.DumpObject(svc))
 			continue
 		}
 	}
 
 	for _, cm := range q.ConfigMaps.GetAll() {
 		if op, err := u.upsertConfigMap(cm, gen); err != nil {
-			u.log.Error(err, "cannot upsert config-map", "operation", op)
+			u.log.Error(err, "cannot upsert config-map", "operation", op,
+				"config-map", store.DumpObject(cm))
 			continue
 		}
 	}
 
 	for _, dp := range q.Deployments.GetAll() {
 		if op, err := u.upsertDeployment(dp, gen); err != nil {
-			u.log.Error(err, "cannot upsert deployment", "operation", op)
+			u.log.Error(err, "cannot upsert deployment", "operation", op,
+				"deployment", store.DumpObject(dp))
 			continue
 		}
 	}
@@ -131,42 +138,48 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
 		if err := u.deleteObject(gc, gen); err != nil {
-			u.log.Error(err, "cannot delete gateway-class")
+			u.log.Error(err, "cannot delete gateway-class",
+				"gateway-class", store.DumpObject(gc))
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.Objects() {
 		if err := u.deleteObject(gw, gen); err != nil {
-			u.log.Error(err, "cannot delete gateway")
+			u.log.Error(err, "cannot delete gateway",
+				"gateway", store.DumpObject(gw))
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.Objects() {
 		if err := u.deleteObject(ro, gen); err != nil {
-			u.log.Error(err, "cannot delete UDP route")
+			u.log.Error(err, "cannot delete UDP route",
+				"route", store.DumpObject(ro))
 			continue
 		}
 	}
 
 	for _, svc := range q.Services.Objects() {
 		if err := u.deleteObject(svc, gen); err != nil {
-			u.log.Error(err, "cannot delete service")
+			u.log.Error(err, "cannot delete service",
+				"service", store.DumpObject(svc))
 			continue
 		}
 	}
 
 	for _, cm := range q.ConfigMaps.Objects() {
 		if err := u.deleteObject(cm, gen); err != nil {
-			u.log.Error(err, "cannot delete config-map")
+			u.log.Error(err, "cannot delete config-map",
+				"config-map", store.DumpObject(cm))
 			continue
 		}
 	}
 
 	for _, dp := range q.Deployments.Objects() {
 		if err := u.deleteObject(dp, gen); err != nil {
-			u.log.Error(err, "cannot delete deployment")
+			u.log.Error(err, "cannot delete deployment",
+				"deployment", store.DumpObject(dp))
 			continue
 		}
 	}

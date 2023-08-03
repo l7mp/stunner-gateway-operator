@@ -242,7 +242,7 @@ func testManagedMode() {
 				}
 
 				s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1b1.ListenerConditionReady))
+					string(gwapiv1b1.ListenerConditionAccepted))
 				if s == nil || s.Status != metav1.ConditionTrue {
 					return false
 				}
@@ -285,12 +285,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -308,12 +306,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -331,13 +327,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
-
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should survive the event of adding a route", func() {
@@ -951,12 +944,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -974,12 +965,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -997,12 +986,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			ro := &gwapiv1a2.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
@@ -1275,12 +1262,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -1298,12 +1283,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -1321,13 +1304,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
-
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should set the status of Gateway 2", func() {
@@ -1354,7 +1334,7 @@ func testManagedMode() {
 				}
 
 				s = meta.FindStatusCondition(listenerStatuses[0].Conditions,
-					string(gwapiv1b1.GatewayConditionReady))
+					string(gwapiv1b1.GatewayConditionAccepted))
 				if s == nil || s.Status != metav1.ConditionTrue {
 					return false
 				}
@@ -1396,12 +1376,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should set the Route status", func() {
@@ -2046,12 +2024,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[1]: detached
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -2069,12 +2045,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 
 			// listeners[2]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
@@ -2092,13 +2066,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
-
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should set the status of Gateway 2", func() {
@@ -2125,7 +2096,7 @@ func testManagedMode() {
 				}
 
 				s = meta.FindStatusCondition(listenerStatuses[0].Conditions,
-					string(gwapiv1b1.GatewayConditionReady))
+					string(gwapiv1b1.GatewayConditionAccepted))
 				if s == nil || s.Status != metav1.ConditionTrue {
 					return false
 				}
@@ -2166,12 +2137,10 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
-				string(gwapiv1b1.ListenerConditionReady))
+				string(gwapiv1b1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1b1.ListenerConditionReady)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonReady)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1b1.ListenerReasonNoConflicts)))
 		})
 
 		It("should set the Route status", func() {

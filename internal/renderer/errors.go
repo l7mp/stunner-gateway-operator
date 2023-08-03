@@ -25,6 +25,9 @@ const (
 	ClusterIPNotFound
 	EndpointNotFound
 	InconsitentClusterType
+	InvalidProtocol
+	PortUnavailable
+	PublicAddressNotFound
 )
 
 type TypedError struct {
@@ -83,19 +86,25 @@ func NewNonCriticalError(reason ErrorType) error {
 func (e *NonCriticalError) Error() string {
 	switch e.reason {
 	case InvalidBackendGroup:
-		return "Invalid Group in backend reference (expecing: None)"
+		return "invalid Group in backend reference (expecing: None)"
 	case InvalidBackendKind:
-		return "Invalid Kind in backend reference (expecting Service)"
+		return "invalid Kind in backend reference (expecting Service)"
 	case BackendNotFound:
-		return "Backend not found"
+		return "backend not found"
 	case ServiceNotFound:
-		return "No Service found for backend"
+		return "no Service found for backend"
 	case ClusterIPNotFound:
-		return "No ClusterIP found for Service (this is fine for headless Services)"
+		return "no ClusterIP found for Service (this is fine for headless Services)"
 	case EndpointNotFound:
-		return "No Endpoint found for backend"
+		return "no Endpoint found for backend"
 	case InconsitentClusterType:
 		return "inconsitent cluster type for backends"
+	case PortUnavailable:
+		return "port unavailable"
+	case InvalidProtocol:
+		return "invalid protocol"
+	case PublicAddressNotFound:
+		return "no public address found for gateway"
 	}
 	return "Unknown error"
 }

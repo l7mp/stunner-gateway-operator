@@ -1,10 +1,9 @@
 package renderer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -193,39 +192,32 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	for _, gw := range c.gws.GetAll() {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
-		// this also re-inits listener statuses
 		initGatewayStatus(gw, config.ControllerName)
 
 		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
-		var ready bool
 		ap, err := r.getPublicAddrPort4Gateway(gw)
 		if err != nil {
 			log.V(1).Info("cannot find public address", "gateway", gw.GetName(),
 				"error", err.Error())
-			ready = false
+			ap = nil
 		} else if ap == nil {
-			log.V(1).Info("cannot find public address", "gateway", gw.GetName())
-			ready = false
+			// this should never happen: blow up
+			err = NewCriticalError(InternalError)
+			log.Error(err, "cannot find public address", "gateway", gw.GetName())
+			return err
 		} else if ap.addr == "" {
+			// this should never happen either but should be harmless
 			log.Info("public service found but no ExternalIP is available for service: " +
 				"this is most probably caused by a fallback to a NodePort access service " +
 				"but no nodes seem to be having a valid external IP address. Hint: " +
 				"enable LoadBalancer services in Kubernetes")
-			ready = false
-		} else {
-			ready = true
+			ap = nil
 		}
 
 		// recreate the LoadBalancer service, otherwise a changed
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
 		// be reflected back to the service
-		if s := createLbService4Gateway(c, gw); s != nil {
-			if err := controllerutil.SetOwnerReference(gw, s, r.scheme); err != nil {
-				r.log.Error(err, "cannot set owner reference", "owner",
-					store.GetObjectKey(gw), "reference",
-					store.GetObjectKey(s))
-			}
-
+		if s := r.createLbService4Gateway(c, gw); s != nil {
 			log.Info("creating public service for gateway", "name",
 				store.GetObjectKey(s), "gateway", gw.GetName(), "service",
 				store.DumpObject(s))
@@ -233,11 +225,20 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			c.update.UpsertQueue.Services.Upsert(s)
 		}
 
+		udpPorts := make(map[int]bool)
+		tcpPorts := make(map[int]bool)
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
 			log.V(3).Info("obtaining routes", "gateway", gw.GetName(), "listener",
 				l.Name)
 			rs := r.getUDPRoutes4Listener(gw, &l)
+
+			if isListenerConflicted(&l, udpPorts, tcpPorts) {
+				log.Info("listener protocol/port conflict", "gateway", gw.GetName(),
+					"listener", l.Name)
+				setListenerStatus(gw, &l, NewNonCriticalError(PortUnavailable), true, len(rs))
+				continue
+			}
 
 			lc, err := r.renderListener(gw, c.gwConf, &l, rs, ap)
 			if err != nil {
@@ -246,15 +247,15 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 				log.Info("error rendering configuration for listener", "gateway",
 					gw.GetName(), "listener", l.Name, "error", err.Error())
 
-				setListenerStatus(gw, &l, false, ready, 0)
+				setListenerStatus(gw, &l, err, false, 0)
 				continue
 			}
 
 			conf.Listeners = append(conf.Listeners, *lc)
-			setListenerStatus(gw, &l, true, ready, len(rs))
+			setListenerStatus(gw, &l, nil, false, len(rs))
 		}
 
-		setGatewayStatusProgrammed(gw, nil)
+		setGatewayStatusProgrammed(gw, nil, ap)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -385,10 +386,10 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
-			setListenerStatus(gw, &l, true, false, 0)
+			setListenerStatus(gw, &l, errors.New("invalid"), false, 0)
 		}
 
-		setGatewayStatusProgrammed(gw, reason)
+		setGatewayStatusProgrammed(gw, reason, nil)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -446,11 +447,6 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 			}
 			return
 
-		}
-
-		if err := controllerutil.SetOwnerReference(c.gwConf, cm, r.scheme); err != nil {
-			log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gc),
-				"reference", store.GetObjectKey(cm))
 		}
 
 		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
