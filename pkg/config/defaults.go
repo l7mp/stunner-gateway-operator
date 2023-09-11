@@ -90,6 +90,13 @@ const (
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
 	DefaultHealthCheckEndpoint = "http://0.0.0.0:8086"
 
+	// DefaultConfigDiscoveryAddress is the default URI at which config discovery requests are served.
+	DefaultConfigDiscoveryAddress = "0.0.0.0:13478"
+
+	// DefaultConfigDiscoveryEndpoint is the API endpoint served by the config discovery
+	// service. The config watcher is avaialble at `<DefaultConfigDiscoveryEndpoint>/watch`.
+	DefaultConfigDiscoveryEndpoint = "/api/v1/config"
+
 	// DefaultThrottleTimeout is the default time interval to wait between subsequent config
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
@@ -103,4 +110,10 @@ const (
 
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
 	MixedProtocolAnnotationValue = "true"
+
+	// DefaultConfigDiscoveryServiceName is the name of the CDS Kubernetes service.
+	DefaultConfigDiscoveryServiceName = "stunner-gateway-operator-controller-manager"
+
+	// DefaultConfigDiscoveryServiceName is the namespace of the CDS Kubernetes service.
+	DefaultConfigDiscoveryServiceNamespace = "stunner-gateway-operator-system"
 )

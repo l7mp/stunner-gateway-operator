@@ -1,13 +1,16 @@
 package renderer
 
 import (
-	// "fmt"
+	"fmt"
+	"net"
+	"net/url"
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	apiutil "k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,21 +33,31 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		return nil, NewCriticalError(RenderingError)
 	}
 
-	dataplane, err := r.getDataplane(c)
+	dataplane, err := getDataplane(c)
 	if err != nil {
+		dataplaneName := opdefault.DefaultDataplaneName
+		if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
+			dataplaneName = *c.gwConf.Spec.Dataplane
+		}
+		r.log.Error(err, "cannot find Dataplane for Gateway",
+			"gateway-config", store.GetObjectKey(c.gwConf),
+			"dataplane", dataplaneName)
+
 		return nil, err
 	}
 
-	var deployment *appv1.Deployment
+	// var deployment *appv1.Deployment
 
-	switch dataplane.Spec.Template {
-	case config.ConfigWatcherName:
-		// dataplane with config-watcher sidecar
-		deployment = configWatcherDataplaneTemplate(gw)
-	default:
-		// standard dataplane: single stunnerd pod with included config file watcher
-		deployment = defaultDataplaneTemplate(gw)
-	}
+	// switch dataplane.Spec.Template {
+	// case config.ConfigWatcherName:
+	// 	// dataplane with config-watcher sidecar
+	// 	deployment = configWatcherDataplaneTemplate(gw)
+	// default:
+	// 	// standard dataplane: single stunnerd pod with included config file watcher
+	// 	deployment = defaultDataplaneTemplate(gw)
+	// }
+
+	deployment := defaultDataplaneTemplate(c, gw)
 
 	// post process
 
@@ -136,7 +149,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	return deployment, nil
 }
 
-func (r *Renderer) getDataplane(c *RenderContext) (*stnrv1a1.Dataplane, error) {
+func getDataplane(c *RenderContext) (*stnrv1a1.Dataplane, error) {
 	dataplaneName := opdefault.DefaultDataplaneName
 	if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
 		dataplaneName = *c.gwConf.Spec.Dataplane
@@ -144,14 +157,45 @@ func (r *Renderer) getDataplane(c *RenderContext) (*stnrv1a1.Dataplane, error) {
 	dataplane := store.Dataplanes.GetObject(types.NamespacedName{Name: dataplaneName})
 	if dataplane == nil {
 		err := NewCriticalError(InvalidDataplane)
-		r.log.Error(err, "cannot find Dataplane for Gateway",
-			"gateway-config", store.GetObjectKey(c.gwConf),
-			"dataplane", dataplaneName,
-		)
 		return nil, err
 	}
 
 	return dataplane, nil
+}
+
+func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
+	livenessProbeAction := config.LivenessProbeAction.DeepCopy()
+	livenessProbe := config.LivenessProbe.DeepCopy()
+	livenessProbe.ProbeHandler.HTTPGet = livenessProbeAction
+
+	readinessProbeAction := config.ReadinessProbeAction.DeepCopy()
+	readinessProbe := config.ReadinessProbe.DeepCopy()
+	readinessProbe.ProbeHandler.HTTPGet = readinessProbeAction
+
+	dataplane, err := getDataplane(c)
+	if err != nil {
+		return livenessProbe, readinessProbe
+	}
+
+	// port in the Dataplane object?
+	if dataplane.Spec.HealthCheckPort != nil {
+		livenessProbeAction.Port = apiutil.FromInt(*dataplane.Spec.HealthCheckPort)
+		readinessProbeAction.Port = apiutil.FromInt(*dataplane.Spec.HealthCheckPort)
+	}
+
+	if c.gwConf != nil && c.gwConf.Spec.HealthCheckEndpoint != nil {
+		u, err := url.Parse(*c.gwConf.Spec.HealthCheckEndpoint)
+		if err != nil {
+			return livenessProbe, readinessProbe
+		}
+		port := u.Port()
+		if port != "" {
+			livenessProbeAction.Port = apiutil.FromString(port)
+			readinessProbeAction.Port = apiutil.FromString(port)
+		}
+	}
+
+	return livenessProbe, readinessProbe
 }
 
 // ///////
@@ -235,7 +279,7 @@ func defaultDeploymentSkeleton(gateway *gwapiv1a2.Gateway) appv1.Deployment {
 }
 
 // defaultDataplaneTemplate post-processes a deployment skeleton into a default dataplane
-func defaultDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
+func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1a2.Gateway) *appv1.Deployment {
 	optional := true
 	configMapVolumeSource := corev1.ConfigMapVolumeSource{
 		LocalObjectReference: corev1.LocalObjectReference{
@@ -244,8 +288,12 @@ func defaultDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
 		Optional: &optional,
 	}
 
-	podIPFieldSelector := corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
-	podIPEnvVarSource := corev1.EnvVarSource{FieldRef: &podIPFieldSelector}
+	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
+	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+	podNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "metadata.name"}
+	podNameEnvVarSource := corev1.EnvVarSource{FieldRef: &podNameFieldSelector}
+	podNamespaceFieldSelector := corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}
+	podNamespaceEnvVarSource := corev1.EnvVarSource{FieldRef: &podNamespaceFieldSelector}
 
 	volumeMounts := []corev1.VolumeMount{{
 		Name:      config.ConfigVolumeName,
@@ -253,24 +301,47 @@ func defaultDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
 		ReadOnly:  true,
 	}}
 
+	livenessProbe, readinessProbe := getHealthCheckParameters(c)
+
+	// CDS server address
+	port := "13478"
+	if addr, err := net.ResolveTCPAddr("tcp", config.ConfigDiscoveryAddress); err == nil {
+		port = fmt.Sprintf("%d", addr.Port)
+	}
+	cdsAddr := url.URL{
+		Scheme: "http",
+		Host: fmt.Sprintf("%s.%s.svc.cluster.local:%s", config.ConfigDiscoveryServiceName,
+			config.ConfigDiscoveryServiceNamespace, port),
+		Path: opdefault.DefaultConfigDiscoveryEndpoint,
+	}
+
 	dp := defaultDeploymentSkeleton(gateway)
 	dp.Spec.Template.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{{
 			Name:    opdefault.DefaultStunnerdInstanceName,
 			Image:   config.StunnerdImage,
 			Command: []string{"stunnerd"},
-			Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
+			// Enable config-discovery
+			Args: []string{"-w", "-c", cdsAddr.String(), "--udp-thread-num=16"},
+			// Disable config-discovery
+			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR",
-				ValueFrom: &podIPEnvVarSource,
+				ValueFrom: &podAddrEnvVarSource,
+			}, {
+				Name:      "STUNNER_NAME",
+				ValueFrom: &podNameEnvVarSource,
+			}, {
+				Name:      "STUNNER_NAMESPACE",
+				ValueFrom: &podNamespaceEnvVarSource,
 			}},
 			Resources: corev1.ResourceRequirements{
 				Limits:   config.ResourceLimit,
 				Requests: config.ResourceRequest,
 			},
 			VolumeMounts:    volumeMounts,
-			LivenessProbe:   &config.LivenessProbe,
-			ReadinessProbe:  &config.ReadinessProbe,
+			LivenessProbe:   livenessProbe,
+			ReadinessProbe:  readinessProbe,
 			ImagePullPolicy: corev1.PullAlways,
 		}},
 		Volumes: []corev1.Volume{{
@@ -286,72 +357,72 @@ func defaultDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
 	return &dp
 }
 
-// configWatcherDataplaneTemplate post-processes a deployment skeleton into a dataplane with a config-watcher sidecar.
-func configWatcherDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
-	podIPFieldSelector := corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
-	podIPEnvVarSource := corev1.EnvVarSource{FieldRef: &podIPFieldSelector}
+// // configWatcherDataplaneTemplate post-processes a deployment skeleton into a dataplane with a config-watcher sidecar.
+// func configWatcherDataplaneTemplate(gateway *gwapiv1a2.Gateway) *appv1.Deployment {
+// 	podIPFieldSelector := corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
+// 	podIPEnvVarSource := corev1.EnvVarSource{FieldRef: &podIPFieldSelector}
 
-	emptyDir := corev1.EmptyDirVolumeSource{}
-	volumeMounts := []corev1.VolumeMount{{
-		Name:      config.ConfigVolumeName,
-		MountPath: "/etc/stunnerd",
-		ReadOnly:  true,
-	}}
+// 	emptyDir := corev1.EmptyDirVolumeSource{}
+// 	volumeMounts := []corev1.VolumeMount{{
+// 		Name:      config.ConfigVolumeName,
+// 		MountPath: "/etc/stunnerd",
+// 		ReadOnly:  true,
+// 	}}
 
-	dp := defaultDeploymentSkeleton(gateway)
-	dp.Spec.Template.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{{
-			Name:    opdefault.DefaultStunnerdInstanceName,
-			Image:   config.StunnerdImage,
-			Command: []string{"stunnerd"},
-			Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
-			Env: []corev1.EnvVar{{
-				Name:      "STUNNER_ADDR",
-				ValueFrom: &podIPEnvVarSource,
-			}},
-			Resources: corev1.ResourceRequirements{
-				Limits:   config.ResourceLimit,
-				Requests: config.ResourceRequest,
-			},
-			VolumeMounts:    volumeMounts,
-			LivenessProbe:   &config.LivenessProbe,
-			ReadinessProbe:  &config.ReadinessProbe,
-			ImagePullPolicy: corev1.PullAlways,
-		}, {
-			Name:  "config-watcher",
-			Image: config.ConfigWatcherImage,
-			Env: []corev1.EnvVar{{
-				Name:  "LABEL",
-				Value: "stunner.l7mp.io/owned-by",
-			}, {
-				Name:  "LABEL_VALUE",
-				Value: "stunner",
-			}, {
-				Name:  "FOLDER",
-				Value: "/etc/stunnerd",
-			}, {
-				Name:  "RESOURCE",
-				Value: "configmap",
-			}, {
-				Name:  "NAMESPACE",
-				Value: "stunner",
-			}},
-			Resources: corev1.ResourceRequirements{
-				Limits:   config.ResourceLimit,
-				Requests: config.ResourceRequest,
-			},
-			VolumeMounts:    volumeMounts,
-			LivenessProbe:   &config.LivenessProbe,
-			ReadinessProbe:  &config.ReadinessProbe,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-		}},
-		Volumes: []corev1.Volume{{
-			Name:         config.ConfigVolumeName,
-			VolumeSource: corev1.VolumeSource{EmptyDir: &emptyDir},
-		}},
-		TerminationGracePeriodSeconds: &config.TerminationGrace,
-		HostNetwork:                   false,
-	}
+// 	dp := defaultDeploymentSkeleton(gateway)
+// 	dp.Spec.Template.Spec = corev1.PodSpec{
+// 		Containers: []corev1.Container{{
+// 			Name:    opdefault.DefaultStunnerdInstanceName,
+// 			Image:   config.StunnerdImage,
+// 			Command: []string{"stunnerd"},
+// 			Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
+// 			Env: []corev1.EnvVar{{
+// 				Name:      "STUNNER_ADDR",
+// 				ValueFrom: &podIPEnvVarSource,
+// 			}},
+// 			Resources: corev1.ResourceRequirements{
+// 				Limits:   config.ResourceLimit,
+// 				Requests: config.ResourceRequest,
+// 			},
+// 			VolumeMounts:    volumeMounts,
+// 			LivenessProbe:   &config.LivenessProbe,
+// 			ReadinessProbe:  &config.ReadinessProbe,
+// 			ImagePullPolicy: corev1.PullAlways,
+// 		}, {
+// 			Name:  "config-watcher",
+// 			Image: config.ConfigWatcherImage,
+// 			Env: []corev1.EnvVar{{
+// 				Name:  "LABEL",
+// 				Value: "stunner.l7mp.io/owned-by",
+// 			}, {
+// 				Name:  "LABEL_VALUE",
+// 				Value: "stunner",
+// 			}, {
+// 				Name:  "FOLDER",
+// 				Value: "/etc/stunnerd",
+// 			}, {
+// 				Name:  "RESOURCE",
+// 				Value: "configmap",
+// 			}, {
+// 				Name:  "NAMESPACE",
+// 				Value: "stunner",
+// 			}},
+// 			Resources: corev1.ResourceRequirements{
+// 				Limits:   config.ResourceLimit,
+// 				Requests: config.ResourceRequest,
+// 			},
+// 			VolumeMounts:    volumeMounts,
+// 			LivenessProbe:   &config.LivenessProbe,
+// 			ReadinessProbe:  &config.ReadinessProbe,
+// 			ImagePullPolicy: corev1.PullIfNotPresent,
+// 		}},
+// 		Volumes: []corev1.Volume{{
+// 			Name:         config.ConfigVolumeName,
+// 			VolumeSource: corev1.VolumeSource{EmptyDir: &emptyDir},
+// 		}},
+// 		TerminationGracePeriodSeconds: &config.TerminationGrace,
+// 		HostNetwork:                   false,
+// 	}
 
-	return &dp
-}
+// 	return &dp
+// }

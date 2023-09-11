@@ -51,9 +51,9 @@ func (e *CriticalError) Error() string {
 	case InvalidAuthType:
 		return "invalid authentication type"
 	case InvalidUsernamePassword:
-		return "missing username and/or password for plaintext authetication"
+		return "missing username and/or password for plaintext authentication"
 	case InvalidSharedSecret:
-		return "missing shared-secret for longterm authetication"
+		return "missing shared-secret for longterm authentication"
 	case InvalidAuthConfig:
 		return "internal error: could not validate generated auth config"
 	case InvalidDataplane:

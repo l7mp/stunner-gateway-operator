@@ -47,14 +47,14 @@ type Dataplane struct {
 
 // DataplaneSpec describes the prefixes reachable via a Dataplane.
 type DataplaneSpec struct {
-	// Dataplane template. The `default` template spawns a single stunnerd container with the
-	// running config mapped into the pod from the ConfigMap. The `config-watcher` template
-	// uses a separate sidecar container to watch the ConfigMap, which can be faster than the
-	// default but requires additional RBAC permissions.
-	//
-	// +optional
-	// +kubebuilder:default:="default"
-	Template string `json:"template,omitempty"`
+	// // Dataplane template. The `default` template spawns a single stunnerd container with the
+	// // running config mapped into the pod from the ConfigMap. The `config-watcher` template
+	// // uses a separate sidecar container to watch the ConfigMap, which can be faster than the
+	// // default but requires additional RBAC permissions.
+	// //
+	// // +optional
+	// // +kubebuilder:default:="default"
+	// Template string `json:"template,omitempty"`
 
 	// Number of desired pods. This is a pointer to distinguish between explicit zero and not
 	// specified. Defaults to 1.
@@ -117,6 +117,16 @@ type DataplaneSpec struct {
 	//
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// If specified, the health-check port.
+	//
+	// +optional
+	HealthCheckPort *int `json:"healthCheckPort,omitempty"`
+
+	// // If specified, the metrics collection port.
+	// //
+	// // +optional
+	// MetricsEndpointPort *int `json:"metricsEndpointPort,omitempty"`
 }
 
 // +kubebuilder:object:root=true

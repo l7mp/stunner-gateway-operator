@@ -43,8 +43,14 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	cds "github.com/l7mp/stunner-gateway-operator/pkg/config/server"
 
 	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+)
+
+const (
+	envVarName      = "STUNNER_GATEWAY_OPERATOR_SERVICE_NAME"
+	envVarNamespace = "STUNNER_GATEWAY_OPERATOR_SERVICE_NAMESPACE"
 )
 
 var (
@@ -58,20 +64,23 @@ func init() {
 }
 
 func main() {
-	var controllerName, dataplaneMode, metricsAddr, throttleTimeout, probeAddr string
+	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr string
 	var enableLeaderElection, enableEDS bool
 
 	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
 	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
 		`Managed dataplane mode: "managed" means the operator takes care of providing the stunnerd pods `+
-			`for each Gateway, "legacy" mode means the dataplane(s) must be provided by the user.`)
+			`for each Gateway (automatically enables config-discovery), "legacy" mode means `+
+			`the dataplane(s) must be provided by the user.`)
 	flag.StringVar(&throttleTimeout, "throttle-timeout", opdefault.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
 	flag.BoolVar(&enableEDS, "endpoint-discovery", opdefault.DefaultEnableEndpointDiscovery,
 		fmt.Sprintf("Enable endpoint discovery, default: %t.", opdefault.DefaultEnableEndpointDiscovery))
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&cdsAddr, "config-discovery-address", opdefault.DefaultConfigDiscoveryAddress,
+		`Config discovery server endpoint.`)
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -91,23 +100,33 @@ func main() {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
 	}))
 
-	if dataplaneMode != "managed" && dataplaneMode != "legacy" {
-		setupLog.Info(`unknown dataplane mode: must be either "managed" or "legacy"`)
-		os.Exit(1)
+	// store name/namespace: the dataplane deployment template will need it as a CDS server URL
+	name, ok := os.LookupEnv(envVarName)
+	if ok {
+		config.ConfigDiscoveryServiceName = name
+	}
+	namespace, ok := os.LookupEnv(envVarNamespace)
+	if ok {
+		config.ConfigDiscoveryServiceNamespace = namespace
 	}
 
-	setupLog.Info("dataplane mode", "state", dataplaneMode)
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
+	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
-	setupLog.Info("endpoint discovery", "state", enableEDS)
+	config.ConfigDiscoveryAddress = cdsAddr
+	setupLog.Info("config discovery server", "addr", config.ConfigDiscoveryAddress)
+
 	config.EnableEndpointDiscovery = enableEDS
+	setupLog.Info("endpoint discovery", "state", enableEDS)
 
 	if d, err := time.ParseDuration(throttleTimeout); err != nil {
 		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
 		config.ThrottleTimeout = d
 	}
 
-	setupLog.Info("setting up Kubernetes controller manager")
+	setupLog.Info("setting up Kubernetes controller manager",
+		"identity", fmt.Sprintf("%s.%s", name, namespace))
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -142,11 +161,18 @@ func main() {
 		Logger:  logger,
 	})
 
+	setupLog.Info("setting up CDS server", "address", cdsAddr)
+	c := cds.NewConfigDiscoveryServer(cds.ConfigDiscoveryConfig{
+		Addr:   config.ConfigDiscoveryAddress,
+		Logger: logger,
+	})
+
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
 		ControllerName: controllerName,
 		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
+		ConfigCh:       c.GetConfigUpdateChannel(),
 		UpdaterCh:      u.GetUpdaterChannel(),
 		Logger:         logger,
 	})
@@ -162,9 +188,14 @@ func main() {
 	}
 
 	setupLog.Info("starting updater thread")
-	err = u.Start(ctx)
-	if err != nil {
-		setupLog.Error(err, "problem running updater")
+	if err := u.Start(ctx); err != nil {
+		setupLog.Error(err, "could not run updater")
+		os.Exit(1)
+	}
+
+	setupLog.Info("starting config discovery server")
+	if err := c.Start(ctx); err != nil {
+		setupLog.Error(err, "could not run config discovery server")
 		os.Exit(1)
 	}
 

@@ -37,16 +37,17 @@ type OperatorConfig struct {
 	Manager        manager.Manager
 	ControllerName string
 	RenderCh       chan event.Event
+	ConfigCh       chan event.Event
 	UpdaterCh      chan event.Event
 	Logger         logr.Logger
 }
 
 type Operator struct {
-	ctx                             context.Context
-	mgr                             manager.Manager
-	renderCh, operatorCh, updaterCh chan event.Event
-	manager                         manager.Manager
-	log, logger                     logr.Logger
+	ctx                                       context.Context
+	mgr                                       manager.Manager
+	renderCh, operatorCh, updaterCh, configCh chan event.Event
+	manager                                   manager.Manager
+	log, logger                               logr.Logger
 }
 
 // NewOperator creates a new Operator
@@ -58,6 +59,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 		renderCh:   cfg.RenderCh,
 		operatorCh: make(chan event.Event, channelBufferSize),
 		updaterCh:  cfg.UpdaterCh,
+		configCh:   cfg.ConfigCh,
 		logger:     cfg.Logger,
 	}
 }
@@ -116,6 +118,9 @@ func (o *Operator) eventLoop(ctx context.Context) {
 			case event.EventTypeUpdate:
 				// pass through to the updater
 				o.updaterCh <- e
+
+				// notify the config discovery server
+				o.configCh <- e
 
 			case event.EventTypeRender:
 				// rate-limit rendering requests before passing on to the renderer

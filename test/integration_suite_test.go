@@ -50,6 +50,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	cds "github.com/l7mp/stunner-gateway-operator/pkg/config/server"
 
 	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -207,6 +208,13 @@ var _ = BeforeSuite(func() {
 		Logger:  ctrl.Log,
 	})
 
+	cdsAddr := opdefault.DefaultConfigDiscoveryAddress
+	setupLog.Info("setting up CDS server", "address", cdsAddr)
+	c := cds.NewConfigDiscoveryServer(cds.ConfigDiscoveryConfig{
+		Addr:   config.ConfigDiscoveryAddress,
+		Logger: ctrl.Log,
+	})
+
 	// make rendering fast!
 	config.ThrottleTimeout = time.Millisecond
 
@@ -215,6 +223,7 @@ var _ = BeforeSuite(func() {
 		ControllerName: opdefault.DefaultControllerName,
 		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
+		ConfigCh:       c.GetConfigUpdateChannel(),
 		UpdaterCh:      u.GetUpdaterChannel(),
 		Logger:         ctrl.Log,
 	})
@@ -227,6 +236,10 @@ var _ = BeforeSuite(func() {
 
 	setupLog.Info("starting updater thread")
 	err = u.Start(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	setupLog.Info("starting config discovery server")
+	err = c.Start(ctx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting operator thread")

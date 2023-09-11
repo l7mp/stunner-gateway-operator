@@ -113,8 +113,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
-				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
-					conf.Admin.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 
@@ -378,8 +377,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
-					conf.Admin.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 
@@ -551,8 +549,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
-				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
-					conf.Admin.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 
@@ -1242,8 +1239,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
-					conf.Admin.Name, "name")
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 
@@ -1516,8 +1512,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
 
-				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
-					conf.Admin.Name, "name")
+				assert.Equal(t, "testnamespace/dummy-gateway", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
 					"loglevel")
 

@@ -38,4 +38,13 @@ var (
 	// throttle timeout the slower the controller and the smaller the operator CPU
 	// consumption. Default is 250 msec.
 	ThrottleTimeout = opdefault.DefaultThrottleTimeout
+
+	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
+	ConfigDiscoveryAddress = opdefault.DefaultConfigDiscoveryAddress
+
+	// ConfigDiscoveryServiceName is the name of the CDS Kubernetes service.
+	ConfigDiscoveryServiceName = opdefault.DefaultConfigDiscoveryServiceName
+
+	// ConfigDiscoveryServiceName is the namespace of the CDS Kubernetes service.
+	ConfigDiscoveryServiceNamespace = opdefault.DefaultConfigDiscoveryServiceNamespace
 )

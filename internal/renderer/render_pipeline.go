@@ -94,7 +94,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 
 // renderManagedGateways generates and sets a STUNner daemon configuration for the "managed" dataplane mode.
 func (r *Renderer) renderManagedGateways(e *event.EventRender) {
-	r.log.Info("commencing full dataplane render", "mode", "managed")
+	r.log.Info("commencing dataplane render", "mode", "managed")
 
 	r.log.V(1).Info("obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
@@ -122,7 +122,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		gcCtx.gwConf = gwConf
 
 		// don't even start rendering if Dataplane is not available
-		if _, err := r.getDataplane(gcCtx); err != nil {
+		if _, err := getDataplane(gcCtx); err != nil {
 			r.log.Error(err, "error obtaining Dataplane",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway-config", store.GetObjectKey(gwConf),
@@ -321,6 +321,14 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	// schedule for update
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
+
+	if config.DataplaneMode == config.DataplaneModeManaged {
+		// config name is the name of the gateway
+		gw := c.gws.GetFirst()
+		if gw != nil {
+			conf.Admin.Name = store.GetObjectKey(gw)
+		}
+	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
 		conf.String())

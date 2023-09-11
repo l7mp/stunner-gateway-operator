@@ -2,6 +2,8 @@
 // package.
 package config
 
+import "strings"
+
 // DataplaneModeType species the type of the STUN/TURN authentication mechanism used by STUNner
 type DataplaneModeType int
 
@@ -17,13 +19,13 @@ const (
 
 // NewDataplaneModeType parses the dataplane mode specification.
 func NewDataplaneMode(raw string) DataplaneModeType {
-	switch raw {
+	switch strings.ToLower(raw) {
 	case dataplaneModeManagedStr:
 		return DataplaneModeManaged
 	case dataplaneModeLegacyStr:
 		return DataplaneModeLegacy
 	default:
-		return DataplaneModeManaged
+		return DataplaneModeLegacy
 	}
 }
 
