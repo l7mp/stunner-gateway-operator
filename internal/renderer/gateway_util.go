@@ -65,7 +65,7 @@ func isListenerConflicted(l *gwapiv1a2.Listener, udpPorts portMap, tcpPorts port
 
 // gateway status
 func initGatewayStatus(gw *gwapiv1a2.Gateway, cname string) {
-	gw.Status.Addresses = []gwapiv1a2.GatewayAddress{}
+	gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{}
 
 	// set accepted to true and programmed to pending
 	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
@@ -123,7 +123,7 @@ func setGatewayStatusProgrammed(gw *gwapiv1a2.Gateway, err error, ap *gatewayAdd
 		if string(aType) == "" {
 			aType = gwapiv1a2.IPAddressType
 		}
-		gw.Status.Addresses = []gwapiv1a2.GatewayAddress{{
+		gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{{
 			Type:  &aType,
 			Value: ap.addr,
 		}}

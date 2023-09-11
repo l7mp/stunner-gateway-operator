@@ -189,9 +189,7 @@ var _ = BeforeSuite(func() {
 
 	setupLog.Info("setting up client manager")
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-		Port:               9443,
+		Scheme: scheme,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
