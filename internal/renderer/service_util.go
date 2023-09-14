@@ -279,7 +279,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gatew
 			continue
 		}
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     fmt.Sprintf("%s-%s", gw.GetName(), strings.ToLower(serviceProto)),
+			Name:     string(l.Name),
 			Protocol: corev1.Protocol(serviceProto),
 			Port:     int32(l.Port),
 		})
