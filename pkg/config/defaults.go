@@ -110,10 +110,4 @@ const (
 
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
 	MixedProtocolAnnotationValue = "true"
-
-	// DefaultConfigDiscoveryServiceName is the name of the CDS Kubernetes service.
-	DefaultConfigDiscoveryServiceName = "stunner-gateway-operator-controller-manager"
-
-	// DefaultConfigDiscoveryServiceName is the namespace of the CDS Kubernetes service.
-	DefaultConfigDiscoveryServiceNamespace = "stunner-gateway-operator-system"
 )

@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -50,8 +51,8 @@ import (
 )
 
 const (
-	envVarName      = "STUNNER_GATEWAY_OPERATOR_SERVICE_NAME"
-	envVarNamespace = "STUNNER_GATEWAY_OPERATOR_SERVICE_NAMESPACE"
+	envVarMode    = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
+	envVarAddress = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
 )
 
 var (
@@ -70,18 +71,15 @@ func main() {
 
 	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
-	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
-		`Managed dataplane mode: "managed" means the operator takes care of providing the stunnerd pods `+
-			`for each Gateway (automatically enables config-discovery), "legacy" mode means `+
-			`the dataplane(s) must be provided by the user.`)
 	flag.StringVar(&throttleTimeout, "throttle-timeout", opdefault.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
 	flag.BoolVar(&enableEDS, "endpoint-discovery", opdefault.DefaultEnableEndpointDiscovery,
 		fmt.Sprintf("Enable endpoint discovery, default: %t.", opdefault.DefaultEnableEndpointDiscovery))
+	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
+		`Managed dataplane mode: either "managed" (automatic dataplane provisioning using the config discovery service) or "legacy" (dataplane(s) provided by the user).`)
+	flag.StringVar(&cdsAddr, "config-discovery-address", opdefault.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&cdsAddr, "config-discovery-address", opdefault.DefaultConfigDiscoveryAddress,
-		`Config discovery server endpoint.`)
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -101,32 +99,42 @@ func main() {
 		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
 	}))
 
-	// store name/namespace: the dataplane deployment template will need it as a CDS server URL
-	name, ok := os.LookupEnv(envVarName)
-	if ok {
-		config.ConfigDiscoveryServiceName = name
-	}
-	namespace, ok := os.LookupEnv(envVarNamespace)
-	if ok {
-		config.ConfigDiscoveryServiceNamespace = namespace
+	config.EnableEndpointDiscovery = enableEDS
+	setupLog.Info("endpoint discovery", "state", enableEDS)
+
+	if dataplaneMode == opdefault.DefaultDataplaneMode {
+		// dataplane mode not overrridden on the command line: use env var
+		envMode, ok := os.LookupEnv(envVarMode)
+		if ok {
+			dataplaneMode = envMode
+		}
 	}
 
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
+	if cdsAddr == opdefault.DefaultConfigDiscoveryAddress {
+		// CDS address not overrridden on the command line: use env var
+		envAddr, ok := os.LookupEnv(envVarAddress)
+		if ok {
+			cdsAddr = envAddr
+		}
+		// add the default port
+		as := strings.Split(cdsAddr, ":")
+		if len(as) == 1 || (len(as) == 2 && as[1] == "") {
+			dd := strings.Split(opdefault.DefaultConfigDiscoveryAddress, ":")
+			cdsAddr = fmt.Sprintf("%s:%s", cdsAddr, dd[1])
+		}
+	}
 	config.ConfigDiscoveryAddress = cdsAddr
 	setupLog.Info("config discovery server", "addr", config.ConfigDiscoveryAddress)
-
-	config.EnableEndpointDiscovery = enableEDS
-	setupLog.Info("endpoint discovery", "state", enableEDS)
 
 	if d, err := time.ParseDuration(throttleTimeout); err != nil {
 		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
 		config.ThrottleTimeout = d
 	}
 
-	setupLog.Info("setting up Kubernetes controller manager",
-		"identity", fmt.Sprintf("%s.%s", name, namespace))
+	setupLog.Info("setting up Kubernetes controller manager")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,

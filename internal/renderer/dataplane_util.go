@@ -292,9 +292,11 @@ func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1a2.Gateway) *app
 	}
 	cdsAddr := url.URL{
 		Scheme: "http",
-		Host: fmt.Sprintf("%s.%s.svc.cluster.local:%s", config.ConfigDiscoveryServiceName,
-			config.ConfigDiscoveryServiceNamespace, port),
-		Path: opdefault.DefaultConfigDiscoveryEndpoint,
+		Host:   config.ConfigDiscoveryAddress,
+		Path:   opdefault.DefaultConfigDiscoveryEndpoint,
+	}
+	if cdsAddr.Port() == "" {
+		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
 	}
 
 	dp := defaultDeploymentSkeleton(gateway)
@@ -304,18 +306,21 @@ func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1a2.Gateway) *app
 			Image:   config.StunnerdImage,
 			Command: []string{"stunnerd"},
 			// Enable config-discovery
-			Args: []string{"-w", "-c", cdsAddr.String(), "--udp-thread-num=16"},
+			Args: []string{"-w", "--udp-thread-num=16"},
 			// Disable config-discovery
 			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
 			Env: []corev1.EnvVar{{
-				Name:      "STUNNER_ADDR",
+				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,
 			}, {
-				Name:  "STUNNER_NAME",
+				Name:  "STUNNER_NAME", // gateway name for creating the stunnerd id
 				Value: gateway.GetName(),
 			}, {
-				Name:  "STUNNER_NAMESPACE",
+				Name:  "STUNNER_NAMESPACE", // gateway namespace for creating the stunnerd id
 				Value: gateway.GetNamespace(),
+			}, {
+				Name:  "STUNNER_CONFIG_ORIGIN", // CDS server address
+				Value: cdsAddr.String(),
 			}},
 			Resources: corev1.ResourceRequirements{
 				Limits:   config.ResourceLimit,
