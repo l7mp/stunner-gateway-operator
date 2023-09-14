@@ -280,26 +280,8 @@ func defaultDeploymentSkeleton(gateway *gwapiv1a2.Gateway) appv1.Deployment {
 
 // defaultDataplaneTemplate post-processes a deployment skeleton into a default dataplane
 func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1a2.Gateway) *appv1.Deployment {
-	optional := true
-	configMapVolumeSource := corev1.ConfigMapVolumeSource{
-		LocalObjectReference: corev1.LocalObjectReference{
-			Name: gateway.GetName(),
-		},
-		Optional: &optional,
-	}
-
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
-	podNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "metadata.name"}
-	podNameEnvVarSource := corev1.EnvVarSource{FieldRef: &podNameFieldSelector}
-	podNamespaceFieldSelector := corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}
-	podNamespaceEnvVarSource := corev1.EnvVarSource{FieldRef: &podNamespaceFieldSelector}
-
-	volumeMounts := []corev1.VolumeMount{{
-		Name:      config.ConfigVolumeName,
-		MountPath: "/etc/stunnerd",
-		ReadOnly:  true,
-	}}
 
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
@@ -329,26 +311,19 @@ func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1a2.Gateway) *app
 				Name:      "STUNNER_ADDR",
 				ValueFrom: &podAddrEnvVarSource,
 			}, {
-				Name:      "STUNNER_NAME",
-				ValueFrom: &podNameEnvVarSource,
+				Name:  "STUNNER_NAME",
+				Value: gateway.GetName(),
 			}, {
-				Name:      "STUNNER_NAMESPACE",
-				ValueFrom: &podNamespaceEnvVarSource,
+				Name:  "STUNNER_NAMESPACE",
+				Value: gateway.GetNamespace(),
 			}},
 			Resources: corev1.ResourceRequirements{
 				Limits:   config.ResourceLimit,
 				Requests: config.ResourceRequest,
 			},
-			VolumeMounts:    volumeMounts,
 			LivenessProbe:   livenessProbe,
 			ReadinessProbe:  readinessProbe,
 			ImagePullPolicy: corev1.PullAlways,
-		}},
-		Volumes: []corev1.Volume{{
-			Name: config.ConfigVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &configMapVolumeSource,
-			},
 		}},
 		TerminationGracePeriodSeconds: &config.TerminationGrace,
 		HostNetwork:                   false,
