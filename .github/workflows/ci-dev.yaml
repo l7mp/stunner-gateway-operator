@@ -15,7 +15,6 @@ defaults:
     shell: bash
 
 jobs:
-
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -31,6 +30,7 @@ jobs:
 
   push_to_registry:
     name: Push Docker image to DockerHub
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -67,6 +67,7 @@ jobs:
 
   push_chart:
     name: Push helm charts to the web
+    needs: ["unit-tests", "push_to_registry"]
     runs-on: ubuntu-latest
     steps:
       - name: Triggering release workflow in the stunner-helm repo
