@@ -31,11 +31,23 @@ type ConfigDiscoveryConfig struct {
 	Logger logr.Logger
 }
 
+type Client struct {
+	*websocket.Conn
+	mu sync.Mutex
+}
+
+// Concurrency message writer
+func (c *Client) WriteMessage(messageType int, data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Conn.WriteMessage(messageType, data)
+}
+
 type ConfigDiscoveryServer struct {
 	ctx      context.Context
 	addr     string
 	configCh chan event.Event
-	conns    map[string]*websocket.Conn
+	conns    map[string]*Client
 	lock     sync.RWMutex
 	store    *store.ConfigMapStore
 	log      logr.Logger
@@ -45,7 +57,7 @@ func NewConfigDiscoveryServer(cfg ConfigDiscoveryConfig) *ConfigDiscoveryServer 
 	return &ConfigDiscoveryServer{
 		configCh: make(chan event.Event, 10),
 		addr:     cfg.Addr,
-		conns:    make(map[string]*websocket.Conn),
+		conns:    make(map[string]*Client),
 		store:    store.NewConfigMapStore(),
 		log:      cfg.Logger.WithName("cds-server"),
 	}
@@ -184,8 +196,9 @@ func (c *ConfigDiscoveryServer) HandleConn(ctx context.Context, conn *websocket.
 		client.Close()
 	}
 
+	client = &Client{Conn: conn}
 	c.lock.Lock()
-	c.conns[id] = conn
+	c.conns[id] = client
 	c.lock.Unlock()
 
 	// a dummy reader that drops everything it receives: this must be there for the WebSocket
@@ -201,7 +214,7 @@ func (c *ConfigDiscoveryServer) HandleConn(ctx context.Context, conn *websocket.
 	}()
 
 	conn.SetPingHandler(func(string) error {
-		return conn.WriteMessage(websocket.PongMessage, []byte("keepalive"))
+		return client.WriteMessage(websocket.PongMessage, []byte("keepalive"))
 	})
 
 	// send initial config
@@ -288,7 +301,7 @@ func (c *ConfigDiscoveryServer) ProcessUpdate(e *event.EventUpdate) error {
 func (c *ConfigDiscoveryServer) sendConfig(id string) error {
 	// obtain client connection
 	c.lock.RLock()
-	conn, ok := c.conns[id]
+	client, ok := c.conns[id]
 	c.lock.RUnlock()
 
 	if !ok {
@@ -323,8 +336,8 @@ func (c *ConfigDiscoveryServer) sendConfig(id string) error {
 	}
 
 	// and send it along
-	if err := conn.WriteMessage(websocket.TextMessage, conf); err != nil {
-		c.closeConn(conn, id)
+	if err := client.WriteMessage(websocket.TextMessage, conf); err != nil {
+		c.closeConn(client, id)
 
 		return fmt.Errorf("could not send config: %w", err)
 	}
@@ -332,13 +345,13 @@ func (c *ConfigDiscoveryServer) sendConfig(id string) error {
 	return nil
 }
 
-func (c *ConfigDiscoveryServer) closeConn(conn *websocket.Conn, id string) {
-	c.log.V(1).Info("closing connection", "client", conn.RemoteAddr().String(), "id", id)
-	conn.WriteMessage(websocket.CloseMessage, []byte{}) //nolint:errcheck
+func (c *ConfigDiscoveryServer) closeConn(client *Client, id string) {
+	c.log.V(1).Info("closing connection", "client", client.RemoteAddr().String(), "id", id)
+	client.WriteMessage(websocket.CloseMessage, []byte{}) //nolint:errcheck
 	c.lock.Lock()
 	delete(c.conns, id)
 	c.lock.Unlock()
-	conn.Close()
+	client.Close()
 }
 
 func (c *ConfigDiscoveryServer) getClientId(req *http.Request) (string, error) {
@@ -387,5 +400,4 @@ func cmEqual(cm1, cm2 *corev1.ConfigMap) bool {
 	}
 
 	return s1Conf.DeepEqual(s2Conf)
-
 }
