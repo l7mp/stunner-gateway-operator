@@ -268,6 +268,8 @@ func (c *ConfigDiscoveryServer) ProcessUpdate(e *event.EventUpdate) error {
 		// new config!
 		c.log.V(4).Info("new config", "generation", e.Generation,
 			"client", nsName.String())
+		// store a copy
+		cm = cm.DeepCopy()
 		c.store.Upsert(cm)
 		if err := c.sendConfig(id); err != nil {
 			c.log.V(1).Info("cannot send config (client has gone?)", "client", id,
