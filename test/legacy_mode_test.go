@@ -1083,7 +1083,7 @@ func testLegacyMode() {
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
-		It("should not install TLS cert/key unless listener protocol is TLS or DTLS", func() {
+		It("should survive installing a TLS cert/key for multiple TLS/DTLS listeners", func() {
 			ctrl.Log.Info("re-loading TLS Secret with restored cert/key")
 			createOrUpdateSecret(&testutils.TestSecret, nil)
 
@@ -1099,7 +1099,7 @@ func testLegacyMode() {
 					}},
 				}
 
-				current.Spec.Listeners[0].TLS = &tls
+				current.Spec.Listeners[0].TLS = nil
 
 				current.Spec.Listeners[1].Name = gwapiv1a2.SectionName("gateway-1-listener-dtls")
 				current.Spec.Listeners[1].Protocol = gwapiv1a2.ProtocolType("DTLS")
@@ -1133,8 +1133,9 @@ func testLegacyMode() {
 					return false
 				}
 
-				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[2].Cert != "" && c.Listeners[2].Key != "" {
+				// certs/keys should be installed on the last 2 listeners
+				if c.Listeners[1].Cert != "" && c.Listeners[1].Key != "" &&
+					c.Listeners[2].Cert != "" && c.Listeners[2].Key != "" {
 					conf = &c
 					return true
 				}
