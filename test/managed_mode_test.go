@@ -187,7 +187,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -198,7 +198,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -384,7 +384,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -397,7 +397,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -546,7 +546,7 @@ func testManagedMode() {
 			l := conf.Listeners[0]
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -555,7 +555,7 @@ func testManagedMode() {
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -565,7 +565,7 @@ func testManagedMode() {
 
 			l = conf.Listeners[2]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -611,7 +611,7 @@ func testManagedMode() {
 			Expect(conf.Listeners).To(HaveLen(3))
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -845,7 +845,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -858,7 +858,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1104,7 +1104,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1117,7 +1117,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1178,7 +1178,7 @@ func testManagedMode() {
 
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1835,7 +1835,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1848,7 +1848,7 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))
@@ -1909,7 +1909,7 @@ func testManagedMode() {
 
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
-			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(l.MinRelayPort).Should(Equal(1))
 			Expect(l.MaxRelayPort).Should(Equal(2))

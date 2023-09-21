@@ -127,7 +127,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -136,7 +136,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -391,7 +391,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -400,7 +400,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -563,7 +563,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 4, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, 1, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, lc.Routes, 1, "route num")
@@ -571,7 +571,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/udp-ok", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, 2, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, lc.Routes, 1, "route num")
@@ -579,7 +579,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[2]
 				assert.Equal(t, "testnamespace/gateway-1/tcp", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, 11, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, lc.Routes, 1, "route num")
@@ -587,7 +587,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[3]
 				assert.Equal(t, "testnamespace/gateway-1/tcp-ok", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, 12, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, lc.Routes, 1, "route num")
@@ -1253,7 +1253,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1262,7 +1262,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1526,7 +1526,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
 				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
@@ -1537,7 +1537,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1769,7 +1769,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		assert.Len(t, conf.Listeners, 2, "listener num")
 		// 		lc := conf.Listeners[0]
 		// 		assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-		// 		assert.Equal(t, "UDP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 		// 		assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 		// 		assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 		// 		assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1778,7 +1778,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 		// 		lc = conf.Listeners[1]
 		// 		assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-		// 		assert.Equal(t, "TCP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 		// 		assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 		// 		assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 		// 		assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1854,7 +1854,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		assert.Len(t, conf.Listeners, 2, "listener num")
 		// 		lc = conf.Listeners[0]
 		// 		assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
-		// 		assert.Equal(t, "UDP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 		// 		// the service links to the original gateway, our gateway does not
 		// 		// have linkage, so public addr should be empty
 		// 		assert.Equal(t, "", lc.PublicAddr, "public-ip")
@@ -1865,7 +1865,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 		// 		lc = conf.Listeners[1]
 		// 		assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
-		// 		assert.Equal(t, "TCP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 		// 		assert.Equal(t, "", lc.PublicAddr, "public-ip")
 		// 		assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 		// 		assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1963,7 +1963,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		assert.Len(t, conf.Listeners, 2, "listener num")
 		// 		lc := conf.Listeners[0]
 		// 		assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-		// 		assert.Equal(t, "UDP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 		// 		assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 		// 		assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 		// 		assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
@@ -1972,7 +1972,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 		// 		lc = conf.Listeners[1]
 		// 		assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-		// 		assert.Equal(t, "TCP", lc.Protocol, "proto")
+		// 		assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 		// 		assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 		// 		assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 		// 		assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")

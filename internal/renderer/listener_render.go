@@ -23,9 +23,9 @@ func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.Gatewa
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
-	proto, err := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
+	proto, err := r.getProtocol(l.Protocol)
 	if err != nil {
-		return nil, NewNonCriticalError(InvalidProtocol)
+		return nil, err
 	}
 
 	minPort, maxPort := stnrconfv1a1.DefaultMinRelayPort,
@@ -76,10 +76,13 @@ func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.Gatewa
 }
 
 func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string, string, bool) {
-	proto, _ := stnrconfv1a1.NewListenerProtocol(string(l.Protocol))
+	proto, err := r.getProtocol(l.Protocol)
+	if err != nil {
+		return "", "", false
+	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
-		(proto != stnrconfv1a1.ListenerProtocolTLS && proto != stnrconfv1a1.ListenerProtocolDTLS) {
+		(proto != stnrconfv1a1.ListenerProtocolTURNTLS && proto != stnrconfv1a1.ListenerProtocolTURNDTLS) {
 		return "", "", false
 	}
 
@@ -145,4 +148,34 @@ func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string,
 	}
 
 	return "", "", false
+}
+
+// normalize protocol aliases
+func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1a1.ListenerProtocol, error) {
+	protocol := string(proto)
+	switch protocol {
+	case "UDP":
+		protocol = "TURN-UDP" // v0.16: resolves to TURN-UDP
+		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "UDP",
+			"valid-protocol", "TURN-UDP")
+	case "TCP":
+		protocol = "TURN-TCP" // v0.16: resolves to TURN-TCp
+		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "TCP",
+			"valid-protocol", "TURN-TCP")
+	case "TLS":
+		protocol = "TURN-TLS" // v0.16: resolves to TURN-TLS
+		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "TLS",
+			"valid-protocol", "TURN-TLS")
+	case "DTLS":
+		protocol = "TURN-DTLS" // v0.16: resolves to TURN-DTLS
+		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "DTLS",
+			"valid-protocol", "TURN-DTLS")
+	}
+
+	ret, err := stnrconfv1a1.NewListenerProtocol(protocol)
+	if err != nil {
+		return ret, NewNonCriticalError(InvalidProtocol)
+	}
+
+	return ret, nil
 }

@@ -591,10 +591,10 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 				assert.Equal(t, string(gw.Spec.Listeners[2].Name), string(sp[1].Name), "sp 2 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Protocol), string(sp[1].Protocol), "sp 2 - proto")
+				assert.Equal(t, "UDP", string(sp[1].Protocol), "sp 2 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[1].Port), "sp 2 - port")
 			},
 		},
@@ -649,7 +649,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[2].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "TCP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -711,11 +711,9 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 				assert.Equal(t, string(gw.Spec.Listeners[1].Name), string(sp[1].Name), "sp 2 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[1].Protocol), string(sp[1].Protocol), "sp 2 - proto")
 				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto-tcp")
 				assert.Equal(t, string(gw.Spec.Listeners[1].Port), string(sp[1].Port), "sp 2 - port")
 			},
@@ -778,8 +776,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
-				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -841,11 +838,9 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 				assert.Equal(t, string(gw.Spec.Listeners[1].Name), string(sp[1].Name), "sp 2 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[1].Protocol), string(sp[1].Protocol), "sp 2 - proto")
 				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto-tcp")
 				assert.Equal(t, string(gw.Spec.Listeners[1].Port), string(sp[1].Port), "sp 2 - port")
 			},
@@ -912,9 +907,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto-udp")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
 		{
@@ -979,7 +972,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -1039,7 +1032,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 
 				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")
@@ -1102,7 +1095,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 
 				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")
@@ -1165,7 +1158,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -1225,7 +1218,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -1290,7 +1283,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
@@ -1349,7 +1342,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
 
 				assert.Equal(t, "TCP", string(sp[1].Protocol), "sp 2 - proto")

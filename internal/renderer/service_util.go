@@ -12,7 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -129,7 +131,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway, addrHint gatewayAddress) (*gatewayAddress, bool) {
 	var ap *gatewayAddress
 
-	i, found := getServicePort(gw, svc)
+	i, found := r.getServicePort(gw, svc)
 
 	// The desired selection of public IP should go in the following order: (see
 	// https://github.com/l7mp/stunner-gateway-operator/issues/3)
@@ -257,16 +259,12 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gatew
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
 		var proto string
-		switch string(l.Protocol) {
-		case "UDP", "DTLS":
-			proto = "UDP"
-		case "TCP", "TLS":
-			proto = "TCP"
-		default:
-			c.log.V(1).Info("createLbService4Gateway: unknown listener protocol",
-				"gateway", store.GetObjectKey(gw), "listener", l.Name, "protocol", string(l.Protocol))
+
+		proto, err := r.getServiceProtocol(l.Protocol)
+		if err != nil {
 			continue
 		}
+
 		if serviceProto == "" {
 			serviceProto = proto
 		} else if found && isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue {
@@ -327,32 +325,47 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gatew
 	return svc
 }
 
-/// LIB
-
 // first matching listener-proto-port and service-proto-port pair
-func getServicePort(gw *gwapiv1a2.Gateway, svc *corev1.Service) (int, bool) {
+func (r *Renderer) getServicePort(gw *gwapiv1a2.Gateway, svc *corev1.Service) (int, bool) {
 	for _, l := range gw.Spec.Listeners {
+		serviceProto, err := r.getServiceProtocol(l.Protocol)
+		if err != nil {
+			continue
+		}
+
 		for i, s := range svc.Spec.Ports {
 			if int32(l.Port) == s.Port {
-				p := ""
-				switch l.Protocol {
-				case "TCP":
-					p = "TCP"
-				case "UDP":
-					p = "UDP"
-				case "TLS":
-					p = "TCP"
-				case "DTLS":
-					p = "UDP"
-				}
-
-				if strings.EqualFold(p, string(s.Protocol)) {
+				if strings.EqualFold(serviceProto, string(s.Protocol)) {
 					return i, true
 				}
 			}
 		}
 	}
 	return 0, false
+}
+
+// getServiceProtocol returns the sercice-compatible protocol for a listener
+func (r *Renderer) getServiceProtocol(proto gwapiv1b1.ProtocolType) (string, error) {
+	protocol, err := r.getProtocol(proto)
+	if err != nil {
+		return "", err
+	}
+
+	var serviceProto string
+	switch protocol {
+	case stnrconfv1a1.ListenerProtocolUDP, stnrconfv1a1.ListenerProtocolDTLS:
+		serviceProto = "UDP"
+	case stnrconfv1a1.ListenerProtocolTURNUDP, stnrconfv1a1.ListenerProtocolTURNDTLS:
+		serviceProto = "UDP"
+	case stnrconfv1a1.ListenerProtocolTURNTCP, stnrconfv1a1.ListenerProtocolTURNTLS:
+		serviceProto = "TCP"
+	case stnrconfv1a1.ListenerProtocolTCP, stnrconfv1a1.ListenerProtocolTLS:
+		serviceProto = "TCP"
+	default:
+		return "", NewNonCriticalError(InvalidProtocol)
+	}
+
+	return serviceProto, nil
 }
 
 // first matching service-port and load-balancer service status

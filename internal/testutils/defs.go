@@ -114,7 +114,7 @@ var TestGw = gwapiv1a2.Gateway{
 		Listeners: []gwapiv1a2.Listener{{
 			Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
 			Port:     gwapiv1a2.PortNumber(1),
-			Protocol: gwapiv1a2.ProtocolType("UDP"),
+			Protocol: gwapiv1a2.ProtocolType("TURN-UDP"),
 		}, {
 			Name:     gwapiv1a2.SectionName("invalid"),
 			Port:     gwapiv1a2.PortNumber(3),
@@ -122,7 +122,7 @@ var TestGw = gwapiv1a2.Gateway{
 		}, {
 			Name:     gwapiv1a2.SectionName("gateway-1-listener-tcp"),
 			Port:     gwapiv1a2.PortNumber(2),
-			Protocol: gwapiv1a2.ProtocolType("TCP"),
+			Protocol: gwapiv1a2.ProtocolType("TURN-TCP"),
 		}},
 	},
 }
