@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
 	github.com/gorilla/websocket v1.5.0
-	github.com/l7mp/stunner v0.15.2
+	github.com/l7mp/stunner v0.15.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.10
 	github.com/stretchr/testify v1.8.4
@@ -77,4 +77,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// replace github.com/l7mp/stunner => ../stunner
+//replace github.com/l7mp/stunner => ../stunner
