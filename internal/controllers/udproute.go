@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -280,7 +281,7 @@ func (r *udpRouteReconciler) validateStaticServiceForReconcile(o client.Object) 
 }
 
 // getServiceForBackend finds the Service associated with a backendRef
-func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1a2.BackendRef) *corev1.Service {
+func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1b1.BackendRef) *corev1.Service {
 	svc := corev1.Service{}
 
 	// if no explicit Service namespace is provided, use the UDPRoute namespace to lookup the
@@ -311,7 +312,7 @@ func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute 
 }
 
 // getEndpointsForBackend finds the Endpoints associated with a backendRef
-func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1a2.BackendRef) *corev1.Endpoints {
+func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1b1.BackendRef) *corev1.Endpoints {
 	e := corev1.Endpoints{}
 
 	// if no explicit Endpoints namespace is provided, use the UDPRoute namespace to lookup the
@@ -342,7 +343,7 @@ func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udprout
 }
 
 // getStaticServiceForBackend finds the StaticService associated with a backendRef
-func (r *udpRouteReconciler) getStaticServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1a2.BackendRef) *stnrv1a1.StaticService {
+func (r *udpRouteReconciler) getStaticServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1b1.BackendRef) *stnrv1a1.StaticService {
 	svc := stnrv1a1.StaticService{}
 
 	// if no explicit StaticService namespace is provided, use the UDPRoute namespace to lookup the

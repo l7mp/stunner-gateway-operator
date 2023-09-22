@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -15,7 +16,7 @@ import (
 
 var (
 	TestTrue                = true
-	TestNsName              = gwapiv1a2.Namespace("testnamespace")
+	TestNsName              = gwapiv1b1.Namespace("testnamespace")
 	TestStunnerConfig       = "stunner-config"
 	TestRealm               = "testrealm"
 	TestMetricsEndpoint     = "testmetrics"
@@ -28,7 +29,7 @@ var (
 	TestMaxPort             = int32(2)
 	TestLabelName           = "testlabel"
 	TestLabelValue          = "testvalue"
-	TestSectionName         = gwapiv1a2.SectionName("gateway-1-listener-udp")
+	TestSectionName         = gwapiv1b1.SectionName("gateway-1-listener-udp")
 	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
 	TestKey64               = "dGVzdGtleQ==" // "testkey"
 	TestReplicas            = int32(3)
@@ -57,16 +58,16 @@ var TestNs = corev1.Namespace{
 }
 
 // GatewayClass
-var TestGwClass = gwapiv1a2.GatewayClass{
+var TestGwClass = gwapiv1b1.GatewayClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayclass-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1a2.GatewayClassSpec{
-		ControllerName: gwapiv1a2.GatewayController(opdefault.DefaultControllerName),
-		ParametersRef: &gwapiv1a2.ParametersReference{
-			Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-			Kind:      gwapiv1a2.Kind("GatewayConfig"),
+	Spec: gwapiv1b1.GatewayClassSpec{
+		ControllerName: gwapiv1b1.GatewayController(opdefault.DefaultControllerName),
+		ParametersRef: &gwapiv1b1.ParametersReference{
+			Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+			Kind:      gwapiv1b1.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
 			Namespace: &TestNsName,
 		},
@@ -99,9 +100,9 @@ var TestGwConfig = stnrv1a1.GatewayConfig{
 }
 
 // Gateway
-var TestGw = gwapiv1a2.Gateway{
+var TestGw = gwapiv1b1.Gateway{
 	// TypeMeta: metav1.TypeMeta{
-	// 	APIVersion: fmt.Sprintf("%s/%s", gwapiv1a2.GroupVersion.Group, gwapiv1a2.GroupVersion.Version),
+	// 	APIVersion: fmt.Sprintf("%s/%s", gwapiv1b1.GroupVersion.Group, gwapiv1b1.GroupVersion.Version),
 	// 	Kind:       "Gateway",
 	// },
 	ObjectMeta: metav1.ObjectMeta{
@@ -109,20 +110,20 @@ var TestGw = gwapiv1a2.Gateway{
 		Namespace: "testnamespace",
 		Labels:    map[string]string{"dummy-label": "dummy-value"},
 	},
-	Spec: gwapiv1a2.GatewaySpec{
+	Spec: gwapiv1b1.GatewaySpec{
 		GatewayClassName: "gatewayclass-ok",
-		Listeners: []gwapiv1a2.Listener{{
-			Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
-			Port:     gwapiv1a2.PortNumber(1),
-			Protocol: gwapiv1a2.ProtocolType("TURN-UDP"),
+		Listeners: []gwapiv1b1.Listener{{
+			Name:     gwapiv1b1.SectionName("gateway-1-listener-udp"),
+			Port:     gwapiv1b1.PortNumber(1),
+			Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 		}, {
-			Name:     gwapiv1a2.SectionName("invalid"),
-			Port:     gwapiv1a2.PortNumber(3),
-			Protocol: gwapiv1a2.ProtocolType("dummy"),
+			Name:     gwapiv1b1.SectionName("invalid"),
+			Port:     gwapiv1b1.PortNumber(3),
+			Protocol: gwapiv1b1.ProtocolType("dummy"),
 		}, {
-			Name:     gwapiv1a2.SectionName("gateway-1-listener-tcp"),
-			Port:     gwapiv1a2.PortNumber(2),
-			Protocol: gwapiv1a2.ProtocolType("TURN-TCP"),
+			Name:     gwapiv1b1.SectionName("gateway-1-listener-tcp"),
+			Port:     gwapiv1b1.PortNumber(2),
+			Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
 		}},
 	},
 }
@@ -134,16 +135,16 @@ var TestUDPRoute = gwapiv1a2.UDPRoute{
 		Namespace: "testnamespace",
 	},
 	Spec: gwapiv1a2.UDPRouteSpec{
-		CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-			ParentRefs: []gwapiv1a2.ParentReference{{
+		CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+			ParentRefs: []gwapiv1b1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
 		Rules: []gwapiv1a2.UDPRouteRule{{
-			BackendRefs: []gwapiv1a2.BackendRef{{
-				BackendObjectReference: gwapiv1a2.BackendObjectReference{
-					Name: gwapiv1a2.ObjectName("testservice-ok"),
+			BackendRefs: []gwapiv1b1.BackendRef{{
+				BackendObjectReference: gwapiv1b1.BackendObjectReference{
+					Name: gwapiv1b1.ObjectName("testservice-ok"),
 				},
 			}},
 		}},

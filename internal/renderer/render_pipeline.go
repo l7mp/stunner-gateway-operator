@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
@@ -143,7 +143,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			gwCtx := NewRenderContext(e, r, gc)
 			gwCtx.gwConf = gcCtx.gwConf
-			gwCtx.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+			gwCtx.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 			// render for this gateway
 			if err := r.renderForGateways(gwCtx); err != nil {

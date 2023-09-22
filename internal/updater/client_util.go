@@ -12,16 +12,17 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (u *Updater) updateGatewayClass(gc *gwapiv1a2.GatewayClass, gen int) error {
+func (u *Updater) updateGatewayClass(gc *gwapiv1b1.GatewayClass, gen int) error {
 	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1b1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 		Name:      gc.GetName(),
 		Namespace: gc.GetNamespace(),
 	}}
@@ -43,12 +44,12 @@ func (u *Updater) updateGatewayClass(gc *gwapiv1a2.GatewayClass, gen int) error 
 	return nil
 }
 
-func (u *Updater) updateGateway(gw *gwapiv1a2.Gateway, gen int) error {
+func (u *Updater) updateGateway(gw *gwapiv1b1.Gateway, gen int) error {
 	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      gw.GetName(),
 		Namespace: gw.GetNamespace(),
 	}}

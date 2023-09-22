@@ -18,7 +18,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) []*gwapiv1a2.UDPRoute {
+func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) []*gwapiv1a2.UDPRoute {
 	r.log.V(4).Info("getUDPRoutes4Listener", "gateway", store.GetObjectKey(gw), "listener",
 		l.Name)
 
@@ -57,10 +57,10 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Lis
 	return ret
 }
 
-func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (bool, string) {
-	if p.Group != nil && *p.Group != gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group) {
+func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1b1.ParentReference, gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (bool, string) {
+	if p.Group != nil && *p.Group != gwapiv1b1.Group(gwapiv1b1.GroupVersion.Group) {
 		return false, fmt.Sprintf("parent group %q does not match gateway group %q",
-			string(*p.Group), gwapiv1a2.GroupVersion.Group)
+			string(*p.Group), gwapiv1b1.GroupVersion.Group)
 	}
 
 	if p.Kind != nil && *p.Kind != "Gateway" {
@@ -68,16 +68,16 @@ func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, gw *
 			string(*p.Kind), "Gateway")
 	}
 
-	namespace := gwapiv1a2.Namespace(ro.GetNamespace())
+	namespace := gwapiv1b1.Namespace(ro.GetNamespace())
 	if p.Namespace != nil {
 		namespace = *p.Namespace
 	}
-	if namespace != gwapiv1a2.Namespace(gw.GetNamespace()) {
+	if namespace != gwapiv1b1.Namespace(gw.GetNamespace()) {
 		return false, fmt.Sprintf("parent namespace %q does not match gateway namespace %q",
 			string(namespace), gw.GetNamespace())
 	}
 
-	if p.Name != gwapiv1a2.ObjectName(gw.GetName()) {
+	if p.Name != gwapiv1b1.ObjectName(gw.GetName()) {
 		return false, fmt.Sprintf("parent name %q does not match gateway name %q",
 			string(p.Name), gw.GetName())
 	}
@@ -94,7 +94,7 @@ func resolveParentRef(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, gw *
 	return true, ""
 }
 
-func gatewayAllowsNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (bool, string) {
+func gatewayAllowsNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (bool, string) {
 	// default namespace attachment policy: Same
 	if l.AllowedRoutes == nil || l.AllowedRoutes.Namespaces == nil || l.AllowedRoutes.Namespaces.From == nil {
 		return gatewayAllowsSameNamespace(ro, gw)
@@ -135,7 +135,7 @@ func gatewayAllowsNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1a2.Gateway, l *gw
 	}
 }
 
-func gatewayAllowsSameNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1a2.Gateway) (bool, string) {
+func gatewayAllowsSameNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1b1.Gateway) (bool, string) {
 	allowed := gw.GetNamespace() == ro.GetNamespace()
 	if !allowed {
 		return false, fmt.Sprintf("parent %q/%q (namespace attachment policy: Same) rejects route %q/%q",
@@ -145,7 +145,7 @@ func gatewayAllowsSameNamespace(ro *gwapiv1a2.UDPRoute, gw *gwapiv1a2.Gateway) (
 }
 
 func initRouteStatus(ro *gwapiv1a2.UDPRoute) {
-	ro.Status.Parents = []gwapiv1a2.RouteParentStatus{}
+	ro.Status.Parents = []gwapiv1b1.RouteParentStatus{}
 }
 
 // isParentController returns true if at least one of the parents of the route is controlled by us
@@ -183,7 +183,7 @@ func (r *Renderer) isRouteControlled(ro *gwapiv1a2.UDPRoute) bool {
 
 // isParentOutContext returns true if (1) the parent exists and (2) it is NOT included in the
 // gateway context being processed (in which case we do not generate a status for the parent)
-func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) bool {
+func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDPRoute, p *gwapiv1b1.ParentReference) bool {
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
 	if p.Namespace != nil {
@@ -201,7 +201,7 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *gwapiv1a2.UDP
 
 // className == "" means "do not consider classness of parent", this is useful for generating a
 // route status that is consistent across rendering contexts
-func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, className string) bool {
+func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1b1.ParentReference, className string) bool {
 	// r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 	// 	"parent", dumpParentRef(p))
 
@@ -214,7 +214,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 
 	// does the parent belong to the class we are processing: we don't want to generate routes
 	// for gateways that link to other classes
-	if className != "" && gw.Spec.GatewayClassName != gwapiv1a2.ObjectName(className) {
+	if className != "" && gw.Spec.GatewayClassName != gwapiv1b1.ObjectName(className) {
 		r.log.V(4).Info("parent links to a gateway that is being managed by another "+
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
 			dumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
@@ -246,7 +246,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.P
 	return false
 }
 
-func (r *Renderer) getParentGateway(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference) *gwapiv1a2.Gateway {
+func (r *Renderer) getParentGateway(ro *gwapiv1a2.UDPRoute, p *gwapiv1b1.ParentReference) *gwapiv1b1.Gateway {
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
 	if p.Namespace != nil {
@@ -257,16 +257,16 @@ func (r *Renderer) getParentGateway(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentR
 	return store.Gateways.GetObject(namespacedName)
 }
 
-func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReference, controllerName string, accepted bool, backendErr error) {
-	// ns := gwapiv1a2.Namespace(ro.GetNamespace())
-	// gr := gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group)
-	// kind := gwapiv1a2.Kind("Gateway")
+func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1b1.ParentReference, controllerName string, accepted bool, backendErr error) {
+	// ns := gwapiv1b1.Namespace(ro.GetNamespace())
+	// gr := gwapiv1b1.Group(gwapiv1b1.GroupVersion.Group)
+	// kind := gwapiv1b1.Kind("Gateway")
 
-	pRef := gwapiv1a2.ParentReference{
+	pRef := gwapiv1b1.ParentReference{
 		Name: p.Name,
 	}
 
-	if p.Group != nil && *p.Group != gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group) {
+	if p.Group != nil && *p.Group != gwapiv1b1.Group(gwapiv1b1.GroupVersion.Group) {
 		pRef.Group = p.Group
 	}
 
@@ -283,29 +283,29 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 		pRef.SectionName = p.SectionName
 	}
 
-	s := gwapiv1a2.RouteParentStatus{
+	s := gwapiv1b1.RouteParentStatus{
 		ParentRef:      pRef,
-		ControllerName: gwapiv1a2.GatewayController(controllerName),
+		ControllerName: gwapiv1b1.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{},
 	}
 
 	var acceptCond metav1.Condition
 	if accepted {
 		acceptCond = metav1.Condition{
-			Type:               string(gwapiv1a2.RouteConditionAccepted),
+			Type:               string(gwapiv1b1.RouteConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: ro.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1a2.RouteReasonAccepted),
+			Reason:             string(gwapiv1b1.RouteReasonAccepted),
 			Message:            "parent accepts the route",
 		}
 	} else {
 		acceptCond = metav1.Condition{
-			Type:               string(gwapiv1a2.RouteConditionAccepted),
+			Type:               string(gwapiv1b1.RouteConditionAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: ro.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1a2.RouteReasonNotAllowedByListeners),
+			Reason:             string(gwapiv1b1.RouteReasonNotAllowedByListeners),
 			Message:            "parent rejects the route",
 		}
 	}
@@ -313,18 +313,18 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 
 	var resolvedCond metav1.Condition
 	if backendErr != nil {
-		var reason gwapiv1a2.RouteConditionReason
+		var reason gwapiv1b1.RouteConditionReason
 		switch {
 		case IsNonCriticalError(backendErr, InvalidBackendKind), IsNonCriticalError(backendErr, InvalidBackendGroup):
 			// "RouteReasonInvalidKind" is used with the "ResolvedRefs" condition when
 			// one of the Route's rules has a reference to an unknown or unsupported
 			// Group and/or Kind.
-			reason = gwapiv1a2.RouteReasonInvalidKind
+			reason = gwapiv1b1.RouteReasonInvalidKind
 		default:
-			reason = gwapiv1a2.RouteReasonBackendNotFound
+			reason = gwapiv1b1.RouteReasonBackendNotFound
 		}
 		resolvedCond = metav1.Condition{
-			Type:               string(gwapiv1a2.RouteConditionResolvedRefs),
+			Type:               string(gwapiv1b1.RouteConditionResolvedRefs),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: ro.Generation,
 			LastTransitionTime: metav1.Now(),
@@ -333,11 +333,11 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 		}
 	} else {
 		resolvedCond = metav1.Condition{
-			Type:               string(gwapiv1a2.RouteConditionResolvedRefs),
+			Type:               string(gwapiv1b1.RouteConditionResolvedRefs),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: ro.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1a2.RouteReasonResolvedRefs),
+			Reason:             string(gwapiv1b1.RouteReasonResolvedRefs),
 			Message:            "all backend references successfully resolved",
 		}
 	}
@@ -347,7 +347,7 @@ func setRouteConditionStatus(ro *gwapiv1a2.UDPRoute, p *gwapiv1a2.ParentReferenc
 	ro.Status.Parents = append(ro.Status.Parents, s)
 }
 
-func dumpParentRef(p *gwapiv1a2.ParentReference) string {
+func dumpParentRef(p *gwapiv1b1.ParentReference) string {
 	g, k, ns, sn := "<NIL>", "<NIL>", "<NIL>", "<NIL>"
 	if p.Group != nil {
 		g = string(*p.Group)
@@ -369,7 +369,7 @@ func dumpParentRef(p *gwapiv1a2.ParentReference) string {
 		g, k, ns, p.Name, sn)
 }
 
-func dumpBackendRef(b *gwapiv1a2.BackendRef) string {
+func dumpBackendRef(b *gwapiv1b1.BackendRef) string {
 	g, k, ns := "<NIL>", "<NIL>", "<NIL>"
 	if b.Group != nil {
 		g = string(*b.Group)

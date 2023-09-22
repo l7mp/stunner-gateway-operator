@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	// gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -71,9 +71,9 @@ const (
 var (
 	// Resources
 	testNs         *corev1.Namespace
-	testGwClass    *gwapiv1a2.GatewayClass
+	testGwClass    *gwapiv1b1.GatewayClass
 	testGwConfig   *stnrgwv1a1.GatewayConfig
-	testGw         *gwapiv1a2.Gateway
+	testGw         *gwapiv1b1.Gateway
 	testUDPRoute   *gwapiv1a2.UDPRoute
 	testSvc        *corev1.Service
 	testEndpoint   *corev1.Endpoints
@@ -173,8 +173,8 @@ var _ = BeforeSuite(func() {
 	// Gateway API schemes
 	err = gwapiv1a2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
-	// err = gwapiv1b1.AddToScheme(scheme)
-	// Expect(err).NotTo(HaveOccurred())
+	err = gwapiv1b1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
 	err = stnrgwv1a1.AddToScheme(scheme)
@@ -283,10 +283,10 @@ func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayMutator func(current *gwapiv1a2.Gateway)
+type GatewayMutator func(current *gwapiv1b1.Gateway)
 
-func createOrUpdateGateway(template *gwapiv1a2.Gateway, f GatewayMutator) {
-	current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateGateway(template *gwapiv1b1.Gateway, f GatewayMutator) {
+	current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

@@ -10,7 +10,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -22,10 +21,10 @@ const maxGwayStatusConds = 8
 
 type portMap map[int]bool
 
-func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1a2.Gateway {
+func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1b1.Gateway {
 	// r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(c.gc))
 
-	ret := []*gwapiv1a2.Gateway{}
+	ret := []*gwapiv1b1.Gateway{}
 
 	for _, g := range store.Gateways.GetAll() {
 		if string(g.Spec.GatewayClassName) == c.gc.GetName() {
@@ -39,7 +38,7 @@ func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1a2.Gateway {
 	return ret
 }
 
-func pruneGatewayStatusConds(gw *gwapiv1a2.Gateway) *gwapiv1a2.Gateway {
+func pruneGatewayStatusConds(gw *gwapiv1b1.Gateway) *gwapiv1b1.Gateway {
 	if len(gw.Status.Conditions) >= maxGwayStatusConds {
 		gw.Status.Conditions =
 			gw.Status.Conditions[len(gw.Status.Conditions)-(maxGwayStatusConds-1):]
@@ -48,7 +47,7 @@ func pruneGatewayStatusConds(gw *gwapiv1a2.Gateway) *gwapiv1a2.Gateway {
 	return gw
 }
 
-func isListenerConflicted(l *gwapiv1a2.Listener, udpPorts portMap, tcpPorts portMap) bool {
+func isListenerConflicted(l *gwapiv1b1.Listener, udpPorts portMap, tcpPorts portMap) bool {
 	switch l.Protocol {
 	case "UDP", "DTLS":
 		_, ok := udpPorts[int(l.Port)]
@@ -64,7 +63,7 @@ func isListenerConflicted(l *gwapiv1a2.Listener, udpPorts portMap, tcpPorts port
 }
 
 // gateway status
-func initGatewayStatus(gw *gwapiv1a2.Gateway, cname string) {
+func initGatewayStatus(gw *gwapiv1b1.Gateway, cname string) {
 	gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{}
 
 	// set accepted to true and programmed to pending
@@ -89,22 +88,22 @@ func initGatewayStatus(gw *gwapiv1a2.Gateway, cname string) {
 
 	// reinit listener statuses
 	gw.Status.Listeners = gw.Status.Listeners[:0]
-	group := gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group)
+	group := gwapiv1b1.Group(gwapiv1b1.GroupVersion.Group)
 
 	for _, l := range gw.Spec.Listeners {
 		gw.Status.Listeners = append(gw.Status.Listeners,
-			gwapiv1a2.ListenerStatus{
+			gwapiv1b1.ListenerStatus{
 				Name: l.Name,
-				SupportedKinds: []gwapiv1a2.RouteGroupKind{{
+				SupportedKinds: []gwapiv1b1.RouteGroupKind{{
 					Group: &group,
-					Kind:  gwapiv1a2.Kind("UDPRoute"),
+					Kind:  gwapiv1b1.Kind("UDPRoute"),
 				}},
 				Conditions: []metav1.Condition{},
 			})
 	}
 }
 
-func setGatewayStatusProgrammed(gw *gwapiv1a2.Gateway, err error, ap *gatewayAddress) {
+func setGatewayStatusProgrammed(gw *gwapiv1b1.Gateway, err error, ap *gatewayAddress) {
 	if err != nil {
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 			Type:               string(gwapiv1b1.GatewayConditionProgrammed),
@@ -121,7 +120,7 @@ func setGatewayStatusProgrammed(gw *gwapiv1a2.Gateway, err error, ap *gatewayAdd
 	if ap != nil {
 		aType := ap.aType
 		if string(aType) == "" {
-			aType = gwapiv1a2.IPAddressType
+			aType = gwapiv1b1.IPAddressType
 		}
 		gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{{
 			Type:  &aType,
@@ -148,7 +147,7 @@ func setGatewayStatusProgrammed(gw *gwapiv1a2.Gateway, err error, ap *gatewayAdd
 }
 
 // listener status
-func getStatus4Listener(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) *gwapiv1a2.ListenerStatus {
+func getStatus4Listener(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) *gwapiv1b1.ListenerStatus {
 	for i := range gw.Status.Listeners {
 		if gw.Status.Listeners[i].Name == l.Name {
 			return &gw.Status.Listeners[i]
@@ -160,7 +159,7 @@ func getStatus4Listener(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) *gwapiv1a2
 // sets "Detached" to true with reason "UnsupportedProtocol" or false, depending on "accepted"
 // sets ResolvedRefs to true
 // sets "Ready" to <ready> depending on "ready"
-func setListenerStatus(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener, err error, conflicted bool, routes int) {
+func setListenerStatus(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener, err error, conflicted bool, routes int) {
 	s := getStatus4Listener(gw, l)
 	if s == nil {
 		// should never happen
@@ -175,7 +174,7 @@ func setListenerStatus(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener, err error, 
 	s.AttachedRoutes = int32(routes)
 }
 
-func setListenerStatusAccepted(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerStatus, reason error) {
+func setListenerStatusAccepted(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, reason error) {
 	switch {
 	case IsNonCriticalError(reason, PortUnavailable):
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
@@ -216,7 +215,7 @@ func setListenerStatusAccepted(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerStatu
 	}
 }
 
-func setListenerStatusConflicted(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerStatus, conflicted bool) {
+func setListenerStatusConflicted(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, conflicted bool) {
 	if !conflicted {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 			Type:               string(gwapiv1b1.ListenerConditionConflicted),
@@ -238,7 +237,7 @@ func setListenerStatusConflicted(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerSta
 	}
 }
 
-func setListenerStatusResolvedRefs(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerStatus) {
+func setListenerStatusResolvedRefs(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus) {
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 		Type:               string(gwapiv1b1.ListenerConditionResolvedRefs),
 		Status:             metav1.ConditionTrue,
@@ -249,7 +248,7 @@ func setListenerStatusResolvedRefs(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerS
 	})
 }
 
-// func setListenerStatusReady(gw *gwapiv1a2.Gateway, s *gwapiv1a2.ListenerStatus, ready bool) {
+// func setListenerStatusReady(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, ready bool) {
 // 	if ready {
 // 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 // 			Type:               string(gwapiv1b1.ListenerConditionReady),

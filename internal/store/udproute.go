@@ -3,7 +3,7 @@ package store
 import (
 	"k8s.io/apimachinery/pkg/types"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 var UDPRoutes = NewUDPRouteStore()
@@ -19,12 +19,12 @@ func NewUDPRouteStore() *UDPRouteStore {
 }
 
 // GetAll returns all UDPRoute objects from the global storage
-func (s *UDPRouteStore) GetAll() []*gatewayv1alpha2.UDPRoute {
-	ret := make([]*gatewayv1alpha2.UDPRoute, 0)
+func (s *UDPRouteStore) GetAll() []*gwapiv1a2.UDPRoute {
+	ret := make([]*gwapiv1a2.UDPRoute, 0)
 
 	objects := s.Objects()
 	for i := range objects {
-		r, ok := objects[i].(*gatewayv1alpha2.UDPRoute)
+		r, ok := objects[i].(*gwapiv1a2.UDPRoute)
 		if !ok {
 			// this is critical: throw up hands and die
 			panic("access to an invalid object in the global UDPRouteStore")
@@ -37,13 +37,13 @@ func (s *UDPRouteStore) GetAll() []*gatewayv1alpha2.UDPRoute {
 }
 
 // GetObject returns a named UDPRoute object from the global storage
-func (s *UDPRouteStore) GetObject(nsName types.NamespacedName) *gatewayv1alpha2.UDPRoute {
+func (s *UDPRouteStore) GetObject(nsName types.NamespacedName) *gwapiv1a2.UDPRoute {
 	o := s.Get(nsName)
 	if o == nil {
 		return nil
 	}
 
-	r, ok := o.(*gatewayv1alpha2.UDPRoute)
+	r, ok := o.(*gwapiv1a2.UDPRoute)
 	if !ok {
 		// this is critical: throw up hands and die
 		panic("access to an invalid object in the global UDPRouteStore")
@@ -53,6 +53,6 @@ func (s *UDPRouteStore) GetObject(nsName types.NamespacedName) *gatewayv1alpha2.
 }
 
 // // AddUDPRoute adds a UDPRoute object to the the global storage (this is used mainly for testing)
-// func (s *UDPRouteStore) AddUDPRoute(gc *gatewayv1alpha2.UDPRoute) {
+// func (s *UDPRouteStore) AddUDPRoute(gc *gwapiv1a2.UDPRoute) {
 // 	s.Upsert(gc)
 // }

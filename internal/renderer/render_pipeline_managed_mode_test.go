@@ -33,9 +33,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "no EDS - E2E test",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
@@ -43,7 +43,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -72,7 +72,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
@@ -280,22 +280,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -309,9 +309,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		},
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -321,7 +321,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -349,7 +349,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
@@ -427,58 +427,58 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		},
 		{
 			name: "no EDS  - E2E test - conflicted status",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("udp"),
-					Port:     gwapiv1a2.PortNumber(1),
-					Protocol: gwapiv1a2.ProtocolType("UDP"),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("udp"),
+					Port:     gwapiv1b1.PortNumber(1),
+					Protocol: gwapiv1b1.ProtocolType("UDP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("udp-ok"),
-					Port:     gwapiv1a2.PortNumber(2),
-					Protocol: gwapiv1a2.ProtocolType("UDP"),
+					Name:     gwapiv1b1.SectionName("udp-ok"),
+					Port:     gwapiv1b1.PortNumber(2),
+					Protocol: gwapiv1b1.ProtocolType("UDP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("udp-conflicted"),
-					Port:     gwapiv1a2.PortNumber(1),
-					Protocol: gwapiv1a2.ProtocolType("UDP"),
+					Name:     gwapiv1b1.SectionName("udp-conflicted"),
+					Port:     gwapiv1b1.PortNumber(1),
+					Protocol: gwapiv1b1.ProtocolType("UDP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("dtls-conflicted"),
-					Port:     gwapiv1a2.PortNumber(1),
-					Protocol: gwapiv1a2.ProtocolType("DTLS"),
+					Name:     gwapiv1b1.SectionName("dtls-conflicted"),
+					Port:     gwapiv1b1.PortNumber(1),
+					Protocol: gwapiv1b1.ProtocolType("DTLS"),
 				}, {
-					Name:     gwapiv1a2.SectionName("tcp"),
-					Port:     gwapiv1a2.PortNumber(11),
-					Protocol: gwapiv1a2.ProtocolType("TCP"),
+					Name:     gwapiv1b1.SectionName("tcp"),
+					Port:     gwapiv1b1.PortNumber(11),
+					Protocol: gwapiv1b1.ProtocolType("TCP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("tcp-ok"),
-					Port:     gwapiv1a2.PortNumber(12),
-					Protocol: gwapiv1a2.ProtocolType("TCP"),
+					Name:     gwapiv1b1.SectionName("tcp-ok"),
+					Port:     gwapiv1b1.PortNumber(12),
+					Protocol: gwapiv1b1.ProtocolType("TCP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("tcp-conflicted"),
-					Port:     gwapiv1a2.PortNumber(11),
-					Protocol: gwapiv1a2.ProtocolType("TCP"),
+					Name:     gwapiv1b1.SectionName("tcp-conflicted"),
+					Port:     gwapiv1b1.PortNumber(11),
+					Protocol: gwapiv1b1.ProtocolType("TCP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("tls-conflicted"),
-					Port:     gwapiv1a2.PortNumber(11),
-					Protocol: gwapiv1a2.ProtocolType("TLS"),
+					Name:     gwapiv1b1.SectionName("tls-conflicted"),
+					Port:     gwapiv1b1.PortNumber(11),
+					Protocol: gwapiv1b1.ProtocolType("TLS"),
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				// attach to all listeners
 				ro := testutils.TestUDPRoute.DeepCopy()
-				ro.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{{Name: "gateway-1"}}
+				ro.Spec.CommonRouteSpec.ParentRefs = []gwapiv1b1.ParentReference{{Name: "gateway-1"}}
 				c.rs = []gwapiv1a2.UDPRoute{*ro}
 
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -507,7 +507,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
@@ -971,22 +971,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1000,9 +1000,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		},
 		{
 			name: "E2E invalidation",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
@@ -1025,7 +1025,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				r.invalidateGatewayClass(c, errors.New("dummy"))
 
@@ -1069,7 +1069,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				objs := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found = objs[0].(*gwapiv1a2.Gateway)
+				gw, found = objs[0].(*gwapiv1b1.Gateway)
 				assert.True(t, found, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
@@ -1097,9 +1097,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		},
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -1109,13 +1109,13 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
-				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -1128,27 +1128,27 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gwapiv1a2.ObjectName("dummy-gateway-class")
-				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1b1.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
-				sn := gwapiv1a2.SectionName("gateway-1-listener-udp")
+				sn := gwapiv1b1.SectionName("gateway-1-listener-udp")
 				udpRoute := testutils.TestUDPRoute.DeepCopy()
-				udpRoute.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{{
+				udpRoute.Spec.CommonRouteSpec.ParentRefs = []gwapiv1b1.ParentReference{{
 					Name:      "dummy-gateway",
 					Namespace: &testutils.TestNsName,
 				}, {
-					Name:        gwapiv1a2.ObjectName(testutils.TestGw.GetName()),
+					Name:        gwapiv1b1.ObjectName(testutils.TestGw.GetName()),
 					Namespace:   &testutils.TestNsName,
 					SectionName: &sn,
 				}}
-				udpRoute.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
-						Name:      gwapiv1a2.ObjectName(testutils.TestSvc.GetName()),
+				udpRoute.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
+					BackendObjectReference: gwapiv1b1.BackendObjectReference{
+						Name:      gwapiv1b1.ObjectName(testutils.TestSvc.GetName()),
 						Namespace: &testutils.TestNsName,
 					},
 				}, {
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+					BackendObjectReference: gwapiv1b1.BackendObjectReference{
 						Name:      "dummy-service",
 						Namespace: &testutils.TestNsName,
 					},
@@ -1159,7 +1159,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -1210,7 +1210,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				// render first gw
 				gw := gws[0]
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
@@ -1407,22 +1407,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1437,22 +1437,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1483,7 +1483,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				// render gw
 				gw = gws[0]
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
@@ -1589,22 +1589,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1619,22 +1619,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1648,9 +1648,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		},
 		// {
 		// 	name: "EDS with relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-		// 	cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+		// 	cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 		// 	cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-		// 	gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+		// 	gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 		// 	rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 		// 	svcs: []corev1.Service{testutils.TestSvc},
 		// 	eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -1659,13 +1659,13 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		// a new gatewayclass that specifies a different gateway-config
 		// 		dummyGc := testutils.TestGwClass.DeepCopy()
 		// 		dummyGc.SetName("dummy-gateway-class")
-		// 		dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-		// 			Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-		// 			Kind:      gwapiv1a2.Kind("GatewayConfig"),
+		// 		dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+		// 			Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+		// 			Kind:      gwapiv1b1.Kind("GatewayConfig"),
 		// 			Name:      "dummy-gateway-config",
 		// 			Namespace: &testutils.TestNsName,
 		// 		}
-		// 		c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+		// 		c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 		// 		// the new gateway-config that renders into a different stunner configmap
 		// 		dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -1678,15 +1678,15 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		dummyGw := testutils.TestGw.DeepCopy()
 		// 		dummyGw.SetName("dummy-gateway")
 		// 		dummyGw.Spec.GatewayClassName =
-		// 			gwapiv1a2.ObjectName("dummy-gateway-class")
-		// 		c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+		// 			gwapiv1b1.ObjectName("dummy-gateway-class")
+		// 		c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 		// 		// a route for dummy-gateway
 		// 		dummyUdp := testutils.TestUDPRoute.DeepCopy()
 		// 		dummyUdp.SetName("dummy-route")
 		// 		dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 		// 		dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-		// 			gwapiv1a2.ObjectName("dummy-service")
+		// 			gwapiv1b1.ObjectName("dummy-service")
 		// 		c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 		// 		s := testutils.TestSvc.DeepCopy()
@@ -1888,18 +1888,18 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// },
 		// {
 		// 	name:  "StaticService - E2E test",
-		// 	cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+		// 	cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 		// 	cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-		// 	gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+		// 	gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 		// 	svcs:  []corev1.Service{testutils.TestSvc},
 		// 	ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
 		// 	dps:   []stnrv1a1.Dataplane{testutils.TestDataplane},
 		// 	prep: func(c *renderTestConfig) {
-		// 		group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
-		// 		kind := gwapiv1a2.Kind("StaticService")
+		// 		group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+		// 		kind := gwapiv1b1.Kind("StaticService")
 		// 		udp := testutils.TestUDPRoute.DeepCopy()
-		// 		udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
-		// 			BackendObjectReference: gwapiv1a2.BackendObjectReference{
+		// 		udp.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
+		// 			BackendObjectReference: gwapiv1b1.BackendObjectReference{
 		// 				Group: &group,
 		// 				Kind:  &kind,
 		// 				Name:  "teststaticservice-ok",
@@ -2001,7 +2001,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 		// 		gws := c.update.UpsertQueue.Gateways.Objects()
 		// 		assert.Len(t, gws, 1, "gateway num")
-		// 		gw, found := gws[0].(*gwapiv1a2.Gateway)
+		// 		gw, found := gws[0].(*gwapiv1b1.Gateway)
 		// 		assert.True(t, found, "gateway found")
 		// 		assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 		// 			store.GetObjectKey(gw), "gw name found")
@@ -2043,22 +2043,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		// 		assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 		// 		assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-		// 		assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+		// 		assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 		// 			parentStatus.ControllerName, "status parent ref")
 
 		// 		d := meta.FindStatusCondition(parentStatus.Conditions,
-		// 			string(gwapiv1a2.RouteConditionAccepted))
+		// 			string(gwapiv1b1.RouteConditionAccepted))
 		// 		assert.NotNil(t, d, "accepted found")
-		// 		assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+		// 		assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 		// 			"type")
 		// 		assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 		// 		assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 		// 		assert.Equal(t, "Accepted", d.Reason, "reason")
 
 		// 		d = meta.FindStatusCondition(parentStatus.Conditions,
-		// 			string(gwapiv1a2.RouteConditionResolvedRefs))
+		// 			string(gwapiv1b1.RouteConditionResolvedRefs))
 		// 		assert.NotNil(t, d, "resolved-refs found")
-		// 		assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+		// 		assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 		// 			"type")
 		// 		assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 		// 		assert.Equal(t, int64(0), d.ObservedGeneration, "gen")

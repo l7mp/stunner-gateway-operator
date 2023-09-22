@@ -202,7 +202,7 @@ func testLegacyMode() {
 		})
 
 		It("should set the GatewayClass status", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -220,7 +220,7 @@ func testLegacyMode() {
 
 		It("should set the Gateway status", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -407,39 +407,39 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1b1.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController("gatewayclass-ok")))
 
 			// Expect(ps.ParentRef.Group).To(BeNil())
 			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
-				addr := gwapiv1a2.IPAddressType
-				current.Spec.Addresses = []gwapiv1a2.GatewayAddress{{
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
+				addr := gwapiv1b1.IPAddressType
+				current.Spec.Addresses = []gwapiv1b1.GatewayAddress{{
 					Type:  &addr,
 					Value: "1.2.3.5",
 				}}
@@ -486,7 +486,7 @@ func testLegacyMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {})
 
 			ctrl.Log.Info("loading a Kubernetes Node")
 			createOrUpdateNode(&testutils.TestNode, nil)
@@ -704,7 +704,7 @@ func testLegacyMode() {
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "NodePort"})
 			})
 
@@ -746,7 +746,7 @@ func testLegacyMode() {
 
 		It("should add annotations from Gateway", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "dummy-1",
@@ -857,7 +857,7 @@ func testLegacyMode() {
 			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "new-dummy-1",
@@ -902,19 +902,19 @@ func testLegacyMode() {
 			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
 
-				current.Spec.Listeners[1].Name = gwapiv1a2.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1a2.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
 				current.Spec.Listeners[1].TLS = &tls
 			})
 
@@ -1088,24 +1088,24 @@ func testLegacyMode() {
 			createOrUpdateSecret(&testutils.TestSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 1st listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
 
 				current.Spec.Listeners[0].TLS = nil
 
-				current.Spec.Listeners[1].Name = gwapiv1a2.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1a2.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
 				current.Spec.Listeners[1].TLS = &tls
-				current.Spec.Listeners[2].Name = gwapiv1a2.SectionName("gateway-1-listener-tls")
-				current.Spec.Listeners[2].Protocol = gwapiv1a2.ProtocolType("TLS")
+				current.Spec.Listeners[2].Name = gwapiv1b1.SectionName("gateway-1-listener-tls")
+				current.Spec.Listeners[2].Protocol = gwapiv1b1.ProtocolType("TLS")
 				current.Spec.Listeners[2].TLS = &tls
 			})
 
@@ -1182,19 +1182,19 @@ func testLegacyMode() {
 			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
 
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {})
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {})
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
-				kind := gwapiv1a2.Kind("StaticService")
-				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{{
+				group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1b1.Kind("StaticService")
+				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
+					ParentRefs: []gwapiv1b1.ParentReference{{
 						Name: "gateway-1",
 					}},
 				}
-				current.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+				current.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
+					BackendObjectReference: gwapiv1b1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
@@ -1284,7 +1284,7 @@ func testLegacyMode() {
 		})
 
 		It("should set the status correctly", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -1300,7 +1300,7 @@ func testLegacyMode() {
 				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
 
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -1404,25 +1404,25 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -1513,7 +1513,7 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 
 			ctrl.Log.Info("re-loading Gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 				})
@@ -1603,7 +1603,7 @@ func testLegacyMode() {
 
 		It("should reset status on all resources", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -1706,38 +1706,38 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1b1.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController("gatewayclass-ok")))
 
 			// Expect(ps.ParentRef.Group).To(BeNil())
 			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 	})
 
 	Context("When changing a route parentref to the TCP listener (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
-		sn := gwapiv1a2.SectionName("gateway-1-listener-tcp")
+		sn := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading UDPRoute")
@@ -1818,7 +1818,7 @@ func testLegacyMode() {
 
 		It("should reset status on all resources", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -1921,25 +1921,25 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(sn)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// Expect(k8sClient).To(BeNil())
@@ -1948,8 +1948,8 @@ func testLegacyMode() {
 
 	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
-		// snudp := gwapiv1a2.SectionName("gateway-1-listener-udp")
-		// sntcp := gwapiv1a2.SectionName("gateway-1-listener-tcp")
+		// snudp := gwapiv1b1.SectionName("gateway-1-listener-udp")
+		// sntcp := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
 		It("should be possible to add a new route in a new namespace", func() {
 			ctrl.Log.Info("creating a dummy-namespace")
@@ -2058,7 +2058,7 @@ func testLegacyMode() {
 
 		It("should reset Gateway statuses", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -2171,27 +2171,27 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1b1.Namespace("testnamespace"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			// Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(snudp)))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
@@ -2212,38 +2212,38 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps = ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(testutils.TestNsName)))
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
 		It("should be possible to change the namespace attachment policy to All", func() {
 			ctrl.Log.Info("updating the gateway: set namespace attachment policy to All for the 3rd listener")
 			fromNamespaces := gwapiv1b1.NamespacesFromAll
-			routeNamespaces := gwapiv1a2.RouteNamespaces{
+			routeNamespaces := gwapiv1b1.RouteNamespaces{
 				From: &fromNamespaces,
 			}
-			allowedRoutes := gwapiv1a2.AllowedRoutes{
+			allowedRoutes := gwapiv1b1.AllowedRoutes{
 				Namespaces: &routeNamespaces,
 			}
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes
 			})
 		})
@@ -2336,7 +2336,7 @@ func testLegacyMode() {
 
 		It("should reset status on all resources", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -2440,25 +2440,25 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
@@ -2471,25 +2471,25 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps = ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(testutils.TestNsName)))
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 	})
@@ -2499,9 +2499,9 @@ func testLegacyMode() {
 
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
-			sn := gwapiv1a2.SectionName("gateway-1-listener-tcp")
+			sn := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1a2.ParentReference{
+				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1b1.ParentReference{
 					{
 						Name:        "gateway-1",
 						SectionName: &testutils.TestSectionName,
@@ -2515,18 +2515,18 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("updating the gateway: set namespace attachment policy for the listeners")
 			fromNamespaces := gwapiv1b1.NamespacesFromSelector
-			routeNamespaces1 := gwapiv1a2.RouteNamespaces{
+			routeNamespaces1 := gwapiv1b1.RouteNamespaces{
 				From: &fromNamespaces,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"invalid-label": "invalid-value"},
 				},
 			}
 
-			allowedRoutes1 := gwapiv1a2.AllowedRoutes{
+			allowedRoutes1 := gwapiv1b1.AllowedRoutes{
 				Namespaces: &routeNamespaces1,
 			}
 
-			routeNamespaces2 := gwapiv1a2.RouteNamespaces{
+			routeNamespaces2 := gwapiv1b1.RouteNamespaces{
 				From: &fromNamespaces,
 				Selector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -2539,10 +2539,10 @@ func testLegacyMode() {
 				},
 			}
 
-			allowedRoutes2 := gwapiv1a2.AllowedRoutes{
+			allowedRoutes2 := gwapiv1b1.AllowedRoutes{
 				Namespaces: &routeNamespaces2,
 			}
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = &allowedRoutes1
 				current.Spec.Listeners[2].AllowedRoutes = &allowedRoutes2
 			})
@@ -2635,7 +2635,7 @@ func testLegacyMode() {
 
 		It("should reset status on all resources", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -2743,26 +2743,26 @@ func testLegacyMode() {
 				ps = ro.Status.Parents[1]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).NotTo(BeNil())
 			Expect(*ps.ParentRef.SectionName).To(Equal(testutils.TestSectionName))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			ps = ro.Status.Parents[1]
@@ -2771,26 +2771,26 @@ func testLegacyMode() {
 				ps = ro.Status.Parents[0]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).NotTo(BeNil())
-			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1a2.SectionName("gateway-1-listener-tcp")))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1b1.SectionName("gateway-1-listener-tcp")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
@@ -2802,32 +2802,32 @@ func testLegacyMode() {
 			// 3rd listener accepts the route
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps = ro.Status.Parents[0]
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(testutils.TestNsName)))
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 		})
 
 		It("should be possible to remove the new route and the namespace", func() {
 			// reset gw
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				current.Spec.Listeners[0].AllowedRoutes = nil
 				current.Spec.Listeners[1].AllowedRoutes = nil
 				current.Spec.Listeners[2].AllowedRoutes = nil
@@ -2853,7 +2853,7 @@ func testLegacyMode() {
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				sn := gwapiv1a2.SectionName("dummy")
+				sn := gwapiv1b1.SectionName("dummy")
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 				// gwapiv1a2.ObjectName("dummy")
 			})
@@ -2928,7 +2928,7 @@ func testLegacyMode() {
 				}
 
 				if ro.Status.Parents[0].ParentRef.SectionName != nil &&
-					*ro.Status.Parents[0].ParentRef.SectionName == gwapiv1a2.SectionName("dummy") {
+					*ro.Status.Parents[0].ParentRef.SectionName == gwapiv1b1.SectionName("dummy") {
 					return true
 				}
 
@@ -2942,24 +2942,24 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).NotTo(BeNil())
-			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1a2.SectionName("dummy")))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(*ps.ParentRef.SectionName).To(Equal(gwapiv1b1.SectionName("dummy")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			// backendRefs resolved, to ResolvedRefs=True
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -3265,8 +3265,8 @@ func testLegacyMode() {
 			// the client may overwrite our objects, recreate!
 
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
-				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
+				current.Spec.Listeners[0].Port = gwapiv1b1.PortNumber(1234)
 			})
 
 			lookupKey := types.NamespacedName{
@@ -3303,7 +3303,7 @@ func testLegacyMode() {
 			ctrl.Log.Info("re-loading route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy")
+					gwapiv1b1.ObjectName("dummy")
 			})
 
 			lookupKey := types.NamespacedName{
@@ -3350,26 +3350,26 @@ func testLegacyMode() {
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy")
+					gwapiv1b1.ObjectName("dummy")
 				current.Spec.Rules[0].BackendRefs = append(current.Spec.Rules[0].BackendRefs,
-					gwapiv1a2.BackendRef{
-						BackendObjectReference: gwapiv1a2.BackendObjectReference{
-							Name: gwapiv1a2.ObjectName("dummy-2"),
+					gwapiv1b1.BackendRef{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							Name: gwapiv1b1.ObjectName("dummy-2"),
 						},
 					})
 
 				// try to attach to all listeners: p1 -> udp, p2 -> dummy, p3 -> tcp
-				sn := gwapiv1a2.SectionName("invalid")
+				sn := gwapiv1b1.SectionName("invalid")
 				current.Spec.CommonRouteSpec.ParentRefs = append(current.Spec.CommonRouteSpec.ParentRefs,
-					gwapiv1a2.ParentReference{
-						Name:        gwapiv1a2.ObjectName("gateway-1"),
+					gwapiv1b1.ParentReference{
+						Name:        gwapiv1b1.ObjectName("gateway-1"),
 						SectionName: &sn,
 					})
 
-				sn2 := gwapiv1a2.SectionName("gateway-1-listener-tcp")
+				sn2 := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 				current.Spec.CommonRouteSpec.ParentRefs = append(current.Spec.CommonRouteSpec.ParentRefs,
-					gwapiv1a2.ParentReference{
-						Name:        gwapiv1a2.ObjectName("gateway-1"),
+					gwapiv1b1.ParentReference{
+						Name:        gwapiv1b1.ObjectName("gateway-1"),
 						SectionName: &sn2,
 					})
 
@@ -3463,26 +3463,26 @@ func testLegacyMode() {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&ro.Spec)
 
 				ro.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy")
+					gwapiv1b1.ObjectName("dummy")
 				ro.Spec.Rules[0].BackendRefs = append(ro.Spec.Rules[0].BackendRefs,
-					gwapiv1a2.BackendRef{
-						BackendObjectReference: gwapiv1a2.BackendObjectReference{
-							Name: gwapiv1a2.ObjectName("dummy-2"),
+					gwapiv1b1.BackendRef{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							Name: gwapiv1b1.ObjectName("dummy-2"),
 						},
 					})
 
 				// try to attach to all listeners: p1 -> udp, p2 -> dummy, p3 -> tcp
-				sn := gwapiv1a2.SectionName("gateway-2-udp")
+				sn := gwapiv1b1.SectionName("gateway-2-udp")
 				ro.Spec.CommonRouteSpec.ParentRefs = append(ro.Spec.CommonRouteSpec.ParentRefs,
-					gwapiv1a2.ParentReference{
-						Name:        gwapiv1a2.ObjectName("gateway-2"),
+					gwapiv1b1.ParentReference{
+						Name:        gwapiv1b1.ObjectName("gateway-2"),
 						SectionName: &sn,
 					})
 
-				sn2 := gwapiv1a2.SectionName("gateway-2-tcp")
+				sn2 := gwapiv1b1.SectionName("gateway-2-tcp")
 				ro.Spec.CommonRouteSpec.ParentRefs = append(ro.Spec.CommonRouteSpec.ParentRefs,
-					gwapiv1a2.ParentReference{
-						Name:        gwapiv1a2.ObjectName("gateway-2"),
+					gwapiv1b1.ParentReference{
+						Name:        gwapiv1b1.ObjectName("gateway-2"),
 						SectionName: &sn2,
 					})
 
@@ -3491,12 +3491,12 @@ func testLegacyMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("re-loading the test gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
-				current.Spec.Listeners[0].Port = gwapiv1a2.PortNumber(1234)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
+				current.Spec.Listeners[0].Port = gwapiv1b1.PortNumber(1234)
 			})
 
 			ctrl.Log.Info("adding a new gateway")
-			current := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: testutils.TestGw.GetNamespace(),
 			}}
@@ -3505,13 +3505,13 @@ func testLegacyMode() {
 				testutils.TestGw.Spec.DeepCopyInto(&current.Spec)
 
 				current.Spec.Listeners[0].Name =
-					gwapiv1a2.SectionName("gateway-2-udp")
+					gwapiv1b1.SectionName("gateway-2-udp")
 				current.Spec.Listeners[0].Port =
-					gwapiv1a2.PortNumber(1234)
+					gwapiv1b1.PortNumber(1234)
 				current.Spec.Listeners[2].Name =
-					gwapiv1a2.SectionName("gateway-2-tcp")
+					gwapiv1b1.SectionName("gateway-2-tcp")
 				current.Spec.Listeners[2].Port =
-					gwapiv1a2.PortNumber(4321)
+					gwapiv1b1.PortNumber(4321)
 
 				return nil
 			})
@@ -3626,7 +3626,7 @@ func testLegacyMode() {
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
 
 			ctrl.Log.Info("deleting gateway-2")
-			gw := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: testutils.TestGw.GetNamespace(),
 			}}
@@ -3768,31 +3768,31 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1b1.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController("gatewayclass-ok")))
 
 			// Expect(ps.ParentRef.Group).To(BeNil())
 			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// restoure
@@ -3812,8 +3812,8 @@ func testLegacyMode() {
 
 			// need to trigger a re-render: delete the invalid Gateway listener
 			ctrl.Log.Info("re-loading Gateway with 1 valid listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
-				current.Spec.Listeners = []gwapiv1a2.Listener{
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
+				current.Spec.Listeners = []gwapiv1b1.Listener{
 					current.Spec.Listeners[0], current.Spec.Listeners[1]}
 			})
 
@@ -3888,7 +3888,7 @@ func testLegacyMode() {
 
 	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", func() {
 		conf := &stunnerconfv1alpha1.StunnerConfig{}
-		sn := gwapiv1a2.SectionName("gateway-1-listener-tcp")
+		sn := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway with 2 valid listeners")
@@ -3978,7 +3978,7 @@ func testLegacyMode() {
 
 		It("should reset status on all resources", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -4081,25 +4081,25 @@ func testLegacyMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(sn)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// Expect(k8sClient).To(BeNil())

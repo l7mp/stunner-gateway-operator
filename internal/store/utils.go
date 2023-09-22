@@ -11,8 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -76,13 +78,13 @@ func DumpObject(o client.Object) string {
 	ro := o.DeepCopyObject()
 
 	switch ro := ro.(type) {
-	case *gwapiv1a2.GatewayClass:
+	case *gwapiv1b1.GatewayClass:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
 			output = string(json)
 		}
-	case *gwapiv1a2.Gateway:
+	case *gwapiv1b1.Gateway:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
@@ -148,9 +150,9 @@ func DumpObject(o client.Object) string {
 
 // 	var tmp client.Object
 // 	switch ro := ro.(type) {
-// 	case *gwapiv1a2.GatewayClass:
+// 	case *gwapiv1b1.GatewayClass:
 // 		tmp = ro
-// 	case *gwapiv1a2.Gateway:
+// 	case *gwapiv1b1.Gateway:
 // 		tmp = ro
 // 	case *gwapiv1a2.UDPRoute:
 // 		tmp = ro
@@ -232,7 +234,7 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 }
 
 // IsReferenceService returns true of the provided BackendRef points to a Service.
-func IsReferenceService(ref *gwapiv1a2.BackendRef) bool {
+func IsReferenceService(ref *gwapiv1b1.BackendRef) bool {
 	// Group is the group of the referent. For example, “gateway.networking.k8s.io”. When
 	// unspecified or empty string, core API group is inferred.
 	if ref.Group != nil && *ref.Group != corev1.GroupName {
@@ -247,7 +249,7 @@ func IsReferenceService(ref *gwapiv1a2.BackendRef) bool {
 }
 
 // IsReferenceStaticService returns true of the provided BackendRef points to a StaticService.
-func IsReferenceStaticService(ref *gwapiv1a2.BackendRef) bool {
+func IsReferenceStaticService(ref *gwapiv1b1.BackendRef) bool {
 	if ref.Group == nil || string(*ref.Group) != stnrv1a1.GroupVersion.Group {
 		return false
 	}

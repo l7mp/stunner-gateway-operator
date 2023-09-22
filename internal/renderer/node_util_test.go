@@ -10,7 +10,8 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -21,10 +22,9 @@ func TestRenderNodeUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name:  "node-ip ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep:  func(c *renderTestConfig) {},
@@ -36,10 +36,9 @@ func TestRenderNodeUtil(t *testing.T) {
 		},
 		{
 			name:  "second valid node-ip ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep: func(c *renderTestConfig) {

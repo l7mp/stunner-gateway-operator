@@ -26,15 +26,15 @@ func TestRenderGatewayUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "wrong gatewayclassname errs",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.GatewayClassName = "dummy"
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -47,16 +47,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "multiple gateways ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.ObjectMeta.SetName("dummy")
 				gw.ObjectMeta.SetGeneration(4)
-				c.gws = []gwapiv1a2.Gateway{*gw, testutils.TestGw}
+				c.gws = []gwapiv1b1.Gateway{*gw, testutils.TestGw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -77,9 +77,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway status ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -121,9 +121,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway rescheduled/re-ready status ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -131,7 +131,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				initGatewayStatus(gw, "dummy")
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				gw.ObjectMeta.SetGeneration(1)
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -171,16 +171,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "listener status ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// u := testutils.TestUDPRoute.DeepCopy()
 				// u.ObjectMeta.SetName("tcp")
 				// u.Spec.
-				// 	c.rs = []gwapiv1a2.UDPRoute{*u, testutils.TestUDPRoute}
+				// 	c.rs = []gwapiv1b1.UDPRoute{*u, testutils.TestUDPRoute}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()

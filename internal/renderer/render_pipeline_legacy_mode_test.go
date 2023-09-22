@@ -33,9 +33,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "piecewise render",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{},
+			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
@@ -69,16 +69,16 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "no EDS - E2E test",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -178,9 +178,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "EDS without relay-to-cluster-IP - E2E test",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -189,7 +189,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -290,9 +290,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -301,7 +301,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -403,9 +403,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "E2E invalidation",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -465,7 +465,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := gws[0].(*gwapiv1a2.Gateway)
+				gw, found := gws[0].(*gwapiv1b1.Gateway)
 				assert.True(t, found, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
@@ -493,9 +493,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "no EDS - E2E rendering for multiple gateway-classes",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -505,13 +505,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
-				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -524,22 +524,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gwapiv1a2.ObjectName("dummy-gateway-class")
-				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1b1.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy-service")
+					gwapiv1b1.ObjectName("dummy-service")
 				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -734,9 +734,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -745,13 +745,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
-				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -764,22 +764,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gwapiv1a2.ObjectName("dummy-gateway-class")
-				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1b1.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy-service")
+					gwapiv1b1.ObjectName("dummy-service")
 				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -987,9 +987,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "EDS with relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
@@ -997,13 +997,13 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
-				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
-				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -1016,22 +1016,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gwapiv1a2.ObjectName("dummy-gateway-class")
-				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1b1.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy-service")
+					gwapiv1b1.ObjectName("dummy-service")
 				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
 				// update owner ref so that we accept the public IP
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -1240,9 +1240,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name:  "StaticService - E2E test",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
 			prep: func(c *renderTestConfig) {
@@ -1256,11 +1256,11 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 
-				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
-				kind := gwapiv1a2.Kind("StaticService")
+				group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1b1.Kind("StaticService")
 				udp := testutils.TestUDPRoute.DeepCopy()
-				udp.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
+					BackendObjectReference: gwapiv1b1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
@@ -1365,7 +1365,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := gws[0].(*gwapiv1a2.Gateway)
+				gw, found := gws[0].(*gwapiv1b1.Gateway)
 				assert.True(t, found, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
@@ -1407,22 +1407,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
 				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName, "status parent ref section-name")
 
-				assert.Equal(t, gwapiv1a2.GatewayController("stunner.l7mp.io/gateway-operator"),
+				assert.Equal(t, gwapiv1b1.GatewayController("stunner.l7mp.io/gateway-operator"),
 					parentStatus.ControllerName, "status parent ref")
 
 				d := meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionAccepted), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionAccepted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
-					string(gwapiv1a2.RouteConditionResolvedRefs))
+					string(gwapiv1b1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs found")
-				assert.Equal(t, string(gwapiv1a2.RouteConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1b1.RouteConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
@@ -1433,22 +1433,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "reject uncontrolled route",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ControllerName = "dummy-controller"
-				dummyGc.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
-				c.cls = []gwapiv1a2.GatewayClass{testutils.TestGwClass, *dummyGc}
+				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
 				// the new gateway-config that renders into a different stunner configmap
 				dummyConf := testutils.TestGwConfig.DeepCopy()
@@ -1461,15 +1461,15 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGw := testutils.TestGw.DeepCopy()
 				dummyGw.SetName("dummy-gateway")
 				dummyGw.Spec.GatewayClassName =
-					gwapiv1a2.ObjectName("dummy-gateway-class")
-				c.gws = []gwapiv1a2.Gateway{*dummyGw, testutils.TestGw}
+					gwapiv1b1.ObjectName("dummy-gateway-class")
+				c.gws = []gwapiv1b1.Gateway{*dummyGw, testutils.TestGw}
 
 				// a route for dummy-gateway
 				dummyUdp := testutils.TestUDPRoute.DeepCopy()
 				dummyUdp.SetName("dummy-route")
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-					gwapiv1a2.ObjectName("dummy-service")
+					gwapiv1b1.ObjectName("dummy-service")
 				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -1510,16 +1510,16 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		},
 		{
 			name: "Address hint set in Gw.spec.addresses",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: gwapiv1b1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -1527,14 +1527,14 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				c.svcs = []corev1.Service{*s}
 
 				gw := testutils.TestGw.DeepCopy()
-				at := gwapiv1a2.IPAddressType
-				gw.Spec.Addresses = []gwapiv1a2.GatewayAddress{
+				at := gwapiv1b1.IPAddressType
+				gw.Spec.Addresses = []gwapiv1b1.GatewayAddress{
 					{
 						Type:  &at,
 						Value: "1.1.1.1",
 					},
 				}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 

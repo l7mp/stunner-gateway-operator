@@ -14,7 +14,7 @@ import (
 
 	// "k8s.io/apimachinery/pkg/types"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
@@ -28,9 +28,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "default deployment render",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -48,7 +48,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
-				c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 				deploy, err := r.createDeployment(c)
 				assert.NoError(t, err, "create deployment")
@@ -138,9 +138,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		},
 		// {
 		// 	name: "config-watcher deployment render",
-		// 	cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+		// 	cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 		// 	cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-		// 	gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+		// 	gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 		// 	dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
 		// 	prep: func(c *renderTestConfig) {
 		// 		d := testutils.TestDataplane.DeepCopy()
@@ -162,7 +162,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		// 		gws := r.getGateways4Class(c)
 		// 		assert.Len(t, gws, 1, "gateways for class")
 		// 		gw := gws[0]
-		// 		c.gws.ResetGateways([]*gwapiv1a2.Gateway{gw})
+		// 		c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
 
 		// 		deploy, err := r.createDeployment(c)
 		// 		assert.NoError(t, err, "create deployment")

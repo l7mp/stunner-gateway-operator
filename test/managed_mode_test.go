@@ -205,7 +205,7 @@ func testManagedMode() {
 		})
 
 		It("should set the GatewayClass status", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -223,7 +223,7 @@ func testManagedMode() {
 
 		It("should set the Gateway status", func() {
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -424,8 +424,8 @@ func testManagedMode() {
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
 			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
 			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
@@ -433,22 +433,22 @@ func testManagedMode() {
 			// Expect(ps.ParentRef.Group).To(BeNil())
 			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -496,19 +496,19 @@ func testManagedMode() {
 			createOrUpdateSecret(&testutils.TestSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1a2.Gateway) {
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1b1.Gateway) {
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
 
-				current.Spec.Listeners[1].Name = gwapiv1a2.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1a2.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
 				current.Spec.Listeners[1].TLS = &tls
 			})
 
@@ -783,15 +783,15 @@ func testManagedMode() {
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				group := gwapiv1a2.Group(stnrv1a1.GroupVersion.Group)
-				kind := gwapiv1a2.Kind("StaticService")
-				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{{
+				group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+				kind := gwapiv1b1.Kind("StaticService")
+				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
+					ParentRefs: []gwapiv1b1.ParentReference{{
 						Name: "gateway-1",
 					}},
 				}
-				current.Spec.Rules[0].BackendRefs = []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+				current.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
+					BackendObjectReference: gwapiv1b1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
@@ -878,7 +878,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status correctly", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -894,7 +894,7 @@ func testManagedMode() {
 				Equal(string(gwapiv1b1.GatewayClassReasonAccepted)))
 
 			// wait until gateway is programmed
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
 				if err != nil {
@@ -997,25 +997,25 @@ func testManagedMode() {
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 	})
@@ -1030,16 +1030,16 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			ctrl.Log.Info("loading Gateway 2")
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, gw2, func() error {
 				testGw.Spec.DeepCopyInto(&gw2.Spec)
-				gw2.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-2-listener-udp"),
-					Port:     gwapiv1a2.PortNumber(10),
-					Protocol: gwapiv1a2.ProtocolType("UDP"),
+				gw2.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-2-listener-udp"),
+					Port:     gwapiv1b1.PortNumber(10),
+					Protocol: gwapiv1b1.ProtocolType("UDP"),
 				}}
 				return nil
 			})
@@ -1049,8 +1049,8 @@ func testManagedMode() {
 			ctrl.Log.Info("updating UDPRoute")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
-				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{{
+				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
+					ParentRefs: []gwapiv1b1.ParentReference{{
 						Name:        "gateway-1",
 						SectionName: &testutils.TestSectionName,
 					}, {
@@ -1138,7 +1138,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			// retry, but also try to unpack inside Eventually
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1197,7 +1197,7 @@ func testManagedMode() {
 		})
 
 		It("should set the GatewayClass status", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -1214,7 +1214,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of Gateway 1", func() {
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(testGw), gw)
 				if err != nil {
@@ -1311,7 +1311,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of Gateway 2", func() {
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1390,54 +1390,54 @@ func testManagedMode() {
 			Expect(ro.Status.Parents).To(HaveLen(2))
 
 			ps := ro.Status.Parents[0]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-1") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-1") {
 				ps = ro.Status.Parents[1]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			ps = ro.Status.Parents[1]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-2") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-2") {
 				ps = ro.Status.Parents[0]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-2")))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-2")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -1523,7 +1523,7 @@ func testManagedMode() {
 		})
 
 		It("should create a Deployment for Gateway 2", func() {
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1610,7 +1610,7 @@ func testManagedMode() {
 
 		It("should survive deleting Gateway 2", func() {
 			ctrl.Log.Info("deleting Gateway 2")
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1625,7 +1625,7 @@ func testManagedMode() {
 				}
 
 				ps := ro.Status.Parents[0]
-				if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-2") {
+				if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-2") {
 					ps = ro.Status.Parents[1]
 				}
 
@@ -1635,7 +1635,7 @@ func testManagedMode() {
 				// fmt.Println("++++++++++++++++++++++")
 
 				s := meta.FindStatusCondition(ps.Conditions,
-					string(gwapiv1a2.RouteConditionAccepted))
+					string(gwapiv1b1.RouteConditionAccepted))
 				if s != nil && s.Status == metav1.ConditionFalse {
 					return true
 				}
@@ -1649,54 +1649,54 @@ func testManagedMode() {
 			Expect(ro.Status.Parents).To(HaveLen(2))
 
 			ps := ro.Status.Parents[0]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-1") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-1") {
 				ps = ro.Status.Parents[1]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			ps = ro.Status.Parents[1]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-2") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-2") {
 				ps = ro.Status.Parents[0]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-2")))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-2")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -1712,14 +1712,14 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			ctrl.Log.Info("loading GatewayClass 2")
-			gc2 := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+			gc2 := &gwapiv1b1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 				Name: "gateway-class-2",
 			}}
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, gc2, func() error {
 				testGwClass.Spec.DeepCopyInto(&gc2.Spec)
-				gc2.Spec.ParametersRef = &gwapiv1a2.ParametersReference{
-					Group:     gwapiv1a2.Group(stnrv1a1.GroupVersion.Group),
-					Kind:      gwapiv1a2.Kind("GatewayConfig"),
+				gc2.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "gateway-config-2",
 					Namespace: &testutils.TestNsName,
 				}
@@ -1760,17 +1760,17 @@ func testManagedMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("loading Gateway 2")
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
 			_, err = ctrlutil.CreateOrUpdate(ctx, k8sClient, gw2, func() error {
 				testGw.Spec.DeepCopyInto(&gw2.Spec)
-				gw2.Spec.GatewayClassName = gwapiv1a2.ObjectName("gateway-class-2")
-				gw2.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-2-listener-udp"),
-					Port:     gwapiv1a2.PortNumber(10),
-					Protocol: gwapiv1a2.ProtocolType("UDP"),
+				gw2.Spec.GatewayClassName = gwapiv1b1.ObjectName("gateway-class-2")
+				gw2.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-2-listener-udp"),
+					Port:     gwapiv1b1.PortNumber(10),
+					Protocol: gwapiv1b1.ProtocolType("UDP"),
 				}}
 				return nil
 			})
@@ -1780,8 +1780,8 @@ func testManagedMode() {
 			ctrl.Log.Info("updating UDPRoute")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
-				current.Spec.CommonRouteSpec = gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{{
+				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
+					ParentRefs: []gwapiv1b1.ParentReference{{
 						Name:        "gateway-1",
 						SectionName: &testutils.TestSectionName,
 					}, {
@@ -1869,7 +1869,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			// retry, but also try to unpack inside Eventually
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1928,7 +1928,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of GatewayClass 1", func() {
-			gc := &gwapiv1a2.GatewayClass{}
+			gc := &gwapiv1b1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
 				gc)).Should(Succeed())
 
@@ -1945,7 +1945,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of GatewayClass 2", func() {
-			gc := &gwapiv1a2.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+			gc := &gwapiv1b1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 				Name: "gateway-class-2",
 			}}
 			// wait until status gets updated
@@ -1976,7 +1976,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of Gateway 1", func() {
-			gw := &gwapiv1a2.Gateway{}
+			gw := &gwapiv1b1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(testGw), gw)
 				if err != nil {
@@ -2073,7 +2073,7 @@ func testManagedMode() {
 		})
 
 		It("should set the status of Gateway 2", func() {
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -2151,54 +2151,54 @@ func testManagedMode() {
 			Expect(ro.Status.Parents).To(HaveLen(2))
 
 			ps := ro.Status.Parents[0]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-1") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-1") {
 				ps = ro.Status.Parents[1]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s := meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			ps = ro.Status.Parents[1]
-			if ps.ParentRef.Name != gwapiv1a2.ObjectName("gateway-2") {
+			if ps.ParentRef.Name != gwapiv1b1.ObjectName("gateway-2") {
 				ps = ro.Status.Parents[0]
 			}
 
-			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1a2.Group("gateway.networking.k8s.io"))))
-			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1a2.Kind("Gateway"))))
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1b1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1b1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
-			Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-2")))
-			Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController(config.ControllerName)))
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1b1.ObjectName("gateway-2")))
+			Expect(ps.ControllerName).To(Equal(gwapiv1b1.GatewayController(config.ControllerName)))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionAccepted))
+				string(gwapiv1b1.RouteConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionAccepted)))
+				Equal(string(gwapiv1b1.RouteConditionAccepted)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			s = meta.FindStatusCondition(ps.Conditions,
-				string(gwapiv1a2.RouteConditionResolvedRefs))
+				string(gwapiv1b1.RouteConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
-				Equal(string(gwapiv1a2.RouteConditionResolvedRefs)))
+				Equal(string(gwapiv1b1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
@@ -2284,7 +2284,7 @@ func testManagedMode() {
 		})
 
 		It("should create a Deployment for Gateway 2", func() {
-			gw2 := &gwapiv1a2.Gateway{ObjectMeta: metav1.ObjectMeta{
+			gw2 := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
 				Namespace: string(testutils.TestNsName),
 			}}

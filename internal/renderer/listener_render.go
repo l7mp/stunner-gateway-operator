@@ -15,11 +15,11 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func stnrListenerName(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) string {
+func stnrListenerName(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1a2.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1a1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1a1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -75,7 +75,7 @@ func (r *Renderer) renderListener(gw *gwapiv1a2.Gateway, gwConf *stnrv1a1.Gatewa
 	return &lc, nil
 }
 
-func (r *Renderer) getTLS(gw *gwapiv1a2.Gateway, l *gwapiv1a2.Listener) (string, string, bool) {
+func (r *Renderer) getTLS(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (string, string, bool) {
 	proto, err := r.getProtocol(l.Protocol)
 	if err != nil {
 		return "", "", false

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -22,7 +22,7 @@ import (
 )
 
 type gatewayAddress struct {
-	aType gwapiv1a2.AddressType
+	aType gwapiv1b1.AddressType
 	addr  string
 	port  int
 }
@@ -43,7 +43,7 @@ var annotationRegexPort *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kub
 // - nodeport svc created by us (owned by the gateway)
 // - load-balancer svc created manually by a user but annotated for the gateway
 // - nodeport svc created manually by a user but annotated for the gateway
-func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*gatewayAddress, error) {
+func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1b1.Gateway) (*gatewayAddress, error) {
 	r.log.V(4).Info("getPublicAddrs4Gateway", "gateway", store.GetObjectKey(gw))
 	aps := []gatewayAddress{}
 
@@ -51,7 +51,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*gatewayAdd
 	// fallback for the public address
 	var addrHint gatewayAddress
 	if len(gw.Spec.Addresses) > 0 && (gw.Spec.Addresses[0].Type == nil ||
-		*gw.Spec.Addresses[0].Type == gwapiv1a2.IPAddressType || *gw.Spec.Addresses[0].Type == gwapiv1a2.HostnameAddressType) &&
+		*gw.Spec.Addresses[0].Type == gwapiv1b1.IPAddressType || *gw.Spec.Addresses[0].Type == gwapiv1b1.HostnameAddressType) &&
 		gw.Spec.Addresses[0].Value != "" {
 		addrHint = gatewayAddress{
 			aType: *gw.Spec.Addresses[0].Type,
@@ -110,7 +110,7 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1a2.Gateway) (*gatewayAdd
 }
 
 // we need the namespaced name!
-func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2.Gateway) bool {
+func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1b1.Gateway) bool {
 	// r.log.V(4).Info("isServiceAnnotated4Gateway", "service", store.GetObjectKey(svc),
 	// 	"gateway", store.GetObjectKey(gw), "annotations", fmt.Sprintf("%#v",
 	// 		svc.GetAnnotations()))
@@ -128,7 +128,7 @@ func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1a2
 }
 
 // for the semantics, see https://github.com/l7mp/stunner-gateway-operator/issues/3
-func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gateway, addrHint gatewayAddress) (*gatewayAddress, bool) {
+func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1b1.Gateway, addrHint gatewayAddress) (*gatewayAddress, bool) {
 	var ap *gatewayAddress
 
 	i, found := r.getServicePort(gw, svc)
@@ -169,7 +169,7 @@ func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gate
 		addr := getFirstNodeAddr()
 		if svcPort.NodePort > 0 && addr != "" {
 			ap = &gatewayAddress{
-				aType: gwapiv1a2.IPAddressType,
+				aType: gwapiv1b1.IPAddressType,
 				addr:  addr,
 				port:  int(svcPort.NodePort),
 			}
@@ -183,7 +183,7 @@ func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1a2.Gate
 	return nil, false
 }
 
-func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gateway) *corev1.Service {
+func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gateway) *corev1.Service {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
 		return nil
@@ -300,7 +300,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gatew
 	if len(gw.Spec.Addresses) > 0 {
 		if gw.Spec.Addresses[0].Type == nil ||
 			(gw.Spec.Addresses[0].Type != nil &&
-				*gw.Spec.Addresses[0].Type == gwapiv1a2.IPAddressType) {
+				*gw.Spec.Addresses[0].Type == gwapiv1b1.IPAddressType) {
 			// only the first address can be used because
 			// stunner is limited to use a single public address
 			// https://github.com/l7mp/stunner-gateway-operator/issues/32#issuecomment-1648035135
@@ -326,7 +326,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1a2.Gatew
 }
 
 // first matching listener-proto-port and service-proto-port pair
-func (r *Renderer) getServicePort(gw *gwapiv1a2.Gateway, svc *corev1.Service) (int, bool) {
+func (r *Renderer) getServicePort(gw *gwapiv1b1.Gateway, svc *corev1.Service) (int, bool) {
 	for _, l := range gw.Spec.Listeners {
 		serviceProto, err := r.getServiceProtocol(l.Protocol)
 		if err != nil {
@@ -385,13 +385,13 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 			s.Ports[spIndex].Port == port && s.Ports[spIndex].Protocol == proto {
 
 			ap := gatewayAddress{
-				aType: gwapiv1a2.IPAddressType,
+				aType: gwapiv1b1.IPAddressType,
 				addr:  s.IP,
 				port:  int(s.Ports[spIndex].Port),
 			}
 			// fallback to Hostname (typically for AWS)
 			if s.IP == "" {
-				ap.aType = gwapiv1a2.HostnameAddressType
+				ap.aType = gwapiv1b1.HostnameAddressType
 				ap.addr = s.Hostname
 			}
 
@@ -404,13 +404,13 @@ func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatu
 	// as a port
 	if len(st.Ingress) > 0 {
 		ap := gatewayAddress{
-			aType: gwapiv1a2.IPAddressType,
+			aType: gwapiv1b1.IPAddressType,
 			addr:  st.Ingress[0].IP,
 			port:  int(port),
 		}
 		// fallback to Hostname (typically for AWS)
 		if ap.addr == "" {
-			ap.aType = gwapiv1a2.HostnameAddressType
+			ap.aType = gwapiv1b1.HostnameAddressType
 			ap.addr = st.Ingress[0].Hostname
 		}
 		return &ap

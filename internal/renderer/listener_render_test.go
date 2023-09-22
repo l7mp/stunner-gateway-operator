@@ -26,9 +26,9 @@ func TestRenderListenerRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "udp listener ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -66,9 +66,9 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name: "unknown proto listener errs",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -96,9 +96,9 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name: "tcp listener ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -133,9 +133,9 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name: "listener defaults ok",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -180,15 +180,15 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name: "wrong proto errs",
-			cls:  []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.Listeners[0].Protocol = gwapiv1a2.ProtocolType("dummy")
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				gw.Spec.Listeners[0].Protocol = gwapiv1b1.ProtocolType("dummy")
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -218,39 +218,39 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-udp"),
-					Port:     gwapiv1a2.PortNumber(1),
-					Protocol: gwapiv1a2.ProtocolType("TURN-UDP"),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1b1.PortNumber(1),
+					Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 				}, {
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(2),
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(2),
 					TLS:      &tls,
 				}, {
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-dtls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-DTLS"),
-					Port:     gwapiv1a2.PortNumber(3),
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-dtls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-DTLS"),
+					Port:     gwapiv1b1.PortNumber(3),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -304,30 +304,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - wrong secret type ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Type = corev1.SecretTypeOpaque
@@ -363,28 +363,28 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - secret namespace optional",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				tls := gwapiv1a2.GatewayTLSConfig{
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
-						Name: gwapiv1a2.ObjectName("testsecret-ok"),
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
+						Name: gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -416,30 +416,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - no secret errs",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("dummy-secret"),
+						Name:      gwapiv1b1.ObjectName("dummy-secret"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -471,30 +471,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - passthrough TLS is not supported",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModePassthrough
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -526,30 +526,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - no secret type ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Type = corev1.SecretType("")
@@ -585,30 +585,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - opaque secret type ok",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Type = corev1.SecretTypeOpaque
@@ -644,30 +644,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - missing cert",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Data = map[string][]byte{"tls.crt": []byte("testcert")}
@@ -703,30 +703,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - missing cert",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Data = map[string][]byte{"tls.key": []byte("testkey")}
@@ -762,30 +762,30 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - alternative cert/key data keys",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				ns := gwapiv1a2.Namespace("testnamespace")
-				tls := gwapiv1a2.GatewayTLSConfig{
+				ns := gwapiv1b1.Namespace("testnamespace")
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 						Namespace: &ns,
-						Name:      gwapiv1a2.ObjectName("testsecret-ok"),
+						Name:      gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Data = map[string][]byte{
@@ -824,32 +824,32 @@ func TestRenderListenerRender(t *testing.T) {
 		},
 		{
 			name:  "TLS/DTLS listener - multiple certificate-refs",
-			cls:   []gwapiv1a2.GatewayClass{testutils.TestGwClass},
+			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1a2.Gateway{testutils.TestGw},
+			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1b1.TLSModeTerminate
-				tls := gwapiv1a2.GatewayTLSConfig{
+				tls := gwapiv1b1.GatewayTLSConfig{
 					Mode: &mode,
-					CertificateRefs: []gwapiv1a2.SecretObjectReference{{
-						Name: gwapiv1a2.ObjectName("dummy-secret"),
+					CertificateRefs: []gwapiv1b1.SecretObjectReference{{
+						Name: gwapiv1b1.ObjectName("dummy-secret"),
 					}, {
-						Name: gwapiv1a2.ObjectName("no-key-secret"),
+						Name: gwapiv1b1.ObjectName("no-key-secret"),
 					}, {
-						Name: gwapiv1a2.ObjectName("testsecret-ok"),
+						Name: gwapiv1b1.ObjectName("testsecret-ok"),
 					}},
 				}
-				gw.Spec.Listeners = []gwapiv1a2.Listener{{
-					Name:     gwapiv1a2.SectionName("gateway-1-listener-tls"),
-					Protocol: gwapiv1a2.ProtocolType("TURN-TLS"),
-					Port:     gwapiv1a2.PortNumber(1),
+				gw.Spec.Listeners = []gwapiv1b1.Listener{{
+					Name:     gwapiv1b1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1b1.PortNumber(1),
 					TLS:      &tls,
 				}}
-				c.gws = []gwapiv1a2.Gateway{*gw}
+				c.gws = []gwapiv1b1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
 				s.SetName("no-key-secret")

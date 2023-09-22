@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	// gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -29,6 +30,7 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	_ = gwapiv1a2.AddToScheme(scheme)
+	_ = gwapiv1b1.AddToScheme(scheme)
 	_ = stnrv1a1.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }

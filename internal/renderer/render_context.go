@@ -3,7 +3,7 @@ package renderer
 import (
 	"github.com/go-logr/logr"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
@@ -16,13 +16,13 @@ import (
 type RenderContext struct {
 	origin event.Event
 	update *event.EventUpdate
-	gc     *gwapiv1a2.GatewayClass
+	gc     *gwapiv1b1.GatewayClass
 	gwConf *stnrv1a1.GatewayConfig
 	gws    *store.GatewayStore
 	log    logr.Logger
 }
 
-func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1a2.GatewayClass) *RenderContext {
+func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1b1.GatewayClass) *RenderContext {
 	return &RenderContext{
 		origin: e,
 		update: event.NewEventUpdate(r.gen),
