@@ -133,7 +133,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 // Reconcile handles updates to a Gateway managed by this controller or a Secret referenced by one
 // of the Gateways managed by this controller.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("object", req.String())
+	log := r.log.WithValues("resource", req.String())
 	log.Info("reconciling")
 
 	gatewayClassList := []client.Object{}

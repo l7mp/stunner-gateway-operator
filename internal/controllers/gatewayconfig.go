@@ -91,7 +91,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 }
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("gateway-config", req.String())
+	log := r.log.WithValues("resource", req.String())
 	log.Info("reconciling")
 
 	configList := []client.Object{}

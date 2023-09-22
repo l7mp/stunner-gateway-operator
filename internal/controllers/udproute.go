@@ -133,7 +133,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 // Reconcile handles an update to a UDPRoute or a Service/Endpoints referenced by an UDPRoute.
 func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("object", req.String())
+	log := r.log.WithValues("resource", req.String())
 	log.Info("reconciling")
 
 	routeList := []client.Object{}
