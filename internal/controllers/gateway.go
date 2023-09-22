@@ -183,7 +183,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 			for _, listener := range gw.Spec.Listeners {
 				if listener.TLS == nil ||
 					(listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
-					(string(listener.Protocol) != "TLS" && string(listener.Protocol) != "DTLS") {
+					(string(listener.Protocol) != "TLS" && string(listener.Protocol) != "DTLS" &&
+						string(listener.Protocol) != "TURN-TLS" && string(listener.Protocol) != "TURN-DTLS") {
 					continue
 				}
 				for _, ref := range listener.TLS.CertificateRefs {
@@ -195,8 +196,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 					// obtain ref'd secret
 					secret := corev1.Secret{}
 
-					// if no explicit Service namespace is provided, use the UDPRoute
-					// namespace to lookup the provided Service
+					// if no explicit Service namespace is provided, use the
+					// Gateway namespace to lookup the provided Service
 					secretNamespace := gw.Namespace
 					if ref.Namespace != nil {
 						secretNamespace = string(*ref.Namespace)
@@ -392,13 +393,11 @@ func secretGatewayIndexFunc(o client.Object) []string {
 	var secretReferences []string
 
 	for _, listener := range gateway.Spec.Listeners {
-		if listener.TLS == nil || (listener.TLS.Mode != nil &&
-			*listener.TLS.Mode != gwapiv1b1.TLSModeTerminate) {
+		if listener.TLS == nil || (listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate) {
 			continue
 		}
 		for _, cert := range listener.TLS.CertificateRefs {
-			if cert.Kind == nil ||
-				(cert.Kind != nil && string(*cert.Kind) == "Secret") {
+			if cert.Kind == nil || string(*cert.Kind) == "Secret" {
 
 				// if no explicit Secret namespace is provided, use the Gateway
 				// namespace to lookup the provided Secret Name

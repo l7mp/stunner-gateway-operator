@@ -914,7 +914,7 @@ func testLegacyMode() {
 				}
 
 				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("TURN-DTLS")
 				current.Spec.Listeners[1].TLS = &tls
 			})
 
@@ -1102,10 +1102,10 @@ func testLegacyMode() {
 				current.Spec.Listeners[0].TLS = nil
 
 				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("TURN-DTLS")
 				current.Spec.Listeners[1].TLS = &tls
 				current.Spec.Listeners[2].Name = gwapiv1b1.SectionName("gateway-1-listener-tls")
-				current.Spec.Listeners[2].Protocol = gwapiv1b1.ProtocolType("TLS")
+				current.Spec.Listeners[2].Protocol = gwapiv1b1.ProtocolType("TURN-TLS")
 				current.Spec.Listeners[2].TLS = &tls
 			})
 

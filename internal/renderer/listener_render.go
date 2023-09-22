@@ -159,7 +159,7 @@ func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1a1.Liste
 		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "UDP",
 			"valid-protocol", "TURN-UDP")
 	case "TCP":
-		protocol = "TURN-TCP" // v0.16: resolves to TURN-TCp
+		protocol = "TURN-TCP" // v0.16: resolves to TURN-TCP
 		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "TCP",
 			"valid-protocol", "TURN-TCP")
 	case "TLS":

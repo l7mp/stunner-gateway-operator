@@ -438,35 +438,35 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				gw.Spec.Listeners = []gwapiv1b1.Listener{{
 					Name:     gwapiv1b1.SectionName("udp"),
 					Port:     gwapiv1b1.PortNumber(1),
-					Protocol: gwapiv1b1.ProtocolType("UDP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("udp-ok"),
 					Port:     gwapiv1b1.PortNumber(2),
-					Protocol: gwapiv1b1.ProtocolType("UDP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("udp-conflicted"),
 					Port:     gwapiv1b1.PortNumber(1),
-					Protocol: gwapiv1b1.ProtocolType("UDP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("dtls-conflicted"),
 					Port:     gwapiv1b1.PortNumber(1),
-					Protocol: gwapiv1b1.ProtocolType("DTLS"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-DTLS"),
 				}, {
 					Name:     gwapiv1b1.SectionName("tcp"),
 					Port:     gwapiv1b1.PortNumber(11),
-					Protocol: gwapiv1b1.ProtocolType("TCP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("tcp-ok"),
 					Port:     gwapiv1b1.PortNumber(12),
-					Protocol: gwapiv1b1.ProtocolType("TCP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("tcp-conflicted"),
 					Port:     gwapiv1b1.PortNumber(11),
-					Protocol: gwapiv1b1.ProtocolType("TCP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
 				}, {
 					Name:     gwapiv1b1.SectionName("tls-conflicted"),
 					Port:     gwapiv1b1.PortNumber(11),
-					Protocol: gwapiv1b1.ProtocolType("TLS"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-TLS"),
 				}}
 				c.gws = []gwapiv1b1.Gateway{*gw}
 

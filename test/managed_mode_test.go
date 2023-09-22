@@ -508,7 +508,7 @@ func testManagedMode() {
 				}
 
 				current.Spec.Listeners[1].Name = gwapiv1b1.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("DTLS")
+				current.Spec.Listeners[1].Protocol = gwapiv1b1.ProtocolType("TURN-DTLS")
 				current.Spec.Listeners[1].TLS = &tls
 			})
 
@@ -1039,7 +1039,7 @@ func testManagedMode() {
 				gw2.Spec.Listeners = []gwapiv1b1.Listener{{
 					Name:     gwapiv1b1.SectionName("gateway-2-listener-udp"),
 					Port:     gwapiv1b1.PortNumber(10),
-					Protocol: gwapiv1b1.ProtocolType("UDP"),
+					Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
 				}}
 				return nil
 			})

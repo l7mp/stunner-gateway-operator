@@ -49,11 +49,11 @@ func pruneGatewayStatusConds(gw *gwapiv1b1.Gateway) *gwapiv1b1.Gateway {
 
 func isListenerConflicted(l *gwapiv1b1.Listener, udpPorts portMap, tcpPorts portMap) bool {
 	switch l.Protocol {
-	case "UDP", "DTLS":
+	case "UDP", "DTLS", "TURN-UDP", "TURN-DTLS":
 		_, ok := udpPorts[int(l.Port)]
 		udpPorts[int(l.Port)] = true
 		return ok
-	case "TCP", "TLS":
+	case "TCP", "TLS", "TURN-TCP", "TURN-TLS":
 		_, ok := tcpPorts[int(l.Port)]
 		tcpPorts[int(l.Port)] = true
 		return ok
