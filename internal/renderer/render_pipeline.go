@@ -349,6 +349,10 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			return err
 		}
 		c.update.UpsertQueue.Deployments.Upsert(dp)
+
+		log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
+			"deployment", store.DumpObject(dp))
+
 	}
 
 	return nil
