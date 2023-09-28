@@ -34,7 +34,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 
 	// the rest of the errors are not critical, but we still need to keep track of each in
 	// order to set the ResolvedRefs Route status: last error is reported only
-	var backendErr error
+	var routeError error
 
 	ctype, prevCType := stnrconfv1a1.ClusterTypeStatic, stnrconfv1a1.ClusterTypeUnknown
 	for _, b := range rs[0].BackendRefs {
@@ -42,18 +42,18 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 
 		if b.Group != nil && string(*b.Group) != corev1.GroupName &&
 			string(*b.Group) != stnrv1a1.GroupVersion.Group {
-			backendErr = NewNonCriticalError(InvalidBackendGroup)
+			routeError = NewNonCriticalError(InvalidBackendGroup)
 			r.log.V(2).Info("renderCluster: invalid backend Group", "route",
 				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "group",
-				*b.Group, "error", backendErr.Error())
+				*b.Group, "error", routeError.Error())
 			continue
 		}
 
 		if b.Kind != nil && string(*b.Kind) != "Service" && string(*b.Kind) != "StaticService" {
-			backendErr = NewNonCriticalError(InvalidBackendKind)
+			routeError = NewNonCriticalError(InvalidBackendKind)
 			r.log.V(2).Info("renderCluster: invalid backend Kind", "route",
 				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "kind", *b.Kind,
-				"error", backendErr)
+				"error", routeError)
 			continue
 		}
 
@@ -66,65 +66,75 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 		ep := []string{}
 		switch ref := &b; {
 		case store.IsReferenceService(ref):
-			var err error
+			var errEDS error
 
-			// get endpoints if EDS is enabled
+			// get endpoints (checks EDS inline)
 			if config.EnableEndpointDiscovery {
-				epEDS, ctypeEDS, errEDS := getEndpointsForService(ref, ns)
-				if errEDS != nil {
-					backendErr = errEDS
-					r.log.V(2).Info("renderCluster: error rendering Endpoints for Service backend",
+				epEDS, ctypeEDS, err := getEndpointsForService(ref, ns)
+				if err != nil {
+					r.log.V(1).Info("renderCluster: error rendering Endpoints for Service backend",
 						"route", store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
-						"error", backendErr)
+						"error", err)
+					errEDS = err
+					routeError = err
+				} else {
+					ep = append(ep, epEDS...)
+					ctype = ctypeEDS
 				}
-				eps = append(eps, epEDS...)
-				ctype = ctypeEDS
-				err = errEDS
 			}
 
 			// the clusterIP or STRICT_DNS cluster if EDS is disabled
 			epCluster, ctypeCluster, errCluster := getClusterRouteForService(ref, ns)
 			if errCluster != nil {
-				backendErr = errCluster
-				r.log.V(2).Info("renderCluster: error rendering route for Service backend",
+				r.log.V(1).Info("renderCluster: error rendering service-route (ClusterIP/DNS route) for Service backend",
 					"route", store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
-					"error", backendErr)
+					"error", errCluster)
+				routeError = errCluster
+			} else {
+				ep = append(ep, epCluster...)
+				ctype = ctypeCluster
 			}
 
-			if errCluster != nil && err != nil {
+			if errCluster != nil && errEDS != nil {
 				// both attempts failed: skip backend
+				r.log.V(1).Info("renderCluster: skipping Service backend", "route",
+					store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
+					"reason", routeError)
+				routeError = NewNonCriticalError(BackendNotFound)
 				continue
 			}
-
-			eps = append(eps, epCluster...)
-			ctype = ctypeCluster
 
 		case store.IsReferenceStaticService(ref):
 			var err error
 			ep, ctype, err = getEndpointsForStaticService(ref, ns)
 			if err != nil {
-				backendErr = err
-				r.log.V(2).Info("renderCluster: error rendering endpoints for StaticService backend",
+				routeError = err
+				r.log.Info("renderCluster: error rendering endpoints for StaticService backend",
 					"route", store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
-					"error", backendErr)
+					"error", routeError)
 				continue
 			}
 		default:
 			// error could also be InvalidBackendGroup: both are reported with the same
 			// reason in the route status
-			backendErr = NewNonCriticalError(InvalidBackendKind)
+			routeError = NewNonCriticalError(InvalidBackendKind)
 			r.log.Info("renderCluster: invalid backend Kind and/or Group", "route", store.GetObjectKey(ro),
-				"backendRef", dumpBackendRef(&b), "error", backendErr)
+				"backendRef", dumpBackendRef(&b), "error", routeError)
+			continue
+		}
+
+		if IsNonCriticalError(routeError, BackendNotFound) {
+			r.log.Info("renderCluster: skipping backend", "route", store.GetObjectKey(ro),
+				"backendRef", dumpBackendRef(&b))
 			continue
 		}
 
 		if prevCType != stnrconfv1a1.ClusterTypeUnknown && prevCType != ctype {
-			backendErr = NewNonCriticalError(InconsitentClusterType)
+			routeError = NewNonCriticalError(InconsitentClusterType)
 			r.log.Info("renderCluster: inconsistent cluster type", "route",
 				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b),
 				"prevous-ctype", fmt.Sprintf("%#v", prevCType))
 			continue
-
 		}
 
 		r.log.V(2).Info("renderCluster: adding Endpoints for backend", "route",
@@ -151,13 +161,13 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 	}
 
 	backendStatus := "None"
-	if backendErr != nil {
-		backendStatus = backendErr.Error()
+	if routeError != nil {
+		backendStatus = routeError.Error()
 	}
 	r.log.V(2).Info("renderCluster ready", "route", store.GetObjectKey(ro), "result",
 		fmt.Sprintf("%#v", cluster), "backend-error", backendStatus)
 
-	return &cluster, backendErr
+	return &cluster, routeError
 }
 
 func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1a1.ClusterType, error) {

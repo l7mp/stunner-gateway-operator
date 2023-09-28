@@ -760,6 +760,88 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			},
 		},
+		{
+			name: "eds - multiple backends - missing backends skipped",
+			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			prep: func(c *renderTestConfig) {
+				udp := testutils.TestUDPRoute.DeepCopy()
+				ns := gwapiv1b1.Namespace("dummy-ns")
+				udp.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{
+					{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							// missing svc
+							Name: "dummy",
+						},
+					},
+					{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							// no clusterip, has endpoints
+							Namespace: &ns,
+							Name:      "testservice-ok-1",
+						},
+					},
+					{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							// has clusterip, no endpoints
+							Namespace: &ns,
+							Name:      "testservice-ok-2",
+						},
+					},
+				}
+				c.rs = []gwapiv1a2.UDPRoute{*udp}
+
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetName("testservice-ok-1")
+				s1.SetNamespace("dummy-ns")
+				// no clusterIP but has endpoints
+
+				s2 := testutils.TestSvc.DeepCopy()
+				s2.SetName("testservice-ok-2")
+				s2.SetNamespace("dummy-ns")
+				// add a clusterIP but no endpoints
+				s2.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s1, *s2}
+
+				e := testutils.TestEndpoint.DeepCopy()
+				e.SetNamespace("dummy-ns")
+				e.SetName("testservice-ok-1")
+				c.eps = []corev1.Endpoints{*e}
+
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				rs := store.UDPRoutes.GetAll()
+				assert.Len(t, rs, 1, "route len")
+
+				// switch EDS off
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				rc, err := r.renderCluster(rs[0])
+				// no endpoint for dummy svc: handle non-critical error!
+				assert.NotNil(t, err, "error")
+				assert.True(t, IsNonCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
+
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				// plus the clusterIP
+				assert.Contains(t, rc.Endpoints, "1.1.1.1", "endpoint cluster-ip-1")
+
+				// restore
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			},
+		},
 		// StaticService
 		{
 			name:  "StaticService ok",

@@ -130,5 +130,5 @@ func IsNonCritical(e error) bool {
 // IsNonCriticalError returns true of an error is a critical error of the given type.
 func IsNonCriticalError(e error, reason ErrorType) bool {
 	err, ok := e.(*NonCriticalError)
-	return ok && err.reason == reason
+	return err != nil && ok && err.reason == reason
 }

@@ -28,7 +28,6 @@ import (
 
 // var testerLogLevel = zapcore.Level(-10)
 // var testerLogLevel = zapcore.DebugLevel
-
 var testerLogLevel = zapcore.ErrorLevel
 
 var (
