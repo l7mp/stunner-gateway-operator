@@ -191,27 +191,26 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
 	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
 	if svc == nil {
-	  svc = &corev1.Service{
-	  	ObjectMeta: metav1.ObjectMeta{
-	  		Namespace: gw.GetNamespace(),
-	  		Name:      gw.GetName(),
-	  		Labels: map[string]string{
-	  			opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
-	  			opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
-	  			opdefault.RelatedGatewayKey:       gw.GetName(),
-	  		},
-	  		Annotations: map[string]string{
-	  			opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
-	  		},
-	  	},
-	  	Spec: corev1.ServiceSpec{
-	  		Type:     opdefault.DefaultServiceType,
-	  		Selector: map[string]string{},
-	  		Ports:    []corev1.ServicePort{},
-	  	},
-	  }
+		svc = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: gw.GetNamespace(),
+				Name:      gw.GetName(),
+				Labels: map[string]string{
+					opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+					opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+					opdefault.RelatedGatewayKey:       gw.GetName(),
+				},
+				Annotations: map[string]string{
+					opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     opdefault.DefaultServiceType,
+				Selector: map[string]string{},
+				Ports:    []corev1.ServicePort{},
+			},
+		}
 	}
-
 
 	// set labels
 	switch config.DataplaneMode {
@@ -280,11 +279,24 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 				"service-protocol", serviceProto)
 			continue
 		}
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     string(l.Name),
-			Protocol: corev1.Protocol(serviceProto),
-			Port:     int32(l.Port),
-		})
+		servicePortExists := false
+		// search for existing port
+		for _, s := range svc.Spec.Ports {
+			if string(l.Name) == s.Name {
+				// found one, let's update it and move on
+				s.Protocol = corev1.Protocol(serviceProto)
+				s.Port = int32(l.Port)
+				servicePortExists = true
+				break
+			}
+		}
+		if !servicePortExists {
+			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+				Name:     string(l.Name),
+				Protocol: corev1.Protocol(serviceProto),
+				Port:     int32(l.Port),
+			})
+		}
 	}
 
 	healthCheckPort, err := setHealthCheck(as, svc)
@@ -451,12 +463,25 @@ func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, 
 		}
 	}
 
+	healthCheckName := "gateway-health-check"
 	if healthCheckPort > 0 && healthCheckProtocol != "" {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "gateway-health-check",
-			Protocol: corev1.Protocol(healthCheckProtocol),
-			Port:     int32(healthCheckPort),
-		})
+		servicePortExists := false
+		for _, s := range svc.Spec.Ports {
+			if string(s.Name) == healthCheckName {
+				// found one, let's update it and move on
+				s.Protocol = corev1.Protocol(healthCheckProtocol)
+				s.Port = int32(healthCheckPort)
+				servicePortExists = true
+				break
+			}
+		}
+		if !servicePortExists {
+			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+				Name:     healthCheckName,
+				Protocol: corev1.Protocol(healthCheckProtocol),
+				Port:     int32(healthCheckPort),
+			})
+		}
 		return int32(healthCheckPort), nil
 	}
 	return 0, nil
