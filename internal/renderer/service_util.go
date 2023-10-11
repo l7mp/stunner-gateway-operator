@@ -188,26 +188,30 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		// should never happen
 		return nil
 	}
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gw.GetNamespace(),
-			Name:      gw.GetName(),
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
-				opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
-				opdefault.RelatedGatewayKey:       gw.GetName(),
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     opdefault.DefaultServiceType,
-			Selector: map[string]string{},
-			Ports:    []corev1.ServicePort{},
-		},
+	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
+	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
+	if svc == nil {
+	  svc = &corev1.Service{
+	  	ObjectMeta: metav1.ObjectMeta{
+	  		Namespace: gw.GetNamespace(),
+	  		Name:      gw.GetName(),
+	  		Labels: map[string]string{
+	  			opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+	  			opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+	  			opdefault.RelatedGatewayKey:       gw.GetName(),
+	  		},
+	  		Annotations: map[string]string{
+	  			opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
+	  		},
+	  	},
+	  	Spec: corev1.ServiceSpec{
+	  		Type:     opdefault.DefaultServiceType,
+	  		Selector: map[string]string{},
+	  		Ports:    []corev1.ServicePort{},
+	  	},
+	  }
 	}
+
 
 	// set labels
 	switch config.DataplaneMode {
