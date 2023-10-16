@@ -21,9 +21,9 @@ const (
 	// DefaultDataplaneName is the name of the default Dataplane to use when no dataplane is specified explicitly.
 	DefaultDataplaneName = "default"
 
-	// DefaultDataplaneMode is the default dataplane" mode.
-	DefaultDataplaneMode = "legacy"
-	// DefaultDataplaneMode = "managed"
+	// DefaultDataplaneMode is the default dataplane mode.
+	DefaultDataplaneMode = "managed"
+	// DefaultDataplaneMode = "legacy"
 
 	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
 	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note

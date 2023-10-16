@@ -1537,6 +1537,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gcs := r.getGatewayClasses()
 				assert.Len(t, gcs, 1, "gw-classes found")
@@ -1608,6 +1609,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
+
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 	})
