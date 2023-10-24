@@ -10,22 +10,13 @@ defaults:
     shell: bash
 
 jobs:
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Setup Golang Environment
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-      - name: Run Tests
-        run: make test
+  run_unit_tests:
+    name: Run unit tests
+    uses: l7mp/stunner-gateway-operator/.github/workflows/test.yml@main
 
   push_to_registry:
     name: Push Docker image to DockerHub
-    needs: unit-tests
+    needs: run_unit_tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,7 +54,7 @@ jobs:
 
   push_chart:
     name: Push helm charts to the web
-    needs: ["unit-tests", "push_to_registry"]
+    needs: push_to_registry
     runs-on: ubuntu-latest
     steps:
       - name: Get version
