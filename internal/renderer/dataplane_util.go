@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -188,10 +189,13 @@ func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
 		if err != nil {
 			return livenessProbe, readinessProbe
 		}
-		port := u.Port()
-		if port != "" {
-			livenessProbeAction.Port = apiutil.FromString(port)
-			readinessProbeAction.Port = apiutil.FromString(port)
+		port, err := strconv.ParseInt(u.Port(), 10, 32)
+		if err != nil {
+			return livenessProbe, readinessProbe
+		}
+		if port != 0 {
+			livenessProbeAction.Port = apiutil.FromInt(int(port))
+			readinessProbeAction.Port = apiutil.FromInt(int(port))
 		}
 	}
 

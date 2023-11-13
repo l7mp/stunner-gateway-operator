@@ -101,10 +101,6 @@ var TestGwConfig = stnrv1a1.GatewayConfig{
 
 // Gateway
 var TestGw = gwapiv1b1.Gateway{
-	// TypeMeta: metav1.TypeMeta{
-	// 	APIVersion: fmt.Sprintf("%s/%s", gwapiv1b1.GroupVersion.Group, gwapiv1b1.GroupVersion.Version),
-	// 	Kind:       "Gateway",
-	// },
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gateway-1",
 		Namespace: "testnamespace",
