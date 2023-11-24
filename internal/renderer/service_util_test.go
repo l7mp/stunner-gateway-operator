@@ -1386,6 +1386,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -1405,6 +1407,15 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+
+				// clusterIP services do not need a health-check service-port
+				found := false
+				for _, sp := range spec.Ports {
+					if sp.Protocol == "TCP" && sp.Port == int32(8080) {
+						found = true
+					}
+				}
+				assert.False(t, found, "health-check port exists")
 			},
 		},
 		{
@@ -1418,6 +1429,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "NodePort"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -1437,6 +1450,15 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+
+				// NodePort services do not need a health-check service-port
+				found := false
+				for _, sp := range spec.Ports {
+					if sp.Protocol == "TCP" && sp.Port == int32(8080) {
+						found = true
+					}
+				}
+				assert.False(t, found, "health-check port exists")
 			},
 		},
 		{
@@ -1450,6 +1472,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
+				ann["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				ann["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
@@ -1470,6 +1494,15 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+
+				// ClusterIPservices do not need a health-check service-port
+				found := false
+				for _, sp := range spec.Ports {
+					if sp.Protocol == "TCP" && sp.Port == int32(8080) {
+						found = true
+					}
+				}
+				assert.False(t, found, "health-check port exists")
 			},
 		},
 		{
@@ -1483,6 +1516,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
@@ -1507,6 +1542,15 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+
+				// NodePort services do not need a health-check service-port
+				found := false
+				for _, sp := range spec.Ports {
+					if sp.Protocol == "TCP" && sp.Port == int32(8080) {
+						found = true
+					}
+				}
+				assert.False(t, found, "health-check port exists")
 			},
 		},
 		{
@@ -1520,6 +1564,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann[opdefault.ServiceTypeAnnotationKey] = "NodePort"
+				ann["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
+				ann["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1b1.Gateway{*gw}
 			},
@@ -1540,6 +1586,15 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+
+				// NodePort services do not need a health-check service-port
+				found := false
+				for _, sp := range spec.Ports {
+					if sp.Protocol == "TCP" && sp.Port == int32(8080) {
+						found = true
+					}
+				}
+				assert.False(t, found, "health-check port exists")
 			},
 		},
 		{

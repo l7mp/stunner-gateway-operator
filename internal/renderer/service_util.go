@@ -299,11 +299,14 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		}
 	}
 
-	healthCheckPort, err := setHealthCheck(as, svc)
-	if err != nil {
-		c.log.V(1).Info("could not set health check port", "error", err.Error())
-	} else if healthCheckPort != 0 {
-		c.log.V(1).Info("health check port opened", "port", healthCheckPort)
+	// Open the health-check port for LoadBalancer Services only
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		healthCheckPort, err := setHealthCheck(svc.GetAnnotations(), svc)
+		if err != nil {
+			c.log.V(1).Info("could not set health check port", "error", err.Error())
+		} else if healthCheckPort != 0 {
+			c.log.V(1).Info("health check port opened", "port", healthCheckPort)
+		}
 	}
 
 	// copy the LoadBalancer annotations from the GatewayConfig
