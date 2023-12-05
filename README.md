@@ -1,5 +1,11 @@
 <p align="center">
   <img alt="STUNner", src="doc/stunner.svg" width="50%" height="50%"></br>
+  <a href="https://discord.gg/DyPgEsbwzc" alt="Discord">
+    <img alt="Discord" src="https://img.shields.io/discord/945255818494902282" /></a>
+  <a href="https://hub.docker.com/repository/docker/l7mp/stunner-gateway-operator" alt="Docker pulls">
+    <img src="https://img.shields.io/docker/pulls/l7mp/stunner-gateway-operator" /></a>
+  <a href="https://github.com/l7mp/stunner-gateway-operator/blob/main/LICENSE" alt="MIT">
+    <img src="https://img.shields.io/github/license/l7mp/stunner-gateway-operator" /></a>
 </p>
 
 # STUNner Kubernetes Gateway Operator
