@@ -13,11 +13,12 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	// stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -118,7 +119,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -382,7 +383,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -554,7 +555,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1244,7 +1245,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1517,7 +1518,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],

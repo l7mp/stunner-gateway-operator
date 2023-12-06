@@ -9,14 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *stnrconfv1a1.StunnerConfig) (*corev1.ConfigMap, error) {
+func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *stnrconfv1.StunnerConfig) (*corev1.ConfigMap, error) {
 	s := ""
 
 	if conf != nil {

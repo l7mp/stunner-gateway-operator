@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/pkg/config/client"
 	"github.com/l7mp/stunner/pkg/logger"
 
@@ -91,7 +91,7 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc2, err := cdsclient.NewClient(addr2, id2, logger)
 	assert.NoError(t, err, "cds client setup")
 
-	controlCh1 := make(chan stnrconfv1a1.StunnerConfig, 10)
+	controlCh1 := make(chan stnrconfv1.StunnerConfig, 10)
 	defer close(controlCh1)
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	defer cancel2()
@@ -213,7 +213,7 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc3, err := cdsclient.NewClient(addr2, id3, logger)
 	assert.NoError(t, err, "cds client setup")
 
-	controlCh2 := make(chan stnrconfv1a1.StunnerConfig, 10)
+	controlCh2 := make(chan stnrconfv1.StunnerConfig, 10)
 	defer close(controlCh2)
 	ctx3, cancel3 := context.WithCancel(context.Background())
 	err = cdsc3.Watch(ctx3, controlCh2)
@@ -322,7 +322,7 @@ func TestConfigDiscovery(t *testing.T) {
 
 	log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
 	// should yield a zero config plus a real config
-	controlCh2 = make(chan stnrconfv1a1.StunnerConfig, 10)
+	controlCh2 = make(chan stnrconfv1.StunnerConfig, 10)
 	defer close(controlCh2)
 	ctx3, cancel3 = context.WithCancel(context.Background())
 	defer cancel3()
@@ -389,7 +389,7 @@ func TestConfigDiscovery(t *testing.T) {
 	assert.Equal(t, 0, cds.store.Len())
 }
 
-func zeroConfig(namespace, name, realm string) *stnrconfv1a1.StunnerConfig {
+func zeroConfig(namespace, name, realm string) *stnrconfv1.StunnerConfig {
 	id := fmt.Sprintf("%s/%s", namespace, name)
 	c := cdsclient.ZeroConfig(id)
 	c.Auth.Realm = realm
@@ -397,7 +397,7 @@ func zeroConfig(namespace, name, realm string) *stnrconfv1a1.StunnerConfig {
 	return c
 }
 
-func packConfig(c *stnrconfv1a1.StunnerConfig) *corev1.ConfigMap {
+func packConfig(c *stnrconfv1.StunnerConfig) *corev1.ConfigMap {
 	nsName := store.GetNameFromKey(c.Admin.Name)
 
 	sc, _ := json.Marshal(c)
@@ -422,7 +422,7 @@ func packConfig(c *stnrconfv1a1.StunnerConfig) *corev1.ConfigMap {
 	}
 }
 
-func tryControlCh(controlCh chan stnrconfv1a1.StunnerConfig) (*stnrconfv1a1.StunnerConfig, bool) {
+func tryControlCh(controlCh chan stnrconfv1.StunnerConfig) (*stnrconfv1.StunnerConfig, bool) {
 	select {
 	case c, ok := <-controlCh:
 		return &c, ok

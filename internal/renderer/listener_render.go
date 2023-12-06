@@ -9,7 +9,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -19,7 +19,7 @@ func stnrListenerName(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1a1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -28,8 +28,8 @@ func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.Gatewa
 		return nil, err
 	}
 
-	minPort, maxPort := stnrconfv1a1.DefaultMinRelayPort,
-		stnrconfv1a1.DefaultMaxRelayPort
+	minPort, maxPort := stnrconfv1.DefaultMinRelayPort,
+		stnrconfv1.DefaultMaxRelayPort
 	if gwConf.Spec.MinPort != nil {
 		minPort = int(*gwConf.Spec.MinPort)
 	}
@@ -43,7 +43,7 @@ func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.Gatewa
 		p = ap.port
 	}
 
-	lc := stnrconfv1a1.ListenerConfig{
+	lc := stnrconfv1.ListenerConfig{
 		Name:         stnrListenerName(gw, l),
 		Protocol:     proto.String(),
 		Addr:         "$STUNNER_ADDR", // Addr will be filled in from the pod environment
@@ -82,7 +82,7 @@ func (r *Renderer) getTLS(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (string,
 	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
-		(proto != stnrconfv1a1.ListenerProtocolTURNTLS && proto != stnrconfv1a1.ListenerProtocolTURNDTLS) {
+		(proto != stnrconfv1.ListenerProtocolTURNTLS && proto != stnrconfv1.ListenerProtocolTURNDTLS) {
 		return "", "", false
 	}
 
@@ -151,7 +151,7 @@ func (r *Renderer) getTLS(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (string,
 }
 
 // normalize protocol aliases
-func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1a1.ListenerProtocol, error) {
+func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
 	protocol := string(proto)
 	switch protocol {
 	case "UDP":
@@ -172,7 +172,7 @@ func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1a1.Liste
 			"valid-protocol", "TURN-DTLS")
 	}
 
-	ret, err := stnrconfv1a1.NewListenerProtocol(protocol)
+	ret, err := stnrconfv1.NewListenerProtocol(protocol)
 	if err != nil {
 		return ret, NewNonCriticalError(InvalidProtocol)
 	}

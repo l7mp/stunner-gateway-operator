@@ -3,8 +3,9 @@ package renderer
 import (
 	// "context"
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +13,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -71,7 +72,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, stnrconfv1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "", admin.MetricsEndpoint, "metrics_endpoint")
 				assert.Equal(t, opdefault.DefaultHealthCheckEndpoint, *admin.HealthCheckEndpoint,
 					"health-check default on")
@@ -102,7 +103,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, stnrconfv1a1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, stnrconfv1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, "http://0.0.0.0:8080/metrics", admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "http://0.0.0.0:8081", *admin.HealthCheckEndpoint,
 					"health-check default on")

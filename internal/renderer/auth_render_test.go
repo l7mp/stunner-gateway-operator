@@ -3,8 +3,9 @@ package renderer
 import (
 	// "context"
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +36,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
-				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, auth.Credentials["password"],
@@ -43,7 +44,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "longterm auth ok",
+			name: "ephemeral auth ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
@@ -52,7 +53,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.StunnerConfig = "dummy"
 				*w.Spec.Realm = "dummy"
-				*w.Spec.AuthType = "longterm"
+				*w.Spec.AuthType = "ephemeral"
 				s := "dummy"
 				w.Spec.SharedSecret = &s
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
@@ -68,7 +69,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, "dummy", auth.Realm, "realm")
-				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
 				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
 
 			},
@@ -97,14 +98,14 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "plaintext no-username errs",
+			name: "static no-username errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.AuthType = "plaintext"
+				*w.Spec.AuthType = "static"
 				w.Spec.Username = nil
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
@@ -121,14 +122,14 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "plaintext no-password errs",
+			name: "static no-password errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.AuthType = "plaintext"
+				*w.Spec.AuthType = "static"
 				w.Spec.Password = nil
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
@@ -168,7 +169,7 @@ func TestRenderAuthRender(t *testing.T) {
 				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "renderAuth")
 
-				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
 				assert.Equal(t, "testpasswd", auth.Credentials["password"], "password")
 			},
@@ -181,7 +182,7 @@ func TestRenderAuthRender(t *testing.T) {
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.AuthType = "longterm"
+				*w.Spec.AuthType = "ephemeral"
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 			},
@@ -223,7 +224,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, "dummy", auth.Realm, "realm")
-				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
 				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
 
 			},
@@ -254,7 +255,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, "dummy", auth.Realm, "realm")
-				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
 				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
 
 			},
@@ -290,7 +291,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
-				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, "ext-testuser", auth.Credentials["username"],
 					"username")
 				assert.Equal(t, "ext-testpass", auth.Credentials["password"],
@@ -298,7 +299,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name:   "longterm external auth ok",
+			name:   "ephemeral external auth ok",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
 			cfs:    []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
@@ -317,7 +318,7 @@ func TestRenderAuthRender(t *testing.T) {
 				c.cfs = []stnrv1a1.GatewayConfig{*w}
 
 				s := testutils.TestAuthSecret.DeepCopy()
-				s.Data["type"] = []byte("longterm")
+				s.Data["type"] = []byte("ephemeral")
 				s.Data["secret"] = []byte("ext-secret")
 				c.ascrts = []corev1.Secret{*s}
 			},
@@ -332,7 +333,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
-				assert.Equal(t, "longterm", auth.Type, "auth-type")
+				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
 				assert.Equal(t, "ext-secret", auth.Credentials["secret"],
 					"secret")
 			},
@@ -456,7 +457,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
-				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, "ext-testuser", auth.Credentials["username"],
 					"username")
 				assert.Equal(t, "ext-testpass", auth.Credentials["password"],
@@ -473,7 +474,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.AuthRef = &gwapiv1b1.SecretObjectReference{
 					Name: gwapiv1b1.ObjectName("testauthsecret-ok"),
 				}
-				atype := "longterm"
+				atype := "ephemeral"
 				sharedSecret := "testsecret"
 				w.Spec.AuthType = &atype
 				w.Spec.SharedSecret = &sharedSecret
@@ -490,7 +491,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
-				assert.Equal(t, "plaintext", auth.Type, "auth-type")
+				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, "ext-testuser", auth.Credentials["username"],
 					"username")
 				assert.Equal(t, "ext-testpass", auth.Credentials["password"],

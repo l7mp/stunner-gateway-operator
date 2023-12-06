@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
-
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -381,13 +381,13 @@ func (r *Renderer) getServiceProtocol(proto gwapiv1b1.ProtocolType) (string, err
 
 	var serviceProto string
 	switch protocol {
-	case stnrconfv1a1.ListenerProtocolUDP, stnrconfv1a1.ListenerProtocolDTLS:
+	case stnrconfv1.ListenerProtocolUDP, stnrconfv1.ListenerProtocolDTLS:
 		serviceProto = "UDP"
-	case stnrconfv1a1.ListenerProtocolTURNUDP, stnrconfv1a1.ListenerProtocolTURNDTLS:
+	case stnrconfv1.ListenerProtocolTURNUDP, stnrconfv1.ListenerProtocolTURNDTLS:
 		serviceProto = "UDP"
-	case stnrconfv1a1.ListenerProtocolTURNTCP, stnrconfv1a1.ListenerProtocolTURNTLS:
+	case stnrconfv1.ListenerProtocolTURNTCP, stnrconfv1.ListenerProtocolTURNTLS:
 		serviceProto = "TCP"
-	case stnrconfv1a1.ListenerProtocolTCP, stnrconfv1a1.ListenerProtocolTLS:
+	case stnrconfv1.ListenerProtocolTCP, stnrconfv1.ListenerProtocolTLS:
 		serviceProto = "TCP"
 	default:
 		return "", NewNonCriticalError(InvalidProtocol)

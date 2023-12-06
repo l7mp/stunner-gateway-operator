@@ -7,7 +7,7 @@ import (
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -168,8 +168,8 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	log := r.log
 	gc := c.gc
 
-	conf := stnrconfv1a1.StunnerConfig{
-		ApiVersion: stnrconfv1a1.ApiVersion,
+	conf := stnrconfv1.StunnerConfig{
+		ApiVersion: stnrconfv1.ApiVersion,
 	}
 
 	targetName, targetNamespace := getTarget(c)
@@ -188,7 +188,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	}
 	conf.Auth = *auth
 
-	conf.Listeners = []stnrconfv1a1.ListenerConfig{}
+	conf.Listeners = []stnrconfv1.ListenerConfig{}
 	for _, gw := range c.gws.GetAll() {
 		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
 
@@ -263,7 +263,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	}
 
 	log.V(1).Info("processing UDPRoutes")
-	conf.Clusters = []stnrconfv1a1.ClusterConfig{}
+	conf.Clusters = []stnrconfv1.ClusterConfig{}
 	rs := store.UDPRoutes.GetAll()
 	for _, ro := range rs {
 		log.V(2).Info("considering", "route", ro.GetName())

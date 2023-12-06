@@ -3,11 +3,13 @@ package renderer
 import (
 	// "context"
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -15,7 +17,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -172,9 +174,9 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
-				assert.Equal(t, stnrconfv1a1.DefaultMinRelayPort,
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort,
 					lc.MinRelayPort, "min-port")
-				assert.Equal(t, stnrconfv1a1.DefaultMaxRelayPort,
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort,
 					lc.MaxRelayPort, "max-port")
 			},
 		},

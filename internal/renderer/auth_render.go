@@ -5,12 +5,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
+func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	gwConf := c.gwConf
 	r.log.V(3).Info("renderAuth", "gateway-config", store.GetObjectKey(gwConf), "spec", gwConf.Spec)
 
@@ -22,16 +22,16 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error
 	return r.renderInlineAuth(c)
 }
 
-func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
+func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	gwConf := c.gwConf
 	// r.log.V(4).Info("renderInlineAuth", "gateway-config", store.GetObjectKey(gwConf))
 
-	realm := stnrconfv1a1.DefaultRealm
+	realm := stnrconfv1.DefaultRealm
 	if gwConf.Spec.Realm != nil {
 		realm = *gwConf.Spec.Realm
 	}
 
-	auth := stnrconfv1a1.AuthConfig{
+	auth := stnrconfv1.AuthConfig{
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -42,7 +42,7 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig,
 	}
 
 	switch atype {
-	case stnrconfv1a1.AuthTypePlainText:
+	case stnrconfv1.AuthTypePlainText:
 		if gwConf.Spec.Username == nil || gwConf.Spec.Password == nil {
 			return nil, NewCriticalError(InvalidUsernamePassword)
 		}
@@ -50,7 +50,7 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig,
 		auth.Credentials["username"] = *gwConf.Spec.Username
 		auth.Credentials["password"] = *gwConf.Spec.Password
 
-	case stnrconfv1a1.AuthTypeLongTerm:
+	case stnrconfv1.AuthTypeLongTerm:
 		if gwConf.Spec.SharedSecret == nil {
 			return nil, NewCriticalError(InvalidSharedSecret)
 		}
@@ -70,16 +70,16 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig,
 	return &auth, nil
 }
 
-func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfig, error) {
+func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	gwConf := c.gwConf
 	// r.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 
-	realm := stnrconfv1a1.DefaultRealm
+	realm := stnrconfv1.DefaultRealm
 	if gwConf.Spec.Realm != nil {
 		realm = *gwConf.Spec.Realm
 	}
 
-	auth := stnrconfv1a1.AuthConfig{
+	auth := stnrconfv1.AuthConfig{
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -118,7 +118,7 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfi
 	}
 
 	switch atype {
-	case stnrconfv1a1.AuthTypePlainText:
+	case stnrconfv1.AuthTypePlainText:
 		username, usernameOk := secret.Data["username"]
 		password, passwordOk := secret.Data["password"]
 
@@ -129,7 +129,7 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfi
 		auth.Credentials["username"] = string(username)
 		auth.Credentials["password"] = string(password)
 
-	case stnrconfv1a1.AuthTypeLongTerm:
+	case stnrconfv1.AuthTypeLongTerm:
 		sharedSecret, sharedSecretOk := secret.Data["secret"]
 		// accept long form
 		if !sharedSecretOk {
@@ -156,8 +156,8 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1a1.AuthConfi
 	return &auth, nil
 }
 
-func getAuthType(hint *string) (stnrconfv1a1.AuthType, error) {
-	authType := stnrconfv1a1.DefaultAuthType
+func getAuthType(hint *string) (stnrconfv1.AuthType, error) {
+	authType := stnrconfv1.DefaultAuthType
 	if hint != nil {
 		authType = *hint
 	}
@@ -171,9 +171,9 @@ func getAuthType(hint *string) (stnrconfv1a1.AuthType, error) {
 		authType = "longterm"
 	}
 
-	atype, err := stnrconfv1a1.NewAuthType(authType)
+	atype, err := stnrconfv1.NewAuthType(authType)
 	if err != nil {
-		return stnrconfv1a1.AuthTypeUnknown, NewCriticalError(InvalidAuthType)
+		return stnrconfv1.AuthTypeUnknown, NewCriticalError(InvalidAuthType)
 	}
 
 	return atype, nil

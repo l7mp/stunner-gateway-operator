@@ -12,13 +12,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -58,7 +59,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "auth rendered")
-				assert.Equal(t, stnrconfv1a1.AuthTypePlainText.String(),
+				assert.Equal(t, stnrconfv1.AuthTypeStatic.String(),
 					auth.Type, "auth type")
 				assert.Equal(t, "testrealm", auth.Realm, "realm")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
@@ -136,7 +137,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -246,7 +247,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -358,7 +359,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -605,7 +606,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -690,7 +691,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -857,7 +858,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -944,7 +945,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1109,7 +1110,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1197,7 +1198,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1318,7 +1319,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
@@ -1586,7 +1587,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					"loglevel")
 
 				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
-				assert.Equal(t, "plaintext", conf.Auth.Type, "auth-type")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
 					"username")
 				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],

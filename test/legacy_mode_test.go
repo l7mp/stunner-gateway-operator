@@ -37,7 +37,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -50,7 +50,7 @@ import (
 func testLegacyMode() {
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -1508,7 +1508,7 @@ func testLegacyMode() {
 	})
 
 	Context("When re-loading the gateway and the route resources (EDS DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should render a valid STUNner config", func() {
 
@@ -1736,7 +1736,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the TCP listener (EDS DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 		sn := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {
@@ -1947,7 +1947,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 		// snudp := gwapiv1b1.SectionName("gateway-1-listener-udp")
 		// sntcp := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
@@ -2495,7 +2495,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to Selector (EDS DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
@@ -2848,7 +2848,7 @@ func testLegacyMode() {
 	})
 
 	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
@@ -2964,7 +2964,7 @@ func testLegacyMode() {
 		})
 
 		It("changing the auth type", func() {
-			atype := "ephemeral" // use alias -> longterm
+			atype := "ephemeral" // use alias -> ephemeral
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
@@ -2996,7 +2996,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if c.Auth.Type == "longterm" {
+				if c.Auth.Type == "ephemeral" {
 					conf = &c
 					return true
 				}
@@ -3006,7 +3006,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("longterm"))
+			Expect(conf.Auth.Type).Should(Equal("ephemeral"))
 			Expect(conf.Auth.Credentials["secret"]).Should(Equal("dummy"))
 		})
 
@@ -3018,7 +3018,7 @@ func testLegacyMode() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
 			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
-				atype := "timewindowed" // use alias -> longterm
+				atype := "timewindowed" // use alias -> ephemeral
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
 				current.Spec.Password = nil
@@ -3046,7 +3046,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if c.Auth.Type == "plaintext" {
+				if c.Auth.Type == "static" {
 					conf = &c
 					return true
 				}
@@ -3056,7 +3056,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Type).Should(Equal("static"))
 			Expect(conf.Auth.Credentials["username"]).Should(Equal("ext-testuser"))
 			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
 		})
@@ -3065,7 +3065,7 @@ func testLegacyMode() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
 			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
-				atype := "longterm"
+				atype := "ephemeral"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
 				current.Spec.Password = nil
@@ -3095,7 +3095,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if c.Auth.Type == "plaintext" {
+				if c.Auth.Type == "static" {
 					conf = &c
 					return true
 				}
@@ -3105,7 +3105,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Type).Should(Equal("static"))
 			Expect(conf.Auth.Credentials["username"]).Should(Equal("ext-testuser"))
 			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
 		})
@@ -3145,7 +3145,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("plaintext"))
+			Expect(conf.Auth.Type).Should(Equal("static"))
 			Expect(conf.Auth.Credentials["username"]).Should(Equal("new-user"))
 			Expect(conf.Auth.Credentials["password"]).Should(Equal("ext-testpass"))
 		})
@@ -3177,7 +3177,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if c.Auth.Type == "longterm" {
+				if c.Auth.Type == "ephemeral" {
 					conf = &c
 					return true
 				}
@@ -3187,7 +3187,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("longterm"))
+			Expect(conf.Auth.Type).Should(Equal("ephemeral"))
 			Expect(conf.Auth.Credentials["secret"]).Should(Equal("dummy"))
 		})
 
@@ -3222,7 +3222,7 @@ func testLegacyMode() {
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
 			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
-				atype := "timewindowed" // use alias -> longterm
+				atype := "timewindowed" // use alias -> ephemeral
 				secret := "dummy"
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
@@ -3247,7 +3247,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if c.Auth.Type == "longterm" {
+				if c.Auth.Type == "ephemeral" {
 					conf = &c
 					return true
 				}
@@ -3257,7 +3257,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			Expect(conf.Auth.Type).Should(Equal("longterm"))
+			Expect(conf.Auth.Type).Should(Equal("ephemeral"))
 			Expect(conf.Auth.Credentials["secret"]).Should(Equal("dummy"))
 		})
 
@@ -3547,7 +3547,7 @@ func testLegacyMode() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 
 			Expect(conf.Listeners).To(HaveLen(4))
-			l := stunnerconfv1alpha1.ListenerConfig{}
+			l := stnrconfv1.ListenerConfig{}
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-udp" {
@@ -3675,7 +3675,7 @@ func testLegacyMode() {
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3803,7 +3803,7 @@ func testLegacyMode() {
 
 	// WITH EDS and RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3887,7 +3887,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 		sn := gwapiv1b1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {

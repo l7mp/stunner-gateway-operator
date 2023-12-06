@@ -39,20 +39,19 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stunnerconfv1alpha1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
-
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 )
 
 func testManagedMode() {
 	// SINGLE GATEWAY
 	Context("When creating a minimal set of API resources", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS on
@@ -1022,7 +1021,7 @@ func testManagedMode() {
 
 	// MULTI-GATEWAY
 	Context("When creating 2 Gateways", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading all resources", func() {
 			// switch EDS on
@@ -1704,7 +1703,7 @@ func testManagedMode() {
 
 	// MULTI-GATEWAYCLASS
 	Context("When creating 2 GatewayClasses and Gateways", func() {
-		conf := &stunnerconfv1alpha1.StunnerConfig{}
+		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading all resources", func() {
 			// switch EDS on

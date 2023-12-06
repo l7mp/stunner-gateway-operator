@@ -323,7 +323,6 @@ func (c *ConfigDiscoveryServer) sendConfig(id string) error {
 
 		c.log.V(4).Info("sending empty config to client", "client", id, "config", string(conf))
 	} else {
-
 		// obtain config
 		z, ok := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 		if !ok {

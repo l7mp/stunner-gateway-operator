@@ -21,7 +21,7 @@ var (
 	TestRealm               = "testrealm"
 	TestMetricsEndpoint     = "testmetrics"
 	TestHealthCheckEndpoint = "testhealth"
-	TestAuthType            = "plaintext"
+	TestAuthType            = "static"
 	TestUsername            = "testuser"
 	TestPassword            = "testpass"
 	TestLogLevel            = "testloglevel"

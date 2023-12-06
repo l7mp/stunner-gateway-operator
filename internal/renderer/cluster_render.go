@@ -9,14 +9,14 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrconfv1a1 "github.com/l7mp/stunner/pkg/apis/v1alpha1"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterConfig, error) {
+func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
 	r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
 	// track down the backendref
@@ -36,7 +36,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 	// order to set the ResolvedRefs Route status: last error is reported only
 	var routeError error
 
-	ctype, prevCType := stnrconfv1a1.ClusterTypeStatic, stnrconfv1a1.ClusterTypeUnknown
+	ctype, prevCType := stnrconfv1.ClusterTypeStatic, stnrconfv1.ClusterTypeUnknown
 	for _, b := range rs[0].BackendRefs {
 		b := b
 
@@ -129,7 +129,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 			continue
 		}
 
-		if prevCType != stnrconfv1a1.ClusterTypeUnknown && prevCType != ctype {
+		if prevCType != stnrconfv1.ClusterTypeUnknown && prevCType != ctype {
 			routeError = NewNonCriticalError(InconsitentClusterType)
 			r.log.Info("renderCluster: inconsistent cluster type", "route",
 				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b),
@@ -145,11 +145,11 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 		prevCType = ctype
 	}
 
-	if ctype == stnrconfv1a1.ClusterTypeUnknown {
+	if ctype == stnrconfv1.ClusterTypeUnknown {
 		return nil, NewNonCriticalError(BackendNotFound)
 	}
 
-	cluster := stnrconfv1a1.ClusterConfig{
+	cluster := stnrconfv1.ClusterConfig{
 		Name:      store.GetObjectKey(ro),
 		Type:      ctype.String(),
 		Endpoints: eps,
@@ -170,8 +170,8 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1a1.ClusterC
 	return &cluster, routeError
 }
 
-func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1a1.ClusterType, error) {
-	ctype := stnrconfv1a1.ClusterTypeUnknown
+func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 
 	if !config.EnableEndpointDiscovery {
@@ -188,19 +188,19 @@ func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrc
 		return ep, ctype, err
 	}
 
-	ctype = stnrconfv1a1.ClusterTypeStatic
+	ctype = stnrconfv1.ClusterTypeStatic
 	ep = append(ep, ips...)
 
 	return ep, ctype, nil
 }
 
 // either the ClusterIP if EDS is enabled, or a STRICT_DNS route if EDS is disabled
-func getClusterRouteForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1a1.ClusterType, error) {
-	var ctype stnrconfv1a1.ClusterType
+func getClusterRouteForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+	var ctype stnrconfv1.ClusterType
 	ep := []string{}
 
 	if config.EnableEndpointDiscovery {
-		ctype = stnrconfv1a1.ClusterTypeStatic
+		ctype = stnrconfv1.ClusterTypeStatic
 		if config.EnableRelayToClusterIP {
 			n := types.NamespacedName{
 				Namespace: ns,
@@ -217,15 +217,15 @@ func getClusterRouteForService(b *gwapiv1b1.BackendRef, ns string) ([]string, st
 		}
 	} else {
 		// fall back to strict DNS and hope for the best
-		ctype = stnrconfv1a1.ClusterTypeStrictDNS
+		ctype = stnrconfv1.ClusterTypeStrictDNS
 		ep = append(ep, fmt.Sprintf("%s.%s.svc.cluster.local", string(b.Name), ns))
 	}
 
 	return ep, ctype, nil
 }
 
-func getEndpointsForStaticService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1a1.ClusterType, error) {
-	ctype := stnrconfv1a1.ClusterTypeUnknown
+func getEndpointsForStaticService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 
 	n := types.NamespacedName{Namespace: ns, Name: string(b.Name)}
@@ -238,5 +238,5 @@ func getEndpointsForStaticService(b *gwapiv1b1.BackendRef, ns string) ([]string,
 	ep = make([]string, len(ssvc.Spec.Prefixes))
 	copy(ep, ssvc.Spec.Prefixes)
 
-	return ep, stnrconfv1a1.ClusterTypeStatic, nil
+	return ep, stnrconfv1.ClusterTypeStatic, nil
 }
