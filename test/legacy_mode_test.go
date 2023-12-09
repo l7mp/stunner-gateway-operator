@@ -44,7 +44,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 func testLegacyMode() {
@@ -74,7 +74,7 @@ func testLegacyMode() {
 				Name:      testutils.TestGwConfig.GetName(),
 				Namespace: testutils.TestGwConfig.GetNamespace(),
 			}
-			gwConfig := &stnrv1a1.GatewayConfig{}
+			gwConfig := &stnrgwv1a1.GatewayConfig{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, gwConfig)
 				return err == nil
@@ -661,7 +661,7 @@ func testLegacyMode() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
@@ -1186,7 +1186,7 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+				group := gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group)
 				kind := gwapiv1b1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
 					ParentRefs: []gwapiv1b1.ParentReference{{
@@ -2973,7 +2973,7 @@ func testLegacyMode() {
 			})
 
 			ctrl.Log.Info("re-loading gateway-config")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
 			})
@@ -3017,7 +3017,7 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> ephemeral
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3064,7 +3064,7 @@ func testLegacyMode() {
 		It("external auth refs override inline auth", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
 				atype := "ephemeral"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3221,7 +3221,7 @@ func testLegacyMode() {
 
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> ephemeral
 				secret := "dummy"
 				current.Spec.AuthType = &atype

@@ -44,13 +44,14 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	cds "github.com/l7mp/stunner-gateway-operator/pkg/config/server"
 
 	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
@@ -206,12 +207,9 @@ var _ = BeforeSuite(func() {
 		Logger:  ctrl.Log,
 	})
 
-	cdsAddr := opdefault.DefaultConfigDiscoveryAddress
-	setupLog.Info("setting up CDS server", "address", cdsAddr)
-	c := cds.NewConfigDiscoveryServer(cds.ConfigDiscoveryConfig{
-		Addr:   config.ConfigDiscoveryAddress,
-		Logger: ctrl.Log,
-	})
+	cdsserverAddr := stnrv1.DefaultConfigDiscoveryAddress
+	setupLog.Info("setting up CDSSERVER server", "address", cdsserverAddr)
+	c := config.NewCDSServer(config.ConfigDiscoveryAddress, ctrl.Log)
 
 	// make rendering fast!
 	config.ThrottleTimeout = time.Millisecond

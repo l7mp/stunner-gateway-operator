@@ -15,7 +15,7 @@ import (
 
 	// gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -31,7 +31,7 @@ var scheme = runtime.NewScheme()
 func init() {
 	_ = gwapiv1a2.AddToScheme(scheme)
 	_ = gwapiv1b1.AddToScheme(scheme)
-	_ = stnrv1a1.AddToScheme(scheme)
+	_ = stnrgwv1a1.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }
 

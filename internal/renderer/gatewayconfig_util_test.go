@@ -2,8 +2,9 @@ package renderer
 
 import (
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 func TestRenderGatewayConfigUtil(t *testing.T) {
@@ -21,7 +22,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "no gatewayconfig errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{},
+			cfs:  []stnrgwv1a1.GatewayConfig{},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -39,7 +40,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref namespace errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -61,7 +62,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref kind errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -78,7 +79,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref name errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},

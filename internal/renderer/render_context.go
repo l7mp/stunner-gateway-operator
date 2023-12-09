@@ -5,7 +5,7 @@ import (
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -17,7 +17,7 @@ type RenderContext struct {
 	origin event.Event
 	update *event.EventUpdate
 	gc     *gwapiv1b1.GatewayClass
-	gwConf *stnrv1a1.GatewayConfig
+	gwConf *stnrgwv1a1.GatewayConfig
 	gws    *store.GatewayStore
 	log    logr.Logger
 }

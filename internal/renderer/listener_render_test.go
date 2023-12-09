@@ -21,7 +21,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 func TestRenderListenerRender(t *testing.T) {
@@ -29,7 +29,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name: "udp listener ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -69,7 +69,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name: "unknown proto listener errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -99,7 +99,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name: "tcp listener ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -136,7 +136,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name: "listener defaults ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -144,7 +144,7 @@ func TestRenderListenerRender(t *testing.T) {
 				conf := testutils.TestGwConfig.DeepCopy()
 				conf.Spec.MinPort = nil
 				conf.Spec.MaxPort = nil
-				c.cfs = []stnrv1a1.GatewayConfig{*conf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{*conf}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -183,7 +183,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name: "wrong proto errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -221,7 +221,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -307,7 +307,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - wrong secret type ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -366,7 +366,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - secret namespace optional",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -419,7 +419,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - no secret errs",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -474,7 +474,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - passthrough TLS is not supported",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -529,7 +529,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - no secret type ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -588,7 +588,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - opaque secret type ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -647,7 +647,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - missing cert",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -706,7 +706,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - missing cert",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -765,7 +765,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - alternative cert/key data keys",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
@@ -827,7 +827,7 @@ func TestRenderListenerRender(t *testing.T) {
 		{
 			name:  "TLS/DTLS listener - multiple certificate-refs",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},

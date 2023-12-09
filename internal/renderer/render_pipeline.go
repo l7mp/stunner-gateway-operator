@@ -8,6 +8,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	cdsclient "github.com/l7mp/stunner/pkg/config/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -338,10 +339,8 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 	if err != nil {
 		return err
 	}
-
-	// fmt.Printf("%#v\n", cm)
-
 	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
+	c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
 
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		dp, err := r.createDeployment(c)
@@ -443,6 +442,9 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 				"gateway-class", store.GetObjectKey(gc))
 			return
 		}
+		conf := cdsclient.ZeroConfig(fmt.Sprintf("%s/%s", targetNamespace, targetName))
+		c.update.ConfigQueue = append(c.update.ConfigQueue, conf)
+
 		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
 		if err != nil {
 			log.Error(err, "error invalidating ConfigMap", "target",

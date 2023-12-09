@@ -15,7 +15,7 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -25,7 +25,7 @@ func TestRenderAdminRender(t *testing.T) {
 		{
 			name: "admin ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -50,7 +50,7 @@ func TestRenderAdminRender(t *testing.T) {
 		{
 			name: "admin default ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -59,7 +59,7 @@ func TestRenderAdminRender(t *testing.T) {
 				w.Spec.LogLevel = nil
 				w.Spec.MetricsEndpoint = nil
 				w.Spec.HealthCheckEndpoint = nil
-				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -81,7 +81,7 @@ func TestRenderAdminRender(t *testing.T) {
 		{
 			name: "admin metricsendpoint/healthcheckendpoint ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -90,7 +90,7 @@ func TestRenderAdminRender(t *testing.T) {
 				w.Spec.LogLevel = nil
 				*w.Spec.MetricsEndpoint = "http://0.0.0.0:8080/metrics"
 				*w.Spec.HealthCheckEndpoint = "http://0.0.0.0:8081"
-				c.cfs = []stnrv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()

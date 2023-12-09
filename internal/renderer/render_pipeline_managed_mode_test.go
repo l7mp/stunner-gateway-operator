@@ -17,7 +17,7 @@ import (
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -35,11 +35,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "no EDS - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
@@ -311,12 +311,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -429,11 +429,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "no EDS  - E2E test - conflicted status",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.Listeners = []gwapiv1b1.Listener{{
@@ -1002,11 +1002,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "E2E invalidation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
@@ -1099,19 +1099,19 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
@@ -1123,7 +1123,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()

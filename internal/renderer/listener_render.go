@@ -11,7 +11,7 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -19,7 +19,7 @@ func stnrListenerName(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 

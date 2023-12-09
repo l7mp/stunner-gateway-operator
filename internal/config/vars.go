@@ -3,6 +3,8 @@
 package config
 
 import (
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -40,5 +42,5 @@ var (
 	DataplaneMode = NewDataplaneMode(opdefault.DefaultDataplaneMode)
 
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
-	ConfigDiscoveryAddress = opdefault.DefaultConfigDiscoveryAddress
+	ConfigDiscoveryAddress = stnrv1.DefaultConfigDiscoveryAddress
 )

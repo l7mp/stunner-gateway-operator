@@ -16,7 +16,7 @@ import (
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -150,7 +150,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	return deployment, nil
 }
 
-func getDataplane(c *RenderContext) (*stnrv1a1.Dataplane, error) {
+func getDataplane(c *RenderContext) (*stnrgwv1a1.Dataplane, error) {
 	dataplaneName := opdefault.DefaultDataplaneName
 	if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
 		dataplaneName = *c.gwConf.Spec.Dataplane
@@ -297,7 +297,6 @@ func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1b1.Gateway) *app
 	cdsAddr := url.URL{
 		Scheme: "http",
 		Host:   config.ConfigDiscoveryAddress,
-		Path:   opdefault.DefaultConfigDiscoveryEndpoint,
 	}
 	if cdsAddr.Port() == "" {
 		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)

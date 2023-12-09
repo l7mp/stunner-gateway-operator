@@ -10,7 +10,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -66,7 +66,7 @@ var TestGwClass = gwapiv1b1.GatewayClass{
 	Spec: gwapiv1b1.GatewayClassSpec{
 		ControllerName: gwapiv1b1.GatewayController(opdefault.DefaultControllerName),
 		ParametersRef: &gwapiv1b1.ParametersReference{
-			Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+			Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 			Kind:      gwapiv1b1.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
 			Namespace: &TestNsName,
@@ -75,17 +75,17 @@ var TestGwClass = gwapiv1b1.GatewayClass{
 }
 
 // GatewayConfig
-var TestGwConfig = stnrv1a1.GatewayConfig{
+var TestGwConfig = stnrgwv1a1.GatewayConfig{
 	TypeMeta: metav1.TypeMeta{
-		APIVersion: fmt.Sprintf("%s/%s", stnrv1a1.GroupVersion.Group,
-			stnrv1a1.GroupVersion.Version),
+		APIVersion: fmt.Sprintf("%s/%s", stnrgwv1a1.GroupVersion.Group,
+			stnrgwv1a1.GroupVersion.Version),
 		Kind: "GatewaylClass",
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayconfig-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: stnrv1a1.GatewayConfigSpec{
+	Spec: stnrgwv1a1.GatewayConfigSpec{
 		StunnerConfig:       &TestStunnerConfig,
 		Realm:               &TestRealm,
 		MetricsEndpoint:     &TestMetricsEndpoint,
@@ -253,22 +253,22 @@ var TestAuthSecret = corev1.Secret{
 }
 
 // StaticService
-var TestStaticSvc = stnrv1a1.StaticService{
+var TestStaticSvc = stnrgwv1a1.StaticService{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "testnamespace",
 		Name:      "teststaticservice-ok",
 	},
-	Spec: stnrv1a1.StaticServiceSpec{
+	Spec: stnrgwv1a1.StaticServiceSpec{
 		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
 	},
 }
 
 // Dataplane
-var TestDataplane = stnrv1a1.Dataplane{
+var TestDataplane = stnrgwv1a1.Dataplane{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: opdefault.DefaultDataplaneName,
 	},
-	Spec: stnrv1a1.DataplaneSpec{
+	Spec: stnrgwv1a1.DataplaneSpec{
 		Replicas:                      &TestReplicas,
 		Image:                         "testimage-1",
 		Command:                       []string{"testcommand-1"},

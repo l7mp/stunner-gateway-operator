@@ -26,7 +26,7 @@ import (
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -364,9 +364,9 @@ func validateGatewayClass(gc *gwapiv1b1.GatewayClass) error {
 		return fmt.Errorf("empty ParametersRef in GatewayClassSpec: %#v", gc.Spec)
 	}
 
-	if string(ref.Group) != stnrv1a1.GroupVersion.Group {
+	if string(ref.Group) != stnrgwv1a1.GroupVersion.Group {
 		return fmt.Errorf("invalid group in ParametersRef %q, expecting %q",
-			string(ref.Group), stnrv1a1.GroupVersion.Group)
+			string(ref.Group), stnrgwv1a1.GroupVersion.Group)
 	}
 
 	if string(ref.Kind) != "GatewayConfig" {

@@ -17,7 +17,7 @@ import (
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -30,9 +30,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		{
 			name: "default deployment render",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -162,14 +162,14 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		{
 			name: "gatewayconfig override render",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
-			dps:  []stnrv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				gc := c.cfs[0].DeepCopy()
 				hc := "http://0.0.0.0:18081"
 				gc.Spec.HealthCheckEndpoint = &hc
-				c.cfs = []stnrv1a1.GatewayConfig{*gc}
+				c.cfs = []stnrgwv1a1.GatewayConfig{*gc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()

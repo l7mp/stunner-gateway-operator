@@ -21,7 +21,7 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -35,7 +35,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "piecewise render",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -71,7 +71,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "no EDS - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -180,7 +180,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "EDS without relay-to-cluster-IP - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -292,7 +292,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -405,7 +405,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "E2E invalidation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -495,7 +495,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "no EDS - E2E rendering for multiple gateway-classes",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -507,7 +507,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
@@ -519,7 +519,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
@@ -736,7 +736,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -747,7 +747,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
@@ -759,7 +759,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
@@ -989,7 +989,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "EDS with relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -999,7 +999,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
@@ -1011,7 +1011,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
@@ -1242,10 +1242,10 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name:  "StaticService - E2E test",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
-			ssvcs: []stnrv1a1.StaticService{testutils.TestStaticSvc},
+			ssvcs: []stnrgwv1a1.StaticService{testutils.TestStaticSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
@@ -1257,7 +1257,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 
-				group := gwapiv1b1.Group(stnrv1a1.GroupVersion.Group)
+				group := gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group)
 				kind := gwapiv1b1.Kind("StaticService")
 				udp := testutils.TestUDPRoute.DeepCopy()
 				udp.Spec.Rules[0].BackendRefs = []gwapiv1b1.BackendRef{{
@@ -1435,7 +1435,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "reject uncontrolled route",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			prep: func(c *renderTestConfig) {
@@ -1444,7 +1444,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ControllerName = "dummy-controller"
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
@@ -1456,7 +1456,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyConf.SetName("dummy-gateway-config")
 				target := "dummy-stunner-config"
 				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
@@ -1512,7 +1512,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		{
 			name: "Address hint set in Gw.spec.addresses",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},

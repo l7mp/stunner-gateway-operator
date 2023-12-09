@@ -5,11 +5,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrv1a1.GatewayConfig, error) {
+func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1a1.GatewayConfig, error) {
 	// r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	// ref already checked
