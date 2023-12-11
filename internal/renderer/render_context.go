@@ -61,4 +61,7 @@ func (r *RenderContext) Merge(mergeable *RenderContext) {
 	store.Merge(deleteQueue1.Services, deleteQueue2.Services)
 	store.Merge(deleteQueue1.ConfigMaps, deleteQueue2.ConfigMaps)
 	store.Merge(deleteQueue1.Deployments, deleteQueue2.Deployments)
+
+	// merge the CDS server's config-queue
+	r.update.ConfigQueue = append(r.update.ConfigQueue, mergeable.update.ConfigQueue...)
 }

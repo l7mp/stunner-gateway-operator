@@ -11,7 +11,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	cdsclient "github.com/l7mp/stunner/pkg/config/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -333,31 +332,29 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		gw := c.gws.GetFirst()
 		if gw != nil {
 			conf.Admin.Name = store.GetObjectKey(gw)
+
+			// update cds server
+			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
+
+			// create deployment
+			dp, err := r.createDeployment(c)
+			if err != nil {
+				return err
+			}
+			c.update.UpsertQueue.Deployments.Upsert(dp)
+			log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
+				"deployment", store.DumpObject(dp))
 		}
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
 		conf.String())
 
-	// schedule for update
 	cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
 	if err != nil {
 		return err
 	}
 	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
-	c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
-
-	if config.DataplaneMode == config.DataplaneModeManaged {
-		dp, err := r.createDeployment(c)
-		if err != nil {
-			return err
-		}
-		c.update.UpsertQueue.Deployments.Upsert(dp)
-
-		log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
-			"deployment", store.DumpObject(dp))
-
-	}
 
 	return nil
 }
@@ -375,11 +372,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 			// remove the configmap
 			targetNamespace := c.gwConf.GetNamespace()
 			targetName := opdefault.DefaultConfigMapName
-			conf := cdsclient.ZeroConfig(fmt.Sprintf("%s/%s", targetNamespace, targetName))
-			c.update.ConfigQueue = append(c.update.ConfigQueue, conf)
-
-			cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
-			if err != nil {
+			if cm, err := r.renderConfig(c, targetName, targetNamespace, nil); err != nil {
 				log.Error(err, "error invalidating ConfigMap", "target",
 					fmt.Sprintf("%s/%s", targetNamespace, targetName))
 			} else {

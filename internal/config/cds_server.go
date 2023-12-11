@@ -23,7 +23,7 @@ func NewCDSServer(addr string, logger logr.Logger) *Server {
 	return &Server{
 		Server:   cdsserverbase.New(addr, log),
 		configCh: make(chan event.Event, 10),
-		log:      logger,
+		log:      log,
 	}
 }
 
@@ -64,15 +64,15 @@ func (c *Server) GetConfigUpdateChannel() chan event.Event {
 // ProcessUpdate processes new config events and updates the server with the current
 // state-of-the-world.
 func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
-	c.log.Info("processing config update event", "generation", e.Generation,
-		"update", e.String())
+	c.log.Info("processing config update event", "generation", e.Generation, "update",
+		e.String())
 
 	configs := []cdsserverbase.Config{}
 
 	for _, conf := range e.ConfigQueue {
 		id := conf.Admin.Name
-		c.log.V(4).Info("new config", "generation", e.Generation, "client", id,
-			"config", conf.String())
+		c.log.V(4).Info("new config", "generation", e.Generation, "client", id, "config",
+			conf.String())
 
 		// make sure we do not share pointers
 		nc := stnrv1.StunnerConfig{}
