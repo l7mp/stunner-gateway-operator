@@ -8,7 +8,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -148,7 +148,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			gwCtx := NewRenderContext(e, r, gc)
 			gwCtx.gwConf = gcCtx.gwConf
-			gwCtx.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
+			gwCtx.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 			// render for this gateway
 			if err := r.renderForGateways(gwCtx); err != nil {

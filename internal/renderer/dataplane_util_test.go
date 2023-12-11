@@ -15,7 +15,7 @@ import (
 
 	// "k8s.io/apimachinery/pkg/types"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -29,9 +29,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "default deployment render",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -49,7 +49,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
-				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				deploy, err := r.createDeployment(c)
 				assert.NoError(t, err, "create deployment")
@@ -161,9 +161,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		},
 		{
 			name: "override render",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				dp := c.dps[0].DeepCopy()
@@ -187,7 +187,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
-				c.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 				c.dp, err = getDataplane(c)
 				assert.NoError(t, err, "dataplanefound")
 

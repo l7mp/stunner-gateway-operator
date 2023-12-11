@@ -10,8 +10,8 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -25,9 +25,9 @@ func TestRenderAdminRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "admin ok - legacy",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
@@ -52,9 +52,9 @@ func TestRenderAdminRender(t *testing.T) {
 		},
 		{
 			name: "admin ok - managed",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
@@ -88,9 +88,9 @@ func TestRenderAdminRender(t *testing.T) {
 		},
 		{
 			name: "admin metricsendpoint/healthcheckendpoint ok - managed",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			svcs: []corev1.Service{},

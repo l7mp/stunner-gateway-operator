@@ -6,8 +6,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -16,11 +16,11 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-func stnrListenerName(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) string {
+func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -76,13 +76,13 @@ func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1.Gatewa
 	return &lc, nil
 }
 
-func (r *Renderer) getTLS(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (string, string, bool) {
+func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool) {
 	proto, err := r.getProtocol(l.Protocol)
 	if err != nil {
 		return "", "", false
 	}
 
-	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1b1.TLSModeTerminate) ||
+	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
 		(proto != stnrconfv1.ListenerProtocolTURNTLS && proto != stnrconfv1.ListenerProtocolTURNDTLS) {
 		return "", "", false
 	}
@@ -152,7 +152,7 @@ func (r *Renderer) getTLS(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) (string,
 }
 
 // normalize protocol aliases
-func (r *Renderer) getProtocol(proto gwapiv1b1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
+func (r *Renderer) getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
 	protocol := string(proto)
 	switch protocol {
 	case "UDP":

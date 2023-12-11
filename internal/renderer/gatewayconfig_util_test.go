@@ -9,8 +9,8 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -21,9 +21,9 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "no gatewayconfig errs",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
@@ -39,16 +39,16 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref namespace errs",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				gc := c.cls[0].DeepCopy()
-				ns2 := gwapiv1b1.Namespace("dummy")
+				ns2 := gwapiv1.Namespace("dummy")
 				gc.Spec.ParametersRef.Namespace = &ns2
-				c.cls = []gwapiv1b1.GatewayClass{*gc}
+				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -61,15 +61,15 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref kind errs",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				gc := c.cls[0].DeepCopy()
 				gc.Spec.ParametersRef.Kind = "test"
-				c.cls = []gwapiv1b1.GatewayClass{*gc}
+				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				_, err := r.getGatewayClass()
@@ -78,15 +78,15 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		},
 		{
 			name: "wrong gatewayconfig ref name errs",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{},
+			gws:  []gwapiv1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				gc := c.cls[0].DeepCopy()
 				gc.Spec.ParametersRef.Name = "test"
-				c.cls = []gwapiv1b1.GatewayClass{*gc}
+				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()

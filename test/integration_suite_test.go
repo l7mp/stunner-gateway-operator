@@ -41,8 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -72,9 +72,9 @@ const (
 var (
 	// Resources
 	testNs         *corev1.Namespace
-	testGwClass    *gwapiv1b1.GatewayClass
+	testGwClass    *gwapiv1.GatewayClass
 	testGwConfig   *stnrgwv1.GatewayConfig
-	testGw         *gwapiv1b1.Gateway
+	testGw         *gwapiv1.Gateway
 	testUDPRoute   *gwapiv1a2.UDPRoute
 	testSvc        *corev1.Service
 	testEndpoint   *corev1.Endpoints
@@ -156,7 +156,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "config", "gateway-api-v0.8.0", "crd"),
+			filepath.Join("..", "config", "gateway-api-v1.0.0", "crd"),
 		},
 		ErrorIfCRDPathMissing:    true,
 		AttachControlPlaneOutput: true,
@@ -174,7 +174,7 @@ var _ = BeforeSuite(func() {
 	// Gateway API schemes
 	err = gwapiv1a2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1b1.AddToScheme(scheme)
+	err = gwapiv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
@@ -281,10 +281,10 @@ func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayMutator func(current *gwapiv1b1.Gateway)
+type GatewayMutator func(current *gwapiv1.Gateway)
 
-func createOrUpdateGateway(template *gwapiv1b1.Gateway, f GatewayMutator) {
-	current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
+	current := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

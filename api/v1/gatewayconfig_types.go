@@ -18,7 +18,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Hub marks GatewayConfig.v1 as a conversion hub.
@@ -114,7 +114,7 @@ type GatewayConfigSpec struct {
 	// (inline/external) is not supported.
 	//
 	// +optional
-	AuthRef *gwapiv1b1.SecretObjectReference `json:"authRef,omitempty"`
+	AuthRef *gwapiv1.SecretObjectReference `json:"authRef,omitempty"`
 
 	// LoadBalancerServiceAnnotations is a list of annotations that will go into the
 	// LoadBalancer services created automatically by the operator to wrap Gateways.

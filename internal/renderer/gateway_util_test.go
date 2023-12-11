@@ -13,8 +13,8 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -27,15 +27,15 @@ func TestRenderGatewayUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name: "wrong gatewayclassname errs",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.GatewayClassName = "dummy"
-				c.gws = []gwapiv1b1.Gateway{*gw}
+				c.gws = []gwapiv1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -48,16 +48,16 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "multiple gateways ok",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.ObjectMeta.SetName("dummy")
 				gw.ObjectMeta.SetGeneration(4)
-				c.gws = []gwapiv1b1.Gateway{*gw, testutils.TestGw}
+				c.gws = []gwapiv1.Gateway{*gw, testutils.TestGw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -78,9 +78,9 @@ func TestRenderGatewayUtil(t *testing.T) {
 		},
 		{
 			name: "gateway status ok",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
@@ -101,30 +101,30 @@ func TestRenderGatewayUtil(t *testing.T) {
 
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
 
-				assert.Equal(t, string(gwapiv1b1.GatewayConditionAccepted),
+				assert.Equal(t, string(gwapiv1.GatewayConditionAccepted),
 					gw.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
 					"conditions gen")
 				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
 					"status")
-				assert.Equal(t, string(gwapiv1b1.GatewayReasonAccepted),
+				assert.Equal(t, string(gwapiv1.GatewayReasonAccepted),
 					gw.Status.Conditions[0].Reason, "reason")
 
-				assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed),
+				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),
 					gw.Status.Conditions[1].Type, "programmed")
 				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
 					"conditions gen")
 				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
 					"status")
-				assert.Equal(t, string(gwapiv1b1.GatewayReasonInvalid),
+				assert.Equal(t, string(gwapiv1.GatewayReasonInvalid),
 					gw.Status.Conditions[1].Reason, "reason")
 			},
 		},
 		{
 			name: "gateway rescheduled/re-ready status ok",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -132,7 +132,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				initGatewayStatus(gw, "dummy")
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				gw.ObjectMeta.SetGeneration(1)
-				c.gws = []gwapiv1b1.Gateway{*gw}
+				c.gws = []gwapiv1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -151,37 +151,37 @@ func TestRenderGatewayUtil(t *testing.T) {
 
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
 
-				assert.Equal(t, string(gwapiv1b1.GatewayConditionAccepted),
+				assert.Equal(t, string(gwapiv1.GatewayConditionAccepted),
 					gw.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, int64(1), gw.Status.Conditions[0].ObservedGeneration,
 					"conditions gen")
 				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
 					"status")
-				assert.Equal(t, string(gwapiv1b1.GatewayReasonAccepted),
+				assert.Equal(t, string(gwapiv1.GatewayReasonAccepted),
 					gw.Status.Conditions[0].Reason, "reason")
 
-				assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed),
+				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),
 					gw.Status.Conditions[1].Type, "programmed")
 				assert.Equal(t, int64(1), gw.Status.Conditions[1].ObservedGeneration,
 					"conditions gen")
 				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
 					"status")
-				assert.Equal(t, string(gwapiv1b1.GatewayReasonInvalid),
+				assert.Equal(t, string(gwapiv1.GatewayReasonInvalid),
 					gw.Status.Conditions[1].Reason, "reason")
 			},
 		},
 		{
 			name: "listener status ok",
-			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// u := testutils.TestUDPRoute.DeepCopy()
 				// u.ObjectMeta.SetName("tcp")
 				// u.Spec.
-				// 	c.rs = []gwapiv1b1.UDPRoute{*u, testutils.TestUDPRoute}
+				// 	c.rs = []gwapiv1.UDPRoute{*u, testutils.TestUDPRoute}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -219,89 +219,89 @@ func TestRenderGatewayUtil(t *testing.T) {
 				// listeners[0]: ok
 				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
 				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1b1.ListenerConditionAccepted))
+					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "acceptedfound")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonAccepted), d.Reason,
+				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason,
 					"reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1b1.ListenerConditionResolvedRefs))
+					string(gwapiv1.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1b1.ListenerConditionConflicted))
+					string(gwapiv1.ListenerConditionConflicted))
 				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionConflicted), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonNoConflicts),
+				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 
 				// listeners[1]: detached
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1b1.ListenerConditionAccepted))
+					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonUnsupportedProtocol),
+				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1b1.ListenerConditionResolvedRefs))
+					string(gwapiv1.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1b1.ListenerConditionConflicted))
+					string(gwapiv1.ListenerConditionConflicted))
 				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionConflicted), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonNoConflicts),
+				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 
 				// listeners[2]: ok
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1b1.ListenerConditionAccepted))
+					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonAccepted),
+				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1b1.ListenerConditionResolvedRefs))
+					string(gwapiv1.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionResolvedRefs), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonResolvedRefs),
+				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1b1.ListenerConditionConflicted))
+					string(gwapiv1.ListenerConditionConflicted))
 				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1b1.ListenerConditionConflicted), d.Type,
+				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1b1.ListenerReasonNoConflicts),
+				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 			},
 		},

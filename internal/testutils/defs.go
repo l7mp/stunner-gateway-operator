@@ -7,8 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
@@ -17,7 +17,7 @@ import (
 
 var (
 	TestTrue             = true
-	TestNsName           = gwapiv1b1.Namespace("testnamespace")
+	TestNsName           = gwapiv1.Namespace("testnamespace")
 	TestRealm            = "testrealm"
 	TestAuthType         = "static"
 	TestUsername         = "testuser"
@@ -25,7 +25,7 @@ var (
 	TestLogLevel         = "testloglevel"
 	TestLabelName        = "testlabel"
 	TestLabelValue       = "testvalue"
-	TestSectionName      = gwapiv1b1.SectionName("gateway-1-listener-udp")
+	TestSectionName      = gwapiv1.SectionName("gateway-1-listener-udp")
 	TestCert64           = "dGVzdGNlcnQ=" // "testcert"
 	TestKey64            = "dGVzdGtleQ==" // "testkey"
 	TestReplicas         = int32(3)
@@ -43,6 +43,7 @@ var (
 		Limits:   TestResourceLimit,
 		Requests: TestResourceRequest,
 	}
+	TestPort = gwapiv1.PortNumber(1)
 )
 
 // Namespace
@@ -54,16 +55,16 @@ var TestNs = corev1.Namespace{
 }
 
 // GatewayClass
-var TestGwClass = gwapiv1b1.GatewayClass{
+var TestGwClass = gwapiv1.GatewayClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayclass-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1b1.GatewayClassSpec{
-		ControllerName: gwapiv1b1.GatewayController(opdefault.DefaultControllerName),
-		ParametersRef: &gwapiv1b1.ParametersReference{
-			Group:     gwapiv1b1.Group(stnrgwv1.GroupVersion.Group),
-			Kind:      gwapiv1b1.Kind("GatewayConfig"),
+	Spec: gwapiv1.GatewayClassSpec{
+		ControllerName: gwapiv1.GatewayController(opdefault.DefaultControllerName),
+		ParametersRef: &gwapiv1.ParametersReference{
+			Group:     gwapiv1.Group(stnrgwv1.GroupVersion.Group),
+			Kind:      gwapiv1.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
 			Namespace: &TestNsName,
 		},
@@ -91,26 +92,26 @@ var TestGwConfig = stnrgwv1.GatewayConfig{
 }
 
 // Gateway
-var TestGw = gwapiv1b1.Gateway{
+var TestGw = gwapiv1.Gateway{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gateway-1",
 		Namespace: "testnamespace",
 		Labels:    map[string]string{"dummy-label": "dummy-value"},
 	},
-	Spec: gwapiv1b1.GatewaySpec{
+	Spec: gwapiv1.GatewaySpec{
 		GatewayClassName: "gatewayclass-ok",
-		Listeners: []gwapiv1b1.Listener{{
-			Name:     gwapiv1b1.SectionName("gateway-1-listener-udp"),
-			Port:     gwapiv1b1.PortNumber(1),
-			Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
+		Listeners: []gwapiv1.Listener{{
+			Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+			Port:     gwapiv1.PortNumber(1),
+			Protocol: gwapiv1.ProtocolType("TURN-UDP"),
 		}, {
-			Name:     gwapiv1b1.SectionName("invalid"),
-			Port:     gwapiv1b1.PortNumber(3),
-			Protocol: gwapiv1b1.ProtocolType("dummy"),
+			Name:     gwapiv1.SectionName("invalid"),
+			Port:     gwapiv1.PortNumber(3),
+			Protocol: gwapiv1.ProtocolType("dummy"),
 		}, {
-			Name:     gwapiv1b1.SectionName("gateway-1-listener-tcp"),
-			Port:     gwapiv1b1.PortNumber(2),
-			Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
+			Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+			Port:     gwapiv1.PortNumber(2),
+			Protocol: gwapiv1.ProtocolType("TURN-TCP"),
 		}},
 	},
 }
@@ -122,16 +123,18 @@ var TestUDPRoute = gwapiv1a2.UDPRoute{
 		Namespace: "testnamespace",
 	},
 	Spec: gwapiv1a2.UDPRouteSpec{
-		CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-			ParentRefs: []gwapiv1b1.ParentReference{{
+		CommonRouteSpec: gwapiv1.CommonRouteSpec{
+			ParentRefs: []gwapiv1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
 		Rules: []gwapiv1a2.UDPRouteRule{{
-			BackendRefs: []gwapiv1b1.BackendRef{{
-				BackendObjectReference: gwapiv1b1.BackendObjectReference{
-					Name: gwapiv1b1.ObjectName("testservice-ok"),
+			BackendRefs: []gwapiv1.BackendRef{{
+				BackendObjectReference: gwapiv1.BackendObjectReference{
+					Name: gwapiv1.ObjectName("testservice-ok"),
+					// port is mandatory
+					Port: &TestPort,
 				},
 			}},
 		}},

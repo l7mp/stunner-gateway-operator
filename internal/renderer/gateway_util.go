@@ -10,7 +10,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -21,10 +21,10 @@ const maxGwayStatusConds = 8
 
 type portMap map[int]bool
 
-func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1b1.Gateway {
+func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
 	// r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(c.gc))
 
-	ret := []*gwapiv1b1.Gateway{}
+	ret := []*gwapiv1.Gateway{}
 
 	for _, g := range store.Gateways.GetAll() {
 		if string(g.Spec.GatewayClassName) == c.gc.GetName() {
@@ -38,7 +38,7 @@ func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1b1.Gateway {
 	return ret
 }
 
-func pruneGatewayStatusConds(gw *gwapiv1b1.Gateway) *gwapiv1b1.Gateway {
+func pruneGatewayStatusConds(gw *gwapiv1.Gateway) *gwapiv1.Gateway {
 	if len(gw.Status.Conditions) >= maxGwayStatusConds {
 		gw.Status.Conditions =
 			gw.Status.Conditions[len(gw.Status.Conditions)-(maxGwayStatusConds-1):]
@@ -47,7 +47,7 @@ func pruneGatewayStatusConds(gw *gwapiv1b1.Gateway) *gwapiv1b1.Gateway {
 	return gw
 }
 
-func isListenerConflicted(l *gwapiv1b1.Listener, udpPorts portMap, tcpPorts portMap) bool {
+func isListenerConflicted(l *gwapiv1.Listener, udpPorts portMap, tcpPorts portMap) bool {
 	switch l.Protocol {
 	case "UDP", "DTLS", "TURN-UDP", "TURN-DTLS":
 		_, ok := udpPorts[int(l.Port)]
@@ -63,54 +63,54 @@ func isListenerConflicted(l *gwapiv1b1.Listener, udpPorts portMap, tcpPorts port
 }
 
 // gateway status
-func initGatewayStatus(gw *gwapiv1b1.Gateway, cname string) {
-	gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{}
+func initGatewayStatus(gw *gwapiv1.Gateway, cname string) {
+	gw.Status.Addresses = []gwapiv1.GatewayStatusAddress{}
 
 	// set accepted to true and programmed to pending
 	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-		Type:               string(gwapiv1b1.GatewayConditionAccepted),
+		Type:               string(gwapiv1.GatewayConditionAccepted),
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
-		Reason:             string(gwapiv1b1.GatewayReasonAccepted),
+		Reason:             string(gwapiv1.GatewayReasonAccepted),
 		Message: fmt.Sprintf("gateway accepted by controller %s",
 			config.ControllerName),
 	})
 
 	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-		Type:               string(gwapiv1b1.GatewayConditionProgrammed),
+		Type:               string(gwapiv1.GatewayConditionProgrammed),
 		Status:             metav1.ConditionUnknown,
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
-		Reason:             string(gwapiv1b1.GatewayReasonPending),
+		Reason:             string(gwapiv1.GatewayReasonPending),
 		Message:            "gateway under processing",
 	})
 
 	// reinit listener statuses
 	gw.Status.Listeners = gw.Status.Listeners[:0]
-	group := gwapiv1b1.Group(gwapiv1b1.GroupVersion.Group)
+	group := gwapiv1.Group(gwapiv1.GroupVersion.Group)
 
 	for _, l := range gw.Spec.Listeners {
 		gw.Status.Listeners = append(gw.Status.Listeners,
-			gwapiv1b1.ListenerStatus{
+			gwapiv1.ListenerStatus{
 				Name: l.Name,
-				SupportedKinds: []gwapiv1b1.RouteGroupKind{{
+				SupportedKinds: []gwapiv1.RouteGroupKind{{
 					Group: &group,
-					Kind:  gwapiv1b1.Kind("UDPRoute"),
+					Kind:  gwapiv1.Kind("UDPRoute"),
 				}},
 				Conditions: []metav1.Condition{},
 			})
 	}
 }
 
-func setGatewayStatusProgrammed(gw *gwapiv1b1.Gateway, err error, ap *gatewayAddress) {
+func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, ap *gatewayAddress) {
 	if err != nil {
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayConditionProgrammed),
+			Type:               string(gwapiv1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.GatewayReasonInvalid),
+			Reason:             string(gwapiv1.GatewayReasonInvalid),
 			Message: fmt.Sprintf("error processing gateway by controller %q: %s",
 				config.ControllerName, err.Error()),
 		})
@@ -120,34 +120,34 @@ func setGatewayStatusProgrammed(gw *gwapiv1b1.Gateway, err error, ap *gatewayAdd
 	if ap != nil {
 		aType := ap.aType
 		if string(aType) == "" {
-			aType = gwapiv1b1.IPAddressType
+			aType = gwapiv1.IPAddressType
 		}
-		gw.Status.Addresses = []gwapiv1b1.GatewayStatusAddress{{
+		gw.Status.Addresses = []gwapiv1.GatewayStatusAddress{{
 			Type:  &aType,
 			Value: ap.addr,
 		}}
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayConditionProgrammed),
+			Type:               string(gwapiv1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.GatewayConditionProgrammed),
+			Reason:             string(gwapiv1.GatewayConditionProgrammed),
 			Message:            "dataplane configuration successfully rendered",
 		})
 	} else {
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayConditionProgrammed),
+			Type:               string(gwapiv1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.GatewayReasonAddressNotAssigned),
+			Reason:             string(gwapiv1.GatewayReasonAddressNotAssigned),
 			Message:            "no public address found",
 		})
 	}
 }
 
 // listener status
-func getStatus4Listener(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) *gwapiv1b1.ListenerStatus {
+func getStatus4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listener) *gwapiv1.ListenerStatus {
 	for i := range gw.Status.Listeners {
 		if gw.Status.Listeners[i].Name == l.Name {
 			return &gw.Status.Listeners[i]
@@ -159,7 +159,7 @@ func getStatus4Listener(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) *gwapiv1b1
 // sets "Detached" to true with reason "UnsupportedProtocol" or false, depending on "accepted"
 // sets ResolvedRefs to true
 // sets "Ready" to <ready> depending on "ready"
-func setListenerStatus(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener, err error, conflicted bool, routes int) {
+func setListenerStatus(gw *gwapiv1.Gateway, l *gwapiv1.Listener, err error, conflicted bool, routes int) {
 	s := getStatus4Listener(gw, l)
 	if s == nil {
 		// should never happen
@@ -174,97 +174,97 @@ func setListenerStatus(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener, err error, 
 	s.AttachedRoutes = int32(routes)
 }
 
-func setListenerStatusAccepted(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, reason error) {
+func setListenerStatusAccepted(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, reason error) {
 	switch {
 	case IsNonCriticalError(reason, PortUnavailable):
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionAccepted),
+			Type:               string(gwapiv1.ListenerConditionAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonPortUnavailable),
+			Reason:             string(gwapiv1.ListenerReasonPortUnavailable),
 			Message:            "port unavailable",
 		})
 	case IsNonCriticalError(reason, InvalidProtocol):
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionAccepted),
+			Type:               string(gwapiv1.ListenerConditionAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonUnsupportedProtocol),
+			Reason:             string(gwapiv1.ListenerReasonUnsupportedProtocol),
 			Message:            "unsupported protocol",
 		})
 	case reason != nil:
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionAccepted),
+			Type:               string(gwapiv1.ListenerConditionAccepted),
 			Status:             metav1.ConditionUnknown,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonPending),
+			Reason:             string(gwapiv1.ListenerReasonPending),
 			Message:            "pending",
 		})
 	default:
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionAccepted),
+			Type:               string(gwapiv1.ListenerConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonAccepted),
+			Reason:             string(gwapiv1.ListenerReasonAccepted),
 			Message:            "listener accepted",
 		})
 	}
 }
 
-func setListenerStatusConflicted(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, conflicted bool) {
+func setListenerStatusConflicted(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, conflicted bool) {
 	if !conflicted {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionConflicted),
+			Type:               string(gwapiv1.ListenerConditionConflicted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonNoConflicts),
+			Reason:             string(gwapiv1.ListenerReasonNoConflicts),
 			Message:            "listener protocol-port available",
 		})
 	} else {
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.ListenerConditionConflicted),
+			Type:               string(gwapiv1.ListenerConditionConflicted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.ListenerReasonProtocolConflict),
+			Reason:             string(gwapiv1.ListenerReasonProtocolConflict),
 			Message:            "multiple listeners specified with the same Listener port and protocol",
 		})
 	}
 }
 
-func setListenerStatusResolvedRefs(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus) {
+func setListenerStatusResolvedRefs(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus) {
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-		Type:               string(gwapiv1b1.ListenerConditionResolvedRefs),
+		Type:               string(gwapiv1.ListenerConditionResolvedRefs),
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
-		Reason:             string(gwapiv1b1.ListenerReasonResolvedRefs),
+		Reason:             string(gwapiv1.ListenerReasonResolvedRefs),
 		Message:            "listener object references sucessfully resolved",
 	})
 }
 
-// func setListenerStatusReady(gw *gwapiv1b1.Gateway, s *gwapiv1b1.ListenerStatus, ready bool) {
+// func setListenerStatusReady(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, ready bool) {
 // 	if ready {
 // 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1b1.ListenerConditionReady),
+// 			Type:               string(gwapiv1.ListenerConditionReady),
 // 			Status:             metav1.ConditionTrue,
 // 			ObservedGeneration: gw.Generation,
 // 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1b1.ListenerReasonReady),
+// 			Reason:             string(gwapiv1.ListenerReasonReady),
 // 			Message:            "public address found for gateway",
 // 		})
 // 	} else {
 // 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1b1.ListenerConditionReady),
+// 			Type:               string(gwapiv1.ListenerConditionReady),
 // 			Status:             metav1.ConditionFalse,
 // 			ObservedGeneration: gw.Generation,
 // 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1b1.ListenerReasonPending),
+// 			Reason:             string(gwapiv1.ListenerReasonPending),
 // 			Message:            "public address pending",
 // 		})
 // 	}

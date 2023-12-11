@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
@@ -29,7 +29,7 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	_ = gwapiv1a2.AddToScheme(scheme)
-	_ = gwapiv1b1.AddToScheme(scheme)
+	_ = gwapiv1.AddToScheme(scheme)
 	_ = stnrgwv1.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }

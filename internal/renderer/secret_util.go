@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // // set owner ref without using the scheme:
@@ -40,7 +40,7 @@ import (
 
 // getSecretNameFromRef obtains a namespaced name from a SecretObjectReference, performing validity
 // checks along the way.
-func getSecretNameFromRef(ref *gwapiv1b1.SecretObjectReference, namespace string) (types.NamespacedName, error) {
+func getSecretNameFromRef(ref *gwapiv1.SecretObjectReference, namespace string) (types.NamespacedName, error) {
 	ret := types.NamespacedName{}
 	if ref == nil {
 		return ret, errors.New("internal error obtaining Secret: called with nil pointer")
@@ -67,7 +67,7 @@ func getSecretNameFromRef(ref *gwapiv1b1.SecretObjectReference, namespace string
 }
 
 // dumpSecretRef is a helper to create a human-readable dump from a secret ref.
-func dumpSecretRef(ref *gwapiv1b1.SecretObjectReference, namespace string) string {
+func dumpSecretRef(ref *gwapiv1.SecretObjectReference, namespace string) string {
 	if ref == nil {
 		return "<nil>"
 	}

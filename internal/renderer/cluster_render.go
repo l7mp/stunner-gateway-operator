@@ -6,8 +6,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -171,7 +171,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterCon
 	return &cluster, routeError
 }
 
-func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getEndpointsForService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 
@@ -196,7 +196,7 @@ func getEndpointsForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrc
 }
 
 // either the ClusterIP if EDS is enabled, or a STRICT_DNS route if EDS is disabled
-func getClusterRouteForService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getClusterRouteForService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	var ctype stnrconfv1.ClusterType
 	ep := []string{}
 
@@ -225,7 +225,7 @@ func getClusterRouteForService(b *gwapiv1b1.BackendRef, ns string) ([]string, st
 	return ep, ctype, nil
 }
 
-func getEndpointsForStaticService(b *gwapiv1b1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getEndpointsForStaticService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 

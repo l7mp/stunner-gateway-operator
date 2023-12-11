@@ -82,9 +82,9 @@ spec:
                     minLength: 1
                     type: string
                   namespace:
-                    description: "Namespace is the namespace of the backend. When
-                      unspecified, the local namespace is inferred. \n Note that when
-                      a namespace different than the local namespace is specified,
+                    description: "Namespace is the namespace of the referenced object.
+                      When unspecified, the local namespace is inferred. \n Note that
+                      when a namespace different than the local namespace is specified,
                       a ReferenceGrant object is required in the referent namespace
                       to allow that namespace's owner to accept the reference. See
                       the ReferenceGrant documentation for details. \n Support: Core"

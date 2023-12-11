@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -183,7 +183,7 @@ func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
 // TEMPLATES
 // //////
 
-func defaultDeploymentSkeleton(gateway *gwapiv1b1.Gateway) appv1.Deployment {
+func defaultDeploymentSkeleton(gateway *gwapiv1.Gateway) appv1.Deployment {
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			// Like `kubectl label ... -l "app=stunner"
@@ -260,7 +260,7 @@ func defaultDeploymentSkeleton(gateway *gwapiv1b1.Gateway) appv1.Deployment {
 }
 
 // defaultDataplaneTemplate post-processes a deployment skeleton into a default dataplane
-func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1b1.Gateway) *appv1.Deployment {
+func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1.Gateway) *appv1.Deployment {
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
@@ -317,7 +317,7 @@ func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1b1.Gateway) *app
 }
 
 // // configWatcherDataplaneTemplate post-processes a deployment skeleton into a dataplane with a config-watcher sidecar.
-// func configWatcherDataplaneTemplate(gateway *gwapiv1b1.Gateway) *appv1.Deployment {
+// func configWatcherDataplaneTemplate(gateway *gwapiv1.Gateway) *appv1.Deployment {
 // 	podIPFieldSelector := corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}
 // 	podIPEnvVarSource := corev1.EnvVarSource{FieldRef: &podIPFieldSelector}
 
