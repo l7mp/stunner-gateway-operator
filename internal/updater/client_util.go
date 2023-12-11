@@ -243,7 +243,7 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 }
 
 func (u *Updater) deleteObject(o client.Object, gen int) error {
-	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
+	u.log.V(2).Info("delete object", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
 }

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
@@ -367,13 +370,29 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
 
-	if config.DataplaneMode == config.DataplaneModeLegacy && c.gwConf == nil {
-		// this is the killer case: we have most probably lost our gatewayconfig and we
-		// don't know which stunner config to invalidate; for now warn, later eliminate
-		// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
-		// started using them
-		log.Info("no gateway-config: active STUNNer configuration may remain stale",
-			"gateway-class", gc.GetName())
+	if config.DataplaneMode == config.DataplaneModeLegacy {
+		if c.gwConf != nil {
+			// remove the configmap
+			targetNamespace := c.gwConf.GetNamespace()
+			targetName := opdefault.DefaultConfigMapName
+			conf := cdsclient.ZeroConfig(fmt.Sprintf("%s/%s", targetNamespace, targetName))
+			c.update.ConfigQueue = append(c.update.ConfigQueue, conf)
+
+			cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
+			if err != nil {
+				log.Error(err, "error invalidating ConfigMap", "target",
+					fmt.Sprintf("%s/%s", targetNamespace, targetName))
+			} else {
+				c.update.UpsertQueue.ConfigMaps.Upsert(cm)
+			}
+		} else {
+			// this is the killer case: we have most probably lost our gatewayconfig and we
+			// don't know which stunner config to invalidate; for now warn, later eliminate
+			// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
+			// started using them
+			log.Info("no gateway-config: active STUNNer configuration may remain stale",
+				"gateway-class", gc.GetName())
+		}
 	}
 
 	setGatewayClassStatusAccepted(gc, reason)
@@ -407,6 +426,30 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		// schedule for update
 		c.update.UpsertQueue.Gateways.Upsert(gw)
+
+		// delete dataplane configmaps and deployments for invalidated gateways
+		// we do not update the client via CDS: the deployment is going away anyway
+		if config.DataplaneMode == config.DataplaneModeManaged {
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw.GetName(),
+					Namespace: gw.GetNamespace(),
+				},
+			}
+			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
+			log.V(2).Info("deleting dataplane ConfigMap", "generation", r.gen,
+				"deployment", store.DumpObject(cm))
+
+			dp := &appv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw.GetName(),
+					Namespace: gw.GetNamespace(),
+				},
+			}
+			c.update.DeleteQueue.Deployments.Upsert(dp)
+			log.V(2).Info("deleting dataplane Deployment", "generation", r.gen,
+				"deployment", store.DumpObject(dp))
+		}
 	}
 
 	log.V(1).Info("processing UDPRoutes")
@@ -433,39 +476,6 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 		}
 
 		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
-	}
-
-	// schedule for update
-	if c.gwConf != nil {
-		targetName, targetNamespace := getTarget(c)
-		if targetName == "" {
-			// we didn't find any ConfigMaps, give up
-			log.V(2).Info("could not invalidate ConfigMap: Could not identify ConfigMap namespace/name",
-				"gateway-class", store.GetObjectKey(gc))
-			return
-		}
-		conf := cdsclient.ZeroConfig(fmt.Sprintf("%s/%s", targetNamespace, targetName))
-		c.update.ConfigQueue = append(c.update.ConfigQueue, conf)
-
-		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
-		if err != nil {
-			log.Error(err, "error invalidating ConfigMap", "target",
-				fmt.Sprintf("%s/%s", targetNamespace, targetName))
-			if !IsNonCritical(err) && config.DataplaneMode == config.DataplaneModeManaged {
-				// critical error: we could not render a valid configuration so
-				// remove deployment
-				gw := c.gws.GetFirst()
-				if gw == nil {
-					return
-				}
-				dp := defaultDeploymentSkeleton(gw)
-				c.update.DeleteQueue.Deployments.Upsert(&dp)
-			}
-			return
-
-		}
-
-		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
 }
 

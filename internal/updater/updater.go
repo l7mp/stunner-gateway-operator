@@ -138,48 +138,48 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
 		if err := u.deleteObject(gc, gen); err != nil {
-			u.log.Error(err, "cannot delete gateway-class",
-				"gateway-class", store.DumpObject(gc))
+			u.log.V(1).Info("cannot delete gateway-class", "gateway-class",
+				store.DumpObject(gc), "error", err)
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.Objects() {
 		if err := u.deleteObject(gw, gen); err != nil {
-			u.log.Error(err, "cannot delete gateway",
-				"gateway", store.DumpObject(gw))
+			u.log.V(1).Info("cannot delete gateway", "gateway",
+				store.DumpObject(gw), "error", err)
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.Objects() {
 		if err := u.deleteObject(ro, gen); err != nil {
-			u.log.Error(err, "cannot delete UDP route",
-				"route", store.DumpObject(ro))
+			u.log.V(1).Info("cannot delete UDP route", "route",
+				store.DumpObject(ro), "error", err)
 			continue
 		}
 	}
 
 	for _, svc := range q.Services.Objects() {
 		if err := u.deleteObject(svc, gen); err != nil {
-			u.log.Error(err, "cannot delete service",
-				"service", store.DumpObject(svc))
+			u.log.V(1).Info("cannot delete service", "service",
+				store.DumpObject(svc), "error", err)
 			continue
 		}
 	}
 
 	for _, cm := range q.ConfigMaps.Objects() {
 		if err := u.deleteObject(cm, gen); err != nil {
-			u.log.Error(err, "cannot delete config-map",
-				"config-map", store.DumpObject(cm))
+			u.log.V(1).Info("cannot delete config-map", "config-map",
+				store.DumpObject(cm), "error", err)
 			continue
 		}
 	}
 
 	for _, dp := range q.Deployments.Objects() {
 		if err := u.deleteObject(dp, gen); err != nil {
-			u.log.Error(err, "cannot delete deployment",
-				"deployment", store.DumpObject(dp))
+			u.log.V(1).Info("cannot delete deployment", "deployment",
+				store.DumpObject(dp), "error", err)
 			continue
 		}
 	}

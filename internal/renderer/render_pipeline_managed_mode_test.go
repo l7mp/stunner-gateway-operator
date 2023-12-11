@@ -1032,31 +1032,21 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				r.invalidateGatewayClass(c, errors.New("dummy"))
 
-				// configmap
+				// we do not render a zero config on invalidation, but rather
+				// remove the deployment all together
 				cms := c.update.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 0, "configmap ready")
+				cms = c.update.DeleteQueue.ConfigMaps.Objects()
 				assert.Len(t, cms, 1, "configmap ready")
 				o := cms[0]
+				assert.Equal(t, o.GetName(), gw.GetName(), "configmap name")
+				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(), "configmap  namespace")
 
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
-				assert.True(t, found, "configmap data: stunnerd.conf found")
-				assert.Equal(t, "", conf, "configmap data: stunnerd.conf empty")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+				objs := c.update.DeleteQueue.Deployments.Objects()
+				assert.Len(t, objs, 1, "deployment num")
+				o = cms[0]
+				assert.Equal(t, o.GetName(), gw.GetName(), "deployment name")
+				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(), "deployment namespace")
 
 				//statuses
 				setGatewayClassStatusAccepted(gc, nil)
@@ -1070,9 +1060,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
-				objs := c.update.UpsertQueue.Gateways.Objects()
+				objs = c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found = objs[0].(*gwapiv1b1.Gateway)
+				gw, found := objs[0].(*gwapiv1b1.Gateway)
 				assert.True(t, found, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
