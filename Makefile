@@ -94,10 +94,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
-generate: controller-gen conversion-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	$(CONVERSION_GEN) --go-header-file "hack/boilerplate.go.txt" --input-dirs "./api/v1alpha1" \
-		--output-base "." --output-file-base="zz_generated.conversion" --skip-unsafe=true
+	# $(CONVERSION_GEN) --go-header-file "hack/boilerplate.go.txt" --input-dirs "./api/v1alpha1" \
+	# 	--output-base "." --output-file-base="zz_generated.conversion" --skip-unsafe=true
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -190,7 +190,7 @@ $(LOCALBIN):
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-CONVERSION_GEN ?= $(LOCALBIN)/conversion-gen
+# CONVERSION_GEN ?= $(LOCALBIN)/conversion-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
@@ -215,10 +215,10 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
-.PHONY: conversion-gen
-conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
-$(CONVERSION_GEN): $(LOCALBIN) 
-	test -s $(LOCALBIN)/conversion-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen 
+# .PHONY: conversion-gen
+# conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
+# $(CONVERSION_GEN): $(LOCALBIN) 
+# 	test -s $(LOCALBIN)/conversion-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen 
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.

@@ -161,21 +161,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&stnrgwv1.GatewayConfig{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "GatewayConfig")
-			os.Exit(1)
-		}
-		if err = (&stnrgwv1.StaticService{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "StaticService")
-			os.Exit(1)
-		}
-		if err = (&stnrgwv1.Dataplane{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Dataplane")
-			os.Exit(1)
-		}
-	}
-
 	setupLog.Info("setting up STUNner config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
 		Scheme: scheme,
