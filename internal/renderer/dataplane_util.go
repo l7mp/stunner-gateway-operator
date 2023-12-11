@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strconv"
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	apiutil "k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // createDeployment creates a new deployment for a managed Gateway. Label selector rules are as follows:
@@ -150,7 +149,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	return deployment, nil
 }
 
-func getDataplane(c *RenderContext) (*stnrgwv1a1.Dataplane, error) {
+func getDataplane(c *RenderContext) (*stnrgwv1.Dataplane, error) {
 	dataplaneName := opdefault.DefaultDataplaneName
 	if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
 		dataplaneName = *c.gwConf.Spec.Dataplane
@@ -165,6 +164,10 @@ func getDataplane(c *RenderContext) (*stnrgwv1a1.Dataplane, error) {
 }
 
 func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
+	if c.dp != nil && c.dp.Spec.DisableHealthCheck {
+		return nil, nil
+	}
+
 	livenessProbeAction := config.LivenessProbeAction.DeepCopy()
 	livenessProbe := config.LivenessProbe.DeepCopy()
 	livenessProbe.ProbeHandler.HTTPGet = livenessProbeAction
@@ -172,32 +175,6 @@ func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
 	readinessProbeAction := config.ReadinessProbeAction.DeepCopy()
 	readinessProbe := config.ReadinessProbe.DeepCopy()
 	readinessProbe.ProbeHandler.HTTPGet = readinessProbeAction
-
-	dataplane, err := getDataplane(c)
-	if err != nil {
-		return livenessProbe, readinessProbe
-	}
-
-	// port in the Dataplane object?
-	if dataplane.Spec.HealthCheckPort != nil {
-		livenessProbeAction.Port = apiutil.FromInt(*dataplane.Spec.HealthCheckPort)
-		readinessProbeAction.Port = apiutil.FromInt(*dataplane.Spec.HealthCheckPort)
-	}
-
-	if c.gwConf != nil && c.gwConf.Spec.HealthCheckEndpoint != nil {
-		u, err := url.Parse(*c.gwConf.Spec.HealthCheckEndpoint)
-		if err != nil {
-			return livenessProbe, readinessProbe
-		}
-		port, err := strconv.ParseInt(u.Port(), 10, 32)
-		if err != nil {
-			return livenessProbe, readinessProbe
-		}
-		if port != 0 {
-			livenessProbeAction.Port = apiutil.FromInt(int(port))
-			readinessProbeAction.Port = apiutil.FromInt(int(port))
-		}
-	}
 
 	return livenessProbe, readinessProbe
 }
@@ -286,7 +263,6 @@ func defaultDeploymentSkeleton(gateway *gwapiv1b1.Gateway) appv1.Deployment {
 func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1b1.Gateway) *appv1.Deployment {
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
-
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
 	// CDS server address

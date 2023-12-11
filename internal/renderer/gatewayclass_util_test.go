@@ -15,7 +15,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderGatewayClassUtil(t *testing.T) {
@@ -23,7 +23,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "no gatewayclass errs",
 			cls:  []gwapiv1b1.GatewayClass{},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -36,7 +36,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "too many gatewayclasses errs",
 			cls:  []gwapiv1b1.GatewayClass{},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -53,7 +53,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "wrong controller errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -70,7 +70,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "empty parametersref errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -87,7 +87,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "invalid ref group errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -104,7 +104,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "empty ref name errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -121,7 +121,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "nil ref namespace errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -138,7 +138,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "empty ref namespace errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -155,7 +155,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "condition status: accepted",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -179,7 +179,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "condition status: re-scheduled",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -208,7 +208,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 		{
 			name: "condition status: invalid-params",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},

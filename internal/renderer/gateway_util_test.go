@@ -20,7 +20,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderGatewayUtil(t *testing.T) {
@@ -28,7 +28,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 		{
 			name: "wrong gatewayclassname errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -49,7 +49,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 		{
 			name: "multiple gateways ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -79,7 +79,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 		{
 			name: "gateway status ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -123,7 +123,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 		{
 			name: "gateway rescheduled/re-ready status ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -173,7 +173,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 		{
 			name: "listener status ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},

@@ -123,7 +123,8 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		gcCtx.gwConf = gwConf
 
 		// don't even start rendering if Dataplane is not available
-		if _, err := getDataplane(gcCtx); err != nil {
+		dp, err := getDataplane(gcCtx)
+		if err != nil {
 			r.log.Error(err, "error obtaining Dataplane",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway-config", store.GetObjectKey(gwConf),
@@ -133,6 +134,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			continue
 		}
+		gcCtx.dp = dp
 
 		for _, gw := range r.getGateways4Class(gcCtx) {
 			gw := gw
@@ -473,9 +475,6 @@ func getTarget(c *RenderContext) (string, string) {
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
 		targetName = opdefault.DefaultConfigMapName
-		if c.gwConf.Spec.StunnerConfig != nil {
-			targetName = *c.gwConf.Spec.StunnerConfig
-		}
 		targetNamespace = c.gwConf.GetNamespace()
 	case config.DataplaneModeManaged:
 		// assume it exists

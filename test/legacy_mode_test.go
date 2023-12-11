@@ -44,7 +44,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func testLegacyMode() {
@@ -74,7 +74,7 @@ func testLegacyMode() {
 				Name:      testutils.TestGwConfig.GetName(),
 				Namespace: testutils.TestGwConfig.GetNamespace(),
 			}
-			gwConfig := &stnrgwv1a1.GatewayConfig{}
+			gwConfig := &stnrgwv1.GatewayConfig{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, gwConfig)
 				return err == nil
@@ -87,7 +87,7 @@ func testLegacyMode() {
 
 		It("should successfully render a STUNner ConfigMap", func() {
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -110,7 +110,7 @@ func testLegacyMode() {
 		It("should render a ConfigMap that can be successfully unpacked", func() {
 			// retry, but also try to unpack inside Eventually
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -139,7 +139,7 @@ func testLegacyMode() {
 		It("should render a STUNner config with exactly 2 listeners", func() {
 			// retry, but also try to unpack inside Eventually
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -186,8 +186,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -197,8 +195,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 		})
 
 		It("should set the GatewayClass status", func() {
@@ -326,7 +322,7 @@ func testLegacyMode() {
 
 			// retry, but also try to unpack inside Eventually
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -372,8 +368,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -385,8 +379,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -447,7 +439,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -493,7 +485,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -535,7 +527,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -577,7 +569,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -625,7 +617,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -661,14 +653,14 @@ func testLegacyMode() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -710,7 +702,7 @@ func testLegacyMode() {
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -919,7 +911,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -957,8 +949,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -966,8 +956,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -976,8 +964,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -988,7 +974,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1025,8 +1011,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -1039,7 +1023,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1076,8 +1060,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(newKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -1110,7 +1092,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1149,8 +1131,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Cert).Should(Equal(""))
 			Expect(l.Key).Should(Equal(""))
@@ -1160,8 +1140,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -1170,8 +1148,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tls"))
 			Expect(l.Protocol).Should(Equal("TURN-TLS"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -1186,7 +1162,7 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				group := gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group)
+				group := gwapiv1b1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1b1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
 					ParentRefs: []gwapiv1b1.ParentReference{{
@@ -1204,7 +1180,7 @@ func testLegacyMode() {
 
 			// wait until configmap gets updated
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1253,8 +1229,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1266,8 +1240,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1435,7 +1407,7 @@ func testLegacyMode() {
 
 			// wait until configmap gets updated
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1473,7 +1445,7 @@ func testLegacyMode() {
 
 			// wait until configmap gets updated
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1523,7 +1495,7 @@ func testLegacyMode() {
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -1574,8 +1546,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1587,8 +1557,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1747,7 +1715,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 
@@ -1790,8 +1758,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
@@ -1802,8 +1768,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1986,7 +1950,7 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 
@@ -2029,8 +1993,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -2042,8 +2004,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -2250,7 +2210,7 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 
@@ -2293,8 +2253,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -2306,8 +2264,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(2))
 			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
 			Expect(l.Routes).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
@@ -2550,7 +2506,7 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 
@@ -2593,8 +2549,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
@@ -2605,8 +2559,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(2))
 			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
 			Expect(l.Routes).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
@@ -2859,7 +2811,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -2897,8 +2849,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
@@ -2909,8 +2859,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
 			Expect(conf.Clusters).To(HaveLen(0))
@@ -2973,13 +2921,13 @@ func testLegacyMode() {
 			})
 
 			ctrl.Log.Info("re-loading gateway-config")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3017,7 +2965,7 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> ephemeral
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3029,7 +2977,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3064,7 +3012,7 @@ func testLegacyMode() {
 		It("external auth refs override inline auth", func() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1b1.Namespace("testnamespace")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				atype := "ephemeral"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
@@ -3078,7 +3026,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3117,7 +3065,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3160,7 +3108,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3196,7 +3144,7 @@ func testLegacyMode() {
 			Expect(k8sClient.Delete(ctx, testAuthSecret)).Should(Succeed())
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3221,7 +3169,7 @@ func testLegacyMode() {
 
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1a1.GatewayConfig) {
+			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				atype := "timewindowed" // use alias -> ephemeral
 				secret := "dummy"
 				current.Spec.AuthType = &atype
@@ -3230,7 +3178,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3270,7 +3218,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3307,7 +3255,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3378,7 +3326,7 @@ func testLegacyMode() {
 			Expect(err).Should(Succeed())
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3518,7 +3466,7 @@ func testLegacyMode() {
 			Expect(err).Should(Succeed())
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3646,7 +3594,7 @@ func testLegacyMode() {
 
 		It("should render an empty config", func() {
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3689,7 +3637,7 @@ func testLegacyMode() {
 			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3730,8 +3678,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -3743,8 +3689,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -3818,7 +3762,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 			cm := &corev1.ConfigMap{}
@@ -3860,8 +3804,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -3900,7 +3842,7 @@ func testLegacyMode() {
 			})
 
 			lookupKey := types.NamespacedName{
-				Name:      "stunner-config", // test GatewayConfig rewrites DefaultConfigMapName
+				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
 			}
 
@@ -3943,8 +3885,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
 			l = conf.Listeners[1]
@@ -3955,8 +3895,6 @@ func testLegacyMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 

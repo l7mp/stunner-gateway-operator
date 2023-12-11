@@ -14,19 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Hub marks StaticService.v1 as a conversion hub.
+func (*StaticService) Hub() {}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner,shortName=ssvc
+// +kubebuilder:storageversion
 
-// StaticService is a set of static IP address prefixes STUNner allows access to via a Route. The
-// purpose is to allow a Service-like CRD containing a set of static IP address prefixes to be set
-// as the backend of a UDPRoute (or TCPRoute).
+// StaticService is a set of static IP address prefixes STUNner allows access to via a UDPRoute (or
+// TCPRoute in the future). In contrast to Kubernetes Services, StaticServices expose all ports on
+// the given IPs. See also https://github.com/kubernetes/enhancements/pull/2611.
 type StaticService struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -38,15 +41,6 @@ type StaticService struct {
 
 // StaticServiceSpec describes the prefixes reachable via a StaticService.
 type StaticServiceSpec struct {
-	// The list of ports reachable via this service (currently omitted).
-	// +patchMergeKey=port
-	// +patchStrategy=merge
-	// +listType=map
-	// +listMapKey=port
-	// +listMapKey=protocol
-	// +optional
-	Ports []corev1.ServicePort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"port" protobuf:"bytes,1,rep,name=ports"`
-
 	// Prefixes is a list of IP address prefixes reachable via this route.
 	Prefixes []string `json:"prefixes"`
 }

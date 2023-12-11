@@ -22,11 +22,12 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 const (
@@ -120,7 +121,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch StaticService objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &stnrgwv1a1.StaticService{}),
+		source.Kind(mgr.GetCache(), &stnrgwv1.StaticService{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateStaticServiceForReconcile),
 	); err != nil {
@@ -258,7 +259,7 @@ func (r *udpRouteReconciler) validateBackendForReconcile(o client.Object) bool {
 func (r *udpRouteReconciler) validateStaticServiceForReconcile(o client.Object) bool {
 	// are we given a service or an endpoints object?
 	key := ""
-	if svc, ok := o.(*stnrgwv1a1.StaticService); ok {
+	if svc, ok := o.(*stnrgwv1.StaticService); ok {
 		key = store.GetObjectKey(svc)
 	} else {
 		return false
@@ -343,8 +344,8 @@ func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udprout
 }
 
 // getStaticServiceForBackend finds the StaticService associated with a backendRef
-func (r *udpRouteReconciler) getStaticServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1b1.BackendRef) *stnrgwv1a1.StaticService {
-	svc := stnrgwv1a1.StaticService{}
+func (r *udpRouteReconciler) getStaticServiceForBackend(ctx context.Context, udproute *gwapiv1a2.UDPRoute, ref *gwapiv1b1.BackendRef) *stnrgwv1.StaticService {
+	svc := stnrgwv1.StaticService{}
 
 	// if no explicit StaticService namespace is provided, use the UDPRoute namespace to lookup the
 	// StaticService

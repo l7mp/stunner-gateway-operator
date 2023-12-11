@@ -11,9 +11,10 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
@@ -41,7 +42,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterCon
 		b := b
 
 		if b.Group != nil && string(*b.Group) != corev1.GroupName &&
-			string(*b.Group) != stnrgwv1a1.GroupVersion.Group {
+			string(*b.Group) != stnrgwv1.GroupVersion.Group {
 			routeError = NewNonCriticalError(InvalidBackendGroup)
 			r.log.V(2).Info("renderCluster: invalid backend Group", "route",
 				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "group",

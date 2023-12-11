@@ -16,7 +16,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderNodeUtil(t *testing.T) {
@@ -24,7 +24,7 @@ func TestRenderNodeUtil(t *testing.T) {
 		{
 			name:  "node-ip ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
@@ -38,7 +38,7 @@ func TestRenderNodeUtil(t *testing.T) {
 		{
 			name:  "second valid node-ip ok",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},

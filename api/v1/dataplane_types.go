@@ -14,21 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func init() {
-	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
-}
+// Hub marks Dataplane.v1 as a conversion hub.
+func (*Dataplane) Hub() {}
 
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner,scope=Cluster,shortName=dps
+// +kubebuilder:storageversion
 
 // Dataplane is a collection of configuration parameters that can be used for spawning a `stunnerd`
 // instance for a Gateway. Labels and annotations on the Dataplane object will be copied verbatim
@@ -46,21 +46,6 @@ type Dataplane struct {
 
 // DataplaneSpec describes the prefixes reachable via a Dataplane.
 type DataplaneSpec struct {
-	// // Dataplane template. The `default` template spawns a single stunnerd container with the
-	// // running config mapped into the pod from the ConfigMap. The `config-watcher` template
-	// // uses a separate sidecar container to watch the ConfigMap, which can be faster than the
-	// // default but requires additional RBAC permissions.
-	// //
-	// // +optional
-	// // +kubebuilder:default:="default"
-	// Template string `json:"template,omitempty"`
-
-	// Number of desired pods. This is a pointer to distinguish between explicit zero and not
-	// specified. Defaults to 1.
-	//
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty"`
-
 	// Container image name.
 	//
 	// +optional
@@ -81,10 +66,20 @@ type DataplaneSpec struct {
 	// +optional
 	Args []string `json:"args,omitempty"`
 
+	// List of sources to populate environment variables in the stunnerd container.
+	// +optional
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
 	// List of environment variables to set in the stunnerd container.
 	//
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// Number of desired pods. This is a pointer to distinguish between explicit zero and not
+	// specified. Defaults to 1.
+	//
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	// Resources required by stunnerd.
 	//
@@ -117,10 +112,19 @@ type DataplaneSpec struct {
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
-	// If specified, the health-check port.
+	// Disable health-checking. Default is to enable HTTP health-checks on port 8086: a
+	// liveness probe responder will be exposed on path `/live` and readiness probe on path
+	// `/ready`.
 	//
 	// +optional
-	HealthCheckPort *int `json:"healthCheckPort,omitempty"`
+	DisableHealthCheck bool `json:"disableHealthCheck,omitempty"`
+
+	// EnableMetricsEnpoint can be used to enable metrics scraping (Prometheus). If enabled, a
+	// metrics endpoint will available at http://0.0.0.0:8080 at all dataplane pods. Default is
+	// no metrics collection.
+	//
+	// +optional
+	EnableMetricsEnpoint bool `json:"disableMetricsEndpoint,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -133,4 +137,8 @@ type DataplaneList struct {
 
 	// List of services.
 	Items []Dataplane `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
 }

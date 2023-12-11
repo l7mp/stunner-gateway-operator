@@ -25,7 +25,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // var testerLogLevel = zapcore.Level(-10)
@@ -40,13 +40,13 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1b1.AddToScheme(scheme))
-	utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))
+	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
 
 type renderTestConfig struct {
 	name   string
 	cls    []gwapiv1b1.GatewayClass
-	cfs    []stnrgwv1a1.GatewayConfig
+	cfs    []stnrgwv1.GatewayConfig
 	gws    []gwapiv1b1.Gateway
 	rs     []gwapiv1a2.UDPRoute
 	svcs   []corev1.Service
@@ -55,8 +55,8 @@ type renderTestConfig struct {
 	scrts  []corev1.Secret
 	ascrts []corev1.Secret
 	nss    []corev1.Namespace
-	ssvcs  []stnrgwv1a1.StaticService
-	dps    []stnrgwv1a1.Dataplane
+	ssvcs  []stnrgwv1.StaticService
+	dps    []stnrgwv1.Dataplane
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }

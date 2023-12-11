@@ -3,9 +3,12 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 )
 
 // Labeling rules
@@ -87,9 +90,6 @@ const (
 	// ClusterIP of a service.
 	DefaultEnableRelayToClusterIP = true
 
-	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
-	DefaultHealthCheckEndpoint = "http://0.0.0.0:8086"
-
 	// DefaultThrottleTimeout is the default time interval to wait between subsequent config
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
@@ -103,4 +103,12 @@ const (
 
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
 	MixedProtocolAnnotationValue = "true"
+)
+
+var (
+	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
+	DefaultHealthCheckEndpoint = fmt.Sprintf("http://:%d", stnrconfv1.DefaultHealthCheckPort)
+
+	// DefaultMetricsEndpoint is the default URI at which metrics scaping requests are served.
+	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrconfv1.DefaultMetricsPort)
 )

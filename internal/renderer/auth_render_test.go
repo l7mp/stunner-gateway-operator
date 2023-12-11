@@ -13,7 +13,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderAuthRender(t *testing.T) {
@@ -21,7 +21,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "default auth ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
@@ -46,17 +46,16 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "ephemeral auth ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.StunnerConfig = "dummy"
 				*w.Spec.Realm = "dummy"
 				*w.Spec.AuthType = "ephemeral"
 				s := "dummy"
 				w.Spec.SharedSecret = &s
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -77,13 +76,13 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "wrong auth-type errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.AuthType = "dummy"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -100,14 +99,14 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "static no-username errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.AuthType = "static"
 				w.Spec.Username = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -124,14 +123,14 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "static no-password errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.AuthType = "static"
 				w.Spec.Password = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -148,7 +147,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "auth type alias: static - ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
@@ -157,7 +156,7 @@ func TestRenderAuthRender(t *testing.T) {
 				u, p := "testuser", "testpasswd"
 				w.Spec.Username = &u
 				w.Spec.Password = &p
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -177,14 +176,14 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "lonterm no-secret errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.AuthType = "ephemeral"
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -201,17 +200,16 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "auth type alias: timewindowed - ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.StunnerConfig = "dummy"
 				*w.Spec.Realm = "dummy"
 				*w.Spec.AuthType = "timewindowed"
 				s := "dummy"
 				w.Spec.SharedSecret = &s
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -232,17 +230,16 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "auth type alias: ephemeral - ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.StunnerConfig = "dummy"
 				*w.Spec.Realm = "dummy"
 				*w.Spec.AuthType = "timewindowed"
 				s := "dummy"
 				w.Spec.SharedSecret = &s
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -264,7 +261,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "default external auth ok",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
@@ -278,7 +275,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -301,7 +298,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "ephemeral external auth ok",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
@@ -315,7 +312,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 
 				s := testutils.TestAuthSecret.DeepCopy()
 				s.Data["type"] = []byte("ephemeral")
@@ -341,7 +338,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "wrong secret group errs",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
@@ -355,7 +352,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -372,7 +369,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "wrong secret kind errs",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
@@ -386,7 +383,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -403,7 +400,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "missing secret errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
 				w := testutils.TestGwConfig.DeepCopy()
@@ -416,7 +413,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -432,7 +429,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "missing namespace ok",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				// add AuthRef to gwconf and remove inline auth
@@ -444,7 +441,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				w.Spec.Password = nil
 				w.Spec.SharedSecret = nil
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -467,7 +464,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name:   "external auth overrides inline",
 			cls:    []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:    []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			ascrts: []corev1.Secret{testutils.TestAuthSecret},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -478,7 +475,7 @@ func TestRenderAuthRender(t *testing.T) {
 				sharedSecret := "testsecret"
 				w.Spec.AuthType = &atype
 				w.Spec.SharedSecret = &sharedSecret
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -501,7 +498,7 @@ func TestRenderAuthRender(t *testing.T) {
 		{
 			name: "mixed inline/external auth errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			prep: func(c *renderTestConfig) {
 				// gateway-config contains pass
 				w := testutils.TestGwConfig.DeepCopy()
@@ -511,7 +508,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.AuthType = nil
 				pwd := "ext-testpass"
 				w.Spec.Password = &pwd
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 
 				// secret contains type and  username
 				s := testutils.TestAuthSecret.DeepCopy()

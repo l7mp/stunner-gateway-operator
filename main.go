@@ -47,7 +47,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 const (
@@ -63,7 +63,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1b1.AddToScheme(scheme))
-	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
+	// utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))
+	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
 
 func main() {
@@ -158,6 +159,21 @@ func main() {
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
+	}
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&stnrgwv1.GatewayConfig{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GatewayConfig")
+			os.Exit(1)
+		}
+		if err = (&stnrgwv1.StaticService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "StaticService")
+			os.Exit(1)
+		}
+		if err = (&stnrgwv1.Dataplane{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Dataplane")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("setting up STUNner config renderer")

@@ -11,15 +11,16 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func stnrListenerName(gw *gwapiv1b1.Gateway, l *gwapiv1b1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1a1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1b1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -28,14 +29,14 @@ func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1a1.Gate
 		return nil, err
 	}
 
-	minPort, maxPort := stnrconfv1.DefaultMinRelayPort,
-		stnrconfv1.DefaultMaxRelayPort
-	if gwConf.Spec.MinPort != nil {
-		minPort = int(*gwConf.Spec.MinPort)
-	}
-	if gwConf.Spec.MaxPort != nil {
-		maxPort = int(*gwConf.Spec.MaxPort)
-	}
+	// minPort, maxPort := stnrconfv1.DefaultMinRelayPort,
+	// 	stnrconfv1.DefaultMaxRelayPort
+	// if gwConf.Spec.MinPort != nil {
+	// 	minPort = int(*gwConf.Spec.MinPort)
+	// }
+	// if gwConf.Spec.MaxPort != nil {
+	// 	maxPort = int(*gwConf.Spec.MaxPort)
+	// }
 
 	a, p := "", 0
 	if ap != nil {
@@ -50,8 +51,8 @@ func (r *Renderer) renderListener(gw *gwapiv1b1.Gateway, gwConf *stnrgwv1a1.Gate
 		Port:         int(l.Port),
 		PublicAddr:   a,
 		PublicPort:   p,
-		MinRelayPort: minPort,
-		MaxRelayPort: maxPort,
+		MinRelayPort: stnrconfv1.DefaultMinRelayPort,
+		MaxRelayPort: stnrconfv1.DefaultMaxRelayPort,
 	}
 
 	if cert, key, ok := r.getTLS(gw, l); ok {

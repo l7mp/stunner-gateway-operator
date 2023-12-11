@@ -16,8 +16,9 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func GetObjectKey(object client.Object) string {
@@ -108,19 +109,19 @@ func DumpObject(o client.Object) string {
 		} else {
 			output = string(json)
 		}
-	case *stnrgwv1a1.GatewayConfig:
+	case *stnrgwv1.GatewayConfig:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
 			output = string(json)
 		}
-	case *stnrgwv1a1.StaticService:
+	case *stnrgwv1.StaticService:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
 			output = string(json)
 		}
-	case *stnrgwv1a1.Dataplane:
+	case *stnrgwv1.Dataplane:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
@@ -160,11 +161,11 @@ func DumpObject(o client.Object) string {
 // 		tmp = ro
 // 	case *appv1.Deployment:
 // 		tmp = ro
-// 	case *stnrgwv1a1.GatewayConfig:
+// 	case *stnrgwv1.GatewayConfig:
 // 		tmp = ro
-// 	case *stnrgwv1a1.StaticService:
+// 	case *stnrgwv1.StaticService:
 // 		tmp = ro
-// 	case *stnrgwv1a1.Dataplane:
+// 	case *stnrgwv1.Dataplane:
 // 		tmp = ro
 // 	case *corev1.ConfigMap:
 // 		tmp = stripCM(ro)
@@ -250,7 +251,7 @@ func IsReferenceService(ref *gwapiv1b1.BackendRef) bool {
 
 // IsReferenceStaticService returns true of the provided BackendRef points to a StaticService.
 func IsReferenceStaticService(ref *gwapiv1b1.BackendRef) bool {
-	if ref.Group == nil || string(*ref.Group) != stnrgwv1a1.GroupVersion.Group {
+	if ref.Group == nil || string(*ref.Group) != stnrgwv1.GroupVersion.Group {
 		return false
 	}
 

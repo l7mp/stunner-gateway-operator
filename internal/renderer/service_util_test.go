@@ -18,10 +18,11 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderServiceUtil(t *testing.T) {
@@ -29,7 +30,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "public-ip ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -64,7 +65,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "fallback to hostname ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -99,7 +100,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "wrong annotation name errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -131,7 +132,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "wrong annotation errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -162,7 +163,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name:  "no owner-ref errs",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{},
 			nodes: []corev1.Node{testutils.TestNode},
@@ -196,7 +197,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "wrong proto errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -228,7 +229,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "wrong port errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -259,7 +260,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "no service-port stats ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -298,7 +299,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "multiple service-ports public-ip ok",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -356,7 +357,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name:  "nodeport IP OK",
 			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:    []gwapiv1a2.UDPRoute{},
 			nodes: []corev1.Node{testutils.TestNode},
@@ -394,7 +395,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - single listener",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -454,7 +455,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - single listener",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -513,7 +514,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - single listener, no valid listener",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -544,7 +545,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, single proto",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -602,7 +603,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, multi proto, first valid",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -657,7 +658,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, multi proto with enabled mixed proto annotation in gateway, all valid",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -722,7 +723,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, multi proto with dummy mixed proto annotation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -784,7 +785,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, multi proto with enabled in GwConfig",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -792,7 +793,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
 				c.gws = []gwapiv1b1.Gateway{*gw}
@@ -849,7 +850,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - multi-listener, multi proto with enabled in GwConfig but overridden and disabled in Gateway",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -857,7 +858,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
@@ -914,7 +915,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb annotations",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -923,7 +924,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["test"] = "testval"
 				w.Spec.LoadBalancerServiceAnnotations["dummy"] = "dummyval"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -980,7 +981,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb health check annotations (aws)",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -989,7 +990,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1043,7 +1044,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb health check annotations (do)",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1052,7 +1053,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1106,7 +1107,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb health check annotations not an int port (do)",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1115,7 +1116,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "eighty"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1166,7 +1167,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb health check annotations UDP protocol (do)",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1175,7 +1176,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "UDP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1226,7 +1227,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb annotations from gwConf override from Gw",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1235,7 +1236,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["test"] = "testval"
 				w.Spec.LoadBalancerServiceAnnotations["dummy"] = "dummyval"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann["test"] = "testval"         // same
@@ -1291,7 +1292,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - lb annotations health check from gwConf override from Gw",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1300,7 +1301,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "UDP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP" // overrride
@@ -1353,7 +1354,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - default svc type",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1378,7 +1379,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - svc type ClusterIP from gwConf",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1388,7 +1389,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1421,7 +1422,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - svc type NodePort from gwConf",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1431,7 +1432,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "NodePort"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -1464,7 +1465,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - svc type from svc annotation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1508,7 +1509,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - nodeport svc override gwConf from svc annotation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1518,7 +1519,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
-				c.cfs = []stnrgwv1a1.GatewayConfig{*w}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann[opdefault.ServiceTypeAnnotationKey] = "NodePort"
@@ -1556,7 +1557,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "lb service - svc type NodePort from gw annotation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -1600,7 +1601,7 @@ func TestRenderServiceUtil(t *testing.T) {
 		{
 			name: "public address hint in Gateway Spec",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},

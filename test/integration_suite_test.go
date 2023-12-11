@@ -53,7 +53,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var _ = fmt.Sprintf("%d", 1)
@@ -73,7 +73,7 @@ var (
 	// Resources
 	testNs         *corev1.Namespace
 	testGwClass    *gwapiv1b1.GatewayClass
-	testGwConfig   *stnrgwv1a1.GatewayConfig
+	testGwConfig   *stnrgwv1.GatewayConfig
 	testGw         *gwapiv1b1.Gateway
 	testUDPRoute   *gwapiv1a2.UDPRoute
 	testSvc        *corev1.Service
@@ -81,8 +81,8 @@ var (
 	testNode       *corev1.Node
 	testSecret     *corev1.Secret
 	testAuthSecret *corev1.Secret
-	testStaticSvc  *stnrgwv1a1.StaticService
-	testDataplane  *stnrgwv1a1.Dataplane
+	testStaticSvc  *stnrgwv1.StaticService
+	testDataplane  *stnrgwv1.Dataplane
 	// Globals
 	cfg       *rest.Config
 	k8sClient client.Client
@@ -178,7 +178,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
-	err = stnrgwv1a1.AddToScheme(scheme)
+	err = stnrgwv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -299,10 +299,10 @@ func createOrUpdateGateway(template *gwapiv1b1.Gateway, f GatewayMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayConfigMutator func(current *stnrgwv1a1.GatewayConfig)
+type GatewayConfigMutator func(current *stnrgwv1.GatewayConfig)
 
-func createOrUpdateGatewayConfig(template *stnrgwv1a1.GatewayConfig, f GatewayConfigMutator) {
-	current := &stnrgwv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateGatewayConfig(template *stnrgwv1.GatewayConfig, f GatewayConfigMutator) {
+	current := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

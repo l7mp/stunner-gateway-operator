@@ -10,34 +10,30 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var (
-	TestTrue                = true
-	TestNsName              = gwapiv1b1.Namespace("testnamespace")
-	TestStunnerConfig       = "stunner-config"
-	TestRealm               = "testrealm"
-	TestMetricsEndpoint     = "testmetrics"
-	TestHealthCheckEndpoint = "testhealth"
-	TestAuthType            = "static"
-	TestUsername            = "testuser"
-	TestPassword            = "testpass"
-	TestLogLevel            = "testloglevel"
-	TestMinPort             = int32(1)
-	TestMaxPort             = int32(2)
-	TestLabelName           = "testlabel"
-	TestLabelValue          = "testvalue"
-	TestSectionName         = gwapiv1b1.SectionName("gateway-1-listener-udp")
-	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
-	TestKey64               = "dGVzdGtleQ==" // "testkey"
-	TestReplicas            = int32(3)
-	TestTerminationGrace    = int64(60)
-	TestImagePullPolicy     = corev1.PullAlways
-	TestCPURequest          = resource.MustParse("250m")
-	TestMemoryLimit         = resource.MustParse("10M")
-	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+	TestTrue             = true
+	TestNsName           = gwapiv1b1.Namespace("testnamespace")
+	TestRealm            = "testrealm"
+	TestAuthType         = "static"
+	TestUsername         = "testuser"
+	TestPassword         = "testpass"
+	TestLogLevel         = "testloglevel"
+	TestLabelName        = "testlabel"
+	TestLabelValue       = "testvalue"
+	TestSectionName      = gwapiv1b1.SectionName("gateway-1-listener-udp")
+	TestCert64           = "dGVzdGNlcnQ=" // "testcert"
+	TestKey64            = "dGVzdGtleQ==" // "testkey"
+	TestReplicas         = int32(3)
+	TestTerminationGrace = int64(60)
+	TestImagePullPolicy  = corev1.PullAlways
+	TestCPURequest       = resource.MustParse("250m")
+	TestMemoryLimit      = resource.MustParse("10M")
+	TestResourceRequest  = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceCPU: TestCPURequest,
 	})
 	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
@@ -66,7 +62,7 @@ var TestGwClass = gwapiv1b1.GatewayClass{
 	Spec: gwapiv1b1.GatewayClassSpec{
 		ControllerName: gwapiv1b1.GatewayController(opdefault.DefaultControllerName),
 		ParametersRef: &gwapiv1b1.ParametersReference{
-			Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
+			Group:     gwapiv1b1.Group(stnrgwv1.GroupVersion.Group),
 			Kind:      gwapiv1b1.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
 			Namespace: &TestNsName,
@@ -75,27 +71,22 @@ var TestGwClass = gwapiv1b1.GatewayClass{
 }
 
 // GatewayConfig
-var TestGwConfig = stnrgwv1a1.GatewayConfig{
+var TestGwConfig = stnrgwv1.GatewayConfig{
 	TypeMeta: metav1.TypeMeta{
-		APIVersion: fmt.Sprintf("%s/%s", stnrgwv1a1.GroupVersion.Group,
-			stnrgwv1a1.GroupVersion.Version),
+		APIVersion: fmt.Sprintf("%s/%s", stnrgwv1.GroupVersion.Group,
+			stnrgwv1.GroupVersion.Version),
 		Kind: "GatewaylClass",
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayconfig-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: stnrgwv1a1.GatewayConfigSpec{
-		StunnerConfig:       &TestStunnerConfig,
-		Realm:               &TestRealm,
-		MetricsEndpoint:     &TestMetricsEndpoint,
-		HealthCheckEndpoint: &TestHealthCheckEndpoint,
-		AuthType:            &TestAuthType,
-		Username:            &TestUsername,
-		Password:            &TestPassword,
-		LogLevel:            &TestLogLevel,
-		MinPort:             &TestMinPort,
-		MaxPort:             &TestMaxPort,
+	Spec: stnrgwv1.GatewayConfigSpec{
+		Realm:    &TestRealm,
+		AuthType: &TestAuthType,
+		Username: &TestUsername,
+		Password: &TestPassword,
+		LogLevel: &TestLogLevel,
 	},
 }
 
@@ -253,22 +244,22 @@ var TestAuthSecret = corev1.Secret{
 }
 
 // StaticService
-var TestStaticSvc = stnrgwv1a1.StaticService{
+var TestStaticSvc = stnrgwv1.StaticService{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "testnamespace",
 		Name:      "teststaticservice-ok",
 	},
-	Spec: stnrgwv1a1.StaticServiceSpec{
+	Spec: stnrgwv1.StaticServiceSpec{
 		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
 	},
 }
 
 // Dataplane
-var TestDataplane = stnrgwv1a1.Dataplane{
+var TestDataplane = stnrgwv1.Dataplane{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: opdefault.DefaultDataplaneName,
 	},
-	Spec: stnrgwv1a1.DataplaneSpec{
+	Spec: stnrgwv1.DataplaneSpec{
 		Replicas:                      &TestReplicas,
 		Image:                         "testimage-1",
 		Command:                       []string{"testcommand-1"},

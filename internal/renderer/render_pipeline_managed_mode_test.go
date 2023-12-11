@@ -17,16 +17,18 @@ import (
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderPipelineManagedMode(t *testing.T) {
@@ -35,11 +37,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "no EDS - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
@@ -130,8 +132,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -139,8 +141,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -311,12 +313,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "EDS with relay-to-cluster-IP - E2E test",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -394,8 +396,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -403,8 +405,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -429,11 +431,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "no EDS  - E2E test - conflicted status",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				gw.Spec.Listeners = []gwapiv1b1.Listener{{
@@ -1002,11 +1004,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "E2E invalidation",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
@@ -1099,31 +1101,29 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 		{
 			name: "EDS with no relay-to-cluster-IP - E2E rendering for multiple gateway-classes",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{testutils.TestGw},
 			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
-			dps:  []stnrgwv1a1.Dataplane{testutils.TestDataplane},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
 				// a new gatewayclass that specifies a different gateway-config
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
 				dummyGc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "dummy-gateway-config",
 					Namespace: &testutils.TestNsName,
 				}
 				c.cls = []gwapiv1b1.GatewayClass{testutils.TestGwClass, *dummyGc}
 
-				// the new gateway-config that renders into a different stunner configmap
+				// the new gateway-config that renders into a different stunner config
 				dummyConf := testutils.TestGwConfig.DeepCopy()
 				dummyConf.SetName("dummy-gateway-config")
-				target := "dummy-stunner-config"
-				dummyConf.Spec.StunnerConfig = &target
-				c.cfs = []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
+				c.cfs = []stnrgwv1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
 
 				// a new gateway whose controller-name is the new gatewayclass
 				dummyGw := testutils.TestGw.DeepCopy()
@@ -1256,8 +1256,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -1265,8 +1265,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -1531,8 +1531,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -1540,8 +1540,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
-				assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
+				assert.Equal(t, stnrconfv1.DefaultMinRelayPort, lc.MinRelayPort, "min-port")
+				assert.Equal(t, stnrconfv1.DefaultMaxRelayPort, lc.MaxRelayPort, "max-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 

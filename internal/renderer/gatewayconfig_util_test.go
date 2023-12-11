@@ -14,7 +14,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderGatewayConfigUtil(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "no gatewayconfig errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{},
+			cfs:  []stnrgwv1.GatewayConfig{},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -40,7 +40,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref namespace errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -62,7 +62,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref kind errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},
@@ -79,7 +79,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 		{
 			name: "wrong gatewayconfig ref name errs",
 			cls:  []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1a1.GatewayConfig{testutils.TestGwConfig},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1b1.Gateway{},
 			rs:   []gwapiv1a2.UDPRoute{},
 			svcs: []corev1.Service{},

@@ -44,7 +44,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 )
 
@@ -68,7 +68,7 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testGw)).Should(Succeed())
 
 			ctrl.Log.Info("loading default Dataplane")
-			current := &stnrgwv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: testDataplane.GetName(),
 			}}
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
@@ -85,7 +85,7 @@ func testManagedMode() {
 				Name:      testutils.TestGwConfig.GetName(),
 				Namespace: testutils.TestGwConfig.GetNamespace(),
 			}
-			gwConfig := &stnrgwv1a1.GatewayConfig{}
+			gwConfig := &stnrgwv1.GatewayConfig{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupKey, gwConfig)
 				return err == nil
@@ -188,8 +188,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -199,8 +199,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 		})
 
 		It("should set the GatewayClass status", func() {
@@ -385,8 +385,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -398,8 +398,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -547,8 +547,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -556,8 +556,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -566,8 +566,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -612,8 +612,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -705,7 +705,7 @@ func testManagedMode() {
 
 		It("should update the Deployment when the Dataplane changes", func() {
 			ctrl.Log.Info("adding the default Dataplane")
-			current := &stnrgwv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: testDataplane.GetName(),
 			}}
 
@@ -782,7 +782,7 @@ func testManagedMode() {
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
-				group := gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group)
+				group := gwapiv1b1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1b1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1b1.CommonRouteSpec{
 					ParentRefs: []gwapiv1b1.ParentReference{{
@@ -846,8 +846,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -859,8 +859,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1105,8 +1105,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1118,8 +1118,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1179,8 +1179,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1717,7 +1717,7 @@ func testManagedMode() {
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, gc2, func() error {
 				testGwClass.Spec.DeepCopyInto(&gc2.Spec)
 				gc2.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-					Group:     gwapiv1b1.Group(stnrgwv1a1.GroupVersion.Group),
+					Group:     gwapiv1b1.Group(stnrgwv1.GroupVersion.Group),
 					Kind:      gwapiv1b1.Kind("GatewayConfig"),
 					Name:      "gateway-config-2",
 					Namespace: &testutils.TestNsName,
@@ -1730,7 +1730,7 @@ func testManagedMode() {
 			ctrl.Log.Info("loading GatewayConfig 2")
 			realm := "testrealm-2"
 			dataplane := "dataplane-2"
-			gwConf2 := &stnrgwv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+			gwConf2 := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-config-2",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -1743,7 +1743,7 @@ func testManagedMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("loading  Dataplane 2")
-			dp2 := &stnrgwv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+			dp2 := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: dataplane,
 			}}
 			pullPolicy := corev1.PullNever
@@ -1836,8 +1836,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1849,8 +1849,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1910,8 +1910,8 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.MinRelayPort).Should(Equal(1))
-			Expect(l.MaxRelayPort).Should(Equal(2))
+			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
+			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -2372,7 +2372,7 @@ func testManagedMode() {
 
 		It("should update only Gateway 2 when Dataplane 2 changes", func() {
 			ctrl.Log.Info("updating  Dataplane 2")
-			dp2 := &stnrgwv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+			dp2 := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: "dataplane-2",
 			}}
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, dp2, func() error {
