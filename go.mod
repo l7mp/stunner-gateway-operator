@@ -2,8 +2,6 @@ module github.com/l7mp/stunner-gateway-operator
 
 go 1.21
 
-toolchain go1.21.3
-
 require (
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.3.0
