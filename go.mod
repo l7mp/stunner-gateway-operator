@@ -7,7 +7,7 @@ toolchain go1.21.3
 require (
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.3.0
-	github.com/l7mp/stunner v0.16.1
+	github.com/l7mp/stunner v0.16.2
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.10
 	github.com/stretchr/testify v1.8.4
@@ -88,4 +88,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/l7mp/stunner => ../stunner
+// replace github.com/l7mp/stunner => ../stunner
