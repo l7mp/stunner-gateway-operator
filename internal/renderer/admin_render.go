@@ -5,6 +5,7 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -18,13 +19,13 @@ func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error
 	}
 
 	var me string
-	if c.gwConf.Spec.MetricsEndpoint != nil {
-		me = *c.gwConf.Spec.MetricsEndpoint
+	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.EnableMetricsEnpoint {
+		me = opdefault.DefaultMetricsEndpoint
 	}
 
 	he := opdefault.DefaultHealthCheckEndpoint
-	if c.gwConf.Spec.HealthCheckEndpoint != nil {
-		he = *c.gwConf.Spec.HealthCheckEndpoint
+	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.DisableHealthCheck {
+		he = ""
 	}
 
 	admin := stnrconfv1.AdminConfig{

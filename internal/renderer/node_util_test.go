@@ -3,28 +3,29 @@ package renderer
 import (
 	// "context"
 	// "fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func TestRenderNodeUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
 			name:  "node-ip ok",
-			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep:  func(c *renderTestConfig) {},
@@ -36,9 +37,9 @@ func TestRenderNodeUtil(t *testing.T) {
 		},
 		{
 			name:  "second valid node-ip ok",
-			cls:   []gwapiv1b1.GatewayClass{testutils.TestGwClass},
-			cfs:   []stnrv1a1.GatewayConfig{testutils.TestGwConfig},
-			gws:   []gwapiv1b1.Gateway{testutils.TestGw},
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep: func(c *renderTestConfig) {

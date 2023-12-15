@@ -7,37 +7,33 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var (
-	TestTrue                = true
-	TestNsName              = gwapiv1b1.Namespace("testnamespace")
-	TestStunnerConfig       = "stunner-config"
-	TestRealm               = "testrealm"
-	TestMetricsEndpoint     = "testmetrics"
-	TestHealthCheckEndpoint = "testhealth"
-	TestAuthType            = "static"
-	TestUsername            = "testuser"
-	TestPassword            = "testpass"
-	TestLogLevel            = "testloglevel"
-	TestMinPort             = int32(1)
-	TestMaxPort             = int32(2)
-	TestLabelName           = "testlabel"
-	TestLabelValue          = "testvalue"
-	TestSectionName         = gwapiv1b1.SectionName("gateway-1-listener-udp")
-	TestCert64              = "dGVzdGNlcnQ=" // "testcert"
-	TestKey64               = "dGVzdGtleQ==" // "testkey"
-	TestReplicas            = int32(3)
-	TestTerminationGrace    = int64(60)
-	TestImagePullPolicy     = corev1.PullAlways
-	TestCPURequest          = resource.MustParse("250m")
-	TestMemoryLimit         = resource.MustParse("10M")
-	TestResourceRequest     = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
+	TestTrue             = true
+	TestNsName           = gwapiv1.Namespace("testnamespace")
+	TestRealm            = "testrealm"
+	TestAuthType         = "static"
+	TestUsername         = "testuser"
+	TestPassword         = "testpass"
+	TestLogLevel         = "testloglevel"
+	TestLabelName        = "testlabel"
+	TestLabelValue       = "testvalue"
+	TestSectionName      = gwapiv1.SectionName("gateway-1-listener-udp")
+	TestCert64           = "dGVzdGNlcnQ=" // "testcert"
+	TestKey64            = "dGVzdGtleQ==" // "testkey"
+	TestReplicas         = int32(3)
+	TestTerminationGrace = int64(60)
+	TestImagePullPolicy  = corev1.PullAlways
+	TestCPURequest       = resource.MustParse("250m")
+	TestMemoryLimit      = resource.MustParse("10M")
+	TestResourceRequest  = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceCPU: TestCPURequest,
 	})
 	TestResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
@@ -47,6 +43,8 @@ var (
 		Limits:   TestResourceLimit,
 		Requests: TestResourceRequest,
 	}
+	TestPort    = gwapiv1.PortNumber(1)
+	TestEndPort = gwapiv1.PortNumber(2)
 )
 
 // Namespace
@@ -58,16 +56,16 @@ var TestNs = corev1.Namespace{
 }
 
 // GatewayClass
-var TestGwClass = gwapiv1b1.GatewayClass{
+var TestGwClass = gwapiv1.GatewayClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayclass-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1b1.GatewayClassSpec{
-		ControllerName: gwapiv1b1.GatewayController(opdefault.DefaultControllerName),
-		ParametersRef: &gwapiv1b1.ParametersReference{
-			Group:     gwapiv1b1.Group(stnrv1a1.GroupVersion.Group),
-			Kind:      gwapiv1b1.Kind("GatewayConfig"),
+	Spec: gwapiv1.GatewayClassSpec{
+		ControllerName: gwapiv1.GatewayController(opdefault.DefaultControllerName),
+		ParametersRef: &gwapiv1.ParametersReference{
+			Group:     gwapiv1.Group(stnrgwv1.GroupVersion.Group),
+			Kind:      gwapiv1.Kind("GatewayConfig"),
 			Name:      "gatewayconfig-ok",
 			Namespace: &TestNsName,
 		},
@@ -75,72 +73,69 @@ var TestGwClass = gwapiv1b1.GatewayClass{
 }
 
 // GatewayConfig
-var TestGwConfig = stnrv1a1.GatewayConfig{
+var TestGwConfig = stnrgwv1.GatewayConfig{
 	TypeMeta: metav1.TypeMeta{
-		APIVersion: fmt.Sprintf("%s/%s", stnrv1a1.GroupVersion.Group,
-			stnrv1a1.GroupVersion.Version),
+		APIVersion: fmt.Sprintf("%s/%s", stnrgwv1.GroupVersion.Group,
+			stnrgwv1.GroupVersion.Version),
 		Kind: "GatewaylClass",
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gatewayconfig-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: stnrv1a1.GatewayConfigSpec{
-		StunnerConfig:       &TestStunnerConfig,
-		Realm:               &TestRealm,
-		MetricsEndpoint:     &TestMetricsEndpoint,
-		HealthCheckEndpoint: &TestHealthCheckEndpoint,
-		AuthType:            &TestAuthType,
-		Username:            &TestUsername,
-		Password:            &TestPassword,
-		LogLevel:            &TestLogLevel,
-		MinPort:             &TestMinPort,
-		MaxPort:             &TestMaxPort,
+	Spec: stnrgwv1.GatewayConfigSpec{
+		Realm:    &TestRealm,
+		AuthType: &TestAuthType,
+		Username: &TestUsername,
+		Password: &TestPassword,
+		LogLevel: &TestLogLevel,
 	},
 }
 
 // Gateway
-var TestGw = gwapiv1b1.Gateway{
+var TestGw = gwapiv1.Gateway{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "gateway-1",
 		Namespace: "testnamespace",
 		Labels:    map[string]string{"dummy-label": "dummy-value"},
 	},
-	Spec: gwapiv1b1.GatewaySpec{
+	Spec: gwapiv1.GatewaySpec{
 		GatewayClassName: "gatewayclass-ok",
-		Listeners: []gwapiv1b1.Listener{{
-			Name:     gwapiv1b1.SectionName("gateway-1-listener-udp"),
-			Port:     gwapiv1b1.PortNumber(1),
-			Protocol: gwapiv1b1.ProtocolType("TURN-UDP"),
+		Listeners: []gwapiv1.Listener{{
+			Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+			Port:     gwapiv1.PortNumber(1),
+			Protocol: gwapiv1.ProtocolType("TURN-UDP"),
 		}, {
-			Name:     gwapiv1b1.SectionName("invalid"),
-			Port:     gwapiv1b1.PortNumber(3),
-			Protocol: gwapiv1b1.ProtocolType("dummy"),
+			Name:     gwapiv1.SectionName("invalid"),
+			Port:     gwapiv1.PortNumber(3),
+			Protocol: gwapiv1.ProtocolType("dummy"),
 		}, {
-			Name:     gwapiv1b1.SectionName("gateway-1-listener-tcp"),
-			Port:     gwapiv1b1.PortNumber(2),
-			Protocol: gwapiv1b1.ProtocolType("TURN-TCP"),
+			Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+			Port:     gwapiv1.PortNumber(2),
+			Protocol: gwapiv1.ProtocolType("TURN-TCP"),
 		}},
 	},
 }
 
 // UDPRoute
-var TestUDPRoute = gwapiv1a2.UDPRoute{
+var TestUDPRoute = stnrgwv1.UDPRoute{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "udproute-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1a2.UDPRouteSpec{
-		CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-			ParentRefs: []gwapiv1b1.ParentReference{{
+	Spec: stnrgwv1.UDPRouteSpec{
+		CommonRouteSpec: gwapiv1.CommonRouteSpec{
+			ParentRefs: []gwapiv1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
-		Rules: []gwapiv1a2.UDPRouteRule{{
-			BackendRefs: []gwapiv1b1.BackendRef{{
-				BackendObjectReference: gwapiv1b1.BackendObjectReference{
-					Name: gwapiv1b1.ObjectName("testservice-ok"),
+		Rules: []stnrgwv1.UDPRouteRule{{
+			BackendRefs: []stnrgwv1.BackendRef{{
+				BackendObjectReference: stnrgwv1.BackendObjectReference{
+					Name: gwapiv1.ObjectName("testservice-ok"),
+					// Port:    &TestPort,
+					// EndPort: &TestEndPort,
 				},
 			}},
 		}},
@@ -253,22 +248,22 @@ var TestAuthSecret = corev1.Secret{
 }
 
 // StaticService
-var TestStaticSvc = stnrv1a1.StaticService{
+var TestStaticSvc = stnrgwv1.StaticService{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "testnamespace",
 		Name:      "teststaticservice-ok",
 	},
-	Spec: stnrv1a1.StaticServiceSpec{
+	Spec: stnrgwv1.StaticServiceSpec{
 		Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"},
 	},
 }
 
 // Dataplane
-var TestDataplane = stnrv1a1.Dataplane{
+var TestDataplane = stnrgwv1.Dataplane{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: opdefault.DefaultDataplaneName,
 	},
-	Spec: stnrv1a1.DataplaneSpec{
+	Spec: stnrgwv1.DataplaneSpec{
 		Replicas:                      &TestReplicas,
 		Image:                         "testimage-1",
 		Command:                       []string{"testcommand-1"},
@@ -278,5 +273,30 @@ var TestDataplane = stnrv1a1.Dataplane{
 		Resources:                     &TestResourceRequirements,
 		HostNetwork:                   true,
 		Affinity:                      nil,
+	},
+}
+
+// For backward compatibility
+var TestUDPRouteV1A2 = gwapiv1a2.UDPRoute{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "udproute-ok",
+		Namespace: "testnamespace",
+	},
+	Spec: gwapiv1a2.UDPRouteSpec{
+		CommonRouteSpec: gwapiv1.CommonRouteSpec{
+			ParentRefs: []gwapiv1.ParentReference{{
+				Name:        "gateway-1",
+				SectionName: &TestSectionName,
+			}},
+		},
+		Rules: []gwapiv1a2.UDPRouteRule{{
+			BackendRefs: []gwapiv1a2.BackendRef{{
+				BackendObjectReference: gwapiv1a2.BackendObjectReference{
+					Name: gwapiv1.ObjectName("testservice-ok"),
+					// port is mandatory
+					Port: &TestPort,
+				},
+			}},
+		}},
 	},
 }

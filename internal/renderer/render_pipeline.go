@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -122,7 +125,8 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		gcCtx.gwConf = gwConf
 
 		// don't even start rendering if Dataplane is not available
-		if _, err := getDataplane(gcCtx); err != nil {
+		dp, err := getDataplane(gcCtx)
+		if err != nil {
 			r.log.Error(err, "error obtaining Dataplane",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway-config", store.GetObjectKey(gwConf),
@@ -132,6 +136,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			continue
 		}
+		gcCtx.dp = dp
 
 		for _, gw := range r.getGateways4Class(gcCtx) {
 			gw := gw
@@ -143,7 +148,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			gwCtx := NewRenderContext(e, r, gc)
 			gwCtx.gwConf = gcCtx.gwConf
-			gwCtx.gws.ResetGateways([]*gwapiv1b1.Gateway{gw})
+			gwCtx.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 			// render for this gateway
 			if err := r.renderForGateways(gwCtx); err != nil {
@@ -218,9 +223,9 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
 		// be reflected back to the service
 		if s := r.createLbService4Gateway(c, gw); s != nil {
-			log.Info("creating public service for gateway", "name",
-				store.GetObjectKey(s), "gateway", gw.GetName(), "service",
-				store.DumpObject(s))
+			log.Info("creating public service for gateway", "service",
+				store.GetObjectKey(s), "gateway", store.GetObjectKey(gw),
+				"service", store.DumpObject(s))
 
 			c.update.UpsertQueue.Services.Upsert(s)
 		}
@@ -264,8 +269,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	log.V(1).Info("processing UDPRoutes")
 	conf.Clusters = []stnrconfv1.ClusterConfig{}
-	rs := store.UDPRoutes.GetAll()
-	for _, ro := range rs {
+	for _, ro := range r.allUDPRoutes() {
 		log.V(2).Info("considering", "route", ro.GetName())
 
 		if !r.isRouteControlled(ro) {
@@ -286,19 +290,20 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		}
 
 		rc, err := r.renderCluster(ro)
+		criticalErr := err
 		if err != nil {
 			if IsNonCritical(err) {
 				log.Info("non-critical error rendering cluster", "route",
-					ro.GetName(), "error", err.Error())
+					store.GetObjectKey(ro), "error", err.Error())
 				// note error but otherwise ignore
-				err = nil
+				criticalErr = nil
 			} else {
 				log.Error(err, "fatal error rendering cluster", "route",
 					ro.GetName())
 			}
 		}
 
-		if renderRoute && err == nil && rc != nil {
+		if renderRoute && criticalErr == nil && rc != nil {
 			conf.Clusters = append(conf.Clusters, *rc)
 		}
 
@@ -309,15 +314,20 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 			// set className="" -> do not consider class of the gw for setting the status
 			parentAccept := r.isParentAcceptingRoute(ro, &p, "")
-
 			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept, err)
 		}
 
 		// schedule for update: note that we may process the same UDPRoute several times,
 		// in the context of different Gateways: Upsert makes sure the last render will be
 		// updated
-		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		if isRouteV1A2(ro) {
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+		} else {
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		}
 	}
+	r.invalidateMaskedRoutes(c)
+	r.log.Info(c.update.String())
 
 	// schedule for update
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
@@ -327,33 +337,29 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		gw := c.gws.GetFirst()
 		if gw != nil {
 			conf.Admin.Name = store.GetObjectKey(gw)
+
+			// update cds server
+			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
+
+			// create deployment
+			dp, err := r.createDeployment(c)
+			if err != nil {
+				return err
+			}
+			c.update.UpsertQueue.Deployments.Upsert(dp)
+			log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
+				"deployment", store.DumpObject(dp))
 		}
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
 		conf.String())
 
-	// schedule for update
 	cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
 	if err != nil {
 		return err
 	}
-
-	// fmt.Printf("%#v\n", cm)
-
 	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
-
-	if config.DataplaneMode == config.DataplaneModeManaged {
-		dp, err := r.createDeployment(c)
-		if err != nil {
-			return err
-		}
-		c.update.UpsertQueue.Deployments.Upsert(dp)
-
-		log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
-			"deployment", store.DumpObject(dp))
-
-	}
 
 	return nil
 }
@@ -366,13 +372,25 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
 
-	if config.DataplaneMode == config.DataplaneModeLegacy && c.gwConf == nil {
-		// this is the killer case: we have most probably lost our gatewayconfig and we
-		// don't know which stunner config to invalidate; for now warn, later eliminate
-		// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
-		// started using them
-		log.Info("no gateway-config: active STUNNer configuration may remain stale",
-			"gateway-class", gc.GetName())
+	if config.DataplaneMode == config.DataplaneModeLegacy {
+		if c.gwConf != nil {
+			// remove the configmap
+			targetNamespace := c.gwConf.GetNamespace()
+			targetName := opdefault.DefaultConfigMapName
+			if cm, err := r.renderConfig(c, targetName, targetNamespace, nil); err != nil {
+				log.Error(err, "error invalidating ConfigMap", "target",
+					fmt.Sprintf("%s/%s", targetNamespace, targetName))
+			} else {
+				c.update.UpsertQueue.ConfigMaps.Upsert(cm)
+			}
+		} else {
+			// this is the killer case: we have most probably lost our gatewayconfig and we
+			// don't know which stunner config to invalidate; for now warn, later eliminate
+			// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
+			// started using them
+			log.Info("no gateway-config: active STUNNer configuration may remain stale",
+				"gateway-class", gc.GetName())
+		}
 	}
 
 	setGatewayClassStatusAccepted(gc, reason)
@@ -406,11 +424,34 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		// schedule for update
 		c.update.UpsertQueue.Gateways.Upsert(gw)
+
+		// delete dataplane configmaps and deployments for invalidated gateways
+		// we do not update the client via CDS: the deployment is going away anyway
+		if config.DataplaneMode == config.DataplaneModeManaged {
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw.GetName(),
+					Namespace: gw.GetNamespace(),
+				},
+			}
+			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
+			log.V(2).Info("deleting dataplane ConfigMap", "generation", r.gen,
+				"deployment", store.DumpObject(cm))
+
+			dp := &appv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw.GetName(),
+					Namespace: gw.GetNamespace(),
+				},
+			}
+			c.update.DeleteQueue.Deployments.Upsert(dp)
+			log.V(2).Info("deleting dataplane Deployment", "generation", r.gen,
+				"deployment", store.DumpObject(dp))
+		}
 	}
 
 	log.V(1).Info("processing UDPRoutes")
-	rs := store.UDPRoutes.GetAll()
-	for _, ro := range rs {
+	for _, ro := range r.allUDPRoutes() {
 		log.V(2).Info("considering", "route", ro.GetName())
 
 		initRouteStatus(ro)
@@ -431,37 +472,11 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted, err)
 		}
 
-		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
-	}
-
-	// schedule for update
-	if c.gwConf != nil {
-		targetName, targetNamespace := getTarget(c)
-		if targetName == "" {
-			// we didn't find any ConfigMaps, give up
-			log.V(2).Info("could not invalidate ConfigMap: Could not identify ConfigMap namespace/name",
-				"gateway-class", store.GetObjectKey(gc))
-			return
+		if isRouteV1A2(ro) {
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+		} else {
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
 		}
-		cm, err := r.renderConfig(c, targetName, targetNamespace, nil)
-		if err != nil {
-			log.Error(err, "error invalidating ConfigMap", "target",
-				fmt.Sprintf("%s/%s", targetNamespace, targetName))
-			if !IsNonCritical(err) && config.DataplaneMode == config.DataplaneModeManaged {
-				// critical error: we could not render a valid configuration so
-				// remove deployment
-				gw := c.gws.GetFirst()
-				if gw == nil {
-					return
-				}
-				dp := defaultDeploymentSkeleton(gw)
-				c.update.DeleteQueue.Deployments.Upsert(&dp)
-			}
-			return
-
-		}
-
-		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
 }
 
@@ -471,9 +486,6 @@ func getTarget(c *RenderContext) (string, string) {
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
 		targetName = opdefault.DefaultConfigMapName
-		if c.gwConf.Spec.StunnerConfig != nil {
-			targetName = *c.gwConf.Spec.StunnerConfig
-		}
 		targetNamespace = c.gwConf.GetNamespace()
 	case config.DataplaneModeManaged:
 		// assume it exists

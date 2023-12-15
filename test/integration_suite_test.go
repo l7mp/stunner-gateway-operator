@@ -41,8 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -50,9 +52,8 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	cds "github.com/l7mp/stunner-gateway-operator/pkg/config/server"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var _ = fmt.Sprintf("%d", 1)
@@ -70,18 +71,19 @@ const (
 
 var (
 	// Resources
-	testNs         *corev1.Namespace
-	testGwClass    *gwapiv1b1.GatewayClass
-	testGwConfig   *stnrgwv1a1.GatewayConfig
-	testGw         *gwapiv1b1.Gateway
-	testUDPRoute   *gwapiv1a2.UDPRoute
-	testSvc        *corev1.Service
-	testEndpoint   *corev1.Endpoints
-	testNode       *corev1.Node
-	testSecret     *corev1.Secret
-	testAuthSecret *corev1.Secret
-	testStaticSvc  *stnrgwv1a1.StaticService
-	testDataplane  *stnrgwv1a1.Dataplane
+	testNs           *corev1.Namespace
+	testGwClass      *gwapiv1.GatewayClass
+	testGwConfig     *stnrgwv1.GatewayConfig
+	testGw           *gwapiv1.Gateway
+	testUDPRouteV1A2 *gwapiv1a2.UDPRoute
+	testUDPRoute     *stnrgwv1.UDPRoute
+	testSvc          *corev1.Service
+	testEndpoint     *corev1.Endpoints
+	testNode         *corev1.Node
+	testSecret       *corev1.Secret
+	testAuthSecret   *corev1.Secret
+	testStaticSvc    *stnrgwv1.StaticService
+	testDataplane    *stnrgwv1.Dataplane
 	// Globals
 	cfg       *rest.Config
 	k8sClient client.Client
@@ -120,6 +122,7 @@ func InitResources() {
 	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
 	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
 	testDataplane = testutils.TestDataplane.DeepCopy()
+	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
 }
 
 func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -143,9 +146,14 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ctrl.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	}, zap.Level(zapcore.Level(loglevel))))
+	opts := zap.Options{
+		Development:     true,
+		DestWriter:      GinkgoWriter,
+		StacktraceLevel: zapcore.Level(3),
+		TimeEncoder:     zapcore.RFC3339NanoTimeEncoder,
+		Level:           zapcore.Level(loglevel),
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
 
 	ctx, cancel = context.WithCancel(context.Background())
@@ -155,7 +163,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "config", "gateway-api-v0.8.0", "crd"),
+			filepath.Join("..", "config", "gateway-api-v1.0.0", "crd"),
 		},
 		ErrorIfCRDPathMissing:    true,
 		AttachControlPlaneOutput: true,
@@ -171,13 +179,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Gateway API schemes
-	err = gwapiv1a2.AddToScheme(scheme)
+	err = gwapiv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1b1.AddToScheme(scheme)
+	err = gwapiv1a2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
-	err = stnrgwv1a1.AddToScheme(scheme)
+	err = stnrgwv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -206,12 +214,9 @@ var _ = BeforeSuite(func() {
 		Logger:  ctrl.Log,
 	})
 
-	cdsAddr := opdefault.DefaultConfigDiscoveryAddress
-	setupLog.Info("setting up CDS server", "address", cdsAddr)
-	c := cds.NewConfigDiscoveryServer(cds.ConfigDiscoveryConfig{
-		Addr:   config.ConfigDiscoveryAddress,
-		Logger: ctrl.Log,
-	})
+	cdsserverAddr := stnrv1.DefaultConfigDiscoveryAddress
+	setupLog.Info("setting up CDSSERVER server", "address", cdsserverAddr)
+	c := config.NewCDSServer(config.ConfigDiscoveryAddress, ctrl.Log)
 
 	// make rendering fast!
 	config.ThrottleTimeout = time.Millisecond
@@ -265,10 +270,10 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-type UDPRouteMutator func(current *gwapiv1a2.UDPRoute)
+type UDPRouteMutator func(current *stnrgwv1.UDPRoute)
 
-func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
-	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateUDPRoute(template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
+	current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}
@@ -283,10 +288,10 @@ func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayMutator func(current *gwapiv1b1.Gateway)
+type GatewayMutator func(current *gwapiv1.Gateway)
 
-func createOrUpdateGateway(template *gwapiv1b1.Gateway, f GatewayMutator) {
-	current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
+	current := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}
@@ -301,10 +306,10 @@ func createOrUpdateGateway(template *gwapiv1b1.Gateway, f GatewayMutator) {
 	Expect(err).Should(Succeed())
 }
 
-type GatewayConfigMutator func(current *stnrgwv1a1.GatewayConfig)
+type GatewayConfigMutator func(current *stnrgwv1.GatewayConfig)
 
-func createOrUpdateGatewayConfig(template *stnrgwv1a1.GatewayConfig, f GatewayConfigMutator) {
-	current := &stnrgwv1a1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateGatewayConfig(template *stnrgwv1.GatewayConfig, f GatewayConfigMutator) {
+	current := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

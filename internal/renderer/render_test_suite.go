@@ -3,13 +3,15 @@ package renderer
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -18,12 +20,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // var testerLogLevel = zapcore.Level(-10)
@@ -36,25 +37,25 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1b1.AddToScheme(scheme))
-	utilruntime.Must(stnrv1a1.AddToScheme(scheme))
+	utilruntime.Must(gwapiv1.AddToScheme(scheme))
+	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
 
 type renderTestConfig struct {
 	name   string
-	cls    []gwapiv1b1.GatewayClass
-	cfs    []stnrv1a1.GatewayConfig
-	gws    []gwapiv1b1.Gateway
-	rs     []gwapiv1a2.UDPRoute
+	cls    []gwapiv1.GatewayClass
+	cfs    []stnrgwv1.GatewayConfig
+	gws    []gwapiv1.Gateway
+	rs     []stnrgwv1.UDPRoute
+	rsV1A2 []stnrgwv1.UDPRoute // internal format is always ours, not v1a2
 	svcs   []corev1.Service
 	nodes  []corev1.Node
 	eps    []corev1.Endpoints
 	scrts  []corev1.Secret
 	ascrts []corev1.Secret
 	nss    []corev1.Namespace
-	ssvcs  []stnrv1a1.StaticService
-	dps    []stnrv1a1.Dataplane
+	ssvcs  []stnrgwv1.StaticService
+	dps    []stnrgwv1.Dataplane
 	prep   func(c *renderTestConfig)
 	tester func(t *testing.T, r *Renderer)
 }
@@ -100,6 +101,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.UDPRoutes.Flush()
 			for i := range c.rs {
 				store.UDPRoutes.Upsert(&c.rs[i])
+			}
+
+			store.UDPRoutesV1A2.Flush()
+			for i := range c.rsV1A2 {
+				store.UDPRoutesV1A2.Upsert(&c.rsV1A2[i])
 			}
 
 			store.Services.Flush()

@@ -36,17 +36,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	cds "github.com/l7mp/stunner-gateway-operator/pkg/config/server"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 const (
@@ -61,8 +62,9 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1b1.AddToScheme(scheme))
-	utilruntime.Must(stunnerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gwapiv1.AddToScheme(scheme))
+	// utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))
+	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
 
 func main() {
@@ -77,27 +79,24 @@ func main() {
 		fmt.Sprintf("Enable endpoint discovery, default: %t.", opdefault.DefaultEnableEndpointDiscovery))
 	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
 		`Managed dataplane mode: either "managed" (automatic dataplane provisioning using the config discovery service) or "legacy" (dataplane(s) provided by the user).`)
-	flag.StringVar(&cdsAddr, "config-discovery-address", opdefault.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
+	flag.StringVar(&cdsAddr, "config-discovery-address", stnrv1.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
-		Development: true,
+		Development:     true,
+		DestWriter:      os.Stderr,
+		StacktraceLevel: zapcore.Level(3),
+		TimeEncoder:     zapcore.RFC3339NanoTimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	logger := zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	})
+	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger.WithName("ctrl-runtime"))
 	setupLog := logger.WithName("setup")
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	}))
 
 	config.EnableEndpointDiscovery = enableEDS
 	setupLog.Info("endpoint discovery", "state", enableEDS)
@@ -113,7 +112,7 @@ func main() {
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
-	if cdsAddr == opdefault.DefaultConfigDiscoveryAddress {
+	if cdsAddr == stnrv1.DefaultConfigDiscoveryAddress {
 		// CDS address not overrridden on the command line: use env var
 		envAddr, ok := os.LookupEnv(envVarAddress)
 		if ok {
@@ -122,7 +121,7 @@ func main() {
 		// add the default port
 		as := strings.Split(cdsAddr, ":")
 		if len(as) == 1 || (len(as) == 2 && as[1] == "") {
-			dd := strings.Split(opdefault.DefaultConfigDiscoveryAddress, ":")
+			dd := strings.Split(stnrv1.DefaultConfigDiscoveryAddress, ":")
 			cdsAddr = fmt.Sprintf("%s:%s", cdsAddr, dd[1])
 		}
 	}
@@ -172,10 +171,7 @@ func main() {
 	})
 
 	setupLog.Info("setting up CDS server", "address", cdsAddr)
-	c := cds.NewConfigDiscoveryServer(cds.ConfigDiscoveryConfig{
-		Addr:   config.ConfigDiscoveryAddress,
-		Logger: logger,
-	})
+	c := config.NewCDSServer(config.ConfigDiscoveryAddress, logger)
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{

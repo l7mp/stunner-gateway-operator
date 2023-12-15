@@ -3,12 +3,12 @@ package renderer
 import (
 	"github.com/go-logr/logr"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // RenderContext contains the GatewayClass and the GatewayConfig for the current rendering task,
@@ -16,13 +16,14 @@ import (
 type RenderContext struct {
 	origin event.Event
 	update *event.EventUpdate
-	gc     *gwapiv1b1.GatewayClass
-	gwConf *stnrv1a1.GatewayConfig
+	gc     *gwapiv1.GatewayClass
+	gwConf *stnrgwv1.GatewayConfig
+	dp     *stnrgwv1.Dataplane
 	gws    *store.GatewayStore
 	log    logr.Logger
 }
 
-func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1b1.GatewayClass) *RenderContext {
+func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1.GatewayClass) *RenderContext {
 	return &RenderContext{
 		origin: e,
 		update: event.NewEventUpdate(r.gen),
@@ -47,6 +48,7 @@ func (r *RenderContext) Merge(mergeable *RenderContext) {
 	store.Merge(upsertQueue1.GatewayClasses, upsertQueue2.GatewayClasses)
 	store.Merge(upsertQueue1.Gateways, upsertQueue2.Gateways)
 	store.Merge(upsertQueue1.UDPRoutes, upsertQueue2.UDPRoutes)
+	store.Merge(upsertQueue1.UDPRoutesV1A2, upsertQueue2.UDPRoutesV1A2)
 	store.Merge(upsertQueue1.Services, upsertQueue2.Services)
 	store.Merge(upsertQueue1.ConfigMaps, upsertQueue2.ConfigMaps)
 	store.Merge(upsertQueue1.Deployments, upsertQueue2.Deployments)
@@ -57,7 +59,11 @@ func (r *RenderContext) Merge(mergeable *RenderContext) {
 	store.Merge(deleteQueue1.GatewayClasses, deleteQueue2.GatewayClasses)
 	store.Merge(deleteQueue1.Gateways, deleteQueue2.Gateways)
 	store.Merge(deleteQueue1.UDPRoutes, deleteQueue2.UDPRoutes)
+	store.Merge(deleteQueue1.UDPRoutesV1A2, deleteQueue2.UDPRoutesV1A2)
 	store.Merge(deleteQueue1.Services, deleteQueue2.Services)
 	store.Merge(deleteQueue1.ConfigMaps, deleteQueue2.ConfigMaps)
 	store.Merge(deleteQueue1.Deployments, deleteQueue2.Deployments)
+
+	// merge the CDS server's config-queue
+	r.update.ConfigQueue = append(r.update.ConfigQueue, mergeable.update.ConfigQueue...)
 }

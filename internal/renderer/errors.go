@@ -27,6 +27,7 @@ const (
 	InconsitentClusterType
 	InvalidProtocol
 	PortUnavailable
+	InvalidPortRange
 	PublicAddressNotFound
 )
 
@@ -103,6 +104,8 @@ func (e *NonCriticalError) Error() string {
 		return "port unavailable"
 	case InvalidProtocol:
 		return "invalid protocol"
+	case InvalidPortRange:
+		return "invalid port range"
 	case PublicAddressNotFound:
 		return "no public address found for gateway"
 	}

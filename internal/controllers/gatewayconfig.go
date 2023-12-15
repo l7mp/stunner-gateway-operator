@@ -33,9 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 const secretGatewayConfigIndex = "secretGatewayConfigIndex"
@@ -62,7 +63,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 	r.log.Info("created gatewayconfig controller")
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &stnrv1a1.GatewayConfig{}),
+		source.Kind(mgr.GetCache(), &stnrgwv1.GatewayConfig{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when the GatewayConfig spec changes
 		predicate.GenerationChangedPredicate{},
@@ -72,7 +73,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 	r.log.Info("watching gatewayconfig objects")
 
 	// index GatewayConfig objects as per the referenced Secret
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrv1a1.GatewayConfig{}, secretGatewayConfigIndex,
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.GatewayConfig{}, secretGatewayConfigIndex,
 		secretGatewayConfigIndexFunc); err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	authSecretList := []client.Object{}
 
 	// find all GatewayConfigs
-	gcList := &stnrv1a1.GatewayConfigList{}
+	gcList := &stnrgwv1.GatewayConfigList{}
 	if err := r.List(ctx, gcList); err != nil {
 		r.log.Info("no gateway-configs found")
 		return reconcile.Result{}, err
@@ -161,7 +162,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 // validateSecretForReconcile checks whether the Secret belongs to a valid GatewayConfig.
 func (r *gatewayConfigReconciler) validateSecretForReconcile(obj client.Object) bool {
 	secret := obj.(*corev1.Secret)
-	gcList := &stnrv1a1.GatewayConfigList{}
+	gcList := &stnrgwv1.GatewayConfigList{}
 	secretName := store.GetNamespacedName(secret).String()
 	if err := r.List(context.Background(), gcList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretGatewayConfigIndex, secretName),
@@ -175,7 +176,7 @@ func (r *gatewayConfigReconciler) validateSecretForReconcile(obj client.Object) 
 
 // secretGatewayConfigIndexFunc indexes GatewayConfigs on the Secret referred via the authRef.
 func secretGatewayConfigIndexFunc(o client.Object) []string {
-	gatewayConfig := o.(*stnrv1a1.GatewayConfig)
+	gatewayConfig := o.(*stnrgwv1.GatewayConfig)
 	ret := []string{}
 
 	// authRef not specified

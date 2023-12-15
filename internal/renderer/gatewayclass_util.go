@@ -6,16 +6,16 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) getGatewayClasses() []*gwapiv1b1.GatewayClass {
+func (r *Renderer) getGatewayClasses() []*gwapiv1.GatewayClass {
 	// r.log.V(4).Info("getGatewayClasses")
-	ret := []*gwapiv1b1.GatewayClass{}
+	ret := []*gwapiv1.GatewayClass{}
 
 	for _, gc := range store.GatewayClasses.GetAll() {
 		if err := r.validateGatewayClass(gc); err != nil {
@@ -31,7 +31,7 @@ func (r *Renderer) getGatewayClasses() []*gwapiv1b1.GatewayClass {
 	return ret
 }
 
-func (r *Renderer) validateGatewayClass(gc *gwapiv1b1.GatewayClass) error {
+func (r *Renderer) validateGatewayClass(gc *gwapiv1.GatewayClass) error {
 	// r.log.V(4).Info("validateGatewayClass")
 
 	// play it safe
@@ -46,7 +46,7 @@ func (r *Renderer) validateGatewayClass(gc *gwapiv1b1.GatewayClass) error {
 		return fmt.Errorf("empty ParametersRef in gateway-class spec: %#v", gc.Spec)
 	}
 
-	if ref.Group != gwapiv1b1.Group(stnrv1a1.GroupVersion.Group) {
+	if ref.Group != gwapiv1.Group(stnrgwv1.GroupVersion.Group) {
 		return fmt.Errorf("invalid Group in gateway-class spec: %#v",
 			*gc.Spec.ParametersRef)
 	}
@@ -61,7 +61,7 @@ func (r *Renderer) validateGatewayClass(gc *gwapiv1b1.GatewayClass) error {
 			*gc.Spec.ParametersRef)
 	}
 
-	if ref.Kind != gwapiv1b1.Kind("GatewayConfig") {
+	if ref.Kind != gwapiv1.Kind("GatewayConfig") {
 		return fmt.Errorf("expecting ParametersRef to point to a gateway-config "+
 			"resource: %#v", *gc.Spec.ParametersRef)
 	}
@@ -72,24 +72,24 @@ func (r *Renderer) validateGatewayClass(gc *gwapiv1b1.GatewayClass) error {
 	return nil
 }
 
-func setGatewayClassStatusAccepted(gc *gwapiv1b1.GatewayClass, err error) {
+func setGatewayClassStatusAccepted(gc *gwapiv1.GatewayClass, err error) {
 	if err == nil {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.GatewayClassReasonAccepted),
+			Reason:             string(gwapiv1.GatewayClassReasonAccepted),
 			Message: fmt.Sprintf("GatewayClass is now managed by controller %q",
 				config.ControllerName),
 		})
 	} else {
 		meta.SetStatusCondition(&gc.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gc.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1b1.GatewayClassReasonInvalidParameters),
+			Reason:             string(gwapiv1.GatewayClassReasonInvalidParameters),
 			Message: fmt.Sprintf("controller %q failed to process GatewayClass: %s",
 				config.ControllerName, err.Error()),
 		})
@@ -97,7 +97,7 @@ func setGatewayClassStatusAccepted(gc *gwapiv1b1.GatewayClass, err error) {
 }
 
 // helper for testing
-func (r *Renderer) getGatewayClass() (*gwapiv1b1.GatewayClass, error) {
+func (r *Renderer) getGatewayClass() (*gwapiv1.GatewayClass, error) {
 	gcs := store.GatewayClasses.GetAll()
 	if len(gcs) == 0 {
 		return nil, fmt.Errorf("no gateway-class found")

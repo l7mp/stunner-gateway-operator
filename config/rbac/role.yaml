@@ -2,7 +2,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
@@ -97,6 +96,7 @@ rules:
   - dataplanes
   - gatewayconfigs
   - staticservices
+  - udproutes
   verbs:
   - get
   - list
@@ -109,5 +109,7 @@ rules:
   - dataplanes/finalizers
   - gatewayconfigs/finalizers
   - staticservices/finalizers
+  - udproutes/finalizers
+  - udproutes/status
   verbs:
   - update

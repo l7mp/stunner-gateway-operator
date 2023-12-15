@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: gatewayconfigs.stunner.l7mp.io
 spec:
   group: stunner.l7mp.io
@@ -15,7 +14,7 @@ spec:
     listKind: GatewayConfigList
     plural: gatewayconfigs
     shortNames:
-    - gtwconf
+    - gwconf
     singular: gatewayconfig
   scope: Namespaced
   versions:
@@ -29,7 +28,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: GatewayConfig is the Schema for the gatewayconfigs API
@@ -83,9 +82,9 @@ spec:
                     minLength: 1
                     type: string
                   namespace:
-                    description: "Namespace is the namespace of the backend. When
-                      unspecified, the local namespace is inferred. \n Note that when
-                      a namespace different than the local namespace is specified,
+                    description: "Namespace is the namespace of the referenced object.
+                      When unspecified, the local namespace is inferred. \n Note that
+                      when a namespace different than the local namespace is specified,
                       a ReferenceGrant object is required in the referent namespace
                       to allow that namespace's owner to accept the reference. See
                       the ReferenceGrant documentation for details. \n Support: Core"
@@ -104,16 +103,8 @@ spec:
                 type: string
               dataplane:
                 default: default
-                description: Dataplane defines the TURN server to set up for the STUNner
-                  Gateways using this GatewayConfig. Can be used to select the stunnerd
-                  image repo and version or deploy into the host-network namespace.
-                type: string
-              healthCheckEndpoint:
-                description: HealthCheckEndpoint is the URI of the form `http://address:port`
-                  exposed for external HTTP health-checking. A liveness probe responder
-                  will be exposed on path `/live` and readiness probe on path `/ready`.
-                  The scheme (`http://`) is mandatory, default is to enable health-checking
-                  at "http://0.0.0.0:8086".
+                description: Dataplane defines the dataplane (stunnerd image, version,
+                  etc) for STUNner gateways using this GatewayConfig.
                 type: string
               loadBalancerServiceAnnotations:
                 additionalProperties:
@@ -134,21 +125,6 @@ spec:
                 description: LogLevel specifies the default loglevel for the STUNner
                   daemon.
                 type: string
-              maxPort:
-                description: MaxRelayPort is the smallest relay port assigned for
-                  STUNner relay connections.
-                format: int32
-                type: integer
-              metricsEndpoint:
-                description: MetricsEndpoint is the URI in the form `http://address:port/path`
-                  exposed for metric scraping (Prometheus). The scheme (`http://`)
-                  is mandatory. Default is to expose no metric endpoint.
-                type: string
-              minPort:
-                description: MinRelayPort is the smallest relay port assigned for
-                  STUNner relay connections.
-                format: int32
-                type: integer
               password:
                 description: Password defines the `password` credential for "plaintext"
                   authentication.
@@ -166,13 +142,6 @@ spec:
               sharedSecret:
                 description: SharedSecret defines the shared secret to be used for
                   "longterm" authentication.
-                type: string
-              stunnerConfig:
-                default: stunnerd-config
-                description: StunnerConfig specifies the name of the ConfigMap into
-                  which the operator renders the stunnerd configfile.
-                maxLength: 64
-                pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                 type: string
               userName:
                 description: Username defines the `username` credential for "plaintext"

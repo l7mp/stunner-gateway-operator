@@ -11,18 +11,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-func (u *Updater) updateGatewayClass(gc *gwapiv1b1.GatewayClass, gen int) error {
+func (u *Updater) updateGatewayClass(gc *gwapiv1.GatewayClass, gen int) error {
 	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gwapiv1b1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 		Name:      gc.GetName(),
 		Namespace: gc.GetNamespace(),
 	}}
@@ -44,12 +46,12 @@ func (u *Updater) updateGatewayClass(gc *gwapiv1b1.GatewayClass, gen int) error 
 	return nil
 }
 
-func (u *Updater) updateGateway(gw *gwapiv1b1.Gateway, gen int) error {
+func (u *Updater) updateGateway(gw *gwapiv1.Gateway, gen int) error {
 	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
-	current := &gwapiv1b1.Gateway{ObjectMeta: metav1.ObjectMeta{
+	current := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      gw.GetName(),
 		Namespace: gw.GetNamespace(),
 	}}
@@ -70,9 +72,34 @@ func (u *Updater) updateGateway(gw *gwapiv1b1.Gateway, gen int) error {
 	return nil
 }
 
-func (u *Updater) updateUDPRoute(ro *gwapiv1a2.UDPRoute, gen int) error {
+func (u *Updater) updateUDPRoute(ro *stnrgwv1.UDPRoute, gen int) error {
 	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro), "generation",
 		gen)
+
+	cli := u.manager.GetClient()
+	current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+		Name:      ro.GetName(),
+		Namespace: ro.GetNamespace(),
+	}}
+
+	if err := cli.Get(u.ctx, client.ObjectKeyFromObject(current), current); err != nil {
+		return err
+	}
+
+	ro.Status.DeepCopyInto(&current.Status)
+
+	if err := cli.Status().Update(u.ctx, current); err != nil {
+		return err
+	}
+
+	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "generation",
+		gen, "result", store.DumpObject(current))
+
+	return nil
+}
+
+func (u *Updater) updateUDPRouteV1A2(ro *stnrgwv1.UDPRoute, gen int) error {
+	u.log.V(2).Info("updating UDPRouteV1A2", "resource", store.GetObjectKey(ro), "generation", gen)
 
 	cli := u.manager.GetClient()
 	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -90,8 +117,8 @@ func (u *Updater) updateUDPRoute(ro *gwapiv1a2.UDPRoute, gen int) error {
 		return err
 	}
 
-	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "generation",
-		gen, "result", store.DumpObject(current))
+	u.log.V(1).Info("UDPRouteV1A2 updated", "resource", store.GetObjectKey(ro), "generation",
+		gen, "result", store.DumpObject(stnrgwv1.ConvertV1UDPRouteToV1A2(ro)))
 
 	return nil
 }
@@ -243,7 +270,7 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 }
 
 func (u *Updater) deleteObject(o client.Object, gen int) error {
-	u.log.V(1).Info("delete objec", "resource", store.GetObjectKey(o), "generation", gen)
+	u.log.V(2).Info("delete object", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
 }

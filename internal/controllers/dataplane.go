@@ -29,9 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // DataplaneReconciler reconciles a Dataplane object.
@@ -55,8 +56,8 @@ func RegisterDataplaneController(mgr manager.Manager, ch chan event.Event, log l
 	r.log.Info("created dataplane controller")
 
 	if err := c.Watch(
-		// &source.Kind{Type: &stnrv1a1.Dataplane{}},
-		source.Kind(mgr.GetCache(), &stnrv1a1.Dataplane{}),
+		// &source.Kind{Type: &stnrgwv1.Dataplane{}},
+		source.Kind(mgr.GetCache(), &stnrgwv1.Dataplane{}),
 		&handler.EnqueueRequestForObject{},
 		// trigger when the Dataplane spec changes
 		predicate.GenerationChangedPredicate{},
@@ -75,7 +76,7 @@ func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	dataplaneList := []client.Object{}
 
 	// find all Dataplanes
-	dpList := &stnrv1a1.DataplaneList{}
+	dpList := &stnrgwv1.DataplaneList{}
 	if err := r.List(ctx, dpList); err != nil {
 		r.log.Info("no dataplane resource found")
 		return reconcile.Result{}, err

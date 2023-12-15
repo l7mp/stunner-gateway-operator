@@ -10,15 +10,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	// gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	stnrv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 // clusterTimeout is a timeout for connections to the Kubernetes API
@@ -30,8 +29,8 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	_ = gwapiv1a2.AddToScheme(scheme)
-	_ = gwapiv1b1.AddToScheme(scheme)
-	_ = stnrv1a1.AddToScheme(scheme)
+	_ = gwapiv1.AddToScheme(scheme)
+	_ = stnrgwv1.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }
 

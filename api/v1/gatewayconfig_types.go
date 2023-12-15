@@ -14,23 +14,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
+
+func init() {
+	SchemeBuilder.Register(&GatewayConfig{}, &GatewayConfigList{})
+}
+
+// Hub marks GatewayConfig.v1 as a conversion hub.
+func (*GatewayConfig) Hub() {}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=stunner,shortName=gwconf
+// +kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`
+// +kubebuilder:printcolumn:name="Auth",type=string,JSONPath=`.spec.authType`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:storageversion
+
+// GatewayConfig is the Schema for the gatewayconfigs API
+type GatewayConfig struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec GatewayConfigSpec `json:"spec,omitempty"`
+}
 
 // GatewayConfigSpec defines the desired state of GatewayConfig
 type GatewayConfigSpec struct {
-	// StunnerConfig specifies the name of the ConfigMap into which the operator renders the
-	// stunnerd configfile.
+	// Dataplane defines the dataplane (stunnerd image, version, etc) for STUNner gateways
+	// using this GatewayConfig.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=64
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
-	// +kubebuilder:default:="stunnerd-config"
-	StunnerConfig *string `json:"stunnerConfig,omitempty"`
+	// +kubebuilder:default:="default"
+	Dataplane *string `json:"dataplane,omitempty"`
 
 	// Realm defines the STUN/TURN authentication realm to be used for clients toauthenticate
 	// with STUNner.
@@ -42,21 +62,6 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +kubebuilder:default:="stunner.l7mp.io"
 	Realm *string `json:"realm,omitempty"`
-
-	// MetricsEndpoint is the URI in the form `http://address:port/path` exposed for metric
-	// scraping (Prometheus). The scheme (`http://`) is mandatory. Default is to expose no
-	// metric endpoint.
-	//
-	// +optional
-	MetricsEndpoint *string `json:"metricsEndpoint,omitempty"`
-
-	// HealthCheckEndpoint is the URI of the form `http://address:port` exposed for external
-	// HTTP health-checking. A liveness probe responder will be exposed on path `/live` and
-	// readiness probe on path `/ready`. The scheme (`http://`) is mandatory, default is to
-	// enable health-checking at "http://0.0.0.0:8086".
-	//
-	// +optional
-	HealthCheckEndpoint *string `json:"healthCheckEndpoint,omitempty"`
 
 	// AuthType is the type of the STUN/TURN authentication mechanism.
 	//
@@ -113,7 +118,7 @@ type GatewayConfigSpec struct {
 	// (inline/external) is not supported.
 	//
 	// +optional
-	AuthRef *gwapiv1b1.SecretObjectReference `json:"authRef,omitempty"`
+	AuthRef *gwapiv1.SecretObjectReference `json:"authRef,omitempty"`
 
 	// LoadBalancerServiceAnnotations is a list of annotations that will go into the
 	// LoadBalancer services created automatically by the operator to wrap Gateways.
@@ -133,54 +138,13 @@ type GatewayConfigSpec struct {
 	//
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
-
-	// MinRelayPort is the smallest relay port assigned for STUNner relay connections.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum:1
-	// +kubebuilder:validation:Maximum:65535
-	MinPort *int32 `json:"minPort,omitempty"`
-
-	// MaxRelayPort is the smallest relay port assigned for STUNner relay connections.
-	//
-	// +kubebuilder:validation:Minimum:1
-	// +kubebuilder:validation:Maximum:65535
-	MaxPort *int32 `json:"maxPort,omitempty"`
-
-	// Dataplane defines the TURN server to set up for the STUNner Gateways using this
-	// GatewayConfig. Can be used to select the stunnerd image repo and version or deploy into
-	// the host-network namespace.
-	//
-	// +optional
-	// +kubebuilder:default:="default"
-	Dataplane *string `json:"dataplane,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-// //+kubebuilder:subresource:status
-//+kubebuilder:resource:categories=stunner,shortName=gtwconf
-//+kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`
-//+kubebuilder:printcolumn:name="Auth",type=string,JSONPath=`.spec.authType`
-//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
-// GatewayConfig is the Schema for the gatewayconfigs API
-type GatewayConfig struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec GatewayConfigSpec `json:"spec,omitempty"`
-	// Status GatewayConfigStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // GatewayConfigList contains a list of GatewayConfig
 type GatewayConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []GatewayConfig `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&GatewayConfig{}, &GatewayConfigList{})
 }

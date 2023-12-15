@@ -3,7 +3,7 @@ package store
 import (
 	"k8s.io/apimachinery/pkg/types"
 
-	stunnerv1alpha1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var GatewayConfigs = NewGatewayConfigStore()
@@ -19,12 +19,12 @@ func NewGatewayConfigStore() *GatewayConfigStore {
 }
 
 // GetAll returns all GatewayConfig objects from the global storage
-func (s *GatewayConfigStore) GetAll() []*stunnerv1alpha1.GatewayConfig {
-	ret := make([]*stunnerv1alpha1.GatewayConfig, 0)
+func (s *GatewayConfigStore) GetAll() []*stnrgwv1.GatewayConfig {
+	ret := make([]*stnrgwv1.GatewayConfig, 0)
 
 	objects := s.Objects()
 	for i := range objects {
-		r, ok := objects[i].(*stunnerv1alpha1.GatewayConfig)
+		r, ok := objects[i].(*stnrgwv1.GatewayConfig)
 		if !ok {
 			// this is critical: throw up hands and die
 			panic("access to an invalid object in the global GatewayConfigStore")
@@ -37,13 +37,13 @@ func (s *GatewayConfigStore) GetAll() []*stunnerv1alpha1.GatewayConfig {
 }
 
 // GetObject returns a named GatewayConfig object from the global storage
-func (s *GatewayConfigStore) GetObject(nsName types.NamespacedName) *stunnerv1alpha1.GatewayConfig {
+func (s *GatewayConfigStore) GetObject(nsName types.NamespacedName) *stnrgwv1.GatewayConfig {
 	o := s.Get(nsName)
 	if o == nil {
 		return nil
 	}
 
-	r, ok := o.(*stunnerv1alpha1.GatewayConfig)
+	r, ok := o.(*stnrgwv1.GatewayConfig)
 	if !ok {
 		// this is critical: throw up hands and die
 		panic("access to an invalid object in the global GatewayConfigStore")
@@ -53,6 +53,6 @@ func (s *GatewayConfigStore) GetObject(nsName types.NamespacedName) *stunnerv1al
 }
 
 // // AddGatewayConfig adds a GatewayConfig object to the the global storage (this is used mainly for testing)
-// func (s *GatewayConfigStore) AddGatewayConfig(gc *stunnerv1alpha1.GatewayConfig) {
+// func (s *GatewayConfigStore) AddGatewayConfig(gc *stnrgwv1.GatewayConfig) {
 // 	s.Upsert(gc)
 // }
