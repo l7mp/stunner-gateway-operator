@@ -1,19 +1,9 @@
-apiVersion: stunner.l7mp.io/v1alpha1
+apiVersion: stunner.l7mp.io/v1
 kind: Dataplane
 metadata:
   name: default
 spec:
   replicas: 1
-  image: l7mp/stunnerd:dev
-  imagePullPolicy: Always
-  command:
-    - stunnerd
-  args:
-    - -w
-    - -c
-    - /etc/stunnerd/stunnerd.conf
-    - --udp-thread-num=1
-  hostNetwork: false
   resources:
     limits:
       cpu: 250m
@@ -21,4 +11,5 @@ spec:
     requests:
       cpu: 250m
       memory: 120Mi
-  terminationGracePeriodSeconds: 3600
+  terminationGracePeriodSeconds: 60
+  enableMetricsEndpoint: true

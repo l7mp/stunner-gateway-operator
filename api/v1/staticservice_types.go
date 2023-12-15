@@ -20,6 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func init() {
+	SchemeBuilder.Register(&StaticService{}, &StaticServiceList{})
+}
+
 // Hub marks StaticService.v1 as a conversion hub.
 func (*StaticService) Hub() {}
 
@@ -55,8 +59,4 @@ type StaticServiceList struct {
 
 	// List of services.
 	Items []StaticService `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&StaticService{}, &StaticServiceList{})
 }

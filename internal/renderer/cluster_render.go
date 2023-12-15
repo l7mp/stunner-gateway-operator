@@ -6,9 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -17,7 +14,7 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
+func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
 	r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
 	// track down the backendref
@@ -87,9 +84,11 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterCon
 			// the clusterIP or STRICT_DNS cluster if EDS is disabled
 			epCluster, ctypeCluster, errCluster := getClusterRouteForService(ref, ns)
 			if errCluster != nil {
-				r.log.V(1).Info("renderCluster: error rendering service-route (ClusterIP/DNS route) for Service backend",
-					"route", store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
+				r.log.V(1).Info("renderCluster: error rendering service-route (ClusterIP/DNS "+
+					"route) for Service backend", "route",
+					store.GetObjectKey(ro), "backendRef", dumpBackendRef(ref),
 					"error", errCluster)
+
 				routeError = errCluster
 			} else {
 				ep = append(ep, epCluster...)
@@ -138,6 +137,14 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterCon
 			continue
 		}
 
+		if err := injectPortRange(&b, ep, ctype); err != nil {
+			routeError = NewNonCriticalError(InvalidPortRange)
+			r.log.Info("renderCluster: error", "route",
+				store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b),
+				"cluster-ctype", ctype.String(), "error", err.Error())
+			continue
+		}
+
 		r.log.V(2).Info("renderCluster: adding Endpoints for backend", "route",
 			store.GetObjectKey(ro), "backendRef", dumpBackendRef(&b), "cluster-type",
 			ctype.String(), "endpoints", ep)
@@ -171,7 +178,7 @@ func (r *Renderer) renderCluster(ro *gwapiv1a2.UDPRoute) (*stnrconfv1.ClusterCon
 	return &cluster, routeError
 }
 
-func getEndpointsForService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getEndpointsForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 
@@ -196,7 +203,7 @@ func getEndpointsForService(b *gwapiv1.BackendRef, ns string) ([]string, stnrcon
 }
 
 // either the ClusterIP if EDS is enabled, or a STRICT_DNS route if EDS is disabled
-func getClusterRouteForService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getClusterRouteForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	var ctype stnrconfv1.ClusterType
 	ep := []string{}
 
@@ -225,7 +232,7 @@ func getClusterRouteForService(b *gwapiv1.BackendRef, ns string) ([]string, stnr
 	return ep, ctype, nil
 }
 
-func getEndpointsForStaticService(b *gwapiv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
+func getEndpointsForStaticService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrconfv1.ClusterType, error) {
 	ctype := stnrconfv1.ClusterTypeUnknown
 	ep := []string{}
 
@@ -240,4 +247,29 @@ func getEndpointsForStaticService(b *gwapiv1.BackendRef, ns string) ([]string, s
 	copy(ep, ssvc.Spec.Prefixes)
 
 	return ep, stnrconfv1.ClusterTypeStatic, nil
+}
+
+func injectPortRange(b *stnrgwv1.BackendRef, eps []string, ctype stnrconfv1.ClusterType) error {
+	// only static clusters know how to handle port ranges
+	if ctype != stnrconfv1.ClusterTypeStatic {
+		return nil
+	}
+
+	port, endPort := stnrconfv1.DefaultMinRelayPort, stnrconfv1.DefaultMaxRelayPort
+	if b.Port != nil && int(*b.Port) > 0 && int(*b.Port) < 65536 {
+		port = int(*b.Port)
+		endPort = int(*b.Port)
+	}
+	if b.EndPort != nil && int(*b.EndPort) > 0 && int(*b.EndPort) < 65536 && int(*b.EndPort) >= port {
+		endPort = int(*b.EndPort)
+	}
+
+	// default port range is not injected
+	if port != stnrconfv1.DefaultMinRelayPort || endPort != stnrconfv1.DefaultMaxRelayPort {
+		for i := range eps {
+			eps[i] += fmt.Sprintf(":<%d-%d>", port, endPort)
+		}
+	}
+
+	return nil
 }

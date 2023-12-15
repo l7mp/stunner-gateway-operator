@@ -54,6 +54,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.0 // indirect
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/transport/v3 v3.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect

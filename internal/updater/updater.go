@@ -3,22 +3,11 @@ package updater
 // updater uploads client updates
 import (
 	"context"
-	// "fmt"
-	// "reflect"
 
 	"github.com/go-logr/logr"
-
-	// corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
-	// corev1 "k8s.io/api/core/v1"
-	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	// gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -106,6 +95,14 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 		if err := u.updateUDPRoute(ro, gen); err != nil {
 			u.log.Error(err, "cannot update UDP route",
 				"route", store.DumpObject(ro))
+			continue
+		}
+	}
+
+	for _, ro := range q.UDPRoutesV1A2.GetAll() {
+		if err := u.updateUDPRouteV1A2(ro, gen); err != nil {
+			u.log.Error(err, "cannot update UDPRouteV1A2", "route",
+				store.DumpObject(stnrgwv1.ConvertV1UDPRouteToV1A2(ro)))
 			continue
 		}
 	}

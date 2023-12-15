@@ -223,9 +223,9 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
 		// be reflected back to the service
 		if s := r.createLbService4Gateway(c, gw); s != nil {
-			log.Info("creating public service for gateway", "name",
-				store.GetObjectKey(s), "gateway", gw.GetName(), "service",
-				store.DumpObject(s))
+			log.Info("creating public service for gateway", "service",
+				store.GetObjectKey(s), "gateway", store.GetObjectKey(gw),
+				"service", store.DumpObject(s))
 
 			c.update.UpsertQueue.Services.Upsert(s)
 		}
@@ -269,8 +269,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	log.V(1).Info("processing UDPRoutes")
 	conf.Clusters = []stnrconfv1.ClusterConfig{}
-	rs := store.UDPRoutes.GetAll()
-	for _, ro := range rs {
+	for _, ro := range r.allUDPRoutes() {
 		log.V(2).Info("considering", "route", ro.GetName())
 
 		if !r.isRouteControlled(ro) {
@@ -291,19 +290,20 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		}
 
 		rc, err := r.renderCluster(ro)
+		criticalErr := err
 		if err != nil {
 			if IsNonCritical(err) {
 				log.Info("non-critical error rendering cluster", "route",
-					ro.GetName(), "error", err.Error())
+					store.GetObjectKey(ro), "error", err.Error())
 				// note error but otherwise ignore
-				err = nil
+				criticalErr = nil
 			} else {
 				log.Error(err, "fatal error rendering cluster", "route",
 					ro.GetName())
 			}
 		}
 
-		if renderRoute && err == nil && rc != nil {
+		if renderRoute && criticalErr == nil && rc != nil {
 			conf.Clusters = append(conf.Clusters, *rc)
 		}
 
@@ -314,15 +314,20 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 			// set className="" -> do not consider class of the gw for setting the status
 			parentAccept := r.isParentAcceptingRoute(ro, &p, "")
-
 			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept, err)
 		}
 
 		// schedule for update: note that we may process the same UDPRoute several times,
 		// in the context of different Gateways: Upsert makes sure the last render will be
 		// updated
-		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		if isRouteV1A2(ro) {
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+		} else {
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		}
 	}
+	r.invalidateMaskedRoutes(c)
+	r.log.Info(c.update.String())
 
 	// schedule for update
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
@@ -446,8 +451,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 	}
 
 	log.V(1).Info("processing UDPRoutes")
-	rs := store.UDPRoutes.GetAll()
-	for _, ro := range rs {
+	for _, ro := range r.allUDPRoutes() {
 		log.V(2).Info("considering", "route", ro.GetName())
 
 		initRouteStatus(ro)
@@ -468,7 +472,11 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 			setRouteConditionStatus(ro, &p, config.ControllerName, accepted, err)
 		}
 
-		c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		if isRouteV1A2(ro) {
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+		} else {
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+		}
 	}
 }
 

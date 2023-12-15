@@ -21,6 +21,10 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+func init() {
+	SchemeBuilder.Register(&GatewayConfig{}, &GatewayConfigList{})
+}
+
 // Hub marks GatewayConfig.v1 as a conversion hub.
 func (*GatewayConfig) Hub() {}
 
@@ -143,8 +147,4 @@ type GatewayConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []GatewayConfig `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&GatewayConfig{}, &GatewayConfigList{})
 }

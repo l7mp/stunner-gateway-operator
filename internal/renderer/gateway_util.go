@@ -11,7 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -88,14 +90,18 @@ func initGatewayStatus(gw *gwapiv1.Gateway, cname string) {
 
 	// reinit listener statuses
 	gw.Status.Listeners = gw.Status.Listeners[:0]
-	group := gwapiv1.Group(gwapiv1.GroupVersion.Group)
+	groupgwapiv1a2 := gwapiv1.Group(gwapiv1a2.GroupVersion.Group)
+	groupstnrv1 := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 
 	for _, l := range gw.Spec.Listeners {
 		gw.Status.Listeners = append(gw.Status.Listeners,
 			gwapiv1.ListenerStatus{
 				Name: l.Name,
 				SupportedKinds: []gwapiv1.RouteGroupKind{{
-					Group: &group,
+					Group: &groupgwapiv1a2,
+					Kind:  gwapiv1.Kind("UDPRoute"),
+				}, {
+					Group: &groupstnrv1,
 					Kind:  gwapiv1.Kind("UDPRoute"),
 				}},
 				Conditions: []metav1.Condition{},

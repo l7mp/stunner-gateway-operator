@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -30,7 +29,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -51,7 +50,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -81,7 +80,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -125,7 +124,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -175,7 +174,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// u := testutils.TestUDPRoute.DeepCopy()
@@ -206,7 +205,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					}
 
 					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*gwapiv1a2.UDPRoute{}, addr)
+						[]*stnrgwv1.UDPRoute{}, addr)
 
 					if err != nil {
 						setListenerStatus(gw, &l, err, conflicted, 0)

@@ -12,7 +12,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -28,7 +27,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -57,7 +56,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -88,7 +87,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp4.Spec.CommonRouteSpec.ParentRefs[0].Kind = nil
 				udp4.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 
-				c.rs = []gwapiv1a2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2, *udp3, *udp4}
+				c.rs = []stnrgwv1.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2, *udp3, *udp4}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -115,11 +114,80 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			},
 		},
 		{
+			name:   "get multi-version routes - no-masking",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:    []gwapiv1.Gateway{testutils.TestGw},
+			rs:     []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			rsV1A2: []stnrgwv1.UDPRoute{},
+			svcs:   []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				udpv1a2 := testutils.TestUDPRoute.DeepCopy()
+				udpv1a2.SetName("udproute-ok-v1a2")
+				c.rsV1A2 = []stnrgwv1.UDPRoute{*udpv1a2}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
+					store.GetObjectKey(gw), "gw name found")
+
+				ls := gw.Spec.Listeners
+				l := ls[0]
+
+				rs := r.getUDPRoutes4Listener(gw, &l)
+				assert.Len(t, rs, 2, "route found")
+				keys := []string{store.GetObjectKey(rs[0]), store.GetObjectKey(rs[1])}
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNsName,
+					"udproute-ok"), "route name found")
+				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNsName,
+					"udproute-ok-v1a2"), "route name found")
+			},
+		},
+		{
+			name:   "get multi-version routes - masking",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:    []gwapiv1.Gateway{testutils.TestGw},
+			rs:     []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			rsV1A2: []stnrgwv1.UDPRoute{},
+			svcs:   []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				udpv1a2 := testutils.TestUDPRoute.DeepCopy()
+				udpv1a2.SetName("udproute-ok")
+				c.rsV1A2 = []stnrgwv1.UDPRoute{*udpv1a2}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
+					store.GetObjectKey(gw), "gw name found")
+
+				ls := gw.Spec.Listeners
+				l := ls[0]
+
+				rs := r.getUDPRoutes4Listener(gw, &l)
+				assert.Len(t, rs, 1, "route found")
+				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "udproute-ok"),
+					store.GetObjectKey(rs[0]), "route name found")
+			},
+		},
+		{
 			name: "get multiple routes with route attachment policy All",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -146,7 +214,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 
-				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
+				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -192,7 +260,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			nss:  []corev1.Namespace{testutils.TestNs},
 			prep: func(c *renderTestConfig) {
@@ -241,7 +309,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 
-				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
+				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -284,7 +352,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -292,7 +360,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				sn := gwapiv1.SectionName("gateway-1-listener-udp")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -319,7 +387,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -327,7 +395,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				sn := gwapiv1.SectionName("dummy")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -352,7 +420,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -373,7 +441,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.Spec.CommonRouteSpec.ParentRefs[2].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[2].SectionName = &sn3
 
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -400,7 +468,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				sn1 := gwapiv1.SectionName("gateway-1-listener-udp")
@@ -415,7 +483,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn2
 
-				c.rs = []gwapiv1a2.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2}
+				c.rs = []stnrgwv1.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -457,7 +525,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -493,7 +561,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].Namespace = &testutils.TestNsName
 				udp2.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn2
 
-				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
+				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -532,7 +600,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// add dummy-namespace
@@ -592,7 +660,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 						SectionName: &sn,
 					},
 				}
-				c.rs = []gwapiv1a2.UDPRoute{*udp1, *udp2}
+				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -632,7 +700,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -692,7 +760,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -700,13 +768,13 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				sn := gwapiv1.SectionName("dummy")
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].Name = "gateway-1"
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
-				rs := store.UDPRoutes.GetAll()
+				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
@@ -744,7 +812,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -771,13 +839,13 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					Name:      "gateway-1",
 					Namespace: &sn,
 				}
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
-				rs := store.UDPRoutes.GetAll()
+				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
@@ -816,7 +884,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
@@ -827,13 +895,13 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					Name:      "gateway-1",
 					Namespace: &sn,
 				}
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
-				rs := store.UDPRoutes.GetAll()
+				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
@@ -876,18 +944,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-missing-service-backend")
-				udp1.Spec.Rules[0].BackendRefs = []gwapiv1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+				udp1.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Name: "dummy-svc",
 					},
 				}}
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
-				rs := store.UDPRoutes.GetAll()
+				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
@@ -944,27 +1012,27 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				kind := gwapiv1.Kind("StaticService")
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-missing-service-backend")
-				udp1.Spec.Rules[0].BackendRefs = []gwapiv1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+				udp1.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-dummy",
 					},
 				}, {
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
 					},
 				}}
 
-				c.rs = []gwapiv1a2.UDPRoute{*udp1}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
-				rs := store.UDPRoutes.GetAll()
+				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 

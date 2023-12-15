@@ -15,7 +15,6 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -29,7 +28,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -69,7 +68,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -90,7 +89,7 @@ func TestRenderListenerRender(t *testing.T) {
 					addr: "1.2.3.4",
 					port: 1234,
 				}
-				_, err = r.renderListener(gw, c.gwConf, &l, []*gwapiv1a2.UDPRoute{}, addr)
+				_, err = r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr)
 				assert.Error(t, err, "render fails")
 			},
 		},
@@ -99,7 +98,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -121,7 +120,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, []*gwapiv1a2.UDPRoute{}, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
@@ -136,7 +135,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				conf := testutils.TestGwConfig.DeepCopy()
@@ -183,7 +182,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -221,7 +220,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -266,7 +265,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -307,7 +306,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -347,7 +346,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -366,7 +365,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -400,7 +399,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -419,7 +418,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -455,7 +454,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -474,7 +473,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -510,7 +509,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -529,7 +528,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -569,7 +568,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -588,7 +587,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -628,7 +627,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -647,7 +646,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -687,7 +686,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -706,7 +705,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -746,7 +745,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -765,7 +764,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -808,7 +807,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,
@@ -827,7 +826,7 @@ func TestRenderListenerRender(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			scrts: []corev1.Secret{testutils.TestSecret},
 			prep: func(c *renderTestConfig) {
@@ -872,7 +871,7 @@ func TestRenderListenerRender(t *testing.T) {
 				ls := gw.Spec.Listeners
 				l := ls[0]
 
-				rs := []*gwapiv1a2.UDPRoute{}
+				rs := []*stnrgwv1.UDPRoute{}
 				addr := &gatewayAddress{
 					addr: "1.2.3.4",
 					port: 1234,

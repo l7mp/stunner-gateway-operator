@@ -71,18 +71,19 @@ const (
 
 var (
 	// Resources
-	testNs         *corev1.Namespace
-	testGwClass    *gwapiv1.GatewayClass
-	testGwConfig   *stnrgwv1.GatewayConfig
-	testGw         *gwapiv1.Gateway
-	testUDPRoute   *gwapiv1a2.UDPRoute
-	testSvc        *corev1.Service
-	testEndpoint   *corev1.Endpoints
-	testNode       *corev1.Node
-	testSecret     *corev1.Secret
-	testAuthSecret *corev1.Secret
-	testStaticSvc  *stnrgwv1.StaticService
-	testDataplane  *stnrgwv1.Dataplane
+	testNs           *corev1.Namespace
+	testGwClass      *gwapiv1.GatewayClass
+	testGwConfig     *stnrgwv1.GatewayConfig
+	testGw           *gwapiv1.Gateway
+	testUDPRouteV1A2 *gwapiv1a2.UDPRoute
+	testUDPRoute     *stnrgwv1.UDPRoute
+	testSvc          *corev1.Service
+	testEndpoint     *corev1.Endpoints
+	testNode         *corev1.Node
+	testSecret       *corev1.Secret
+	testAuthSecret   *corev1.Secret
+	testStaticSvc    *stnrgwv1.StaticService
+	testDataplane    *stnrgwv1.Dataplane
 	// Globals
 	cfg       *rest.Config
 	k8sClient client.Client
@@ -121,6 +122,7 @@ func InitResources() {
 	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
 	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
 	testDataplane = testutils.TestDataplane.DeepCopy()
+	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
 }
 
 func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -144,9 +146,14 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ctrl.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	}, zap.Level(zapcore.Level(loglevel))))
+	opts := zap.Options{
+		Development:     true,
+		DestWriter:      GinkgoWriter,
+		StacktraceLevel: zapcore.Level(3),
+		TimeEncoder:     zapcore.RFC3339NanoTimeEncoder,
+		Level:           zapcore.Level(loglevel),
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
 
 	ctx, cancel = context.WithCancel(context.Background())
@@ -172,9 +179,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Gateway API schemes
-	err = gwapiv1a2.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
 	err = gwapiv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = gwapiv1a2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
@@ -263,10 +270,10 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-type UDPRouteMutator func(current *gwapiv1a2.UDPRoute)
+type UDPRouteMutator func(current *stnrgwv1.UDPRoute)
 
-func createOrUpdateUDPRoute(template *gwapiv1a2.UDPRoute, f UDPRouteMutator) {
-	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateUDPRoute(template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
+	current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

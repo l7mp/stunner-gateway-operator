@@ -24,6 +24,10 @@ import (
 // Hub marks Dataplane.v1 as a conversion hub.
 func (*Dataplane) Hub() {}
 
+func init() {
+	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
+}
+
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
@@ -124,7 +128,7 @@ type DataplaneSpec struct {
 	// no metrics collection.
 	//
 	// +optional
-	EnableMetricsEnpoint bool `json:"disableMetricsEndpoint,omitempty"`
+	EnableMetricsEnpoint bool `json:"enableMetricsEndpoint,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -137,8 +141,4 @@ type DataplaneList struct {
 
 	// List of services.
 	Items []Dataplane `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
 }

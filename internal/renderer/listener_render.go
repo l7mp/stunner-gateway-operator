@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -20,7 +19,7 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*gwapiv1a2.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -29,15 +28,6 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 		return nil, err
 	}
 
-	// minPort, maxPort := stnrconfv1.DefaultMinRelayPort,
-	// 	stnrconfv1.DefaultMaxRelayPort
-	// if gwConf.Spec.MinPort != nil {
-	// 	minPort = int(*gwConf.Spec.MinPort)
-	// }
-	// if gwConf.Spec.MaxPort != nil {
-	// 	maxPort = int(*gwConf.Spec.MaxPort)
-	// }
-
 	a, p := "", 0
 	if ap != nil {
 		a = ap.addr
@@ -45,14 +35,12 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 	}
 
 	lc := stnrconfv1.ListenerConfig{
-		Name:         stnrListenerName(gw, l),
-		Protocol:     proto.String(),
-		Addr:         "$STUNNER_ADDR", // Addr will be filled in from the pod environment
-		Port:         int(l.Port),
-		PublicAddr:   a,
-		PublicPort:   p,
-		MinRelayPort: stnrconfv1.DefaultMinRelayPort,
-		MaxRelayPort: stnrconfv1.DefaultMaxRelayPort,
+		Name:       stnrListenerName(gw, l),
+		Protocol:   proto.String(),
+		Addr:       "$STUNNER_ADDR", // Addr will be filled in from the pod environment
+		Port:       int(l.Port),
+		PublicAddr: a,
+		PublicPort: p,
 	}
 
 	if cert, key, ok := r.getTLS(gw, l); ok {

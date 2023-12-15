@@ -43,7 +43,8 @@ var (
 		Limits:   TestResourceLimit,
 		Requests: TestResourceRequest,
 	}
-	TestPort = gwapiv1.PortNumber(1)
+	TestPort    = gwapiv1.PortNumber(1)
+	TestEndPort = gwapiv1.PortNumber(2)
 )
 
 // Namespace
@@ -117,24 +118,24 @@ var TestGw = gwapiv1.Gateway{
 }
 
 // UDPRoute
-var TestUDPRoute = gwapiv1a2.UDPRoute{
+var TestUDPRoute = stnrgwv1.UDPRoute{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "udproute-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1a2.UDPRouteSpec{
+	Spec: stnrgwv1.UDPRouteSpec{
 		CommonRouteSpec: gwapiv1.CommonRouteSpec{
 			ParentRefs: []gwapiv1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
-		Rules: []gwapiv1a2.UDPRouteRule{{
-			BackendRefs: []gwapiv1.BackendRef{{
-				BackendObjectReference: gwapiv1.BackendObjectReference{
+		Rules: []stnrgwv1.UDPRouteRule{{
+			BackendRefs: []stnrgwv1.BackendRef{{
+				BackendObjectReference: stnrgwv1.BackendObjectReference{
 					Name: gwapiv1.ObjectName("testservice-ok"),
-					// port is mandatory
-					Port: &TestPort,
+					// Port:    &TestPort,
+					// EndPort: &TestEndPort,
 				},
 			}},
 		}},
@@ -272,5 +273,30 @@ var TestDataplane = stnrgwv1.Dataplane{
 		Resources:                     &TestResourceRequirements,
 		HostNetwork:                   true,
 		Affinity:                      nil,
+	},
+}
+
+// For backward compatibility
+var TestUDPRouteV1A2 = gwapiv1a2.UDPRoute{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "udproute-ok",
+		Namespace: "testnamespace",
+	},
+	Spec: gwapiv1a2.UDPRouteSpec{
+		CommonRouteSpec: gwapiv1.CommonRouteSpec{
+			ParentRefs: []gwapiv1.ParentReference{{
+				Name:        "gateway-1",
+				SectionName: &TestSectionName,
+			}},
+		},
+		Rules: []gwapiv1a2.UDPRouteRule{{
+			BackendRefs: []gwapiv1a2.BackendRef{{
+				BackendObjectReference: gwapiv1a2.BackendObjectReference{
+					Name: gwapiv1.ObjectName("testservice-ok"),
+					// port is mandatory
+					Port: &TestPort,
+				},
+			}},
+		}},
 	},
 }

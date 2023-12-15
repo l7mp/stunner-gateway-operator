@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -32,7 +31,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
@@ -67,7 +66,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -102,7 +101,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -134,7 +133,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -165,7 +164,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{},
+			rs:    []stnrgwv1.UDPRoute{},
 			nodes: []corev1.Node{testutils.TestNode},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -199,7 +198,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -231,7 +230,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -262,7 +261,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -301,7 +300,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
@@ -359,7 +358,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
-			rs:    []gwapiv1a2.UDPRoute{},
+			rs:    []stnrgwv1.UDPRoute{},
 			nodes: []corev1.Node{testutils.TestNode},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -397,7 +396,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -457,7 +456,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -516,7 +515,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -547,7 +546,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -605,7 +604,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -660,7 +659,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -725,7 +724,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
@@ -787,7 +786,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -852,7 +851,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -917,7 +916,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -983,7 +982,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1046,7 +1045,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1109,7 +1108,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1169,7 +1168,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1229,7 +1228,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1294,7 +1293,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1356,7 +1355,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -1381,7 +1380,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1424,7 +1423,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1467,7 +1466,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -1511,7 +1510,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
@@ -1559,7 +1558,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
@@ -1603,7 +1602,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()

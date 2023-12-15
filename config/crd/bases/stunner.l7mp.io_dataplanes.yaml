@@ -883,7 +883,7 @@ spec:
                   on port 8086: a liveness probe responder will be exposed on path
                   `/live` and readiness probe on path `/ready`.'
                 type: boolean
-              disableMetricsEndpoint:
+              enableMetricsEndpoint:
                 description: EnableMetricsEnpoint can be used to enable metrics scraping
                   (Prometheus). If enabled, a metrics endpoint will available at http://0.0.0.0:8080
                   at all dataplane pods. Default is no metrics collection.

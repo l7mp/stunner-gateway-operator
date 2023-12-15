@@ -129,6 +129,7 @@ func TestConfigDiscovery(t *testing.T) {
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 
 	c2, err = cdsc2.Load()
+	assert.Error(t, err, "load")
 	assert.Nil(t, c2)
 
 	// we should have received a config update
@@ -288,6 +289,7 @@ func TestConfigDiscovery(t *testing.T) {
 	assert.NotNil(t, c1)
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 	c2, err = cdsc2.Load()
+	assert.Error(t, err, "load")
 	assert.Nil(t, c2)
 	c3, err = cdsc3.Load()
 	assert.NoError(t, err, "loading client config ok")
@@ -377,6 +379,7 @@ func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
 	return c
 }
 
+//nolint:unused
 func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
 	nsName := store.GetNameFromKey(c.Admin.Name)
 

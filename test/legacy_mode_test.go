@@ -35,7 +35,6 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -392,7 +391,7 @@ func testLegacyMode() {
 		})
 
 		It("should set the Route status", func() {
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1161,7 +1160,7 @@ func testLegacyMode() {
 			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {})
 
 			ctrl.Log.Info("updating Route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
@@ -1169,8 +1168,8 @@ func testLegacyMode() {
 						Name: "gateway-1",
 					}},
 				}
-				current.Spec.Rules[0].BackendRefs = []gwapiv1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+				current.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
@@ -1369,7 +1368,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1667,7 +1666,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1710,7 +1709,7 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading UDPRoute")
 
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -1878,7 +1877,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1928,12 +1927,12 @@ func testLegacyMode() {
 			})).Should(Succeed())
 
 			ctrl.Log.Info("recreating UDPRoute with open listener attachment")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 			})
 
 			ctrl.Log.Info("creating new UDPRoute in the dummy-namespace")
-			ro := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+			ro := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 				Name:      "dummy-namespace-route",
 				Namespace: "dummy-namespace",
 			}}
@@ -2117,7 +2116,7 @@ func testLegacyMode() {
 
 		It("should reset Route statuses", func() {
 			// the original UDPRoute
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
 				if err != nil {
@@ -2155,7 +2154,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
-			ro = &gwapiv1a2.UDPRoute{}
+			ro = &stnrgwv1.UDPRoute{}
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: "dummy-namespace",
@@ -2389,7 +2388,7 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
 			// the original UDPRoute
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -2418,7 +2417,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
-			ro = &gwapiv1a2.UDPRoute{}
+			ro = &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx,
 				types.NamespacedName{Namespace: "dummy-namespace", Name: "dummy-namespace-route"},
 				ro)).Should(Succeed())
@@ -2456,7 +2455,7 @@ func testLegacyMode() {
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
 			sn := gwapiv1.SectionName("gateway-1-listener-tcp")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1.ParentReference{
 					{
 						Name:        "gateway-1",
@@ -2684,7 +2683,7 @@ func testLegacyMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
 			// the original UDPRoute
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -2746,7 +2745,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// the new UDPRoute in the dummy-namespace
-			ro = &gwapiv1a2.UDPRoute{}
+			ro = &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx,
 				types.NamespacedName{Namespace: "dummy-namespace", Name: "dummy-namespace-route"},
 				ro)).Should(Succeed())
@@ -2785,7 +2784,7 @@ func testLegacyMode() {
 				current.Spec.Listeners[2].AllowedRoutes = nil
 			})
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
-			Expect(k8sClient.Delete(ctx, &gwapiv1a2.UDPRoute{
+			Expect(k8sClient.Delete(ctx, &stnrgwv1.UDPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dummy-namespace-route",
 					Namespace: "dummy-namespace",
@@ -2804,10 +2803,10 @@ func testLegacyMode() {
 
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				sn := gwapiv1.SectionName("dummy")
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
-				// gwapiv1a2.ObjectName("dummy")
+				// stnrgwv1.ObjectName("dummy")
 			})
 
 			lookupKey := types.NamespacedName{
@@ -2863,7 +2862,7 @@ func testLegacyMode() {
 
 			Expect(conf.Clusters).To(HaveLen(0))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			// wait until status gets updated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
@@ -2916,7 +2915,7 @@ func testLegacyMode() {
 			secret := "dummy"
 
 			ctrl.Log.Info("re-loading original UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 			})
 
@@ -3249,7 +3248,7 @@ func testLegacyMode() {
 
 		It("changing a route target", func() {
 			ctrl.Log.Info("re-loading route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1.ObjectName("dummy")
 			})
@@ -3288,10 +3287,10 @@ func testLegacyMode() {
 
 		It("adding a new route", func() {
 			ctrl.Log.Info("re-loading the test route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {})
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {})
 
 			ctrl.Log.Info("adding a new route")
-			current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+			current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 				Name:      "route-2",
 				Namespace: testUDPRoute.GetNamespace(),
 			}}
@@ -3300,8 +3299,8 @@ func testLegacyMode() {
 				current.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1.ObjectName("dummy")
 				current.Spec.Rules[0].BackendRefs = append(current.Spec.Rules[0].BackendRefs,
-					gwapiv1.BackendRef{
-						BackendObjectReference: gwapiv1.BackendObjectReference{
+					stnrgwv1.BackendRef{
+						BackendObjectReference: stnrgwv1.BackendObjectReference{
 							Name: gwapiv1.ObjectName("dummy-2"),
 							Port: &testutils.TestPort,
 						},
@@ -3403,7 +3402,7 @@ func testLegacyMode() {
 
 		It("adding a new gateway", func() {
 			ctrl.Log.Info("updating route-2 to point to both the old and the new gateway")
-			ro := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+			ro := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 				Name:      "route-2",
 				Namespace: testUDPRoute.GetNamespace(),
 			}}
@@ -3414,8 +3413,8 @@ func testLegacyMode() {
 				ro.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1.ObjectName("dummy")
 				ro.Spec.Rules[0].BackendRefs = append(ro.Spec.Rules[0].BackendRefs,
-					gwapiv1.BackendRef{
-						BackendObjectReference: gwapiv1.BackendObjectReference{
+					stnrgwv1.BackendRef{
+						BackendObjectReference: stnrgwv1.BackendObjectReference{
 							Name: gwapiv1.ObjectName("dummy-2"),
 							Port: &testutils.TestPort,
 						},
@@ -3583,7 +3582,7 @@ func testLegacyMode() {
 			Expect(k8sClient.Delete(ctx, gw)).Should(Succeed())
 
 			ctrl.Log.Info("deleting route-3")
-			ro := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
+			ro := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 				Name:      "route-2",
 				Namespace: testUDPRoute.GetNamespace(),
 			}}
@@ -3707,7 +3706,7 @@ func testLegacyMode() {
 		})
 
 		It("should set the Route status", func() {
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -3839,7 +3838,7 @@ func testLegacyMode() {
 			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -4014,7 +4013,7 @@ func testLegacyMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 

@@ -188,8 +188,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -199,8 +197,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 		})
 
 		It("should set the GatewayClass status", func() {
@@ -358,7 +354,7 @@ func testManagedMode() {
 				}
 
 				// conf should have valid cluster confs
-				if len(c.Clusters) == 1 {
+				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
 					conf = &c
 					return true
 				}
@@ -385,8 +381,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -398,8 +392,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -416,7 +408,7 @@ func testManagedMode() {
 		})
 
 		It("should set the Route status", func() {
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -425,9 +417,6 @@ func testManagedMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1a2.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1a2.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1a2.GatewayController("gatewayclass-ok")))
 
 			// Expect(ps.ParentRef.Group).To(BeNil())
 			// Expect(ps.ParentRef.Kind).To(BeNil())
@@ -547,8 +536,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -556,8 +543,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -566,8 +551,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 		})
 
@@ -612,8 +595,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
 			Expect(l.Routes).Should(BeEmpty())
@@ -781,7 +762,7 @@ func testManagedMode() {
 			createOrUpdateGateway(&testutils.TestGw, nil)
 
 			ctrl.Log.Info("updating Route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
@@ -789,8 +770,8 @@ func testManagedMode() {
 						Name: "gateway-1",
 					}},
 				}
-				current.Spec.Rules[0].BackendRefs = []gwapiv1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+				current.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
@@ -846,8 +827,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -859,8 +838,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -990,7 +967,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1016,6 +993,482 @@ func testManagedMode() {
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+		})
+
+		It("should survive converting the route to v1a2 route", func() {
+			ctrl.Log.Info("reseting gateway")
+			createOrUpdateGateway(&testutils.TestGw, nil)
+
+			ctrl.Log.Info("deleting stunnerv1 UDPRoute")
+			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
+
+			ctrl.Log.Info("adding v1alpha2 UDPRoute")
+			Expect(k8sClient.Create(ctx, testUDPRouteV1A2)).Should(Succeed())
+
+			// wait until configmap gets updated
+			lookupKey := store.GetNamespacedName(testGw)
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+
+			contains := func(strs []string, val string) bool {
+				for _, s := range strs {
+					if s == val {
+						return true
+					}
+				}
+				return false
+			}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
+					len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "1.2.3.4") {
+					conf = &c
+					return true
+				}
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(0))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+			c := conf.Clusters[0]
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+
+			gc := &gwapiv1.GatewayClass{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
+				gc)).Should(Succeed())
+
+			Expect(gc.Status.Conditions).To(HaveLen(1))
+
+			s := meta.FindStatusCondition(gc.Status.Conditions,
+				string(gwapiv1.GatewayClassConditionStatusAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayClassConditionStatusAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(
+				Equal(string(gwapiv1.GatewayClassReasonAccepted)))
+
+			// wait until gateway is programmed
+			gw := &gwapiv1.Gateway{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(gw.Status.Conditions).To(HaveLen(2))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1.GatewayConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1.GatewayConditionProgrammed))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayConditionProgrammed)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// stragely recreating the gateway lets api-server to find the public ip
+			// for the gw so Ready status becomes true (should investigate this)
+			Expect(gw.Status.Listeners).To(HaveLen(3))
+
+			// listener[0]: OK
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			// listeners[1]: detached
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			// listeners[2]: ok
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			roV1A2 := &gwapiv1a2.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				roV1A2)).Should(Succeed())
+
+			Expect(roV1A2.Status.Parents).To(HaveLen(1))
+			ps := roV1A2.Status.Parents[0]
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController(config.ControllerName)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+		})
+
+		It("should survive masking the v1a2 route with a stunner.v1 route", func() {
+			ctrl.Log.Info("reseting gateway")
+			createOrUpdateGateway(&testutils.TestGw, nil)
+
+			ctrl.Log.Info("loading UDPRoute")
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
+
+			// wait until v1a2 route gets invalidates
+			Eventually(func() bool {
+				roV1A2 := &gwapiv1a2.UDPRoute{}
+				err := k8sClient.Get(ctx, store.GetNamespacedName(testUDPRouteV1A2), roV1A2)
+				if err != nil {
+					return false
+				}
+
+				for _, s := range roV1A2.Status.Parents {
+					cond := meta.FindStatusCondition(s.Conditions,
+						string(gwapiv1.RouteConditionAccepted))
+					if cond != nil {
+						if cond.Status == metav1.ConditionFalse &&
+							cond.Reason == string(gwapiv1.RouteReasonPending) {
+							return true
+						}
+					}
+				}
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			// wait until configmap gets updated
+			lookupKey := store.GetNamespacedName(testGw)
+			cm := &corev1.ConfigMap{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
+					len(c.Clusters) == 1 {
+					conf = &c
+					return true
+				}
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(0))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+			c := conf.Clusters[0]
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+
+			gc := &gwapiv1.GatewayClass{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
+				gc)).Should(Succeed())
+
+			Expect(gc.Status.Conditions).To(HaveLen(1))
+
+			s := meta.FindStatusCondition(gc.Status.Conditions,
+				string(gwapiv1.GatewayClassConditionStatusAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayClassConditionStatusAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(
+				Equal(string(gwapiv1.GatewayClassReasonAccepted)))
+
+			// wait until gateway is programmed
+			gw := &gwapiv1.Gateway{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
+				if err != nil {
+					return false
+				}
+
+				// should be programmed
+				s := meta.FindStatusCondition(gw.Status.Conditions,
+					string(gwapiv1.GatewayConditionProgrammed))
+				return s.Status == metav1.ConditionTrue
+
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(gw.Status.Conditions).To(HaveLen(2))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1.GatewayConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(gw.Status.Conditions,
+				string(gwapiv1.GatewayConditionProgrammed))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.GatewayConditionProgrammed)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// stragely recreating the gateway lets api-server to find the public ip
+			// for the gw so Ready status becomes true (should investigate this)
+			Expect(gw.Status.Listeners).To(HaveLen(3))
+
+			// listener[0]: OK
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			// listeners[1]: detached
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			// listeners[2]: ok
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			ro := &stnrgwv1.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				ro)).Should(Succeed())
+
+			Expect(ro.Status.Parents).To(HaveLen(1))
+			ps := ro.Status.Parents[0]
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController(config.ControllerName)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			roV1A2 := &gwapiv1a2.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				roV1A2)).Should(Succeed())
+
+			Expect(roV1A2.Status.Parents).To(HaveLen(1))
+			ps = roV1A2.Status.Parents[0]
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController(config.ControllerName)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.RouteReasonPending)))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			ctrl.Log.Info("deleting v1a2 UDPRoute")
+			Expect(k8sClient.Delete(ctx, testUDPRouteV1A2)).Should(Succeed())
 		})
 	})
 
@@ -1046,7 +1499,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{
@@ -1105,8 +1558,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1118,8 +1569,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1179,8 +1628,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1382,7 +1829,7 @@ func testManagedMode() {
 		})
 
 		It("should set the Route status", func() {
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 
@@ -1616,7 +2063,7 @@ func testManagedMode() {
 			Expect(k8sClient.Delete(ctx, gw2)).Should(Succeed())
 
 			// wait until route status gets updated
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, store.GetNamespacedName(testUDPRoute), ro)
 				if err != nil || ro == nil {
@@ -1777,7 +2224,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *gwapiv1a2.UDPRoute) {
+			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{
@@ -1836,8 +2283,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -1849,8 +2294,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TURN-TCP"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1910,8 +2353,6 @@ func testManagedMode() {
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("TURN-UDP"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.MinRelayPort).Should(Equal(stnrconfv1.DefaultMinRelayPort))
-			Expect(l.MaxRelayPort).Should(Equal(stnrconfv1.DefaultMaxRelayPort))
 			Expect(l.Routes).To(HaveLen(1))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
@@ -2143,7 +2584,7 @@ func testManagedMode() {
 		})
 
 		It("should set the Route status", func() {
-			ro := &gwapiv1a2.UDPRoute{}
+			ro := &stnrgwv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
 				ro)).Should(Succeed())
 

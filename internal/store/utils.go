@@ -16,9 +16,8 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func GetObjectKey(object client.Object) string {
@@ -91,6 +90,12 @@ func DumpObject(o client.Object) string {
 		} else {
 			output = string(json)
 		}
+	case *stnrgwv1.UDPRoute:
+		if json, err := json.Marshal(strip(ro)); err != nil {
+			fmt.Printf("---------------ERROR-----------: %s\n", err)
+		} else {
+			output = string(json)
+		}
 	case *gwapiv1a2.UDPRoute:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
@@ -155,7 +160,7 @@ func DumpObject(o client.Object) string {
 // 		tmp = ro
 // 	case *gwapiv1.Gateway:
 // 		tmp = ro
-// 	case *gwapiv1a2.UDPRoute:
+// 	case *stnrgwv1.UDPRoute:
 // 		tmp = ro
 // 	case *corev1.Service:
 // 		tmp = ro
@@ -235,7 +240,7 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 }
 
 // IsReferenceService returns true of the provided BackendRef points to a Service.
-func IsReferenceService(ref *gwapiv1.BackendRef) bool {
+func IsReferenceService(ref *stnrgwv1.BackendRef) bool {
 	// Group is the group of the referent. For example, “gateway.networking.k8s.io”. When
 	// unspecified or empty string, core API group is inferred.
 	if ref.Group != nil && *ref.Group != corev1.GroupName {
@@ -250,7 +255,7 @@ func IsReferenceService(ref *gwapiv1.BackendRef) bool {
 }
 
 // IsReferenceStaticService returns true of the provided BackendRef points to a StaticService.
-func IsReferenceStaticService(ref *gwapiv1.BackendRef) bool {
+func IsReferenceStaticService(ref *stnrgwv1.BackendRef) bool {
 	if ref.Group == nil || string(*ref.Group) != stnrgwv1.GroupVersion.Group {
 		return false
 	}

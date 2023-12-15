@@ -17,7 +17,6 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -37,7 +36,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -73,7 +72,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP
@@ -182,7 +181,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -294,7 +293,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -407,7 +406,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -497,7 +496,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				config.EnableEndpointDiscovery = false
@@ -536,7 +535,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 					gwapiv1.ObjectName("dummy-service")
-				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+				c.rs = []stnrgwv1.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -738,7 +737,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		// 	cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 		// 	cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 		// 	gws:  []gwapiv1.Gateway{testutils.TestGw},
-		// 	rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+		// 	rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 		// 	svcs: []corev1.Service{testutils.TestSvc},
 		// 	eps:  []corev1.Endpoints{testutils.TestEndpoint},
 		// 	prep: func(c *renderTestConfig) {
@@ -774,7 +773,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		// 		dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 		// 		dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 		// 			gwapiv1.ObjectName("dummy-service")
-		// 		c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+		// 		c.rs = []stnrgwv1.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 		// 		s := testutils.TestSvc.DeepCopy()
 		// 		s.Spec.ClusterIP = "4.3.2.1"
@@ -991,7 +990,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {
@@ -1032,7 +1031,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					gwapiv1.ObjectName("dummy-service")
 				dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Namespace =
 					&testutils.TestNsName
-				c.rs = []gwapiv1a2.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
+				c.rs = []stnrgwv1.UDPRoute{*dummyUdp, testutils.TestUDPRoute}
 
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
@@ -1254,7 +1253,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// update owner ref so that we accept the public IP
 				s := testutils.TestSvc.DeepCopy()
 				s.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1a2.GroupVersion.String(),
+					APIVersion: stnrgwv1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
@@ -1264,14 +1263,14 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				udp := testutils.TestUDPRoute.DeepCopy()
-				udp.Spec.Rules[0].BackendRefs = []gwapiv1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
+				udp.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
 						Group: &group,
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
 					},
 				}}
-				c.rs = []gwapiv1a2.UDPRoute{*udp}
+				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
@@ -1397,7 +1396,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				ros := c.update.UpsertQueue.UDPRoutes.Objects()
 				assert.Len(t, ros, 1, "routenum")
-				ro, found := ros[0].(*gwapiv1a2.UDPRoute)
+				ro, found := ros[0].(*stnrgwv1.UDPRoute)
 				assert.True(t, found, "route found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "udproute-ok"),
 					store.GetObjectKey(ro), "route name found")
@@ -1441,7 +1440,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		// 	cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 		// 	cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 		// 	gws:  []gwapiv1.Gateway{testutils.TestGw},
-		// 	rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+		// 	rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 		// 	prep: func(c *renderTestConfig) {
 		// 		// a new gatewayclass that specifies a different gateway-config
 		// 		dummyGc := testutils.TestGwClass.DeepCopy()
@@ -1475,7 +1474,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		// 		dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
 		// 		dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
 		// 			gwapiv1.ObjectName("dummy-service")
-		// 		c.rs = []gwapiv1a2.UDPRoute{*dummyUdp}
+		// 		c.rs = []stnrgwv1.UDPRoute{*dummyUdp}
 		// 	},
 		// 	tester: func(t *testing.T, r *Renderer) {
 		// 		config.DataplaneMode = config.DataplaneModeLegacy
@@ -1518,7 +1517,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []gwapiv1a2.UDPRoute{testutils.TestUDPRoute},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				// update owner ref so that we accept the public IP

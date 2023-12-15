@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
@@ -38,7 +37,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1.AddToScheme(scheme))
 	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
@@ -48,7 +46,8 @@ type renderTestConfig struct {
 	cls    []gwapiv1.GatewayClass
 	cfs    []stnrgwv1.GatewayConfig
 	gws    []gwapiv1.Gateway
-	rs     []gwapiv1a2.UDPRoute
+	rs     []stnrgwv1.UDPRoute
+	rsV1A2 []stnrgwv1.UDPRoute // internal format is always ours, not v1a2
 	svcs   []corev1.Service
 	nodes  []corev1.Node
 	eps    []corev1.Endpoints
@@ -102,6 +101,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.UDPRoutes.Flush()
 			for i := range c.rs {
 				store.UDPRoutes.Upsert(&c.rs[i])
+			}
+
+			store.UDPRoutesV1A2.Flush()
+			for i := range c.rsV1A2 {
+				store.UDPRoutesV1A2.Upsert(&c.rsV1A2[i])
 			}
 
 			store.Services.Flush()

@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -28,7 +27,7 @@ func TestRenderAdminRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *Renderer) {
@@ -55,7 +54,7 @@ func TestRenderAdminRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
@@ -91,7 +90,7 @@ func TestRenderAdminRender(t *testing.T) {
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
-			rs:   []gwapiv1a2.UDPRoute{},
+			rs:   []stnrgwv1.UDPRoute{},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {

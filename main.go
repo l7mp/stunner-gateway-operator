@@ -86,20 +86,17 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
-		Development: true,
+		Development:     true,
+		DestWriter:      os.Stderr,
+		StacktraceLevel: zapcore.Level(3),
+		TimeEncoder:     zapcore.RFC3339NanoTimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	logger := zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	})
+	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger.WithName("ctrl-runtime"))
 	setupLog := logger.WithName("setup")
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), func(o *zap.Options) {
-		o.TimeEncoder = zapcore.RFC3339NanoTimeEncoder
-	}))
 
 	config.EnableEndpointDiscovery = enableEDS
 	setupLog.Info("endpoint discovery", "state", enableEDS)
