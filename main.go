@@ -48,6 +48,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 const (
@@ -63,7 +64,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))
 	utilruntime.Must(gwapiv1.AddToScheme(scheme))
-	// utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))
+	utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))
 	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
 }
 
