@@ -31,7 +31,7 @@ func (*GatewayConfig) Hub() {}
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner,shortName=gwconf
 // +kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`
-// +kubebuilder:printcolumn:name="Auth",type=string,JSONPath=`.spec.authType`
+// +kubebuilder:printcolumn:name="Dataplane",type=string,JSONPath=`.spec.dataplane`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:storageversion
 

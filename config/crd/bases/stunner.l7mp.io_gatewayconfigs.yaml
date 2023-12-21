@@ -22,8 +22,8 @@ spec:
     - jsonPath: .spec.realm
       name: Realm
       type: string
-    - jsonPath: .spec.authType
-      name: Auth
+    - jsonPath: .spec.dataplane
+      name: Dataplane
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
