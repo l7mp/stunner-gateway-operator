@@ -79,8 +79,9 @@ type DataplaneSpec struct {
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	// Number of desired pods. This is a pointer to distinguish between explicit zero and not
-	// specified. Defaults to 1.
+	// Number of desired pods. If empty or set to 1, use whatever is in the target Deployment.
+	// Otherwise, enforce this setting, overwiting whatever is set in the Deployment (this may
+	// block autoscaling the dataplane though). Defaults to 1.
 	//
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
@@ -124,8 +125,8 @@ type DataplaneSpec struct {
 	DisableHealthCheck bool `json:"disableHealthCheck,omitempty"`
 
 	// EnableMetricsEnpoint can be used to enable metrics scraping (Prometheus). If enabled, a
-	// metrics endpoint will available at http://0.0.0.0:8080 at all dataplane pods. Default is
-	// no metrics collection.
+	// metrics endpoint will be available at http://0.0.0.0:8080 at all dataplane pods. Default
+	// is no metrics collection.
 	//
 	// +optional
 	EnableMetricsEnpoint bool `json:"enableMetricsEndpoint,omitempty"`

@@ -885,8 +885,9 @@ spec:
                 type: boolean
               enableMetricsEndpoint:
                 description: EnableMetricsEnpoint can be used to enable metrics scraping
-                  (Prometheus). If enabled, a metrics endpoint will available at http://0.0.0.0:8080
-                  at all dataplane pods. Default is no metrics collection.
+                  (Prometheus). If enabled, a metrics endpoint will be available at
+                  http://0.0.0.0:8080 at all dataplane pods. Default is no metrics
+                  collection.
                 type: boolean
               env:
                 description: List of environment variables to set in the stunnerd
@@ -1046,8 +1047,10 @@ spec:
                 description: Image pull policy. One of Always, Never, IfNotPresent.
                 type: string
               replicas:
-                description: Number of desired pods. This is a pointer to distinguish
-                  between explicit zero and not specified. Defaults to 1.
+                description: Number of desired pods. If empty or set to 1, use whatever
+                  is in the target Deployment. Otherwise, enforce this setting, overwiting
+                  whatever is set in the Deployment (this may block autoscaling the
+                  dataplane though). Defaults to 1.
                 format: int32
                 type: integer
               resources:
