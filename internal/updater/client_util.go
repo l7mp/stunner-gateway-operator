@@ -184,8 +184,11 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		}
 
 		current.Spec.Selector = dp.Spec.Selector
-		if dp.Spec.Replicas != nil {
-			current.Spec.Replicas = dp.Spec.Replicas
+
+		// only update the replica count if it must be enforced
+		if dp.Spec.Replicas != nil && int(*dp.Spec.Replicas) != 1 {
+			replicas := *dp.Spec.Replicas
+			current.Spec.Replicas = &replicas
 		}
 
 		// the pod template is copied verbatim
