@@ -386,8 +386,8 @@ func createOrUpdateNode(template *corev1.Node, f NodeMutator) {
 }
 
 // createOrUpdate will retry when ctrlutil.CreateOrUpdate fails. This is useful to robustify tests:
-// sometimes an update is going on why we try to run the next test and then the CreateOrUpdate may
-// fail with a Conflict.
+// sometimes an update is going on while we are trying to run the next test and then the CreateOrUpdate
+// may fail with a Conflict.
 func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f ctrlutil.MutateFn) (ctrlutil.OperationResult, error) {
 	res, err := ctrlutil.CreateOrUpdate(ctx, c, obj, f)
 	if err == nil {

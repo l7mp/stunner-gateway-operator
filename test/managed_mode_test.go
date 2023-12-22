@@ -18,7 +18,9 @@ package integration
 
 import (
 	// "context"
+
 	"time"
+
 	// "reflect"
 	// "testing"
 	// "fmt"
@@ -752,6 +754,47 @@ func testManagedMode() {
 			Expect(*podSpec.TerminationGracePeriodSeconds).Should(Equal(testutils.TestTerminationGrace))
 			Expect(podSpec.HostNetwork).Should(BeFalse())
 			Expect(podSpec.Affinity).To(BeNil())
+		})
+
+		It("should not reset the replica count when it is updated externally", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+
+			replicas := int32(1)
+			ctrl.Log.Info("updating the replica count in the Dataplane template",
+				"resource", testDataplane.GetName(), "replica-count", replicas)
+			dp := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+				Name: testDataplane.GetName(),
+			}}
+			_, err := createOrUpdate(ctx, k8sClient, dp, func() error {
+				dp.Spec.Replicas = &replicas
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("updating the replica count in the Deployment", "resource", lookupKey)
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      testGw.GetName(),
+				Namespace: testGw.GetNamespace(),
+			}}
+			var generation int64
+			replicas = int32(4)
+			_, err = createOrUpdate(ctx, k8sClient, deploy, func() error {
+				deploy.Spec.Replicas = &replicas
+				generation = deploy.GetGeneration()
+				return nil
+			})
+			Expect(err).Should(Succeed())
+			// we should have obtained a valid generation
+			Expect(generation).NotTo(Equal(int64(0)))
+
+			ctrl.Log.Info("waiting for the Deployment to be updated")
+			time.Sleep(100 * time.Millisecond)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, deploy)
+				return err == nil && deploy != nil && deploy.Spec.Replicas != nil &&
+					*deploy.Spec.Replicas == int32(4) &&
+					deploy.GetGeneration() > generation
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should survive converting the route to a StaticService backend", func() {
