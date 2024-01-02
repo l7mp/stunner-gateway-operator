@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -47,17 +45,129 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	}
 
 	// var deployment *appv1.Deployment
+	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
+	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
-	// switch dataplane.Spec.Template {
-	// case config.ConfigWatcherName:
-	// 	// dataplane with config-watcher sidecar
-	// 	deployment = configWatcherDataplaneTemplate(gw)
-	// default:
-	// 	// standard dataplane: single stunnerd pod with included config file watcher
-	// 	deployment = defaultDataplaneTemplate(gw)
-	// }
+	// CDS server address
+	port := "13478"
+	if addr, err := net.ResolveTCPAddr("tcp", config.ConfigDiscoveryAddress); err == nil {
+		port = fmt.Sprintf("%d", addr.Port)
+	}
+	cdsAddr := url.URL{
+		Scheme: "http",
+		Host:   config.ConfigDiscoveryAddress,
+	}
+	if cdsAddr.Port() == "" {
+		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
+	}
 
-	deployment := defaultDataplaneTemplate(c, gw)
+	// selectors
+	selector := metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			// Like `kubectl label ... -l "app=stunner"
+			{
+				Key:      opdefault.AppLabelKey,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{opdefault.AppLabelValue},
+			},
+			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+			{
+				Key:      opdefault.RelatedGatewayKey,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{gw.GetName()},
+			},
+			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>"
+			{
+				Key:      opdefault.RelatedGatewayNamespace,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{gw.GetNamespace()},
+			},
+		},
+	}
+
+	deployment := appv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gw.GetName(),
+			Namespace: gw.GetNamespace(),
+			Labels: map[string]string{
+				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+				opdefault.RelatedGatewayKey:       gw.GetName(),
+				opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+			},
+			Annotations: map[string]string{
+				opdefault.RelatedGatewayKey: types.NamespacedName{
+					Namespace: gw.GetNamespace(),
+					Name:      gw.GetName(),
+				}.String(),
+			},
+		},
+		Spec: appv1.DeploymentSpec{
+			Selector: &selector,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						opdefault.AppLabelKey:             opdefault.AppLabelValue,
+						opdefault.RelatedGatewayKey:       gw.GetName(),
+						opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+					},
+					Annotations: map[string]string{
+						opdefault.RelatedGatewayKey: types.NamespacedName{
+							Namespace: gw.GetNamespace(),
+							Name:      gw.GetName(),
+						}.String(),
+					},
+				},
+			},
+		},
+	}
+
+	// copy annotations and labels
+	labs := labels.Merge(deployment.GetLabels(), gw.GetLabels())
+	deployment.SetLabels(labs)
+
+	annotations := deployment.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	for k, v := range gw.GetAnnotations() {
+		annotations[k] = v
+	}
+	deployment.SetAnnotations(annotations)
+
+	deployment.Spec.Template.Spec = corev1.PodSpec{
+		Containers: []corev1.Container{{
+			Name:    opdefault.DefaultStunnerdInstanceName,
+			Image:   config.StunnerdImage,
+			Command: []string{"stunnerd"},
+			// Enable config-discovery
+			Args: []string{"-w", "--udp-thread-num=16"},
+			// Disable config-discovery
+			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
+			Env: []corev1.EnvVar{{
+				Name:      "STUNNER_ADDR", // default transport relay address
+				ValueFrom: &podAddrEnvVarSource,
+			}, {
+				Name:  "STUNNER_NAME", // gateway name for creating the stunnerd id
+				Value: gw.GetName(),
+			}, {
+				Name:  "STUNNER_NAMESPACE", // gateway namespace for creating the stunnerd id
+				Value: gw.GetNamespace(),
+			}, {
+				Name:  "STUNNER_CONFIG_ORIGIN", // CDS server address
+				Value: cdsAddr.String(),
+			}},
+			Resources: corev1.ResourceRequirements{
+				Limits:   config.ResourceLimit,
+				Requests: config.ResourceRequest,
+			},
+			LivenessProbe:   livenessProbe,
+			ReadinessProbe:  readinessProbe,
+			ImagePullPolicy: corev1.PullAlways,
+		}},
+		TerminationGracePeriodSeconds: &config.TerminationGrace,
+		HostNetwork:                   false,
+	}
 
 	// post process
 
@@ -109,7 +219,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 
 	if !found {
 		r.log.Info("cannot find stunnerd container in dataplane Deployment template",
-			"deployment", store.DumpObject(deployment))
+			"deployment", store.DumpObject(&deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
 
@@ -132,9 +242,9 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	}
 
 	// owned by the Gateway
-	if err := controllerutil.SetOwnerReference(gw, deployment, r.scheme); err != nil {
+	if err := controllerutil.SetOwnerReference(gw, &deployment, r.scheme); err != nil {
 		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gw),
-			"reference", store.GetObjectKey(deployment))
+			"reference", store.GetObjectKey(&deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
 
@@ -143,10 +253,10 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		"gateway-config", store.GetObjectKey(c.gwConf),
 		"gateway", store.GetObjectKey(gw),
 		"dataplane", store.GetObjectKey(dataplane),
-		"deployment", store.DumpObject(deployment),
+		"deployment", store.DumpObject(&deployment),
 	)
 
-	return deployment, nil
+	return &deployment, nil
 }
 
 func getDataplane(c *RenderContext) (*stnrgwv1.Dataplane, error) {
@@ -183,138 +293,138 @@ func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
 // TEMPLATES
 // //////
 
-func defaultDeploymentSkeleton(gateway *gwapiv1.Gateway) appv1.Deployment {
-	selector := metav1.LabelSelector{
-		MatchExpressions: []metav1.LabelSelectorRequirement{
-			// Like `kubectl label ... -l "app=stunner"
-			{
-				Key:      opdefault.AppLabelKey,
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{opdefault.AppLabelValue},
-			},
-			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
-			{
-				Key:      opdefault.RelatedGatewayKey,
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{gateway.GetName()},
-			},
-			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>"
-			{
-				Key:      opdefault.RelatedGatewayNamespace,
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{gateway.GetNamespace()},
-			},
-		},
-	}
+// func defaultDeploymentSkeleton(gateway *gwapiv1.Gateway) appv1.Deployment {
+// 	selector := metav1.LabelSelector{
+// 		MatchExpressions: []metav1.LabelSelectorRequirement{
+// 			// Like `kubectl label ... -l "app=stunner"
+// 			{
+// 				Key:      opdefault.AppLabelKey,
+// 				Operator: metav1.LabelSelectorOpIn,
+// 				Values:   []string{opdefault.AppLabelValue},
+// 			},
+// 			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+// 			{
+// 				Key:      opdefault.RelatedGatewayKey,
+// 				Operator: metav1.LabelSelectorOpIn,
+// 				Values:   []string{gateway.GetName()},
+// 			},
+// 			// Like `kubectl label ... -l  "stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>"
+// 			{
+// 				Key:      opdefault.RelatedGatewayNamespace,
+// 				Operator: metav1.LabelSelectorOpIn,
+// 				Values:   []string{gateway.GetNamespace()},
+// 			},
+// 		},
+// 	}
 
-	dp := appv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gateway.GetName(),
-			Namespace: gateway.GetNamespace(),
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
-				opdefault.RelatedGatewayKey:       gateway.GetName(),
-				opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayKey: types.NamespacedName{
-					Namespace: gateway.GetNamespace(),
-					Name:      gateway.GetName(),
-				}.String(),
-			},
-		},
-		Spec: appv1.DeploymentSpec{
-			Selector: &selector,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						opdefault.AppLabelKey:             opdefault.AppLabelValue,
-						opdefault.RelatedGatewayKey:       gateway.GetName(),
-						opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
-					},
-					Annotations: map[string]string{
-						opdefault.RelatedGatewayKey: types.NamespacedName{
-							Namespace: gateway.GetNamespace(),
-							Name:      gateway.GetName(),
-						}.String(),
-					},
-				},
-			},
-		},
-	}
+// 	dp := appv1.Deployment{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      gateway.GetName(),
+// 			Namespace: gateway.GetNamespace(),
+// 			Labels: map[string]string{
+// 				opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+// 				opdefault.RelatedGatewayKey:       gateway.GetName(),
+// 				opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
+// 			},
+// 			Annotations: map[string]string{
+// 				opdefault.RelatedGatewayKey: types.NamespacedName{
+// 					Namespace: gateway.GetNamespace(),
+// 					Name:      gateway.GetName(),
+// 				}.String(),
+// 			},
+// 		},
+// 		Spec: appv1.DeploymentSpec{
+// 			Selector: &selector,
+// 			Template: corev1.PodTemplateSpec{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Labels: map[string]string{
+// 						opdefault.AppLabelKey:             opdefault.AppLabelValue,
+// 						opdefault.RelatedGatewayKey:       gateway.GetName(),
+// 						opdefault.RelatedGatewayNamespace: gateway.GetNamespace(),
+// 					},
+// 					Annotations: map[string]string{
+// 						opdefault.RelatedGatewayKey: types.NamespacedName{
+// 							Namespace: gateway.GetNamespace(),
+// 							Name:      gateway.GetName(),
+// 						}.String(),
+// 					},
+// 				},
+// 			},
+// 		},
+// 	}
 
-	// copy annotations and labels
-	labs := labels.Merge(dp.GetLabels(), gateway.GetLabels())
-	dp.SetLabels(labs)
+// 	// copy annotations and labels
+// 	labs := labels.Merge(dp.GetLabels(), gateway.GetLabels())
+// 	dp.SetLabels(labs)
 
-	annotations := dp.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	for k, v := range gateway.GetAnnotations() {
-		annotations[k] = v
-	}
-	dp.SetAnnotations(annotations)
+// 	annotations := dp.GetAnnotations()
+// 	if annotations == nil {
+// 		annotations = make(map[string]string)
+// 	}
+// 	for k, v := range gateway.GetAnnotations() {
+// 		annotations[k] = v
+// 	}
+// 	dp.SetAnnotations(annotations)
 
-	return dp
-}
+// 	return dp
+// }
 
-// defaultDataplaneTemplate post-processes a deployment skeleton into a default dataplane
-func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1.Gateway) *appv1.Deployment {
-	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
-	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
-	livenessProbe, readinessProbe := getHealthCheckParameters(c)
+// // defaultDataplaneTemplate post-processes a deployment skeleton into a default dataplane
+// func defaultDataplaneTemplate(c *RenderContext, gateway *gwapiv1.Gateway) *appv1.Deployment {
+// 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
+// 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+// 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
-	// CDS server address
-	port := "13478"
-	if addr, err := net.ResolveTCPAddr("tcp", config.ConfigDiscoveryAddress); err == nil {
-		port = fmt.Sprintf("%d", addr.Port)
-	}
-	cdsAddr := url.URL{
-		Scheme: "http",
-		Host:   config.ConfigDiscoveryAddress,
-	}
-	if cdsAddr.Port() == "" {
-		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
-	}
+// 	// CDS server address
+// 	port := "13478"
+// 	if addr, err := net.ResolveTCPAddr("tcp", config.ConfigDiscoveryAddress); err == nil {
+// 		port = fmt.Sprintf("%d", addr.Port)
+// 	}
+// 	cdsAddr := url.URL{
+// 		Scheme: "http",
+// 		Host:   config.ConfigDiscoveryAddress,
+// 	}
+// 	if cdsAddr.Port() == "" {
+// 		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
+// 	}
 
-	dp := defaultDeploymentSkeleton(gateway)
-	dp.Spec.Template.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{{
-			Name:    opdefault.DefaultStunnerdInstanceName,
-			Image:   config.StunnerdImage,
-			Command: []string{"stunnerd"},
-			// Enable config-discovery
-			Args: []string{"-w", "--udp-thread-num=16"},
-			// Disable config-discovery
-			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
-			Env: []corev1.EnvVar{{
-				Name:      "STUNNER_ADDR", // default transport relay address
-				ValueFrom: &podAddrEnvVarSource,
-			}, {
-				Name:  "STUNNER_NAME", // gateway name for creating the stunnerd id
-				Value: gateway.GetName(),
-			}, {
-				Name:  "STUNNER_NAMESPACE", // gateway namespace for creating the stunnerd id
-				Value: gateway.GetNamespace(),
-			}, {
-				Name:  "STUNNER_CONFIG_ORIGIN", // CDS server address
-				Value: cdsAddr.String(),
-			}},
-			Resources: corev1.ResourceRequirements{
-				Limits:   config.ResourceLimit,
-				Requests: config.ResourceRequest,
-			},
-			LivenessProbe:   livenessProbe,
-			ReadinessProbe:  readinessProbe,
-			ImagePullPolicy: corev1.PullAlways,
-		}},
-		TerminationGracePeriodSeconds: &config.TerminationGrace,
-		HostNetwork:                   false,
-	}
+// 	dp := defaultDeploymentSkeleton(gateway)
+// 	dp.Spec.Template.Spec = corev1.PodSpec{
+// 		Containers: []corev1.Container{{
+// 			Name:    opdefault.DefaultStunnerdInstanceName,
+// 			Image:   config.StunnerdImage,
+// 			Command: []string{"stunnerd"},
+// 			// Enable config-discovery
+// 			Args: []string{"-w", "--udp-thread-num=16"},
+// 			// Disable config-discovery
+// 			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
+// 			Env: []corev1.EnvVar{{
+// 				Name:      "STUNNER_ADDR", // default transport relay address
+// 				ValueFrom: &podAddrEnvVarSource,
+// 			}, {
+// 				Name:  "STUNNER_NAME", // gateway name for creating the stunnerd id
+// 				Value: gateway.GetName(),
+// 			}, {
+// 				Name:  "STUNNER_NAMESPACE", // gateway namespace for creating the stunnerd id
+// 				Value: gateway.GetNamespace(),
+// 			}, {
+// 				Name:  "STUNNER_CONFIG_ORIGIN", // CDS server address
+// 				Value: cdsAddr.String(),
+// 			}},
+// 			Resources: corev1.ResourceRequirements{
+// 				Limits:   config.ResourceLimit,
+// 				Requests: config.ResourceRequest,
+// 			},
+// 			LivenessProbe:   livenessProbe,
+// 			ReadinessProbe:  readinessProbe,
+// 			ImagePullPolicy: corev1.PullAlways,
+// 		}},
+// 		TerminationGracePeriodSeconds: &config.TerminationGrace,
+// 		HostNetwork:                   false,
+// 	}
 
-	return &dp
-}
+// 	return &dp
+// }
 
 // // configWatcherDataplaneTemplate post-processes a deployment skeleton into a dataplane with a config-watcher sidecar.
 // func configWatcherDataplaneTemplate(gateway *gwapiv1.Gateway) *appv1.Deployment {
