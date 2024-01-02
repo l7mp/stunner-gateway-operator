@@ -212,7 +212,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			return err
 		} else if ap.addr == "" {
 			// this should never happen either but should be harmless
-			log.Info("public service found but no ExternalIP is available for service: " +
+			log.Info("public service found but no external IP is available for service: " +
 				"this is most probably caused by a fallback to a NodePort access service " +
 				"but no nodes seem to be having a valid external IP address. Hint: " +
 				"enable LoadBalancer services in Kubernetes")
