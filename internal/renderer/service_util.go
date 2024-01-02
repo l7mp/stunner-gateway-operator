@@ -320,10 +320,6 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		if gw.Spec.Addresses[0].Type == nil ||
 			(gw.Spec.Addresses[0].Type != nil &&
 				*gw.Spec.Addresses[0].Type == gwapiv1b1.IPAddressType) {
-			// only the first address can be used because
-			// stunner is limited to use a single public address
-			// https://github.com/l7mp/stunner-gateway-operator/issues/32#issuecomment-1648035135
-			svc.Spec.ExternalIPs = []string{gw.Spec.Addresses[0].Value}
 			svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
 		}
 	}

@@ -1635,8 +1635,6 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
 				assert.Equal(t, s.Spec.LoadBalancerIP, "1.1.1.1", "svc loadbalancerip")
-				assert.Equal(t, len(s.Spec.ExternalIPs), 1, "svc externalips list length")
-				assert.Equal(t, s.Spec.ExternalIPs[0], "1.1.1.1", "svc externalips")
 			},
 		},
 	})
