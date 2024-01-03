@@ -188,21 +188,32 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		// should never happen
 		return nil
 	}
+
+	// mandatory labels and annotations
+	mandatoryLabels := map[string]string{
+		opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+		opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+		opdefault.RelatedGatewayKey:       gw.GetName(),
+	}
+	mandatoryAnnotations := mergeMaps(
+		// base: GatewayConfig.Spec.LBServiceAnnotations
+		c.gwConf.Spec.LoadBalancerServiceAnnotations,
+		// Gateway annotations override base
+		gw.Annotations,
+		// related gateway is always included!
+		map[string]string{
+			opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
+		})
+
 	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
 	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
 	if svc == nil {
 		svc = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: gw.GetNamespace(),
-				Name:      gw.GetName(),
-				Labels: map[string]string{
-					opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
-					opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
-					opdefault.RelatedGatewayKey:       gw.GetName(),
-				},
-				Annotations: map[string]string{
-					opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
-				},
+				Namespace:   gw.GetNamespace(),
+				Name:        gw.GetName(),
+				Labels:      mandatoryLabels,
+				Annotations: mandatoryAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     opdefault.DefaultServiceType,
@@ -210,9 +221,13 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 				Ports:    []corev1.ServicePort{},
 			},
 		}
+	} else {
+		// mandatory labels and annotations must always be there
+		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
+		svc.SetAnnotations(mergeMaps(svc.GetAnnotations(), mandatoryAnnotations))
 	}
 
-	// set labels
+	// set selectors
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
 		// legacy mode: note that this may break for multiple gateway hierarchies but we
@@ -250,14 +265,10 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	}
 
-	// merge both GatewayConfig.spec.LBServiceAnnotations map and
-	// Gateway.metadata.Annotations map into a common map
-	// this way the MixedProtocolAnnotation can be placed in either of them
-	// Annotations from the Gateway will override annotations from the GwConfig
-	// if present with the same key
-	as := mergeMaps(c.gwConf.Spec.LoadBalancerServiceAnnotations, gw.Annotations)
-
-	isMixedProtocolEnabled, found := as[opdefault.MixedProtocolAnnotationKey]
+	mixedProto := false
+	if isMixedProtocolEnabled, found := svc.GetAnnotations()[opdefault.MixedProtocolAnnotationKey]; found {
+		mixedProto = isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue
+	}
 	// copy all listener ports/protocols from the gateway
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
@@ -268,17 +279,20 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 			continue
 		}
 
-		if serviceProto == "" {
+		// set service-port.protocol to the listener protocol
+		if serviceProto == "" || mixedProto {
 			serviceProto = proto
-		} else if found && isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue {
-			serviceProto = proto
-		} else if proto != serviceProto {
+		}
+
+		// warn if gateway uses multiple listener protocols but mixedProto is not set
+		if proto != serviceProto {
 			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as the listener "+
 				"protocol is different from the service protocol (multi-protocol LB services are disabled by default)",
 				"gateway", store.GetObjectKey(gw), "listener", l.Name, "listener-protocol", proto,
 				"service-protocol", serviceProto)
 			continue
 		}
+
 		servicePortExists := false
 		// search for existing port
 		for _, s := range svc.Spec.Ports {
@@ -290,6 +304,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 				break
 			}
 		}
+
 		if !servicePortExists {
 			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 				Name:     string(l.Name),
@@ -307,12 +322,6 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1b1.Gatew
 		} else if healthCheckPort != 0 {
 			c.log.V(1).Info("health check port opened", "port", healthCheckPort)
 		}
-	}
-
-	// copy the LoadBalancer annotations from the GatewayConfig
-	// and the Gateway Annotations to the Service
-	for k, v := range as {
-		svc.ObjectMeta.Annotations[k] = v
 	}
 
 	// forward the first requested address to Kubernetes
