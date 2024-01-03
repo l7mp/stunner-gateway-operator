@@ -782,7 +782,7 @@ func testManagedMode() {
 			replicas := int32(1)
 			ctrl.Log.Info("updating the replica count in the Dataplane template",
 				"resource", testDataplane.GetName(), "replica-count", replicas)
-			dp := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+			dp := &stnrv1a1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: testDataplane.GetName(),
 			}}
 			_, err := createOrUpdate(ctx, k8sClient, dp, func() error {
