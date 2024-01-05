@@ -53,12 +53,16 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				addr, err := r.getPublicAddrPort4Gateway(gw)
+				addrs, err := r.getPublicAddr(gw)
 				assert.NoError(t, err, "owner ref found")
-				assert.NotNil(t, addr, "public addr-port found")
-				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
-				assert.Equal(t, 1, addr.port, "public port ok")
-
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 1, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "1.2.3.4", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[1].port, "public port 2 ok")
 			},
 		},
 		{
@@ -89,11 +93,60 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				addr, err := r.getPublicAddrPort4Gateway(gw)
+				addrs, err := r.getPublicAddr(gw)
 				assert.NoError(t, err, "owner ref found")
-				assert.NotNil(t, addr, "public hostname found")
-				assert.Equal(t, 1, addr.port, "public port ok")
-				assert.Equal(t, "dummy-hostname", addr.addr, "public addr ok")
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, gwapiv1.HostnameAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "dummy-hostname", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 1, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, gwapiv1.HostnameAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "dummy-hostname", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[1].port, "public port 2 ok")
+			},
+		},
+		{
+			name: "no service-port status ok",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				s1.Status = corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{
+							IP: "1.2.3.4",
+						}},
+					}}
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				addrs, err := r.getPublicAddr(gw)
+				assert.NoError(t, err, "owner ref found")
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 1, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "1.2.3.4", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[1].port, "public port 2 ok")
 			},
 		},
 		{
@@ -124,8 +177,10 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				_, err = r.getPublicAddrPort4Gateway(gw)
+				_, err = r.getPublicAddr(gw)
 				assert.Error(t, err, "public addr-port found")
+				assert.Equal(t, NewNonCriticalError(PublicAddressNotFound), err,
+					"public addr-port found errs")
 			},
 		},
 		{
@@ -155,8 +210,10 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				_, err = r.getPublicAddrPort4Gateway(gw)
+				_, err = r.getPublicAddr(gw)
 				assert.Error(t, err, "public addr-port found")
+				assert.Equal(t, NewNonCriticalError(PublicAddressNotFound), err,
+					"public addr-port found errs")
 			},
 		},
 		{
@@ -189,27 +246,46 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				_, err = r.getPublicAddrPort4Gateway(gw)
+				_, err = r.getPublicAddr(gw)
 				assert.Error(t, err, "owner ref not found")
+				assert.Equal(t, NewNonCriticalError(PublicAddressNotFound), err,
+					"public addr-port found errs")
 			},
 		},
 		{
-			name: "wrong proto errs",
+			name: "invalid listener proto errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				s1 := testutils.TestSvc.DeepCopy()
-				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
-				s1.SetOwnerReferences([]metav1.OwnerReference{{
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
 					APIVersion: gwapiv1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
 				}})
-				c.svcs = []corev1.Service{*s1}
+				c.svcs = []corev1.Service{*s}
+
+				// add invalid listener
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("invalid"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("dummy"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -220,9 +296,20 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				_, err = r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "public addr-port found")
-
+				addrs, err := r.getPublicAddr(gw)
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Equal(t, NewNonCriticalError(PublicListenerAddressNotFound), err,
+					"public listener addr-port found errs")
+				assert.Len(t, addrs, 3, "public addr-port len")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 1, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, "", string(addrs[1].aType), "public addr type 2 ok")
+				assert.Equal(t, "", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 0, addrs[1].port, "public port 2 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[2].aType, "public addr type 2 ok")
+				assert.Equal(t, "1.2.3.4", addrs[2].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[2].port, "public port 2 ok")
 			},
 		},
 		{
@@ -252,47 +339,18 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				_, err = r.getPublicAddrPort4Gateway(gw)
-				assert.Error(t, err, "public addr-port found")
-			},
-		},
-		{
-			name: "no service-port stats ok",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				s1 := testutils.TestSvc.DeepCopy()
-				s1.SetOwnerReferences([]metav1.OwnerReference{{
-					APIVersion: gwapiv1.GroupVersion.String(),
-					Kind:       "Gateway",
-					UID:        testutils.TestGw.GetUID(),
-					Name:       testutils.TestGw.GetName(),
-				}})
-				s1.Status = corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{
-							IP: "1.2.3.4",
-						}},
-					}}
-				c.svcs = []corev1.Service{*s1}
-			},
-			tester: func(t *testing.T, r *Renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gateways for class")
-				gw := gws[0]
-
-				addr, err := r.getPublicAddrPort4Gateway(gw)
-				assert.NoError(t, err, "owner ref found")
-				assert.NotNil(t, addr, "public addr-port found")
-				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
-				assert.Equal(t, 1, addr.port, "public port ok")
+				addrs, err := r.getPublicAddr(gw)
+				assert.Error(t, err, "public addr-port errs")
+				assert.Equal(t, NewNonCriticalError(PublicListenerAddressNotFound), err,
+					"public listener addr-port found errs")
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, "", string(addrs[0].aType), "public addr type 1 ok")
+				assert.Equal(t, "", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 0, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "1.2.3.4", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[1].port, "public port 2 ok")
 			},
 		},
 		{
@@ -304,18 +362,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
-				s1.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
 				s1.SetOwnerReferences([]metav1.OwnerReference{{
 					APIVersion: gwapiv1.GroupVersion.String(),
 					Kind:       "Gateway",
 					UID:        testutils.TestGw.GetUID(),
 					Name:       testutils.TestGw.GetName(),
 				}})
-				s1.Spec.Ports = append(s1.Spec.Ports, corev1.ServicePort{
-					Name:     "tcp-ok",
-					Protocol: corev1.ProtocolTCP,
-					Port:     2,
-				})
 				s1.Status = corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{{
@@ -346,11 +398,16 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Len(t, gws, 1, "gateways for class")
 				gw := gws[0]
 
-				addr, err := r.getPublicAddrPort4Gateway(gw)
+				addrs, err := r.getPublicAddr(gw)
 				assert.NoError(t, err, "owner ref found")
-				assert.NotNil(t, addr, "public addr-port found")
-				assert.Equal(t, "5.6.7.8", addr.addr, "public addr ok")
-				assert.Equal(t, 2, addr.port, "public port ok")
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, 1, addrs[0].port, "public port 1 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "5.6.7.8", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, 2, addrs[1].port, "public port 2 ok")
 			},
 		},
 		{
@@ -362,9 +419,15 @@ func TestRenderServiceUtil(t *testing.T) {
 			nodes: []corev1.Node{testutils.TestNode},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				gw := testutils.TestGw.DeepCopy()
-				gw.SetUID(types.UID("uid"))
-				c.gws = []gwapiv1.Gateway{*gw}
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.Spec.Type = corev1.ServiceTypeNodePort
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -384,11 +447,16 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.NoError(t, controllerutil.SetOwnerReference(gw, svc, r.scheme), "set-owner")
 				store.Services.Upsert(svc)
 
-				addr, err := r.getPublicAddrPort4Gateway(gw)
+				addrs, err := r.getPublicAddr(gw)
 				assert.NoError(t, err, "owner ref found")
-				assert.NotNil(t, addr, "public addr-port found")
-				assert.Equal(t, "1.2.3.4", addr.addr, "public addr ok")
-				assert.Equal(t, 1, addr.port, "public port ok")
+				assert.NotNil(t, addrs, "public addr-port found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[0].aType, "public addr type 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, svc.Spec.Ports[0].NodePort, int32(addrs[0].port), "public port 1 ok")
+				assert.Equal(t, gwapiv1.IPAddressType, addrs[1].aType, "public addr type 2 ok")
+				assert.Equal(t, "1.2.3.4", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, svc.Spec.Ports[1].NodePort, int32(addrs[1].port), "public port 2 ok")
 			},
 		},
 		{
@@ -550,7 +618,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners[2].Protocol = gwapiv1.ProtocolType("UDP")
+				w.Spec.Listeners[1].Protocol = gwapiv1.ProtocolType("UDP")
 				c.gws = []gwapiv1.Gateway{*w}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -594,13 +662,13 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
 				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
 				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Name), string(sp[1].Name), "sp 2 - name")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Name), string(sp[1].Name), "sp 2 - name")
 				assert.Equal(t, "UDP", string(sp[1].Protocol), "sp 2 - proto")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[1].Port), "sp 2 - port")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Port), string(sp[1].Port), "sp 2 - port")
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto, first valid",
+			name: "lb service - multi-listener-multi proto - first valid",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -649,13 +717,13 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Name), string(sp[0].Name), "sp 1 - name")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Name), string(sp[0].Name), "sp 1 - name")
 				assert.Equal(t, "TCP", string(sp[0].Protocol), "sp 1 - proto")
-				assert.Equal(t, string(gw.Spec.Listeners[2].Port), string(sp[0].Port), "sp 1 - port")
+				assert.Equal(t, string(gw.Spec.Listeners[1].Port), string(sp[0].Port), "sp 1 - port")
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto with enabled mixed proto annotation in gateway, all valid",
+			name: "lb service - multi-listener-multi-proto - mixed proto annotation in gateway - all valid",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -663,7 +731,6 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = append(w.Spec.Listeners[:1], w.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
 					opdefault.MixedProtocolAnnotationKey: "true",
 				}
@@ -720,7 +787,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto with dummy mixed proto annotation",
+			name: "lb service - multi-listener-multi-proto - dummy mixed proto annotation",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -728,7 +795,6 @@ func TestRenderServiceUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = append(w.Spec.Listeners[:1], w.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
 					opdefault.MixedProtocolAnnotationKey: "dummy",
 				}
@@ -782,7 +848,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto with enabled in GwConfig",
+			name: "lb service - multi-listener-multi-proto - mixed-proto enabled in GwConfig",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -791,11 +857,9 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] =
+					opdefault.MixedProtocolAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
-				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
-				c.gws = []gwapiv1.Gateway{*gw}
 			},
 			tester: func(t *testing.T, r *Renderer) {
 				gc, err := r.getGatewayClass()
@@ -847,7 +911,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - multi-listener, multi proto with enabled in GwConfig but overridden and disabled in Gateway",
+			name: "lb service - multi-listener-multi-proto - mixed-proto enabled in GwConfig but disabled in Gateway",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -859,7 +923,6 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations[opdefault.MixedProtocolAnnotationKey] = opdefault.MixedProtocolAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.Listeners = append(gw.Spec.Listeners[:1], gw.Spec.Listeners[2:]...)
 				mixedProtoAnnotation := map[string]string{
 					opdefault.MixedProtocolAnnotationKey: "false",
 				}

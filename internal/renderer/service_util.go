@@ -21,52 +21,68 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-type gatewayAddress struct {
+var annotationRegexProtocol *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*protocol$`)
+var annotationRegexPort *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*port$`)
+
+type gwAddrPort struct {
 	aType gwapiv1.AddressType
 	addr  string
 	port  int
 }
 
-func (ap *gatewayAddress) String() string {
-	if ap == nil {
-		return "<nil>"
+func (ap gwAddrPort) isEmpty() bool {
+	if ap.addr == "" || ap.port == 0 {
+		return true
 	}
-	return fmt.Sprintf("%s:%d(type:%s)", ap.addr, ap.port, string(ap.aType))
+	return false
 }
 
-var annotationRegexProtocol *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*protocol$`)
-var annotationRegexPort *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*port$`)
+func (ap gwAddrPort) String() string {
+	if ap.isEmpty() {
+		return "<nil>"
+	}
+	return fmt.Sprintf("%s(type:%s):%d", ap.addr, string(ap.aType), ap.port)
+}
 
-// returns the preferred address/port exposition for a gateway
-// preference order:
-// - loadbalancer svc created by us (owned by the gateway)
-// - nodeport svc created by us (owned by the gateway)
-// - load-balancer svc created manually by a user but annotated for the gateway
-// - nodeport svc created manually by a user but annotated for the gateway
-func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1.Gateway) (*gatewayAddress, error) {
-	r.log.V(4).Info("getPublicAddrs4Gateway", "gateway", store.GetObjectKey(gw))
-	aps := []gatewayAddress{}
+// returns the preferred address/port exposition for all listeners of the gateway
+// preference order: loadbalancer svc > nodeport svc
+func (r *Renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
+	aps := make([]gwAddrPort, len(gw.Spec.Listeners))
 
-	// hint the public address: if the Gateway contains a Spec.Addresses then use that as a
-	// fallback for the public address
-	var addrHint gatewayAddress
-	if len(gw.Spec.Addresses) > 0 && (gw.Spec.Addresses[0].Type == nil ||
-		*gw.Spec.Addresses[0].Type == gwapiv1.IPAddressType || *gw.Spec.Addresses[0].Type == gwapiv1.HostnameAddressType) &&
-		gw.Spec.Addresses[0].Value != "" {
-		addrHint = gatewayAddress{
-			aType: *gw.Spec.Addresses[0].Type,
-			addr:  gw.Spec.Addresses[0].Value,
-		}
-		r.log.V(2).Info("found public address in Gateway.Spec.Addresses",
-			"gateway", store.GetObjectKey(gw), "address", addrHint.String())
+	// find our service
+	svc, err := r.getPublicSvc(gw)
+	if err != nil {
+		return aps, err
 	}
 
-	err := NewNonCriticalError(PublicAddressNotFound)
-	for _, svc := range store.Services.GetAll() {
-		r.log.V(4).Info("considering service", "svc", store.GetObjectKey(svc), "status",
-			fmt.Sprintf("%#v", svc.Status))
+	// find the addr-port per each listener
+	status := make([]string, len(gw.Spec.Listeners))
+	var retErr error
+	for i, l := range gw.Spec.Listeners {
+		status[i] = "<nil>"
+		ap, err := r.getPublicListenerAddr(svc, gw, &gw.Spec.Listeners[i])
+		if err != nil {
+			r.log.Info("could not find public adddress for listener",
+				"gateway", store.GetObjectKey(gw), "listener", l.Name,
+				"error", err.Error())
+			retErr = NewNonCriticalError(PublicListenerAddressNotFound)
+			continue
+		}
+		aps[i] = ap
+		status[i] = ap.String()
+	}
 
-		if !r.isServiceAnnotated4Gateway(svc, gw) {
+	r.log.V(4).Info("searching public address for gateway: ready",
+		"gateway", store.GetObjectKey(gw),
+		"address", strings.Join(status, ","))
+
+	return aps, retErr
+}
+
+func (r *Renderer) getPublicSvc(gw *gwapiv1.Gateway) (*corev1.Service, error) {
+	var pubSvc *corev1.Service
+	for _, svc := range store.Services.GetAll() {
+		if !isServiceAnnotated4Gateway(svc, gw) {
 			r.log.V(4).Info("skipping service: not annotated for gateway", "svc",
 				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
 			continue
@@ -78,109 +94,184 @@ func (r *Renderer) getPublicAddrPort4Gateway(gw *gwapiv1.Gateway) (*gatewayAddre
 			continue
 		}
 
-		ap, lb := r.getPublicAddrPort4Svc(svc, gw, addrHint)
-		if ap == nil {
-			r.log.V(4).Info("public address/port not found for service", "svc",
-				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
-			continue
+		if isSvcPreferred(pubSvc, svc) {
+			r.log.V(4).Info("found service", "svc", store.GetObjectKey(svc))
+			pubSvc = svc
 		}
-
-		r.log.V(4).Info("public address/port found for service", "svc",
-			store.GetObjectKey(svc), "address", ap.String(), "load-balancer", lb)
-
-		if lb {
-			// prepend!
-			aps = append([]gatewayAddress{*ap}, aps...)
-		} else {
-			// append
-			aps = append(aps, *ap)
-		}
-
-		err = nil
 	}
 
-	var ap *gatewayAddress
-	if len(aps) > 0 {
-		ap = &aps[0]
+	if pubSvc == nil {
+		return nil, NewNonCriticalError(PublicAddressNotFound)
 	}
 
-	r.log.V(4).Info("getPublicAddrs4Gateway: ready", "gateway", gw.GetName(), "address", ap.String())
-
-	return ap, err
+	return pubSvc, nil
 }
 
-// we need the namespaced name!
-func (r *Renderer) isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1.Gateway) bool {
-	// r.log.V(4).Info("isServiceAnnotated4Gateway", "service", store.GetObjectKey(svc),
-	// 	"gateway", store.GetObjectKey(gw), "annotations", fmt.Sprintf("%#v",
-	// 		svc.GetAnnotations()))
-
+func isServiceAnnotated4Gateway(svc *corev1.Service, gw *gwapiv1.Gateway) bool {
 	as := svc.GetAnnotations()
 	namespacedName := fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName())
 	v, found := as[opdefault.RelatedGatewayKey]
 	if found && v == namespacedName {
-		// r.log.V(4).Info("isServiceAnnotated4Gateway: service annotated for gateway",
-		// 	"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
 		return true
 	}
 
 	return false
 }
 
-// for the semantics, see https://github.com/l7mp/stunner-gateway-operator/issues/3
-func (r *Renderer) getPublicAddrPort4Svc(svc *corev1.Service, gw *gwapiv1.Gateway, addrHint gatewayAddress) (*gatewayAddress, bool) {
-	var ap *gatewayAddress
+// precedence: ClusterIP < NodePort < ExternalName < LB
+func isSvcPreferred(a, b *corev1.Service) bool {
+	if a == nil {
+		return true
+	}
 
-	i, found := r.getServicePort(gw, svc)
+	switch a.Spec.Type {
+	case "ClusterIP":
+		return b.Spec.Type == corev1.ServiceTypeNodePort ||
+			b.Spec.Type == corev1.ServiceTypeExternalName ||
+			b.Spec.Type == corev1.ServiceTypeLoadBalancer
+	case "NodePort":
+		return b.Spec.Type == corev1.ServiceTypeExternalName ||
+			b.Spec.Type == corev1.ServiceTypeLoadBalancer
+	case "ExternalName":
+		return b.Spec.Type == corev1.ServiceTypeLoadBalancer
+	case "LoadBalancer":
+		return false
+	}
 
-	// The desired selection of public IP should go in the following order: (see
+	return false
+}
+
+func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gateway, l *gwapiv1.Listener) (gwAddrPort, error) {
+	serviceProto, err := r.getServiceProtocol(l.Protocol)
+	if err != nil {
+		return gwAddrPort{}, err
+	}
+
+	// find the right service-port
+	var sp *corev1.ServicePort
+	var spIndex int
+	for i, s := range svc.Spec.Ports {
+		if int32(l.Port) == s.Port && strings.EqualFold(serviceProto, string(s.Protocol)) {
+			sp = &svc.Spec.Ports[i]
+			spIndex = i
+			break
+		}
+	}
+
+	if sp == nil {
+		return gwAddrPort{}, errors.New("cannot find matching service-port for listener" +
+			"(hint: enable mixed-protocol-LB support)")
+	}
+
+	// Public IPs weighed in the following order: (see
 	// https://github.com/l7mp/stunner-gateway-operator/issues/3)
 	//
 	// 1. Gateway.Spec.Addresses[0] + Gateway.Spec.Listeners[0].Port
-	if found && i < len(svc.Spec.Ports) && addrHint.addr != "" {
-		svcPort := svc.Spec.Ports[i]
-		ap = &gatewayAddress{
-			aType: addrHint.aType,
-			addr:  addrHint.addr,
-			port:  int(svcPort.Port),
+	if len(gw.Spec.Addresses) > 0 && gw.Spec.Addresses[0].Value != "" {
+		t := gwapiv1.IPAddressType
+		if gw.Spec.Addresses[0].Type != nil {
+			t = *gw.Spec.Addresses[0].Type
 		}
-		r.log.V(4).Info("getPublicAddrPort4Svc: using requested address from Gateway spec",
-			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw), "address", ap.String())
-		return ap, false
+		ap := gwAddrPort{
+			aType: t,
+			addr:  gw.Spec.Addresses[0].Value,
+			port:  int(sp.Port),
+		}
+
+		r.log.V(4).Info("using requested address from Gateway spec for listener",
+			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
+			"listener", l.Name, "address", ap.String())
+
+		return ap, nil
 	}
 
 	// 2. If Address is not set, we use the LoadBalancer IP and the above listener port
-	if found && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		lbStatus := svc.Status.LoadBalancer
-
-		// we take the first ingress address assigned by the ingress controller
-		if ap := getLBAddrPort4ServicePort(svc, &lbStatus, i); ap != nil {
-			r.log.V(4).Info("getPublicAddrPort4Svc: using LoadBalancer address",
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		if ap := getLBAddr(svc, spIndex); ap != nil {
+			r.log.V(4).Info("using LoadBalancer address for listener",
 				"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
-				"address", ap.String())
-			return ap, true
+				"listener", l.Name, "address", ap.String())
+			return *ap, nil
 		}
 	}
 
 	// 3. If Address is not set and there is no LoadBalancer IP, we use the first node's IP and
 	// NodePort
-	if found && i < len(svc.Spec.Ports) {
-		svcPort := svc.Spec.Ports[i]
-		addr := getFirstNodeAddr()
-		if svcPort.NodePort > 0 && addr != "" {
-			ap = &gatewayAddress{
-				aType: gwapiv1.IPAddressType,
-				addr:  addr,
-				port:  int(svcPort.NodePort),
+	if addr := getFirstNodeAddr(); addr != "" && sp.NodePort > 0 {
+		ap := gwAddrPort{
+			aType: gwapiv1.IPAddressType,
+			addr:  addr,
+			port:  int(sp.NodePort),
+		}
+
+		r.log.V(4).Info("using NodePort address for listener",
+			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
+			"listener", l.Name, "address", ap.String())
+
+		return ap, nil
+	}
+
+	return gwAddrPort{}, errors.New("could not usable public address for listener")
+}
+
+// first matching service-port and load-balancer service status
+func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
+	for _, ingressStatus := range svc.Status.LoadBalancer.Ingress {
+		// if status contains per-service-port status
+		if ingressStatus.Ports != nil && len(ingressStatus.Ports) != 0 && spIndex < len(ingressStatus.Ports) {
+			// find the status for our service-port
+			spStatus := ingressStatus.Ports[spIndex]
+			if spStatus.Port != svc.Spec.Ports[spIndex].Port ||
+				spStatus.Protocol != svc.Spec.Ports[spIndex].Protocol {
+				continue
 			}
-			r.log.V(4).Info("getPublicAddrPort4Svc: using NodePort address",
-				"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
-				"address", ap.String())
-			return ap, false
+
+			// if IP address is available, use it
+			if ingressStatus.IP != "" {
+				return &gwAddrPort{
+					aType: gwapiv1.IPAddressType,
+					addr:  ingressStatus.IP,
+					port:  int(spStatus.Port),
+				}
+			}
+
+			// fallback to Hostname (typically for AWS)
+			if ingressStatus.Hostname != "" {
+				return &gwAddrPort{
+					aType: gwapiv1.HostnameAddressType,
+					addr:  ingressStatus.Hostname,
+					port:  int(spStatus.Port),
+				}
+			}
 		}
 	}
 
-	return nil, false
+	// some load-balancer controllers do not include a status.Ingress[x].Ports substatus: we
+	// fall back to the first load-balancer IP we find and use the port from the service-port
+	// as a port
+	if len(svc.Status.LoadBalancer.Ingress) > 0 {
+		ingressStatus := svc.Status.LoadBalancer.Ingress[0]
+
+		// if IP address is available, use it
+		if ingressStatus.IP != "" {
+			return &gwAddrPort{
+				aType: gwapiv1.IPAddressType,
+				addr:  ingressStatus.IP,
+				port:  int(svc.Spec.Ports[spIndex].Port),
+			}
+		}
+
+		// fallback to Hostname (typically for AWS)
+		if ingressStatus.Hostname != "" {
+			return &gwAddrPort{
+				aType: gwapiv1.HostnameAddressType,
+				addr:  ingressStatus.Hostname,
+				port:  int(svc.Spec.Ports[spIndex].Port),
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) *corev1.Service {
@@ -349,25 +440,6 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	return svc
 }
 
-// first matching listener-proto-port and service-proto-port pair
-func (r *Renderer) getServicePort(gw *gwapiv1.Gateway, svc *corev1.Service) (int, bool) {
-	for _, l := range gw.Spec.Listeners {
-		serviceProto, err := r.getServiceProtocol(l.Protocol)
-		if err != nil {
-			continue
-		}
-
-		for i, s := range svc.Spec.Ports {
-			if int32(l.Port) == s.Port {
-				if strings.EqualFold(serviceProto, string(s.Protocol)) {
-					return i, true
-				}
-			}
-		}
-	}
-	return 0, false
-}
-
 // getServiceProtocol returns the sercice-compatible protocol for a listener
 func (r *Renderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error) {
 	protocol, err := r.getProtocol(proto)
@@ -390,57 +462,6 @@ func (r *Renderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error
 	}
 
 	return serviceProto, nil
-}
-
-// first matching service-port and load-balancer service status
-func getLBAddrPort4ServicePort(svc *corev1.Service, st *corev1.LoadBalancerStatus, spIndex int) *gatewayAddress {
-	// spIndex must point to a valid service-port
-	if len(svc.Spec.Ports) == 0 || spIndex >= len(svc.Spec.Ports) {
-		fmt.Printf("getLBAddrPort4ServicePort: INTERNAL ERROR: invalid service-port index\n")
-		return nil
-	}
-
-	proto := svc.Spec.Ports[spIndex].Protocol
-	port := svc.Spec.Ports[spIndex].Port
-
-	for _, s := range st.Ingress {
-		// index i is valid, and the protocol and port match the ones specified for the gateway
-		if len(s.Ports) > 0 && spIndex < len(s.Ports) &&
-			s.Ports[spIndex].Port == port && s.Ports[spIndex].Protocol == proto {
-
-			ap := gatewayAddress{
-				aType: gwapiv1.IPAddressType,
-				addr:  s.IP,
-				port:  int(s.Ports[spIndex].Port),
-			}
-			// fallback to Hostname (typically for AWS)
-			if s.IP == "" {
-				ap.aType = gwapiv1.HostnameAddressType
-				ap.addr = s.Hostname
-			}
-
-			return &ap
-		}
-	}
-
-	// some load-balancer controllers do not include a status.Ingress[x].Ports substatus: we
-	// fall back to the first load-balancer IP we find and use the port from the service-port
-	// as a port
-	if len(st.Ingress) > 0 {
-		ap := gatewayAddress{
-			aType: gwapiv1.IPAddressType,
-			addr:  st.Ingress[0].IP,
-			port:  int(port),
-		}
-		// fallback to Hostname (typically for AWS)
-		if ap.addr == "" {
-			ap.aType = gwapiv1.HostnameAddressType
-			ap.addr = st.Ingress[0].Hostname
-		}
-		return &ap
-	}
-
-	return nil
 }
 
 func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {

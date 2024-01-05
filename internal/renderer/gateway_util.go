@@ -109,7 +109,7 @@ func initGatewayStatus(gw *gwapiv1.Gateway, cname string) {
 	}
 }
 
-func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, ap *gatewayAddress) {
+func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, pubAddrs []gwAddrPort) {
 	if err != nil {
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 			Type:               string(gwapiv1.GatewayConditionProgrammed),
@@ -123,15 +123,26 @@ func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, ap *gatewayAddre
 		return
 	}
 
-	if ap != nil {
-		aType := ap.aType
-		if string(aType) == "" {
-			aType = gwapiv1.IPAddressType
+	progd := true
+	var gwAddr gwAddrPort
+	for _, ap := range pubAddrs {
+		if ap.isEmpty() {
+			progd = false
+		} else {
+			gwAddr = ap
 		}
+	}
+
+	gw.Status.Addresses = []gwapiv1.GatewayStatusAddress{}
+	if !gwAddr.isEmpty() {
+		aType := gwAddr.aType
 		gw.Status.Addresses = []gwapiv1.GatewayStatusAddress{{
 			Type:  &aType,
-			Value: ap.addr,
+			Value: gwAddr.addr,
 		}}
+	}
+
+	if progd {
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 			Type:               string(gwapiv1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,
@@ -147,7 +158,7 @@ func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, ap *gatewayAddre
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gwapiv1.GatewayReasonAddressNotAssigned),
-			Message:            "no public address found",
+			Message:            "no public address found for at least one listener",
 		})
 	}
 }

@@ -219,7 +219,6 @@ func testManagedMode() {
 		})
 
 		It("should set the Gateway status", func() {
-			// wait until gateway is programmed
 			gw := &gwapiv1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
@@ -227,14 +226,13 @@ func testManagedMode() {
 					return false
 				}
 
-				// should be programmed
 				s := meta.FindStatusCondition(gw.Status.Conditions,
 					string(gwapiv1.GatewayConditionProgrammed))
-				if s == nil || s.Status != metav1.ConditionTrue {
+				if s == nil || s.Status != metav1.ConditionFalse { // should not be programmed: tcp listener has no public ip
 					return false
 				}
 
-				if len(gw.Status.Listeners) != 3 {
+				if len(gw.Status.Listeners) != 2 {
 					return false
 				}
 
@@ -243,7 +241,6 @@ func testManagedMode() {
 				if s == nil || s.Status != metav1.ConditionTrue {
 					return false
 				}
-
 				return true
 			}, timeout, interval).Should(BeTrue())
 
@@ -261,10 +258,10 @@ func testManagedMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1.GatewayConditionProgrammed)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			// listeners: no public gateway address so Ready status is False
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -287,35 +284,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -323,7 +299,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -497,9 +473,20 @@ func testManagedMode() {
 					}},
 				}
 
-				current.Spec.Listeners[1].Name = gwapiv1.SectionName("gateway-1-listener-dtls")
-				current.Spec.Listeners[1].Protocol = gwapiv1.ProtocolType("TURN-DTLS")
-				current.Spec.Listeners[1].TLS = &tls
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("TURN-DTLS"),
+					TLS:      &tls,
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+				}}
 			})
 
 			lookupKey := store.GetNamespacedName(testGw)
@@ -802,7 +789,29 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
 
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.GatewayTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("testsecret-ok"),
+					}},
+				}
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:          gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:          gwapiv1.PortNumber(1),
+					Protocol:      gwapiv1.ProtocolType("TURN-UDP"),
+					AllowedRoutes: nil,
+				}, {
+					Name:          gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Port:          gwapiv1.PortNumber(2),
+					Protocol:      gwapiv1.ProtocolType("TURN-DTLS"), // exposed even if mixed-proto-lb is disabled
+					TLS:           &tls,
+					AllowedRoutes: nil,
+				}}
+			})
 
 			ctrl.Log.Info("updating Route")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
@@ -874,14 +883,16 @@ func testManagedMode() {
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Key).NotTo(Equal(""))
+			Expect(l.Cert).NotTo(Equal(""))
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -943,9 +954,7 @@ func testManagedMode() {
 				Equal(string(gwapiv1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			// stragely recreating the gateway lets api-server to find the public ip
-			// for the gw so Ready status becomes true (should investigate this)
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -968,35 +977,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -1004,7 +992,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -1040,7 +1028,29 @@ func testManagedMode() {
 
 		It("should survive converting the route to v1a2 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.GatewayTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("testsecret-ok"),
+					}},
+				}
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:          gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:          gwapiv1.PortNumber(1),
+					Protocol:      gwapiv1.ProtocolType("TURN-UDP"),
+					AllowedRoutes: nil,
+				}, {
+					Name:          gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Port:          gwapiv1.PortNumber(2),
+					Protocol:      gwapiv1.ProtocolType("TURN-DTLS"), // exposed even if mixed-proto-lb is disabled
+					TLS:           &tls,
+					AllowedRoutes: nil,
+				}}
+			})
 
 			ctrl.Log.Info("deleting stunnerv1 UDPRoute")
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
@@ -1098,11 +1108,11 @@ func testManagedMode() {
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
@@ -1164,7 +1174,7 @@ func testManagedMode() {
 
 			// stragely recreating the gateway lets api-server to find the public ip
 			// for the gw so Ready status becomes true (should investigate this)
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -1187,35 +1197,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -1223,7 +1212,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -1259,7 +1248,29 @@ func testManagedMode() {
 
 		It("should survive masking the v1a2 route with a stunner.v1 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.GatewayTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("testsecret-ok"),
+					}},
+				}
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:          gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:          gwapiv1.PortNumber(1),
+					Protocol:      gwapiv1.ProtocolType("TURN-UDP"),
+					AllowedRoutes: nil,
+				}, {
+					Name:          gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Port:          gwapiv1.PortNumber(2),
+					Protocol:      gwapiv1.ProtocolType("TURN-DTLS"), // exposed even if mixed-proto-lb is disabled
+					TLS:           &tls,
+					AllowedRoutes: nil,
+				}}
+			})
 
 			ctrl.Log.Info("loading UDPRoute")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
@@ -1324,11 +1335,11 @@ func testManagedMode() {
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Routes).To(HaveLen(0))
 
@@ -1388,9 +1399,7 @@ func testManagedMode() {
 				Equal(string(gwapiv1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			// stragely recreating the gateway lets api-server to find the public ip
-			// for the gw so Ready status becomes true (should investigate this)
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -1413,35 +1422,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -1449,7 +1437,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -1535,6 +1523,10 @@ func testManagedMode() {
 					Name:     gwapiv1.SectionName("gateway-2-listener-udp"),
 					Port:     gwapiv1.PortNumber(10),
 					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("invalid"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("dummy"),
 				}}
 				return nil
 			})
@@ -1605,12 +1597,12 @@ func testManagedMode() {
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 
@@ -1733,7 +1725,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -1756,35 +1748,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -1792,7 +1763,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -1810,15 +1781,16 @@ func testManagedMode() {
 					return false
 				}
 
-				// should be programmed
+				// should NOT be programmed (invalid listener)
 				s := meta.FindStatusCondition(gw2.Status.Conditions,
 					string(gwapiv1.GatewayConditionProgrammed))
-				if s == nil || s.Status != metav1.ConditionTrue {
+				if s == nil || s.Status != metav1.ConditionFalse {
 					return false
 				}
-				// should get a public IP
 				listenerStatuses := gw2.Status.Listeners
-				if len(listenerStatuses) != 1 || listenerStatuses[0].Name != "gateway-2-listener-udp" {
+				if len(listenerStatuses) != 2 ||
+					listenerStatuses[0].Name != "gateway-2-listener-udp" ||
+					listenerStatuses[1].Name != "invalid" {
 					return false
 				}
 
@@ -1844,10 +1816,10 @@ func testManagedMode() {
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
 				Equal(string(gwapiv1.GatewayConditionProgrammed)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 
 			// listeners: no public gateway address so Ready status is False
-			Expect(gw2.Status.Listeners).To(HaveLen(1))
+			Expect(gw2.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
@@ -1865,6 +1837,27 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
 			s = meta.FindStatusCondition(gw2.Status.Listeners[0].Conditions,
+				string(gwapiv1.ListenerConditionConflicted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
+
+			// listeners[1]: detached
+			s = meta.FindStatusCondition(gw2.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
+
+			s = meta.FindStatusCondition(gw2.Status.Listeners[1].Conditions,
+				string(gwapiv1.ListenerConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
+
+			s = meta.FindStatusCondition(gw2.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -2330,12 +2323,12 @@ func testManagedMode() {
 			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
-			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
 
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Routes).Should(BeEmpty())
 
@@ -2489,7 +2482,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
 			// listeners: no public gateway address so Ready status is False
-			Expect(gw.Status.Listeners).To(HaveLen(3))
+			Expect(gw.Status.Listeners).To(HaveLen(2))
 
 			// listener[0]: OK
 			s = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
@@ -2512,35 +2505,14 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			// listeners[1]: detached
+			// listeners[1]: ok
 			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionAccepted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonUnsupportedProtocol)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionResolvedRefs))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Type).Should(
-				Equal(string(gwapiv1.ListenerConditionResolvedRefs)))
-			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
-
-			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-				string(gwapiv1.ListenerConditionConflicted))
-			Expect(s).NotTo(BeNil())
-			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
-			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
-
-			// listeners[2]: ok
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 				string(gwapiv1.ListenerConditionAccepted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonAccepted)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionResolvedRefs))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Type).Should(
@@ -2548,7 +2520,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonResolvedRefs)))
 
-			s = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+			s = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 				string(gwapiv1.ListenerConditionConflicted))
 			Expect(s).NotTo(BeNil())
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
@@ -2779,9 +2751,14 @@ func testManagedMode() {
 			ctrl.Log.Info("trying to Get Deployment", "resource", store.GetNamespacedName(deploy))
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), deploy)
-				return err == nil && deploy != nil
-			}, timeout, interval).Should(BeTrue())
+				if err != nil || deploy == nil {
+					return false
+				}
 
+				// Get gw2 so that the owner-ref UID is filled in
+				err = k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)
+				return err == nil && store.IsOwner(gw2, deploy, "Gateway")
+			}, timeout, interval).Should(BeTrue())
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
 
 			// metadata
@@ -2796,10 +2773,6 @@ func testManagedMode() {
 
 			_, ok = labs["dummy-label"] // testGw has it, hw2 doesn't
 			Expect(ok).Should(BeFalse(), "gw label")
-
-			// Get gw2 so that the owner-ref UID is filled in
-			Expect(k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)).Should(Succeed())
-			Expect(store.IsOwner(gw2, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
 
 			// check the label selector
 			labelSelector := deploy.Spec.Selector

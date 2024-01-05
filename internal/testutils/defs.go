@@ -106,10 +106,6 @@ var TestGw = gwapiv1.Gateway{
 			Port:     gwapiv1.PortNumber(1),
 			Protocol: gwapiv1.ProtocolType("TURN-UDP"),
 		}, {
-			Name:     gwapiv1.SectionName("invalid"),
-			Port:     gwapiv1.PortNumber(3),
-			Protocol: gwapiv1.ProtocolType("dummy"),
-		}, {
 			Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
 			Port:     gwapiv1.PortNumber(2),
 			Protocol: gwapiv1.ProtocolType("TURN-TCP"),
@@ -159,6 +155,13 @@ var TestSvc = corev1.Service{
 				Name:     "udp-ok",
 				Protocol: corev1.ProtocolUDP,
 				Port:     1,
+				NodePort: 30001,
+			},
+			{
+				Name:     "tcp-ok",
+				Protocol: corev1.ProtocolTCP,
+				Port:     2,
+				NodePort: 30002,
 			},
 		},
 	},
@@ -169,15 +172,13 @@ var TestSvc = corev1.Service{
 				Ports: []corev1.PortStatus{{
 					Port:     1,
 					Protocol: corev1.ProtocolUDP,
-				}},
-			}, {
-				IP: "5.6.7.8",
-				Ports: []corev1.PortStatus{{
+				}, {
 					Port:     2,
 					Protocol: corev1.ProtocolTCP,
 				}},
 			}},
-		}},
+		},
+	},
 }
 
 // Node

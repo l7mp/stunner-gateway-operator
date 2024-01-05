@@ -19,7 +19,7 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap *gatewayAddress) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort) (*stnrconfv1.ListenerConfig, error) {
 	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -28,19 +28,17 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 		return nil, err
 	}
 
-	a, p := "", 0
-	if ap != nil {
-		a = ap.addr
-		p = ap.port
+	lc := stnrconfv1.ListenerConfig{
+		Name:     stnrListenerName(gw, l),
+		Protocol: proto.String(),
+		Addr:     "$STUNNER_ADDR", // Addr will be filled in from the pod environment
+		Port:     int(l.Port),
 	}
 
-	lc := stnrconfv1.ListenerConfig{
-		Name:       stnrListenerName(gw, l),
-		Protocol:   proto.String(),
-		Addr:       "$STUNNER_ADDR", // Addr will be filled in from the pod environment
-		Port:       int(l.Port),
-		PublicAddr: a,
-		PublicPort: p,
+	// set public address-port
+	if ap.addr != "" && ap.port > 0 {
+		lc.PublicAddr = ap.addr
+		lc.PublicPort = ap.port
 	}
 
 	if cert, key, ok := r.getTLS(gw, l); ok {

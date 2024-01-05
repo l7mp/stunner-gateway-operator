@@ -29,6 +29,7 @@ const (
 	PortUnavailable
 	InvalidPortRange
 	PublicAddressNotFound
+	PublicListenerAddressNotFound
 )
 
 type TypedError struct {
@@ -108,6 +109,8 @@ func (e *NonCriticalError) Error() string {
 		return "invalid port range"
 	case PublicAddressNotFound:
 		return "no public address found for gateway"
+	case PublicListenerAddressNotFound:
+		return "no public address found for one or more listeners"
 	}
 	return "Unknown error"
 }

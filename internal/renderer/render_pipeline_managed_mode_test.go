@@ -128,14 +128,18 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, 1, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, 2, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 2, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -388,14 +392,18 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, 1, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, 2, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 2, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -502,14 +510,175 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, 1, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, 2, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 2, lc.PublicPort, "public-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				assert.Len(t, conf.Clusters, 1, "cluster num")
+				rc := conf.Clusters[0]
+				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
+				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
+				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
+				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.Contains(t, rc.Endpoints, "4.3.2.1", "cluster-ip")
+
+				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// restore EDS
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+			},
+		},
+		{
+			name: "EDS with mutli-listener GW and relay-to-cluster-IP - E2E test",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			eps:  []corev1.Endpoints{testutils.TestEndpoint},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec = gwapiv1.GatewaySpec{
+					GatewayClassName: "gatewayclass-ok",
+					Listeners: []gwapiv1.Listener{{
+						Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+						Port:     gwapiv1.PortNumber(1),
+						Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+					}, {
+						Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+						Port:     gwapiv1.PortNumber(2),
+						Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+					}},
+				}
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				s1.Spec.ClusterIP = "4.3.2.1"
+				s1.Spec.Ports = []corev1.ServicePort{
+					{
+						Name:     "udp-ok",
+						Protocol: corev1.ProtocolUDP,
+						Port:     1,
+					},
+					{
+						Name:     "tcp-ok",
+						Protocol: corev1.ProtocolTCP,
+						Port:     2,
+					},
+				}
+				s1.Status = corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{
+							IP: "1.2.3.4",
+							Ports: []corev1.PortStatus{{
+								Port:     1,
+								Protocol: corev1.ProtocolUDP,
+							}, {
+								Port:     2,
+								Protocol: corev1.ProtocolTCP,
+							}},
+						}},
+					}}
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeManaged
+
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				err = r.renderForGateways(c)
+				assert.NoError(t, err, "render success")
+
+				// configmap
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+				o := cms[0]
+
+				// objectmeta: configmap is now named after gateway!
+				assert.Equal(t, o.GetName(), gw.GetName(),
+					"configmap name")
+				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
+					"configmap namespace")
+
+				// related gw
+				as := o.GetAnnotations()
+				assert.Len(t, as, 1, "annotations len")
+				_, ok := as[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "annotations: related gw")
+
+				cm, ok := o.(*corev1.ConfigMap)
+				assert.True(t, ok, "configmap cast")
+
+				conf, err := store.UnpackConfigMap(cm)
+				assert.NoError(t, err, "configmap stunner-config unmarschal")
+
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc := conf.Listeners[0]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, 1, lc.Port, "port")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1, lc.PublicPort, "public-port")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, 2, lc.Port, "port")
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 2, lc.PublicPort, "public-port")
 				assert.Len(t, lc.Routes, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -679,7 +848,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/udp-ok", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, 2, lc.Port, "port")
-				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for udp:2
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -687,7 +856,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, 11, lc.Port, "port")
-				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for tcp:11
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -695,7 +864,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/tcp-ok", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
 				assert.Equal(t, 12, lc.Port, "port")
-				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for tcp:11
 				assert.Len(t, lc.Routes, 1, "route num")
 				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
 
@@ -815,9 +984,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					gw.Status.Conditions[1].Type, "programmed")
 				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
 					"conditions gen")
-				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[1].Status,
-					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonProgrammed),
+				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
+					"status") // some public addresses are missing
+				assert.Equal(t, string(gwapiv1.GatewayReasonAddressNotAssigned),
 					gw.Status.Conditions[1].Reason, "reason")
 
 				assert.Len(t, gw.Status.Listeners, 8, "conditions num")
@@ -1394,7 +1563,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.GatewayReasonProgrammed),
 					gw.Status.Conditions[1].Reason, "reason")
 
-				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
+				assert.Len(t, gw.Status.Listeners, 2, "conditions num")
 
 				// listeners[0]: ok
 				assert.Equal(t, "gateway-1-listener-udp", string(gw.Status.Listeners[0].Name), "name")
@@ -1426,39 +1595,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 
-				// listeners[1]: invalid
-				assert.Equal(t, "invalid", string(gw.Status.Listeners[1].Name), "name")
+				// listeners[1]: ok
+				assert.Equal(t, "gateway-1-listener-tcp", string(gw.Status.Listeners[1].Name), "name")
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol), d.Reason,
-					"reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-
-				// listeners[2]: ok
-				assert.Equal(t, "gateway-1-listener-tcp", string(gw.Status.Listeners[2].Name), "name")
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
 					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "acceptedfound")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
@@ -1466,7 +1605,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason,
 					"reason")
 
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 					string(gwapiv1.ListenerConditionResolvedRefs))
 				assert.NotNil(t, d, "resovedrefs found")
 				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
@@ -1476,7 +1615,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
+				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 					string(gwapiv1.ListenerConditionConflicted))
 				assert.NotNil(t, d, "conflicted found")
 				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,

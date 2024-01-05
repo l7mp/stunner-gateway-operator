@@ -246,13 +246,6 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				assert.Equal(t, "testnamespace/udproute-testnamespace", store.GetObjectKey(rs[0]),
 					"route name found")
-
-				l = ls[2]
-				rs = r.getUDPRoutes4Listener(gw, &l)
-				// listener rejects route from different namespace as attachment policy is Same
-				assert.Len(t, rs, 1, "route found")
-				assert.Equal(t, "testnamespace/udproute-testnamespace", store.GetObjectKey(rs[0]),
-					"route name found")
 			},
 		},
 		{
@@ -271,6 +264,20 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				c.nss = []corev1.Namespace{testutils.TestNs, *ns}
 
 				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("invalid"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("dummy"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+				}}
+
 				// allow from only from testnamespace
 				fromNamespaces := gwapiv1.NamespacesFromSelector
 				routeNamespaces1 := gwapiv1.RouteNamespaces{
@@ -511,10 +518,6 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				l = ls[1]
 				rs = r.getUDPRoutes4Listener(gw, &l)
-				assert.Len(t, rs, 0, "route found")
-
-				l = ls[2]
-				rs = r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "udproute-namespace-correct-name-2"),
 					store.GetObjectKey(rs[0]), "route name found")
@@ -587,10 +590,6 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				l = ls[1]
 				rs = r.getUDPRoutes4Listener(gw, &l)
-				assert.Len(t, rs, 0, "route found")
-
-				l = ls[2]
-				rs = r.getUDPRoutes4Listener(gw, &l)
 				// gw rejects route from other namespace as attachment policy is Same
 				assert.Len(t, rs, 0, "route found")
 			},
@@ -610,6 +609,19 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				c.nss = []corev1.Namespace{testutils.TestNs, *ns}
 
 				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("invalid"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("dummy"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+				}}
 				// allow from both namespaces
 				fromNamespaces := gwapiv1.NamespacesFromSelector
 				routeNamespaces := gwapiv1.RouteNamespaces{

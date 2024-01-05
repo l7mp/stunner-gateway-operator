@@ -195,28 +195,16 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	conf.Listeners = []stnrconfv1.ListenerConfig{}
 	for _, gw := range c.gws.GetAll() {
-		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
+		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num",
+			len(gw.Spec.Listeners))
 
 		initGatewayStatus(gw, config.ControllerName)
 
-		log.V(3).Info("obtaining public address", "gateway", gw.GetName())
-		ap, err := r.getPublicAddrPort4Gateway(gw)
+		log.V(3).Info("obtaining public address", "gateway", store.GetObjectKey(gw))
+		pubGwAddrs, err := r.getPublicAddr(gw)
 		if err != nil {
-			log.V(1).Info("cannot find public address", "gateway", gw.GetName(),
+			log.V(1).Info("cannot find public address", "gateway", store.GetObjectKey(gw),
 				"error", err.Error())
-			ap = nil
-		} else if ap == nil {
-			// this should never happen: blow up
-			err = NewCriticalError(InternalError)
-			log.Error(err, "cannot find public address", "gateway", gw.GetName())
-			return err
-		} else if ap.addr == "" {
-			// this should never happen either but should be harmless
-			log.Info("public service found but no external IP is available for service: " +
-				"this is most probably caused by a fallback to a NodePort access service " +
-				"but no nodes seem to be having a valid external IP address. Hint: " +
-				"enable LoadBalancer services in Kubernetes")
-			ap = nil
 		}
 
 		// recreate the LoadBalancer service, otherwise a changed
@@ -234,23 +222,24 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		tcpPorts := make(map[int]bool)
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
-			log.V(3).Info("obtaining routes", "gateway", gw.GetName(), "listener",
+
+			log.V(3).Info("obtaining routes", "gateway", store.GetObjectKey(gw), "listener",
 				l.Name)
 			rs := r.getUDPRoutes4Listener(gw, &l)
 
 			if isListenerConflicted(&l, udpPorts, tcpPorts) {
-				log.Info("listener protocol/port conflict", "gateway", gw.GetName(),
+				log.Info("listener protocol/port conflict", "gateway", store.GetObjectKey(gw),
 					"listener", l.Name)
 				setListenerStatus(gw, &l, NewNonCriticalError(PortUnavailable), true, len(rs))
 				continue
 			}
 
-			lc, err := r.renderListener(gw, c.gwConf, &l, rs, ap)
+			lc, err := r.renderListener(gw, c.gwConf, &l, rs, pubGwAddrs[j])
 			if err != nil {
 				// all listener rendering errors are critical: prevent the
 				// rendering of the listener config
 				log.Info("error rendering configuration for listener", "gateway",
-					gw.GetName(), "listener", l.Name, "error", err.Error())
+					store.GetObjectKey(gw), "listener", l.Name, "error", err.Error())
 
 				setListenerStatus(gw, &l, err, false, 0)
 				continue
@@ -260,7 +249,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			setListenerStatus(gw, &l, nil, false, len(rs))
 		}
 
-		setGatewayStatusProgrammed(gw, nil, ap)
+		setGatewayStatusProgrammed(gw, nil, pubGwAddrs)
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
@@ -409,7 +398,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 	gc := c.gc
 
 	for _, gw := range c.gws.GetAll() {
-		log.V(2).Info("considering", "gateway", gw.GetName(), "listener-num", len(gw.Spec.Listeners))
+		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
 		initGatewayStatus(gw, config.ControllerName)

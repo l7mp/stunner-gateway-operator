@@ -48,7 +48,7 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -84,8 +84,9 @@ func TestRenderListenerRender(t *testing.T) {
 
 				ls := gw.Spec.Listeners
 				l := ls[1]
+				l.Protocol = gwapiv1.ProtocolType("dummy")
 
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -113,9 +114,9 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := gws[0]
 
 				ls := gw.Spec.Listeners
-				l := ls[2]
+				l := ls[1]
 
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "5.6.7.8",
 					port: 4321,
 				}
@@ -160,7 +161,7 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "5.6.7.8",
 					port: 4321,
 				}
@@ -206,7 +207,7 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := r.getUDPRoutes4Listener(gw, &l)
 				assert.Len(t, rs, 1, "route found")
 
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "5.6.7.8",
 					port: 4321,
 				}
@@ -266,7 +267,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -347,7 +348,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -400,7 +401,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -455,7 +456,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -510,7 +511,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -569,7 +570,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -628,7 +629,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -687,7 +688,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -746,7 +747,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -808,7 +809,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}
@@ -872,7 +873,7 @@ func TestRenderListenerRender(t *testing.T) {
 				l := ls[0]
 
 				rs := []*stnrgwv1.UDPRoute{}
-				addr := &gatewayAddress{
+				addr := gwAddrPort{
 					addr: "1.2.3.4",
 					port: 1234,
 				}

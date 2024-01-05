@@ -199,7 +199,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				conflicted := false
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]
-					addr := &gatewayAddress{
+					addr := gwAddrPort{
 						addr: "1.2.3.4",
 						port: 1234,
 					}
@@ -216,7 +216,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				}
 
 				// listeners[0]: ok
-				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
+				assert.Len(t, gw.Status.Listeners, 2, "conditions num")
 				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
 					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "acceptedfound")
@@ -245,13 +245,13 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 
-				// listeners[1]: detached
+				// listeners[1]: ok
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
 					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol),
+				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted),
 					d.Reason, "reason")
 
 				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
@@ -261,6 +261,97 @@ func TestRenderGatewayUtil(t *testing.T) {
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
+					d.Reason, "reason")
+
+				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+					string(gwapiv1.ListenerConditionConflicted))
+				assert.NotNil(t, d, "conflicted found")
+				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
+					d.Reason, "reason")
+			},
+		},
+		{
+			name: "invalid listener status",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("invalid"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("dummy"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
+				}}
+				initGatewayStatus(gw, "dummy")
+				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
+				gw.ObjectMeta.SetGeneration(1)
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
+					testutils.TestNsName, "gateway-1"), "gw name found")
+
+				initGatewayStatus(gw, config.ControllerName)
+				conflicted := false
+				for j := range gw.Spec.Listeners {
+					l := gw.Spec.Listeners[j]
+					addr := gwAddrPort{
+						addr: "1.2.3.4",
+						port: 1234,
+					}
+
+					_, err := r.renderListener(gw, c.gwConf, &l,
+						[]*stnrgwv1.UDPRoute{}, addr)
+
+					if err != nil {
+						setListenerStatus(gw, &l, err, conflicted, 0)
+						continue
+					}
+
+					setListenerStatus(gw, &l, nil, conflicted, 2)
+				}
+
+				// listeners[0]: ok
+				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
+				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionAccepted))
+				assert.NotNil(t, d, "acceptedfound")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason,
+					"reason")
+
+				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionResolvedRefs))
+				assert.NotNil(t, d, "resovedrefs found")
+				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
 				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
@@ -270,7 +361,36 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
+					d.Reason, "reason")
+
+				// listeners[1]: detached
+				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+					string(gwapiv1.ListenerConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol),
+					d.Reason, "reason")
+
+				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
+					string(gwapiv1.ListenerConditionResolvedRefs))
+				assert.NotNil(t, d, "resovedrefs found")
+				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
+					d.Reason, "reason")
+
+				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionConflicted))
+				assert.NotNil(t, d, "conflicted found")
+				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
 				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 
@@ -279,7 +399,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					string(gwapiv1.ListenerConditionAccepted))
 				assert.NotNil(t, d, "accepted found")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
 				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted),
 					d.Reason, "reason")
 
@@ -289,7 +409,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
 				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
 					d.Reason, "reason")
 
@@ -299,7 +419,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
 				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
 					d.Reason, "reason")
 			},
