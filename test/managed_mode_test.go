@@ -673,7 +673,7 @@ func testManagedMode() {
 			Expect(podSpec.Affinity).To(BeNil())
 		})
 
-		It("should update the Deployment when the Dataplane changes", func() {
+		It("should update config when the Dataplane changes", func() {
 			ctrl.Log.Info("adding the default Dataplane")
 			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: testDataplane.GetName(),
@@ -687,10 +687,51 @@ func testManagedMode() {
 				current.Spec.Args[1] = "dummy-arg"
 
 				current.Spec.HostNetwork = false
+				current.Spec.DisableHealthCheck = true
+				current.Spec.EnableMetricsEnpoint = true
 				return nil
 			})
 			Expect(err).Should(Succeed())
 
+			lookupKey := store.GetNamespacedName(testGw)
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if c.Admin.MetricsEndpoint != "" &&
+					(c.Admin.HealthCheckEndpoint == nil || *c.Admin.HealthCheckEndpoint == "") {
+					conf = &c
+					return true
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(conf.Admin.MetricsEndpoint).To(Equal(opdefault.DefaultMetricsEndpoint))
+			Expect(conf.Admin.HealthCheckEndpoint == nil || *conf.Admin.HealthCheckEndpoint == "").To(BeTrue())
+
+			Expect(conf.Listeners).To(HaveLen(3))
+			l := conf.Listeners[1]
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Port).Should(Equal(3))
+			Expect(l.Cert).Should(Equal(newCert64))
+			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(l.Routes).Should(BeEmpty())
+		})
+
+		It("should update the Deployment after the Dataplane changed", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
 

@@ -148,6 +148,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			gwCtx := NewRenderContext(e, r, gc)
 			gwCtx.gwConf = gcCtx.gwConf
+			gwCtx.dp = gcCtx.dp
 			gwCtx.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 			// render for this gateway
