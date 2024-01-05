@@ -665,6 +665,7 @@ func testManagedMode() {
 			// Expect(container.VolumeMounts).To(HaveLen(1))
 
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
+			Expect(container.Ports).To(HaveLen(0))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
@@ -776,6 +777,10 @@ func testManagedMode() {
 			Expect(container.Resources.Requests).Should(Equal(testutils.TestResourceRequest))
 			// Expect(container.VolumeMounts).To(HaveLen(1))
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
+			Expect(container.Ports).To(HaveLen(1))
+			Expect(container.Ports[0].Name).Should(Equal(opdefault.DefaultMetricsPortName))
+			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrconfv1.DefaultMetricsPort)))
+			Expect(container.Ports[0].Protocol).Should(Equal(corev1.ProtocolTCP))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())

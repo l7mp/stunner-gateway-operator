@@ -102,6 +102,10 @@ const (
 
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
 	MixedProtocolAnnotationValue = "true"
+
+	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
+	// endpoint (if enabled).
+	DefaultMetricsPortName = "metrics-port"
 )
 
 var (

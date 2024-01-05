@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -212,6 +214,14 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		}
 		if dataplane.Spec.Resources != nil {
 			dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
+		}
+
+		if dataplane.Spec.EnableMetricsEnpoint {
+			c.Ports = []corev1.ContainerPort{{
+				Name:          opdefault.DefaultMetricsPortName,
+				ContainerPort: int32(stnrconfv1.DefaultMetricsPort),
+				Protocol:      corev1.ProtocolTCP,
+			}}
 		}
 
 		found = true
