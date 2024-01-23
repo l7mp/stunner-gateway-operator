@@ -2,11 +2,11 @@ package renderer
 
 import (
 	"context"
-	// "fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
@@ -20,23 +20,24 @@ type Renderer struct {
 	scheme               *runtime.Scheme
 	gen                  int
 	renderCh, operatorCh chan event.Event
-	log                  logr.Logger
+	*config.ProgressTracker
+	log logr.Logger
 }
 
-// NewRenderer creates a new Renderer
+// NewRenderer creates a new Renderer.
 func NewRenderer(cfg RendererConfig) *Renderer {
 	return &Renderer{
-		scheme:   cfg.Scheme,
-		renderCh: make(chan event.Event, 10),
-		gen:      0,
-		log:      cfg.Logger.WithName("renderer"),
+		scheme:          cfg.Scheme,
+		renderCh:        make(chan event.Event, 10),
+		gen:             0,
+		ProgressTracker: config.NewProgressTracker(),
+		log:             cfg.Logger.WithName("renderer"),
 	}
 }
 
 func (r *Renderer) Start(ctx context.Context) error {
 	r.ctx = ctx
 
-	// starting the renderer thread
 	go func() {
 		defer close(r.renderCh)
 
@@ -52,7 +53,10 @@ func (r *Renderer) Start(ctx context.Context) error {
 				// prepare a new update event Render will populate
 				// config is returned in the update event ConfigMap store
 				ev := e.(*event.EventRender)
+
+				r.ProgressUpdate(1)
 				r.Render(ev)
+				r.ProgressUpdate(-1)
 
 			case <-ctx.Done():
 				return
@@ -63,12 +67,12 @@ func (r *Renderer) Start(ctx context.Context) error {
 	return nil
 }
 
-// GetRenderChannel returns the channel onn which the renderer listenens to rendering requests
+// GetRenderChannel returns the channel onn which the renderer listenens to rendering requests.
 func (r *Renderer) GetRenderChannel() chan event.Event {
 	return r.renderCh
 }
 
-// SetOperatorChannel sets the channel on which the operator event dispatcher listens
+// SetOperatorChannel sets the channel on which the operator event dispatcher listens.
 func (r *Renderer) SetOperatorChannel(ch chan event.Event) {
 	r.operatorCh = ch
 }

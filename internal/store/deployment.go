@@ -51,3 +51,11 @@ func (s *DeploymentStore) GetObject(nsName types.NamespacedName) *appv1.Deployme
 
 	return r
 }
+
+func (s *DeploymentStore) DeepCopy() *DeploymentStore {
+	ret := NewDeploymentStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

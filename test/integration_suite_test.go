@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	// "k8s.io/client-go/kubernetes/scheme"
@@ -44,14 +44,13 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
-
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -60,13 +59,16 @@ var _ = fmt.Sprintf("%d", 1)
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	newCert64 = "bmV3Y2VydA==" // newcert
-	newKey64  = "bmV3a2V5"     // newkey
-	timeout   = time.Second * 10
+	cdsServerAddr = ":63478"
+	newCert64     = "bmV3Y2VydA==" // newcert
+	newKey64      = "bmV3a2V5"     // newkey
+	timeout       = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
 	loglevel = -4
 	//loglevel = -1
+	stunnerLogLevel = "all:TRACE"
+	//stunnerLogLevel = "all:ERROR"
 )
 
 var (
@@ -102,47 +104,12 @@ var (
 	// 		EncodeLevel: zapcore.CapitalLevelEncoder,
 	// 	},
 	// }
+	op *operator.Operator
 )
 
 func init() {
 	os.Setenv("ACK_GINKGO_DEPRECATIONS", "1.16.5")
 	os.Setenv("ACK_GINKGO_RC", "true")
-}
-
-func InitResources() {
-	testNs = testutils.TestNs.DeepCopy()
-	testGwClass = testutils.TestGwClass.DeepCopy()
-	testGwConfig = testutils.TestGwConfig.DeepCopy()
-	testGw = testutils.TestGw.DeepCopy()
-	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
-	testSvc = testutils.TestSvc.DeepCopy()
-	testEndpoint = testutils.TestEndpoint.DeepCopy()
-	testNode = testutils.TestNode.DeepCopy()
-	testSecret = testutils.TestSecret.DeepCopy()
-	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
-	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
-	testDataplane = testutils.TestDataplane.DeepCopy()
-	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
-}
-
-func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format(time.RFC3339Nano))
-}
-
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	// for gingko/v2
-	// suiteConfig, reporterConfig := GinkgoConfiguration()
-	// reporterConfig.FullTrace = true
-	// RunSpecs(t, "Controller Suite", suiteConfig, reporterConfig)
-
-	// RunSpecsWithDefaultAndCustomReporters(t,
-	// 	"Controller Suite",
-	// 	[]Reporter{envtest.NewlineReporter{}},
-	// )
-
-	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -214,15 +181,14 @@ var _ = BeforeSuite(func() {
 		Logger:  ctrl.Log,
 	})
 
-	cdsserverAddr := stnrv1.DefaultConfigDiscoveryAddress
-	setupLog.Info("setting up CDSSERVER server", "address", cdsserverAddr)
-	c := config.NewCDSServer(config.ConfigDiscoveryAddress, ctrl.Log)
+	setupLog.Info("setting up CDS server", "address", cdsServerAddr)
+	c := config.NewCDSServer(cdsServerAddr, ctrl.Log)
 
 	// make rendering fast!
 	config.ThrottleTimeout = time.Millisecond
 
 	setupLog.Info("setting up operator")
-	op := operator.NewOperator(operator.OperatorConfig{
+	op = operator.NewOperator(operator.OperatorConfig{
 		ControllerName: opdefault.DefaultControllerName,
 		Manager:        mgr,
 		RenderCh:       r.GetRenderChannel(),
@@ -232,6 +198,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	r.SetOperatorChannel(op.GetOperatorChannel())
+	op.SetProgressReporters(r, u, c)
 
 	setupLog.Info("starting renderer thread")
 	err = r.Start(ctx)
@@ -257,7 +224,7 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	By("removing test namespace")
@@ -269,6 +236,42 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func InitResources() {
+	testNs = testutils.TestNs.DeepCopy()
+	testGwClass = testutils.TestGwClass.DeepCopy()
+	testGwConfig = testutils.TestGwConfig.DeepCopy()
+	testGw = testutils.TestGw.DeepCopy()
+	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
+	testSvc = testutils.TestSvc.DeepCopy()
+	testEndpoint = testutils.TestEndpoint.DeepCopy()
+	testNode = testutils.TestNode.DeepCopy()
+	testSecret = testutils.TestSecret.DeepCopy()
+	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
+	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
+	testDataplane = testutils.TestDataplane.DeepCopy()
+	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
+}
+
+func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format(time.RFC3339Nano))
+}
+
+func TestAPIs(t *testing.T) {
+	RegisterFailHandler(Fail)
+
+	// for gingko/v2
+	// suiteConfig, reporterConfig := GinkgoConfiguration()
+	// reporterConfig.FullTrace = true
+	// RunSpecs(t, "Controller Suite", suiteConfig, reporterConfig)
+
+	// RunSpecsWithDefaultAndCustomReporters(t,
+	// 	"Controller Suite",
+	// 	[]Reporter{envtest.NewlineReporter{}},
+	// )
+
+	RunSpecs(t, "Controller Suite")
+}
 
 type UDPRouteMutator func(current *stnrgwv1.UDPRoute)
 
@@ -404,7 +407,48 @@ func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f c
 	return res, err
 }
 
-var _ = Describe("Integration test:", func() {
+// managed mode test helper
+type ConfigChecker func(conf *stnrv1.StunnerConfig) bool
+
+func checkConfig(ch chan *stnrv1.StunnerConfig, checker ConfigChecker) bool {
+	timeoutCh := time.After(timeout)
+	for {
+		select {
+		case <-timeoutCh:
+			return false
+		case c := <-ch:
+			// fmt.Printf("--------------------\nCHECKER 0: %#v\n--------------------\n", c)
+			if c == nil {
+				continue
+			}
+			ret := checker(c)
+			if !ret {
+				continue
+			}
+			return true
+		}
+	}
+}
+
+func stabilize() {
+	d := 50 * time.Millisecond
+	start := time.Now()
+	stabilizer := func() bool {
+		progress := op.ProgressReport()
+		ctrl.Log.V(2).Info("total progress report", "report", progress)
+		return progress == 0
+	}
+	Eventually(stabilizer, time.Second*30, interval).Should(BeTrue())
+	time.Sleep(d)
+	Eventually(stabilizer, time.Second*20, interval).Should(BeTrue())
+	time.Sleep(d)
+	Eventually(stabilizer, time.Second*10, interval).Should(BeTrue())
+
+	ctrl.Log.Info("Operator has stabilized: progress counter reports no ongoing operations in 3 consecutive queries",
+		"duration", time.Since(start), "timeout-between-queries", d)
+}
+
+var _ = Describe("Integration test:", Ordered, func() {
 	// LEGACY
 	Context(`When using the "legacy" dataplane mode`, func() {
 		It(`It should be possible to set the dataplane mode to "legacy"`, func() {

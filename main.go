@@ -185,6 +185,7 @@ func main() {
 	})
 
 	r.SetOperatorChannel(op.GetOperatorChannel())
+	op.SetProgressReporters(r, u, c)
 
 	ctx := ctrl.SetupSignalHandler()
 

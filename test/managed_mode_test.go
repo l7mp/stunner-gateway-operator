@@ -19,13 +19,14 @@ package integration
 import (
 	// "context"
 
+	"context"
 	"time"
 
 	// "reflect"
 	// "testing"
 	// "fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	appv1 "k8s.io/api/apps/v1"
@@ -47,19 +48,42 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	cdsclient "github.com/l7mp/stunner/pkg/config/client"
+	"github.com/l7mp/stunner/pkg/logger"
 )
 
 func testManagedMode() {
 	// SINGLE GATEWAY
-	Context("When creating a minimal set of API resources", func() {
-		conf := &stnrconfv1.StunnerConfig{}
+	Context("When creating a minimal set of API resources", Ordered, Label("managed"), func() {
+		var conf *stnrv1.StunnerConfig
+		var clientCtx context.Context
+		var clientCancel context.CancelFunc
+		var ch chan *stnrv1.StunnerConfig
+		var cdsClient cdsclient.Client
 
-		It("should survive loading a minimal config", func() {
-			// switch EDS on
+		BeforeAll(func() {
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
+			clientCtx, clientCancel = context.WithCancel(context.Background())
+			ch = make(chan *stnrv1.StunnerConfig, 128)
+			var err error
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
+				logger.NewLoggerFactory(stunnerLogLevel))
+			Expect(err).Should(Succeed())
+			Expect(cdsClient.Watch(clientCtx, ch)).Should(Succeed())
+		})
+
+		AfterAll(func() {
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			clientCancel()
+			close(ch)
+		})
+
+		It("should survive loading a minimal config", func() {
+			// switch EDS on
 			ctrl.Log.Info("loading GatewayClass")
 			Expect(k8sClient.Create(ctx, testGwClass)).Should(Succeed())
 
@@ -98,84 +122,17 @@ func testManagedMode() {
 				"GatewayClass namespace")
 		})
 
-		It("should successfully render a STUNner ConfigMap", func() {
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
-		})
-
-		It("should render a ConfigMap that can be successfully unpacked", func() {
-			// retry, but also try to unpack inside Eventually
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				_, err = store.UnpackConfigMap(cm)
-				return err == nil
-
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(cm).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
-		})
-
 		It("should render a STUNner config with exactly 2 listeners", func() {
-			// retry, but also try to unpack inside Eventually
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
-
+			}), timeout, interval).Should(BeTrue())
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
 		})
 
 		It("should render a STUNner config with correct listener params", func() {
@@ -203,8 +160,19 @@ func testManagedMode() {
 
 		It("should set the GatewayClass status", func() {
 			gc := &gwapiv1.GatewayClass{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
-				gc)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass), gc)
+				if err != nil {
+					return false
+				}
+
+				s := meta.FindStatusCondition(gc.Status.Conditions,
+					string(gwapiv1.GatewayClassConditionStatusAccepted))
+				if s == nil || s.Status == metav1.ConditionFalse {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gc.Status.Conditions).To(HaveLen(1))
 
@@ -315,36 +283,14 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
 
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
-				// conf should have valid cluster confs
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
-
-			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			v, ok := cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			}), timeout, interval).Should(BeTrue())
 		})
 
 		It("should re-render STUNner config with the new cluster", func() {
@@ -387,8 +333,17 @@ func testManagedMode() {
 
 		It("should set the Route status", func() {
 			ro := &stnrgwv1.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || len(ro.Status.Parents) != 1 {
+					return false
+				}
+
+				// backend refs should be resolved
+				s := meta.FindStatusCondition(ro.Status.Parents[0].Conditions,
+					string(gwapiv1.RouteConditionResolvedRefs))
+				return s != nil && s.Status == metav1.ConditionTrue
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
@@ -425,22 +380,9 @@ func testManagedMode() {
 			ctrl.Log.Info("loading a Kubernetes Node")
 			createOrUpdateNode(&testutils.TestNode, nil)
 
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// fmt.Printf("--------------------\nCHECKER 0: %#v\n--------------------\n", c)
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -448,13 +390,12 @@ func testManagedMode() {
 
 				// the UDP listener should have a valid public IP set on both listeners
 				if c.Listeners[0].PublicAddr == "1.2.3.4" {
-					conf = &c
+					conf = c
 					return true
 				}
 
 				return false
-
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 		})
 
 		It("should install TLS cert/keys", func() {
@@ -489,22 +430,8 @@ func testManagedMode() {
 				}}
 			})
 
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -512,12 +439,12 @@ func testManagedMode() {
 
 				// the UDP listener should have a valid public IP set on both listeners
 				if c.Listeners[1].Cert != "" && c.Listeners[1].Key != "" {
-					conf = &c
+					conf = c
 					return true
 				}
 
 				return false
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(3))
 			l := conf.Listeners[0]
@@ -549,22 +476,8 @@ func testManagedMode() {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -572,12 +485,12 @@ func testManagedMode() {
 
 				// the UDP listener should have a valid public IP set on both listeners
 				if c.Listeners[1].Cert == newCert64 {
-					conf = &c
+					conf = c
 					return true
 				}
 
 				return false
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(3))
 			l := conf.Listeners[1]
@@ -694,30 +607,16 @@ func testManagedMode() {
 			})
 			Expect(err).Should(Succeed())
 
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				if c.Admin.MetricsEndpoint != "" &&
 					(c.Admin.HealthCheckEndpoint == nil || *c.Admin.HealthCheckEndpoint == "") {
-					conf = &c
+					conf = c
 					return true
 				}
 
 				return false
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Admin.MetricsEndpoint).To(Equal(opdefault.DefaultMetricsEndpoint))
 			Expect(conf.Admin.HealthCheckEndpoint == nil || *conf.Admin.HealthCheckEndpoint == "").To(BeTrue())
@@ -779,7 +678,7 @@ func testManagedMode() {
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
 			Expect(container.Ports).To(HaveLen(1))
 			Expect(container.Ports[0].Name).Should(Equal(opdefault.DefaultMetricsPortName))
-			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrconfv1.DefaultMetricsPort)))
+			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrv1.DefaultMetricsPort)))
 			Expect(container.Ports[0].Protocol).Should(Equal(corev1.ProtocolTCP))
 
 			// remainder
@@ -787,6 +686,10 @@ func testManagedMode() {
 			Expect(*podSpec.TerminationGracePeriodSeconds).Should(Equal(testutils.TestTerminationGrace))
 			Expect(podSpec.HostNetwork).Should(BeFalse())
 			Expect(podSpec.Affinity).To(BeNil())
+		})
+
+		It("should stabilize", func() {
+			stabilize()
 		})
 
 		It("should not reset the replica count when it is updated externally", func() {
@@ -877,40 +780,15 @@ func testManagedMode() {
 				}}
 			})
 
-			// wait until configmap gets updated
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-
-			contains := func(strs []string, val string) bool {
-				for _, s := range strs {
-					if s == val {
-						return true
-					}
-				}
-				return false
-			}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
 					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 		})
 
 		It("should render a correct STUNner config", func() {
@@ -981,7 +859,6 @@ func testManagedMode() {
 				s := meta.FindStatusCondition(gw.Status.Conditions,
 					string(gwapiv1.GatewayConditionProgrammed))
 				return s.Status == metav1.ConditionTrue
-
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
@@ -1045,8 +922,16 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
 			ro := &stnrgwv1.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || len(ro.Status.Parents) != 1 {
+					return false
+				}
+
+				// should be programmed
+				return ro.Status.Parents[0].ParentRef.Name == gwapiv1.ObjectName("gateway-1") &&
+					ro.Status.Parents[0].ParentRef.SectionName == nil
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(1))
 			ps := ro.Status.Parents[0]
@@ -1104,41 +989,15 @@ func testManagedMode() {
 			ctrl.Log.Info("adding v1alpha2 UDPRoute")
 			Expect(k8sClient.Create(ctx, testUDPRouteV1A2)).Should(Succeed())
 
-			// wait until configmap gets updated
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-
-			contains := func(strs []string, val string) bool {
-				for _, s := range strs {
-					if s == val {
-						return true
-					}
-				}
-				return false
-			}
-
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
 					len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "1.2.3.4") {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(2))
 
@@ -1198,8 +1057,10 @@ func testManagedMode() {
 				// should be programmed
 				s := meta.FindStatusCondition(gw.Status.Conditions,
 					string(gwapiv1.GatewayConditionProgrammed))
-				return s.Status == metav1.ConditionTrue
-
+				if s == nil || s.Status != metav1.ConditionTrue {
+					return false
+				}
+				return true
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(gw.Status.Conditions).To(HaveLen(2))
@@ -1265,8 +1126,15 @@ func testManagedMode() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
 			roV1A2 := &gwapiv1a2.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				roV1A2)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), roV1A2)
+				if err != nil || len(roV1A2.Status.Parents) != 1 {
+					return false
+				}
+				s := meta.FindStatusCondition(roV1A2.Status.Parents[0].Conditions,
+					string(gwapiv1.RouteConditionAccepted))
+				return s != nil && s.Status == metav1.ConditionTrue
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(roV1A2.Status.Parents).To(HaveLen(1))
 			ps := roV1A2.Status.Parents[0]
@@ -1321,7 +1189,7 @@ func testManagedMode() {
 			ctrl.Log.Info("loading UDPRoute")
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
 
-			// wait until v1a2 route gets invalidates
+			// wait until v1a2 route gets invalidated
 			Eventually(func() bool {
 				roV1A2 := &gwapiv1a2.UDPRoute{}
 				err := k8sClient.Get(ctx, store.GetNamespacedName(testUDPRouteV1A2), roV1A2)
@@ -1340,31 +1208,24 @@ func testManagedMode() {
 					}
 				}
 				return false
-
 			}, timeout, interval).Should(BeTrue())
 
-			// wait until configmap gets updated
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
+			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
+				// there is a good chance we won't get an update so we load the new config
+				cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
+					logger.NewLoggerFactory(stunnerLogLevel))
+				Expect(err).Should(Succeed())
 
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
+				c, err := cl.Load()
+				Expect(err).Should(Succeed())
 
-				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
+				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 0) &&
 					len(c.Clusters) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(2))
@@ -1547,17 +1408,47 @@ func testManagedMode() {
 			ctrl.Log.Info("deleting v1a2 UDPRoute")
 			Expect(k8sClient.Delete(ctx, testUDPRouteV1A2)).Should(Succeed())
 		})
+
+		It("should stabilize", func() {
+			stabilize()
+		})
 	})
 
 	// MULTI-GATEWAY
-	Context("When creating 2 Gateways", func() {
-		conf := &stnrconfv1.StunnerConfig{}
+	Context("When creating 2 Gateways", Ordered, Label("managed"), func() {
+		conf := &stnrv1.StunnerConfig{}
+		var clientCtx context.Context
+		var clientCancel context.CancelFunc
+		var ch1, ch2 chan *stnrv1.StunnerConfig
+		var cdsClient1, cdsClient2 cdsclient.Client
 
-		It("should survive loading all resources", func() {
+		BeforeAll(func() {
 			// switch EDS on
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
+			clientCtx, clientCancel = context.WithCancel(context.Background())
+			ch1 = make(chan *stnrv1.StunnerConfig, 128)
+			ch2 = make(chan *stnrv1.StunnerConfig, 128)
+			var err error
+			logger := logger.NewLoggerFactory(stunnerLogLevel)
+			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", logger)
+			Expect(err).Should(Succeed())
+			Expect(cdsClient1.Watch(clientCtx, ch1)).Should(Succeed())
+			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", logger)
+			Expect(err).Should(Succeed())
+			Expect(cdsClient2.Watch(clientCtx, ch2)).Should(Succeed())
+		})
+
+		AfterAll(func() {
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			clientCancel()
+			close(ch1)
+			close(ch2)
+		})
+
+		It("should survive loading all resources", func() {
 			ctrl.Log.Info("loading Gateway 2")
 			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-2",
@@ -1594,39 +1485,15 @@ func testManagedMode() {
 		})
 
 		It("should render a STUNner config for Gateway 1", func() {
-			// retry, but also try to unpack inside Eventually
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
+			Eventually(checkConfig(ch1, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			Expect(v).Should(Equal(store.GetObjectKey(testGw)))
-			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(2))
 
@@ -1666,42 +1533,15 @@ func testManagedMode() {
 		})
 
 		It("should render a STUNner config for Gateway 2", func() {
-			// retry, but also try to unpack inside Eventually
-			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway-2",
-				Namespace: string(testutils.TestNsName),
-			}}
-			cm := &corev1.ConfigMap{}
-			lookupKey := store.GetNamespacedName(gw2)
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
+			Eventually(checkConfig(ch2, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 1 && len(c.Listeners[0].Routes) == 1 && len(c.Clusters) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			Expect(v).Should(Equal(store.GetObjectKey(gw2)))
-			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(1))
 
@@ -1912,8 +1752,13 @@ func testManagedMode() {
 
 		It("should set the Route status", func() {
 			ro := &stnrgwv1.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || ro == nil {
+					return false
+				}
+				return len(ro.Status.Parents) == 2
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(2))
 
@@ -2228,17 +2073,46 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
+		It("should stabilize", func() {
+			stabilize()
+		})
 	})
 
 	// MULTI-GATEWAYCLASS
-	Context("When creating 2 GatewayClasses and Gateways", func() {
-		conf := &stnrconfv1.StunnerConfig{}
+	Context("When creating 2 GatewayClasses and Gateways", Ordered, Label("managed"), func() {
+		conf := &stnrv1.StunnerConfig{}
+		var clientCtx context.Context
+		var clientCancel context.CancelFunc
+		var ch1, ch2 chan *stnrv1.StunnerConfig
+		var cdsClient1, cdsClient2 cdsclient.Client
 
-		It("should survive loading all resources", func() {
+		BeforeAll(func() {
 			// switch EDS on
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
+			clientCtx, clientCancel = context.WithCancel(context.Background())
+			ch1 = make(chan *stnrv1.StunnerConfig, 128)
+			ch2 = make(chan *stnrv1.StunnerConfig, 128)
+			var err error
+			logger := logger.NewLoggerFactory(stunnerLogLevel)
+			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", logger)
+			Expect(err).Should(Succeed())
+			Expect(cdsClient1.Watch(clientCtx, ch1)).Should(Succeed())
+			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", logger)
+			Expect(err).Should(Succeed())
+			Expect(cdsClient2.Watch(clientCtx, ch2)).Should(Succeed())
+		})
+
+		AfterAll(func() {
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+			clientCancel()
+			close(ch1)
+			close(ch2)
+		})
+
+		It("should survive loading all resources", func() {
 			ctrl.Log.Info("loading GatewayClass 2")
 			gc2 := &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 				Name: "gateway-class-2",
@@ -2271,7 +2145,7 @@ func testManagedMode() {
 			})
 			Expect(err).Should(Succeed())
 
-			ctrl.Log.Info("loading  Dataplane 2")
+			ctrl.Log.Info("loading Dataplane 2")
 			dp2 := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
 				Name: dataplane,
 			}}
@@ -2320,39 +2194,15 @@ func testManagedMode() {
 		})
 
 		It("should render a STUNner config for Gateway 1", func() {
-			// retry, but also try to unpack inside Eventually
-			lookupKey := store.GetNamespacedName(testGw)
-			cm := &corev1.ConfigMap{}
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
+			Eventually(checkConfig(ch1, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			Expect(v).Should(Equal(store.GetObjectKey(testGw)))
-			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(2))
 
@@ -2392,42 +2242,15 @@ func testManagedMode() {
 		})
 
 		It("should render a STUNner config for Gateway 2", func() {
-			// retry, but also try to unpack inside Eventually
-			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway-2",
-				Namespace: string(testutils.TestNsName),
-			}}
-			cm := &corev1.ConfigMap{}
-			lookupKey := store.GetNamespacedName(gw2)
-
-			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
-				lookupKey)
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, cm)
-				if err != nil {
-					return false
-				}
-
-				c, err := store.UnpackConfigMap(cm)
-				if err != nil {
-					return false
-				}
-
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
+			Eventually(checkConfig(ch2, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 {
-					conf = &c
+					conf = c
 					return true
 				}
 				return false
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
-			v, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
-			Expect(ok).Should(BeTrue(), "GatewayConf namespace")
-			Expect(v).Should(Equal(store.GetObjectKey(gw2)))
-			v, ok = cm.GetLabels()[opdefault.OwnedByLabelKey]
-			Expect(ok).Should(BeTrue(), "app label")
-			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			}), timeout, interval).Should(BeTrue())
 
 			Expect(conf.Listeners).To(HaveLen(1))
 
@@ -2646,8 +2469,13 @@ func testManagedMode() {
 
 		It("should set the Route status", func() {
 			ro := &stnrgwv1.UDPRoute{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				ro)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
+				if err != nil || ro == nil {
+					return false
+				}
+				return len(ro.Status.Parents) == 2
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(ro.Status.Parents).To(HaveLen(2))
 
@@ -2946,10 +2774,19 @@ func testManagedMode() {
 
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+		})
 
-			// Make sure all reconcile and update events are processed before channels
-			// are closed (which would lead to a panic)
-			time.Sleep(1 * time.Second)
+		It("should stabilize", func() {
+			stabilize()
 		})
 	})
+}
+
+func contains(strs []string, val string) bool {
+	for _, s := range strs {
+		if s == val {
+			return true
+		}
+	}
+	return false
 }

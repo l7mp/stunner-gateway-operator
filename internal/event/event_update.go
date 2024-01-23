@@ -73,3 +73,32 @@ func (e *EventUpdate) String() string {
 		e.DeleteQueue.Deployments.Len(),
 		len(e.ConfigQueue))
 }
+
+// DeepCopy copies all updated resources into a new update event. This is required to elide locking
+// across the renderer thread and the updater thread.
+func (e *EventUpdate) DeepCopy() *EventUpdate {
+	u := NewEventUpdate(e.Generation)
+
+	q := e.UpsertQueue
+	u.UpsertQueue.GatewayClasses = q.GatewayClasses.DeepCopy()
+	u.UpsertQueue.Gateways = q.Gateways.DeepCopy()
+	u.UpsertQueue.UDPRoutes = q.UDPRoutes.DeepCopy()
+	u.UpsertQueue.UDPRoutesV1A2 = q.UDPRoutesV1A2.DeepCopy()
+	u.UpsertQueue.Services = q.Services.DeepCopy()
+	u.UpsertQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
+	u.UpsertQueue.Deployments = q.Deployments.DeepCopy()
+
+	q = e.DeleteQueue
+	u.DeleteQueue.GatewayClasses = q.GatewayClasses.DeepCopy()
+	u.DeleteQueue.Gateways = q.Gateways.DeepCopy()
+	u.DeleteQueue.UDPRoutes = q.UDPRoutes.DeepCopy()
+	u.DeleteQueue.UDPRoutesV1A2 = q.UDPRoutesV1A2.DeepCopy()
+	u.DeleteQueue.Services = q.Services.DeepCopy()
+	u.DeleteQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
+	u.DeleteQueue.Deployments = q.Deployments.DeepCopy()
+
+	u.ConfigQueue = make([]*stnrv1.StunnerConfig, len(e.ConfigQueue))
+	copy(u.ConfigQueue, e.ConfigQueue)
+
+	return u
+}

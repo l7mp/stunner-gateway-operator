@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -21,14 +22,16 @@ type Updater struct {
 	ctx       context.Context
 	manager   manager.Manager
 	updaterCh chan event.Event
-	log       logr.Logger
+	*config.ProgressTracker
+	log logr.Logger
 }
 
 func NewUpdater(cfg UpdaterConfig) *Updater {
 	return &Updater{
-		manager:   cfg.Manager,
-		updaterCh: make(chan event.Event, 10),
-		log:       cfg.Logger.WithName("updater"),
+		manager:         cfg.Manager,
+		updaterCh:       make(chan event.Event, 10),
+		ProgressTracker: config.NewProgressTracker(),
+		log:             cfg.Logger.WithName("updater"),
 	}
 }
 
@@ -47,13 +50,13 @@ func (u *Updater) Start(ctx context.Context) error {
 					continue
 				}
 
-				// FIXME should run in separate thread
+				u.ProgressUpdate(1)
 				err := u.ProcessUpdate(e.(*event.EventUpdate))
-
 				if err != nil {
-					u.log.Error(err, "could not update process event", "event",
+					u.log.Error(err, "could not process update event", "event",
 						e.String())
 				}
+				u.ProgressUpdate(-1)
 
 			case <-ctx.Done():
 				return

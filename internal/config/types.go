@@ -1,5 +1,3 @@
-// Package config allows to override some of the default settings from the exported default config
-// package.
 package config
 
 import "strings"

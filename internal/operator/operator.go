@@ -48,6 +48,8 @@ type Operator struct {
 	mgr                                       manager.Manager
 	renderCh, operatorCh, updaterCh, configCh chan event.Event
 	manager                                   manager.Manager
+	tracker                                   *config.ProgressTracker
+	progressReporters                         []config.ProgressReporter
 	log, logger                               logr.Logger
 }
 
@@ -61,6 +63,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 		operatorCh: make(chan event.Event, channelBufferSize),
 		updaterCh:  cfg.UpdaterCh,
 		configCh:   cfg.ConfigCh,
+		tracker:    config.NewProgressTracker(),
 		logger:     cfg.Logger,
 	}
 }
@@ -125,7 +128,6 @@ func (o *Operator) eventLoop(ctx context.Context) {
 
 			case event.EventTypeRender:
 				// rate-limit rendering requests before passing on to the renderer
-
 				// render request in progress: do nothing
 				if throttling {
 					o.log.V(3).Info("rendering request throttled", "event",
@@ -136,6 +138,7 @@ func (o *Operator) eventLoop(ctx context.Context) {
 				// request a new rendering round
 				throttling = true
 				throttler.Reset(config.ThrottleTimeout)
+				o.tracker.ProgressUpdate(1)
 
 				o.log.V(3).Info("initiating new rendering request", "event",
 					e.String())
@@ -146,13 +149,39 @@ func (o *Operator) eventLoop(ctx context.Context) {
 			}
 
 		case <-throttler.C:
-			o.renderCh <- event.NewEventRender()
 			throttling = false
 			throttler.Stop()
+
+			// if rendering takes more than the throttle timeout (1ms in the tests)
+			// then the ticker may produce 2 ticks (the channel capacity is 1) and this
+			// may result more than one rendering event
+			if o.tracker.ProgressReport() > 0 {
+				o.tracker.ProgressUpdate(-1)
+			}
+			o.renderCh <- event.NewEventRender()
 
 		case <-ctx.Done():
 			// FIXME revert gateway-class status to "Waiting..."
 			return
 		}
 	}
+}
+
+// SetProgressReporters sets the operator subsystems that need to be queried to check the number of
+// operations in progrses. This can be used to implement graceful shutdown.
+func (o *Operator) SetProgressReporters(reporters ...config.ProgressReporter) {
+	o.progressReporters = make([]config.ProgressReporter, len(reporters))
+	copy(o.progressReporters, reporters)
+}
+
+// ProgressReport returns the number of ongoing operations (rendering processes, updates, etc) plus
+// the number of throttled rendering processes in progress.
+func (o *Operator) ProgressReport() int {
+	progress := 0
+	for _, r := range o.progressReporters {
+		progress += r.ProgressReport()
+	}
+
+	op := o.tracker.ProgressReport()
+	return progress + op
 }

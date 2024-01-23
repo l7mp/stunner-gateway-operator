@@ -23,7 +23,7 @@ import (
 	// "testing"
 	// "fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +48,7 @@ import (
 
 func testLegacyMode() {
 	// WITHOUT EDS
-	Context("When creating a minimal set of API resources (EDS DISABLED)", func() {
+	Context("When creating a minimal set of API resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -1577,7 +1577,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("When re-loading the gateway and the route resources (EDS DISABLED)", func() {
+	Context("When re-loading the gateway and the route resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should render a valid STUNner config", func() {
@@ -1794,7 +1794,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("When changing a route parentref to the DTLS listener (EDS DISABLED)", func() {
+	Context("When changing a route parentref to the DTLS listener (EDS DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-dtls")
 
@@ -1980,7 +1980,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", func() {
+	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 		// snudp := gwapiv1.SectionName("gateway-1-listener-udp")
 		// sntcp := gwapiv1.SectionName("gateway-1-listener-tcp")
@@ -2502,7 +2502,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("When changing a gateway namespace attachment policy to Selector (EDS DISABLED)", func() {
+	Context("When changing a gateway namespace attachment policy to Selector (EDS DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should be possible to change the namespace attachment policy to Selector", func() {
@@ -2874,7 +2874,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", func() {
+	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
@@ -3745,7 +3745,7 @@ func testLegacyMode() {
 	})
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
-	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", func() {
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -3869,7 +3869,7 @@ func testLegacyMode() {
 	})
 
 	// WITH EDS and RELAY-CLUSTER-IP
-	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED)", func() {
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -3957,7 +3957,7 @@ func testLegacyMode() {
 		})
 	})
 
-	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", func() {
+	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-tcp")
 
@@ -4165,6 +4165,13 @@ func testLegacyMode() {
 
 			ctrl.Log.Info("deleting Service")
 			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
+
+			ctrl.Log.Info("deleting Node 1")
+			Expect(k8sClient.Delete(ctx, testNode)).Should(Succeed())
+
+			ctrl.Log.Info("deleting Node 2")
+			node2 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2"}}
+			Expect(k8sClient.Delete(ctx, node2)).Should(Succeed())
 
 			// restore
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery

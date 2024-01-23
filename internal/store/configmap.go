@@ -52,7 +52,10 @@ func (s *ConfigMapStore) GetObject(nsName types.NamespacedName) *corev1.ConfigMa
 	return r
 }
 
-// // AddConfigMap adds a ConfigMap object to the the global storage (this is used mainly for testing)
-// func (s *ConfigMapStore) AddConfigMap(gc *corev1.ConfigMap) {
-// 	s.Upsert(gc)
-// }
+func (s *ConfigMapStore) DeepCopy() *ConfigMapStore {
+	ret := NewConfigMapStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

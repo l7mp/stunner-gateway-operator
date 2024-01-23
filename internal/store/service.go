@@ -52,7 +52,10 @@ func (s *ServiceStore) GetObject(nsName types.NamespacedName) *corev1.Service {
 	return r
 }
 
-// // AddService adds a Service object to the the global storage (this is used mainly for testing)
-// func (s *ServiceStore) AddService(gc *corev1.Service) {
-// 	s.Upsert(gc)
-// }
+func (s *ServiceStore) DeepCopy() *ServiceStore {
+	ret := NewServiceStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

@@ -84,3 +84,11 @@ func (s *GatewayStore) ResetGateways(gws []*gwapiv1.Gateway) {
 	}
 	s.Reset(objs)
 }
+
+func (s *GatewayStore) DeepCopy() *GatewayStore {
+	ret := NewGatewayStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

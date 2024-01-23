@@ -86,9 +86,9 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc2, err := cdsclient.New(addr2, id2, logger)
 	assert.NoError(t, err, "cds client setup")
 
-	ch1 := make(chan stnrv1.StunnerConfig, 10)
+	ch1 := make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch1)
-	ch2 := make(chan stnrv1.StunnerConfig, 10)
+	ch2 := make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch2)
 	err = cdsc1.Watch(ctx, ch1)
 	assert.NoError(t, err, "watcher setup 1")
@@ -209,7 +209,7 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc3, err := cdsclient.New(addr2, id3, logger)
 	assert.NoError(t, err, "cds client setup")
 
-	ch3 := make(chan stnrv1.StunnerConfig, 10)
+	ch3 := make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch3)
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	err = cdsc3.Watch(ctx2, ch3)
@@ -319,7 +319,7 @@ func TestConfigDiscovery(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
-	ch3 = make(chan stnrv1.StunnerConfig, 10)
+	ch3 = make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch3)
 	ctx2, cancel2 = context.WithCancel(context.Background())
 	defer cancel2()
@@ -375,7 +375,7 @@ func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
 	id := fmt.Sprintf("%s/%s", namespace, name)
 	c := cdsclient.ZeroConfig(id)
 	c.Auth.Realm = realm
-
+	_ = c.Validate()
 	return c
 }
 
@@ -406,11 +406,11 @@ func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
 }
 
 // wait for some configurable time for a watch element
-func watchConfig(ch chan stnrv1.StunnerConfig, d time.Duration) *stnrv1.StunnerConfig {
+func watchConfig(ch chan *stnrv1.StunnerConfig, d time.Duration) *stnrv1.StunnerConfig {
 	select {
 	case c := <-ch:
 		// fmt.Println("++++++++++++ got config ++++++++++++: ", c.String())
-		return &c
+		return c
 	case <-time.After(d):
 		// fmt.Println("++++++++++++ timeout ++++++++++++")
 		return nil

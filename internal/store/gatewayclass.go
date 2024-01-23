@@ -51,7 +51,10 @@ func (s *GatewayClassStore) GetObject(nsName types.NamespacedName) *gwapiv1.Gate
 	return r
 }
 
-// // AddGatewayClass adds a GatewayClass object to the the global storage (this is used mainly for testing)
-// func (s *GatewayClassStore) AddGatewayClass(gc *gwapiv1.GatewayClass) {
-// 	s.Upsert(gc)
-// }
+func (s *GatewayClassStore) DeepCopy() *GatewayClassStore {
+	ret := NewGatewayClassStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

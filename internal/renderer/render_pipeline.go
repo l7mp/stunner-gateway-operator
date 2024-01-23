@@ -91,7 +91,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 		setGatewayClassStatusAccepted(gc, nil)
 
 		// send the update back to the operator
-		r.operatorCh <- c.update
+		r.operatorCh <- c.update.DeepCopy()
 	}
 }
 
@@ -118,7 +118,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 			r.log.Error(err, "error obtaining gateway-config",
 				"gateway-class", gc.GetName())
 			r.invalidateGatewayClass(gcCtx, err)
-			r.operatorCh <- gcCtx.update
+			r.operatorCh <- gcCtx.update.DeepCopy()
 
 			continue
 		}
@@ -132,7 +132,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 				"gateway-config", store.GetObjectKey(gwConf),
 			)
 			r.invalidateGatewayClass(gcCtx, err)
-			r.operatorCh <- gcCtx.update
+			r.operatorCh <- gcCtx.update.DeepCopy()
 
 			continue
 		}
@@ -165,7 +165,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 		setGatewayClassStatusAccepted(gc, nil)
 
-		r.operatorCh <- gcCtx.update
+		r.operatorCh <- gcCtx.update.DeepCopy()
 	}
 }
 

@@ -52,7 +52,10 @@ func (s *DataplaneStore) GetObject(nsName types.NamespacedName) *stnrgwv1.Datapl
 	return r
 }
 
-// // AddDataplane adds a Dataplane object to the the global storage (this is used mainly for testing)
-// func (s *DataplaneStore) AddDataplane(gc *stnrgwv1.Dataplane) {
-// 	s.Upsert(gc)
-// }
+func (s *DataplaneStore) DeepCopy() *DataplaneStore {
+	ret := NewDataplaneStore()
+	for _, o := range s.GetAll() {
+		ret.Upsert(o)
+	}
+	return ret
+}

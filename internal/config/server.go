@@ -6,24 +6,25 @@ import (
 
 	"github.com/go-logr/logr"
 
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	cdsserverbase "github.com/l7mp/stunner/pkg/config/server"
+	cdsserver "github.com/l7mp/stunner/pkg/config/server"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
 type Server struct {
-	*cdsserverbase.Server
+	*cdsserver.Server
 	configCh chan event.Event
-	log      logr.Logger
+	*ProgressTracker
+	log logr.Logger
 }
 
 func NewCDSServer(addr string, logger logr.Logger) *Server {
 	log := logger.WithName("cds-server")
 	return &Server{
-		Server:   cdsserverbase.New(addr, log),
-		configCh: make(chan event.Event, 10),
-		log:      log,
+		Server:          cdsserver.New(addr, nil, log),
+		configCh:        make(chan event.Event, 10),
+		ProgressTracker: NewProgressTracker(),
+		log:             log,
 	}
 }
 
@@ -41,10 +42,12 @@ func (c *Server) Start(ctx context.Context) error {
 					continue
 				}
 
+				c.ProgressUpdate(1)
 				if err := c.ProcessUpdate(e.(*event.EventUpdate)); err != nil {
 					c.log.Error(err, "could not process config update event", "event",
 						e.String())
 				}
+				c.ProgressUpdate(-1)
 
 			case <-ctx.Done():
 				return
@@ -67,19 +70,15 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 	c.log.Info("processing config update event", "generation", e.Generation, "update",
 		e.String())
 
-	configs := []cdsserverbase.Config{}
+	configs := []cdsserver.Config{}
 
 	for _, conf := range e.ConfigQueue {
 		id := conf.Admin.Name
-		c.log.V(4).Info("new config", "generation", e.Generation, "client", id, "config",
+		c.log.V(4).Info("config update", "generation", e.Generation, "client", id, "config",
 			conf.String())
-
-		// make sure we do not share pointers
-		nc := stnrv1.StunnerConfig{}
-		conf.DeepCopyInto(&nc)
-		configs = append(configs, cdsserverbase.Config{
+		configs = append(configs, cdsserver.Config{
 			Id:     id,
-			Config: &nc,
+			Config: conf,
 		})
 	}
 

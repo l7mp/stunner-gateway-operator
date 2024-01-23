@@ -88,6 +88,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	// no action neeeded if a node other than the one stored locally is being deleted, added or
 	// modified
 	if stored != nil && store.GetNamespacedName(stored) != req.NamespacedName {
+		log.V(2).Info("ignoring event on untracked node", "stored", store.GetNamespacedName(stored).String())
 		return reconcile.Result{}, nil
 	}
 
