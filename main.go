@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -112,8 +113,20 @@ func main() {
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
+	// CDS address not overrridden on the command line: use env var
 	config.ConfigDiscoveryAddress = cdsAddr
-	setupLog.Info("config discovery server", "addr", cdsAddr)
+	if podAddr, ok := os.LookupEnv(envVarAddress); ok {
+		// default port
+		as := strings.Split(cdsAddr, ":")
+		if len(as) != 2 || as[1] == "" {
+			setupLog.Info("invalid CDS server address", "address", cdsAddr)
+			os.Exit(1)
+		}
+		config.ConfigDiscoveryAddress = fmt.Sprintf("%s:%s", podAddr, as[1])
+	}
+
+	setupLog.Info("config discovery server", "local-addr", cdsAddr,
+		"remote-addr", config.ConfigDiscoveryAddress)
 
 	if d, err := time.ParseDuration(throttleTimeout); err != nil {
 		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
