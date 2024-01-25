@@ -106,6 +106,10 @@ const (
 	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
 	// endpoint (if enabled).
 	DefaultMetricsPortName = "metrics-port"
+
+	// CdsServiceLabel is a label that is automatically added to the CDS Kubernetes Service,
+	// allowing using label-based queries to discovery the CDS Service.
+	CdsServiceLabelKey = "stunner.l7mp.io/config-discovery-service"
 )
 
 var (
