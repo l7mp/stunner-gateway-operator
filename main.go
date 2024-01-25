@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -113,21 +112,8 @@ func main() {
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
-	if cdsAddr == stnrv1.DefaultConfigDiscoveryAddress {
-		// CDS address not overrridden on the command line: use env var
-		envAddr, ok := os.LookupEnv(envVarAddress)
-		if ok {
-			cdsAddr = envAddr
-		}
-		// add the default port
-		as := strings.Split(cdsAddr, ":")
-		if len(as) == 1 || (len(as) == 2 && as[1] == "") {
-			dd := strings.Split(stnrv1.DefaultConfigDiscoveryAddress, ":")
-			cdsAddr = fmt.Sprintf("%s:%s", cdsAddr, dd[1])
-		}
-	}
 	config.ConfigDiscoveryAddress = cdsAddr
-	setupLog.Info("config discovery server", "addr", config.ConfigDiscoveryAddress)
+	setupLog.Info("config discovery server", "addr", cdsAddr)
 
 	if d, err := time.ParseDuration(throttleTimeout); err != nil {
 		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
@@ -172,7 +158,7 @@ func main() {
 	})
 
 	setupLog.Info("setting up CDS server", "address", cdsAddr)
-	c := config.NewCDSServer(config.ConfigDiscoveryAddress, logger)
+	c := config.NewCDSServer(cdsAddr, logger)
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
