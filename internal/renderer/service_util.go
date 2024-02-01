@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -386,11 +387,13 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 		servicePortExists := false
 		// search for existing port
-		for _, s := range svc.Spec.Ports {
+		for i := range svc.Spec.Ports {
+			s := &svc.Spec.Ports[i]
 			if string(l.Name) == s.Name {
 				// found one, let's update it and move on
 				s.Protocol = corev1.Protocol(serviceProto)
 				s.Port = int32(l.Port)
+				s.TargetPort = intstr.FromInt(int(l.Port))
 				servicePortExists = true
 				break
 			}
