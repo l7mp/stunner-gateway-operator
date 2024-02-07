@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -62,7 +63,9 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsclient.WriteWait = 400 * time.Millisecond
 	cdsclient.RetryPeriod = 400 * time.Millisecond
 
-	srv := NewCDSServer(stnrv1.DefaultConfigDiscoveryAddress, zlogger)
+	testCDSAddr := getRandCDSAddr()
+	log.Info("create server", "address", testCDSAddr)
+	srv := NewCDSServer(testCDSAddr, zlogger)
 	assert.NotNil(t, srv, "server")
 
 	log.Info("starting CDS server")
@@ -75,13 +78,13 @@ func TestConfigDiscovery(t *testing.T) {
 	logger := logger.NewLoggerFactory(stunnerLogLevel)
 
 	id1 := "ns/gw1"
-	addr1 := "http://" + stnrv1.DefaultConfigDiscoveryAddress
+	addr1 := "http://" + testCDSAddr
 	log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
 	cdsc1, err := cdsclient.New(addr1, id1, logger)
 	assert.NoError(t, err, "cds client setup")
 
 	id2 := "ns/gw2"
-	addr2 := "http://" + stnrv1.DefaultConfigDiscoveryAddress
+	addr2 := "http://" + testCDSAddr
 	log.Info("creating CDS client instance 2", "address", addr2, "id", id2)
 	cdsc2, err := cdsclient.New(addr2, id2, logger)
 	assert.NoError(t, err, "cds client setup")
@@ -415,4 +418,10 @@ func watchConfig(ch chan *stnrv1.StunnerConfig, d time.Duration) *stnrv1.Stunner
 		// fmt.Println("++++++++++++ timeout ++++++++++++")
 		return nil
 	}
+}
+
+// run on random port
+func getRandCDSAddr() string {
+	rndPort := rand.Intn(10000) + 50000
+	return fmt.Sprintf(":%d", rndPort)
 }
