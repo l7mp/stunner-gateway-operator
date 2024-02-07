@@ -343,16 +343,16 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			log.Info("STUNner dataplane Deployment ready", "generation", r.gen,
 				"deployment", store.DumpObject(dp))
 		}
+	} else {
+		cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
+		if err != nil {
+			return err
+		}
+		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
 		conf.String())
-
-	cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
-	if err != nil {
-		return err
-	}
-	c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 
 	return nil
 }

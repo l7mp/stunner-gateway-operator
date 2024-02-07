@@ -77,41 +77,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// labels
-				labs := o.GetLabels()
-				assert.Len(t, labs, 3, "labels len")
-				v, ok := labs[opdefault.OwnedByLabelKey]
-				assert.True(t, ok, "labels: app")
-				assert.Equal(t, opdefault.OwnedByLabelValue, v, "app label value")
-				v, ok = labs[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "labels: related")
-				assert.Equal(t, gw.GetName(), v, "related-gw label value")
-				v, ok = labs[opdefault.RelatedGatewayNamespace]
-				assert.True(t, ok, "labels: related")
-				assert.Equal(t, gw.GetNamespace(), v, "related-gw label value")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarshal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -161,9 +130,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
 
-				labs = deploy.GetLabels()
+				labs := deploy.GetLabels()
 				assert.Len(t, labs, 4, "labels len")
-				v, ok = labs[opdefault.OwnedByLabelKey]
+				v, ok := labs[opdefault.OwnedByLabelKey]
 				assert.True(t, ok, "labels: app")
 				assert.Equal(t, opdefault.OwnedByLabelValue, v, "app label value")
 				v, ok = labs[opdefault.RelatedGatewayKey]
@@ -177,7 +146,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.True(t, ok, "labels: dataplane label copied")
 				assert.Equal(t, "dummy-value", v, "copied dataplane label value")
 
-				as = deploy.GetAnnotations()
+				as := deploy.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
 				gwName, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
@@ -354,28 +323,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -472,28 +423,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -629,28 +562,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -787,42 +702,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// labels
-				labs := o.GetLabels()
-				assert.Len(t, labs, 3, "labels len")
-				v, ok := labs[opdefault.OwnedByLabelKey]
-				assert.True(t, ok, "labels: app")
-				assert.Equal(t, opdefault.OwnedByLabelValue, v, "app label value")
-				v, ok = labs[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "labels: related")
-				assert.Equal(t, gw.GetName(), v, "related-gw label value")
-				v, ok = labs[opdefault.RelatedGatewayNamespace]
-				assert.True(t, ok, "labels: related")
-				assert.Equal(t, gw.GetNamespace(), v, "related-gw label value")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				a, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-				assert.Equal(t, store.GetObjectKey(&testutils.TestGw), a, "related-gw annotation ok")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarshal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -885,9 +768,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
 
-				labs = deploy.GetLabels()
+				labs := deploy.GetLabels()
 				assert.Len(t, labs, 4, "labels len")
-				v, ok = labs[opdefault.OwnedByLabelKey]
+				v, ok := labs[opdefault.OwnedByLabelKey]
 				assert.True(t, ok, "labels: app")
 				assert.Equal(t, opdefault.OwnedByLabelValue, v, "app label value")
 				v, ok = labs[opdefault.RelatedGatewayKey]
@@ -901,7 +784,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.True(t, ok, "labels: dataplane label copied")
 				assert.Equal(t, "dummy-value", v, "copied dataplane label value")
 
-				as = deploy.GetAnnotations()
+				as := deploy.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
 				gwName, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
@@ -1306,17 +1189,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				// we do not render a zero config on invalidation, but rather
 				// remove the deployment all together
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 0, "configmap ready")
-				cms = c.update.DeleteQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				o := cms[0]
-				assert.Equal(t, o.GetName(), gw.GetName(), "configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(), "configmap  namespace")
-
 				objs := c.update.DeleteQueue.Deployments.Objects()
 				assert.Len(t, objs, 1, "deployment num")
-				o = cms[0]
+				o := objs[0]
 				assert.Equal(t, o.GetName(), gw.GetName(), "deployment name")
 				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(), "deployment namespace")
 
@@ -1483,28 +1358,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.NoError(t, err, "render success")
 
 				// configmap
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-
-				o := cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as := o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok := as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
 
 				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
@@ -1721,29 +1578,10 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				err = r.renderForGateways(c)
 				assert.NoError(t, err, "render success")
 
-				// configmap
-				cms = c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-
-				o = cms[0]
-
-				// objectmeta: configmap is now named after gateway!
-				assert.Equal(t, o.GetName(), gw.GetName(),
-					"configmap name")
-				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(),
-					"configmap namespace")
-
-				// related gw
-				as = o.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				_, ok = as[opdefault.RelatedGatewayKey]
-				assert.True(t, ok, "annotations: related gw")
-
-				cm, ok = o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
-
-				conf, err = store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				// config-queue
+				cs = c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf = cs[0]
 
 				assert.Equal(t, "testnamespace/dummy-gateway", conf.Admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
