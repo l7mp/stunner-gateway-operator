@@ -24,22 +24,21 @@ type RenderContext struct {
 }
 
 func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1.GatewayClass) *RenderContext {
+	logger := r.log
+	if gc != nil {
+		logger = r.log.WithValues("gateway-class", gc.GetName())
+	}
 	return &RenderContext{
 		origin: e,
 		update: event.NewEventUpdate(r.gen),
 		gc:     gc,
 		gws:    store.NewGatewayStore(),
-		log:    r.log.WithValues("gateway-class", gc.GetName()),
+		log:    logger,
 	}
 }
 
 // Merge merges the update queues of two rendering contexts.
 func (r *RenderContext) Merge(mergeable *RenderContext) {
-	if store.GetObjectKey(r.gc) != store.GetObjectKey(mergeable.gc) ||
-		store.GetObjectKey(r.gwConf) != store.GetObjectKey(mergeable.gwConf) {
-		panic("MergeUpdateQueue: trying to merge incompatible render contexts")
-	}
-
 	// MUST BE KEPT IN SYNC WITH EventUpdate
 
 	// merge upsert queues

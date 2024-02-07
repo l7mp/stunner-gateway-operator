@@ -99,9 +99,10 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 	r.log.Info("commencing dataplane render", "mode", "managed")
 
+	pipelineCtx := NewRenderContext(e, r, nil)
+
 	r.log.V(1).Info("obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
-
 	if len(gcs) == 0 {
 		r.log.Info("no gateway-class objects found", "event", e.String())
 		return
@@ -165,8 +166,10 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 		setGatewayClassStatusAccepted(gc, nil)
 
-		r.operatorCh <- gcCtx.update.DeepCopy()
+		pipelineCtx.Merge(gcCtx)
 	}
+
+	r.operatorCh <- pipelineCtx.update.DeepCopy()
 }
 
 // renderForGateways renders a configuration for a set of Gateways (c.gws)
