@@ -31,11 +31,11 @@ const (
 	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
 	// that the Deployments and Services created by the operator will have both the AppLabelKey
 	// and the OwnedByLabelKey labels set.
-	OwnedByLabelKey = "stunner.l7mp.io/owned-by"
+	OwnedByLabelKey = stnrconfv1.DefaultOwnedByLabelKey
 
 	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
 	// maintained by the operator.
-	OwnedByLabelValue = "stunner"
+	OwnedByLabelValue = stnrconfv1.DefaultOwnedByLabelValue
 
 	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
 	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
@@ -43,18 +43,18 @@ const (
 	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
 	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
 	// legacy mode, which usually belong to multiple Gateways).
-	RelatedGatewayKey = "stunner.l7mp.io/related-gateway-name"
+	RelatedGatewayKey = stnrconfv1.DefaultRelatedGatewayKey
 
 	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
 	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
 	// Gateway. The value is the namespace of the related Gateway.
-	RelatedGatewayNamespace = "stunner.l7mp.io/related-gateway-namespace"
+	RelatedGatewayNamespace = stnrconfv1.DefaultRelatedGatewayNamespace
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
-	AppLabelKey = "app"
+	AppLabelKey = stnrconfv1.DefaultAppLabelKey
 
 	// AppLabelValue defines the label value used to mark the pods of the stunnerd deployment.
-	AppLabelValue = "stunner"
+	AppLabelValue = stnrconfv1.DefaultAppLabelValue
 
 	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
