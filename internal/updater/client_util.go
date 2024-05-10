@@ -240,17 +240,20 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 
 		// affinity
 		if dpspec.Affinity != nil {
-			currentspec.Affinity = dpspec.Affinity
+			dpspec.Affinity.DeepCopyInto(currentspec.Affinity)
 		}
 
 		// tolerations
 		if dpspec.Tolerations != nil {
-			currentspec.Tolerations = dpspec.Tolerations
+			currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Containers))
+			for i := range dpspec.Tolerations {
+				dpspec.Tolerations[i].DeepCopyInto(&currentspec.Tolerations[i])
+			}
 		}
 
 		// security context
 		if dpspec.SecurityContext != nil {
-			currentspec.SecurityContext = dpspec.SecurityContext
+			dpspec.SecurityContext.DeepCopyInto(currentspec.SecurityContext)
 		}
 
 		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))

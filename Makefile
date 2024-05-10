@@ -1,9 +1,10 @@
-# VERSION defines the project version for the bundle.
-# Update this value when you upgrade the version of your project.
-# To re-generate a bundle for another specific version without changing the standard setup, you can:
-# - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
-# - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+# Build variables
+PACKAGE = github.com/l7mp/stunner
+BUILD_DIR ?= bin/
+VERSION ?= $(shell (git describe --tags --abbrev=8 --always --long) | tr "/" "-")
+COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
+BUILD_DATE ?= $(shell date +%FT%T%z)
+LDFLAGS += -X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -62,6 +63,12 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+ifeq (${VERBOSE}, 1)
+ifeq ($(filter -v,${GOARGS}),)
+	GOARGS += -v
+endif
+endif
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
@@ -115,7 +122,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build ${GOARGS} -ldflags "${LDFLAGS}" -o ${BUILD_DIR}/manager main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

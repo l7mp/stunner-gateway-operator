@@ -40,6 +40,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	"github.com/l7mp/stunner/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -57,7 +58,10 @@ const (
 )
 
 var (
-	scheme = runtime.NewScheme()
+	scheme     = runtime.NewScheme()
+	version    = "dev"
+	commitHash = "n/a"
+	buildDate  = "<unknown>"
 )
 
 func init() {
@@ -98,6 +102,9 @@ func main() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger.WithName("ctrl-runtime"))
 	setupLog := logger.WithName("setup")
+
+	buildInfo := buildinfo.BuildInfo{Version: version, CommitHash: commitHash, BuildDate: buildDate}
+	setupLog.Info(fmt.Sprintf("starting STUNner gateway operator %s", buildInfo.String()))
 
 	config.EnableEndpointDiscovery = enableEDS
 	setupLog.Info("endpoint discovery", "state", enableEDS)
