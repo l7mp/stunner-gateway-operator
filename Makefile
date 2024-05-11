@@ -4,7 +4,9 @@ BUILD_DIR ?= bin/
 VERSION ?= $(shell (git describe --tags --abbrev=8 --always --long) | tr "/" "-")
 COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE ?= $(shell date +%FT%T%z)
+LDFLAGS += -s -w
 LDFLAGS += -X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}
+GOARGS = -trimpath
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -121,7 +123,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
+build: manifests generate fmt vet build-bin ## Build manager binary.
+
+.PHONY: build-bin
+build-bin:
 	go build ${GOARGS} -ldflags "${LDFLAGS}" -o ${BUILD_DIR}/manager main.go
 
 .PHONY: run
@@ -224,8 +229,8 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 
 # .PHONY: conversion-gen
 # conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
-# $(CONVERSION_GEN): $(LOCALBIN) 
-# 	test -s $(LOCALBIN)/conversion-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen 
+# $(CONVERSION_GEN): $(LOCALBIN)
+# 	test -s $(LOCALBIN)/conversion-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.

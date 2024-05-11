@@ -17,12 +17,18 @@ COPY internal/ internal/
 COPY pkg/config/ pkg/config/
 
 # Build
+COPY .git ./
+COPY Makefile ./
+RUN apk add --no-cache git make bash
+
 RUN apkArch="$(apk --print-arch)"; \
       case "$apkArch" in \
         aarch64) export GOARCH='arm64' ;; \
         *) export GOARCH='amd64' ;; \
       esac; \
-    CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-w -s" -o manager main.go
+    export CGO_ENABLED=0; \
+    export GOOS=linux; \
+    make build-bin
 
 ###########
 # Use distroless as minimal base image to package the manager binary
@@ -30,7 +36,7 @@ RUN apkArch="$(apk --print-arch)"; \
 FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
