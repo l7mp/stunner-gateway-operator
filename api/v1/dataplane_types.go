@@ -60,6 +60,15 @@ type DataplaneSpec struct {
 	// +optional
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	// ImagePullSecrets is an optional list of references to secrets to use for pulling the
+	// stunnerd image. Note that the referenced secrets are not watched by the operator, so
+	// modifications will in effect only for newly created pods. Also note that the Secret is
+	// always searched in the same namespace as the Gateway, which allows to use separate pull
+	// secrets per each namespace.
+	//
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
 	// Entrypoint array. Defaults: "stunnerd".
 	//
 	// +optional
@@ -78,6 +87,12 @@ type DataplaneSpec struct {
 	//
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// ContainerSecurityContext holds container-level security attributes specifically for the
+	// stunnerd container.
+	//
+	// +optional
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 
 	// Number of desired pods. If empty or set to 1, use whatever is in the target Deployment.
 	// Otherwise, enforce this setting, overwiting whatever is set in the Deployment (this may
@@ -116,6 +131,12 @@ type DataplaneSpec struct {
 	//
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// TopologySpreadConstraints describes how stunnerd pods ought to spread across topology
+	// domains.
+	//
+	// +optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 
 	// Disable health-checking. Default is to enable HTTP health-checks on port 8086: a
 	// liveness probe responder will be exposed on path `/live` and readiness probe on path

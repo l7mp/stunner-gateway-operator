@@ -84,8 +84,7 @@ func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	for _, dp := range dpList.Items {
 		dp := dp
-		r.log.V(1).Info("processing Dataplane")
-
+		r.log.V(1).Info("processing Dataplane", "dataplane", store.GetObjectKey(&dp))
 		dataplaneList = append(dataplaneList, &dp)
 	}
 

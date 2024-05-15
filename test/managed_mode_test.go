@@ -2709,11 +2709,83 @@ func testManagedMode() {
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, dp2, func() error {
 				testDataplane.Spec.DeepCopyInto(&dp2.Spec)
 				dp2.Spec.Image = "testimage-3"
+				dp2.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{
+					Name: "testpullsecret1",
+				}, {
+					Name: "testpullsecret2",
+				}}
+				runAsNonRoot := true
+				dp2.Spec.SecurityContext = &corev1.PodSecurityContext{RunAsNonRoot: &runAsNonRoot}
+				dp2.Spec.ContainerSecurityContext = &corev1.SecurityContext{RunAsNonRoot: &runAsNonRoot}
+				dp2.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
+					TopologyKey:       "a",
+					MaxSkew:           int32(12),
+					WhenUnsatisfiable: corev1.DoNotSchedule,
+				}, {
+					TopologyKey:       "b",
+					MaxSkew:           int32(21),
+					WhenUnsatisfiable: corev1.ScheduleAnyway,
+				}}
 				return nil
 			})
 			Expect(err).Should(Succeed())
 
+			// wait till Dataplane is uploaded
+			dp2 = &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
+				Name: "dataplane-2",
+			}}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(dp2), dp2)
+				if err != nil || dp2 == nil {
+					return false
+				}
+
+				dpSpec := &dp2.Spec
+				return dpSpec.Image == "testimage-3"
+			}, timeout, interval).Should(BeTrue())
+
 			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			ctrl.Log.Info("trying to Get Deployment for Gateway 2", "resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				if err != nil || deploy == nil {
+					return false
+				}
+
+				podSpec := &deploy.Spec.Template.Spec
+				if len(podSpec.Containers) != 1 || podSpec.Containers[0].Image != "testimage-3" {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			// check the other change: ImagePullSecrets
+			podSpec := &deploy.Spec.Template.Spec
+			Expect(podSpec.Containers).To(HaveLen(1))
+			Expect(podSpec.Containers[0].Image).Should(Equal("testimage-3"))
+			Expect(podSpec.Containers[0].SecurityContext).NotTo(BeNil())
+			Expect(podSpec.Containers[0].SecurityContext.RunAsNonRoot).NotTo(BeNil())
+			Expect(*podSpec.Containers[0].SecurityContext.RunAsNonRoot).To(BeTrue())
+
+			Expect(podSpec.ImagePullSecrets).To(HaveLen(2))
+			Expect(podSpec.ImagePullSecrets[0].Name).Should(Equal("testpullsecret1"))
+			Expect(podSpec.ImagePullSecrets[1].Name).Should(Equal("testpullsecret2"))
+			Expect(podSpec.TopologySpreadConstraints).To(HaveLen(2))
+			Expect(podSpec.TopologySpreadConstraints[0].TopologyKey).Should(Equal("a"))
+			Expect(podSpec.TopologySpreadConstraints[0].MaxSkew).Should(Equal(int32(12)))
+			Expect(podSpec.TopologySpreadConstraints[0].WhenUnsatisfiable).Should(Equal(corev1.DoNotSchedule))
+			Expect(podSpec.TopologySpreadConstraints[1].TopologyKey).Should(Equal("b"))
+			Expect(podSpec.TopologySpreadConstraints[1].MaxSkew).Should(Equal(int32(21)))
+			Expect(podSpec.TopologySpreadConstraints[1].WhenUnsatisfiable).Should(Equal(corev1.ScheduleAnyway))
+			Expect(podSpec.SecurityContext).NotTo(BeNil())
+			Expect(podSpec.SecurityContext.RunAsNonRoot).NotTo(BeNil())
+			Expect(*podSpec.SecurityContext.RunAsNonRoot).To(BeTrue())
+
+			// gateway 1 should not change
+			deploy = &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 				Name:      "gateway-1",
 				Namespace: string(testutils.TestNsName),
 			}}
@@ -2731,23 +2803,9 @@ func testManagedMode() {
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			deploy = &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway-2",
-				Namespace: string(testutils.TestNsName),
-			}}
-			ctrl.Log.Info("trying to Get Deployment for Gateway 2", "resource", store.GetNamespacedName(deploy))
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
-				if err != nil || deploy == nil {
-					return false
-				}
-
-				podSpec := &deploy.Spec.Template.Spec
-				if len(podSpec.Containers) == 0 || podSpec.Containers[0].Image != "testimage-3" {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
+			podSpec = &deploy.Spec.Template.Spec
+			Expect(podSpec.ImagePullSecrets).To(HaveLen(0))
+			Expect(podSpec.TopologySpreadConstraints).To(HaveLen(0))
 		})
 
 		It("should survive a full cleanup", func() {

@@ -123,9 +123,9 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 				store.Endpoints.Upsert(&c.eps[i])
 			}
 
-			store.Secrets.Flush()
+			store.TLSSecrets.Flush()
 			for i := range c.scrts {
-				store.Secrets.Upsert(&c.scrts[i])
+				store.TLSSecrets.Upsert(&c.scrts[i])
 			}
 
 			store.AuthSecrets.Flush()

@@ -247,8 +247,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	store.Gateways.Reset(gatewayList)
 	r.log.V(2).Info("reset Gateway store", "gateways", store.Gateways.String())
 
-	store.Secrets.Reset(secretList)
-	r.log.V(2).Info("reset Secret store", "secrets", store.Secrets.String())
+	store.TLSSecrets.Reset(secretList)
+	r.log.V(2).Info("reset Secret store", "secrets", store.TLSSecrets.String())
 
 	store.Deployments.Reset(deploymentList)
 	r.log.V(2).Info("reset Deployment store", "deployments", store.Deployments.String())

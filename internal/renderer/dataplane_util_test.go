@@ -170,6 +170,20 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				dp.Spec.DisableHealthCheck = true
 				dp.Spec.EnableMetricsEnpoint = true
 				dp.Spec.HostNetwork = false
+				dp.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{
+					Name: "testpullsecret1",
+				}, {
+					Name: "testpullsecret2",
+				}}
+				dp.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
+					MaxSkew: int32(12),
+				}, {
+					MaxSkew: int32(21),
+				}}
+				runAsNonRoot := true
+				dp.Spec.SecurityContext = &corev1.PodSecurityContext{RunAsNonRoot: &runAsNonRoot}
+				dp.Spec.ContainerSecurityContext = &corev1.SecurityContext{RunAsNonRoot: &runAsNonRoot}
+
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
 			tester: func(t *testing.T, r *Renderer) {
@@ -271,12 +285,24 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy, "container 1 - readiness probe")
 				assert.Nil(t, container.LivenessProbe, "container 1 - liveness probe")
 				assert.Nil(t, container.ReadinessProbe, "container 1 - liveness probe")
+				assert.NotNil(t, container.SecurityContext, "container security context ptr")
+				assert.NotNil(t, container.SecurityContext.RunAsNonRoot, "container security context bool ptr")
+				assert.True(t, *container.SecurityContext.RunAsNonRoot, "container security context bool")
 
 				// remainder
 				assert.NotNil(t, podSpec.TerminationGracePeriodSeconds, "termination grace ptr")
 				assert.Equal(t, testutils.TestTerminationGrace, *podSpec.TerminationGracePeriodSeconds, "termination grace")
 				assert.False(t, podSpec.HostNetwork, "hostnetwork")
 				assert.Nil(t, podSpec.Affinity, "affinity")
+				assert.Len(t, podSpec.ImagePullSecrets, 2, "image pull secrets len")
+				assert.Equal(t, "testpullsecret1", podSpec.ImagePullSecrets[0].Name, "image pull secret 1")
+				assert.Equal(t, "testpullsecret2", podSpec.ImagePullSecrets[1].Name, "image pull secret 2")
+				assert.Len(t, podSpec.TopologySpreadConstraints, 2, "topopology spread constraints len")
+				assert.Equal(t, int32(12), podSpec.TopologySpreadConstraints[0].MaxSkew, "topopology spread constraints 1")
+				assert.Equal(t, int32(21), podSpec.TopologySpreadConstraints[1].MaxSkew, "topopology spread constraints 2")
+				assert.NotNil(t, podSpec.SecurityContext, "pod security context ptr")
+				assert.NotNil(t, podSpec.SecurityContext.RunAsNonRoot, "pod security context bool ptr")
+				assert.True(t, *podSpec.SecurityContext.RunAsNonRoot, "pod security context bool")
 			},
 		},
 	})

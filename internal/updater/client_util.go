@@ -222,10 +222,12 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		dp.Spec.Template.ObjectMeta.DeepCopyInto(&current.Spec.Template.ObjectMeta)
 		dpspec := &dp.Spec.Template.Spec
 		currentspec := &current.Spec.Template.Spec
+
 		currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
 		for i := range dpspec.Containers {
 			dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
 		}
+
 		currentspec.Volumes = make([]corev1.Volume, len(dpspec.Volumes))
 		for i := range dpspec.Volumes {
 			dpspec.Volumes[i].DeepCopyInto(&currentspec.Volumes[i])
@@ -238,12 +240,10 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 
 		currentspec.HostNetwork = dpspec.HostNetwork
 
-		// affinity
 		if dpspec.Affinity != nil {
 			dpspec.Affinity.DeepCopyInto(currentspec.Affinity)
 		}
 
-		// tolerations
 		if dpspec.Tolerations != nil {
 			currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Containers))
 			for i := range dpspec.Tolerations {
@@ -251,12 +251,26 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 			}
 		}
 
-		// security context
 		if dpspec.SecurityContext != nil {
-			dpspec.SecurityContext.DeepCopyInto(currentspec.SecurityContext)
+			currentspec.SecurityContext = dpspec.SecurityContext.DeepCopy()
 		}
 
-		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))
+		if len(dpspec.ImagePullSecrets) != 0 {
+			currentspec.ImagePullSecrets = make([]corev1.LocalObjectReference, len(dpspec.ImagePullSecrets))
+			for i := range dpspec.ImagePullSecrets {
+				dpspec.ImagePullSecrets[i].DeepCopyInto(&currentspec.ImagePullSecrets[i])
+			}
+		}
+
+		if len(dpspec.TopologySpreadConstraints) != 0 {
+			currentspec.TopologySpreadConstraints =
+				make([]corev1.TopologySpreadConstraint, len(dpspec.TopologySpreadConstraints))
+			for i := range dpspec.TopologySpreadConstraints {
+				dpspec.TopologySpreadConstraints[i].DeepCopyInto(&currentspec.TopologySpreadConstraints[i])
+			}
+		}
+
+		// u.log.Info("after", "deploy", fmt.Sprintf("%#v\n", current))
 
 		return nil
 	})

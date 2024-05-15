@@ -96,7 +96,7 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 			continue
 		}
 
-		secret := store.Secrets.GetObject(n)
+		secret := store.TLSSecrets.GetObject(n)
 		if secret == nil {
 			r.log.Info("secret not found", "gateway", store.GetObjectKey(gw),
 				"listener", l.Name, "secret", n.String())

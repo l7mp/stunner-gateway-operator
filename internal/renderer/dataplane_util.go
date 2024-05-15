@@ -216,6 +216,10 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 			dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
 		}
 
+		if dataplane.Spec.ContainerSecurityContext != nil {
+			c.SecurityContext = dataplane.Spec.ContainerSecurityContext.DeepCopy()
+		}
+
 		if dataplane.Spec.EnableMetricsEnpoint {
 			c.Ports = []corev1.ContainerPort{{
 				Name:          opdefault.DefaultMetricsPortName,
@@ -248,7 +252,23 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 
 	// security context
 	if dataplane.Spec.SecurityContext != nil {
-		podSpec.SecurityContext = dataplane.Spec.SecurityContext
+		podSpec.SecurityContext = dataplane.Spec.SecurityContext.DeepCopy()
+	}
+
+	// image pull secrets
+	if len(dataplane.Spec.ImagePullSecrets) != 0 {
+		podSpec.ImagePullSecrets = make([]corev1.LocalObjectReference, len(dataplane.Spec.ImagePullSecrets))
+		for i := range dataplane.Spec.ImagePullSecrets {
+			dataplane.Spec.ImagePullSecrets[i].DeepCopyInto(&podSpec.ImagePullSecrets[i])
+		}
+	}
+
+	// topology spread constraints
+	if len(dataplane.Spec.TopologySpreadConstraints) != 0 {
+		podSpec.TopologySpreadConstraints = make([]corev1.TopologySpreadConstraint, len(dataplane.Spec.TopologySpreadConstraints))
+		for i := range dataplane.Spec.TopologySpreadConstraints {
+			dataplane.Spec.TopologySpreadConstraints[i].DeepCopyInto(&podSpec.TopologySpreadConstraints[i])
+		}
 	}
 
 	// owned by the Gateway
