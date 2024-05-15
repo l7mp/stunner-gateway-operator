@@ -282,3 +282,17 @@ func IsOwner(owner, owned metav1.Object, kind string) bool {
 
 	return false
 }
+
+// MergeMetadata merges labels or annotations. If conflict, the label/annotation in the second
+// argument overrrides the first one. Returns a new map to avoid unintentional sharing.
+func MergeMetadata(a, b map[string]string) map[string]string {
+	ret := make(map[string]string)
+	for k, v := range a {
+		ret[k] = v
+	}
+	for k, v := range b {
+		ret[k] = v
+	}
+
+	return ret
+}

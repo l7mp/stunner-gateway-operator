@@ -8,7 +8,6 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -21,11 +20,32 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-// createDeployment creates a new deployment for a managed Gateway. Label selector rules are as follows:
-// - deployment labeled with "app=stunner" and annotation "stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>" is set
-// - labels and annotations are merged verbatim on top of this from the corresponding Gateway object
-// - all pods od the deployment are marked with label "app=stunner" AND "stunner.l7mp.io/related-gateway-name=<gateway-name>" (no namespace, as '/' is not allowed in label values)
-// - deployment selector filters on these two labels
+// createDeployment creates a new deployment for a managed Gateway. The later the label/annotation
+// in the below orders the higher prio on conflict.
+//
+// Deployment-level labels:
+//   - copy of labels from the related Gateway
+//   - stunner.l7mp.io/owned-by=stunner
+//   - stunner.l7mp.io/related-gateway-name=<gateway-name>
+//   - stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>
+//
+// (Name and namespace are different labels as '/' is not allowed in label values.)
+//
+// Deployment-level annotations:
+//   - copy of annotations from the related gateway
+//   - stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>
+//
+// Pod-level labels:
+//   - app=stunner
+//   - stunner.l7mp.io/related-gateway-name=<gateway-name>
+//   - stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>
+//
+// These labels are used for the Deployment selector. Note that deployment-level labels are NOT
+// propagated to the pods to avoid unexpected conflicts.
+//
+// Pod-level annotations:
+//   - copy of annotations from the related Gateway
+//   - stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>
 func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
 	if gw == nil {
@@ -124,18 +144,16 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		},
 	}
 
-	// copy annotations and labels
-	labs := labels.Merge(deployment.GetLabels(), gw.GetLabels())
+	// copy deployment-level annotations and labels: overwrite whatever is set on the Gateway on conflict
+	labs := store.MergeMetadata(gw.GetLabels(), deployment.GetLabels())
 	deployment.SetLabels(labs)
 
-	annotations := deployment.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	for k, v := range gw.GetAnnotations() {
-		annotations[k] = v
-	}
+	annotations := store.MergeMetadata(gw.GetAnnotations(), deployment.GetAnnotations())
 	deployment.SetAnnotations(annotations)
+
+	// propagate deployment-level annotations to the pod template (labels are NOT propagated)
+	annotations = store.MergeMetadata(gw.GetAnnotations(), deployment.Spec.Template.GetAnnotations())
+	deployment.Spec.Template.SetAnnotations(annotations)
 
 	deployment.Spec.Template.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{{

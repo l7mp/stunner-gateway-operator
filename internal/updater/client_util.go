@@ -7,7 +7,6 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -133,7 +132,7 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		if err := mergeMetadata(current, svc); err != nil {
+		if err := setMetadata(current, svc); err != nil {
 			return nil
 		}
 
@@ -170,7 +169,7 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 
 		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
 
-		if err := mergeMetadata(current, cm); err != nil {
+		if err := setMetadata(current, cm); err != nil {
 			return nil
 		}
 
@@ -206,11 +205,17 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 
 	// use CreateOrPatch: hopefully more clever than CreateOrUpdate
 	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
-		if err := mergeMetadata(current, dp); err != nil {
+		if err := setMetadata(current, dp); err != nil {
 			return nil
 		}
 
 		current.Spec.Selector = dp.Spec.Selector
+
+		// pod-labels: copy verbatim
+		current.Spec.Template.SetLabels(dp.Spec.Template.GetLabels())
+		// retain existing pod annotations but overwrite the mandatory anns from the gw and dataplane
+		podAs := store.MergeMetadata(current.Spec.Template.GetAnnotations(), dp.Spec.Template.GetAnnotations())
+		current.Spec.Template.SetAnnotations(podAs)
 
 		// only update the replica count if it must be enforced
 		if dp.Spec.Replicas != nil && int(*dp.Spec.Replicas) != 1 {
@@ -218,8 +223,6 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 			current.Spec.Replicas = &replicas
 		}
 
-		// the pod template is copied verbatim
-		dp.Spec.Template.ObjectMeta.DeepCopyInto(&current.Spec.Template.ObjectMeta)
 		dpspec := &dp.Spec.Template.Spec
 		currentspec := &current.Spec.Template.Spec
 
@@ -295,17 +298,11 @@ func (u *Updater) deleteObject(o client.Object, gen int) error {
 	return u.manager.GetClient().Delete(u.ctx, o)
 }
 
-func mergeMetadata(dst, src client.Object) error {
-	labs := labels.Merge(dst.GetLabels(), src.GetLabels())
+func setMetadata(dst, src client.Object) error {
+	labs := store.MergeMetadata(dst.GetLabels(), src.GetLabels())
 	dst.SetLabels(labs)
 
-	annotations := dst.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	for k, v := range src.GetAnnotations() {
-		annotations[k] = v
-	}
+	annotations := store.MergeMetadata(dst.GetAnnotations(), src.GetAnnotations())
 	dst.SetAnnotations(annotations)
 
 	return addOwnerRef(dst, src)

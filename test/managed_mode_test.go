@@ -2701,6 +2701,192 @@ func testManagedMode() {
 			Expect(podSpec.Affinity).To(BeNil())
 		})
 
+		It("should retain Deployment labels/annotations and propagate Gateway label/annotation updates to the Deployment", func() {
+			// existing labels/annotations should not be overwritten unless in conflict
+			ctrl.Log.Info("updating metadata on Deployment 2")
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+
+			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, deploy, func() error {
+				labels := deploy.GetLabels()
+				labels["valid-deploy-label"] = "valid-deploy-label-value" // will be ertained on the deployment
+				deploy.SetLabels(labels)
+
+				as := deploy.GetAnnotations()
+				as["valid-deploy-ann"] = "valid-deploy-ann-value" // will be retained on the deployment/pod
+				deploy.SetAnnotations(as)
+
+				as = deploy.Spec.Template.GetAnnotations()
+				as["valid-deploy-pod-ann"] = "valid-deploy-pod-ann-value" // will be retained on the deployment/pod
+				deploy.Spec.Template.SetAnnotations(as)
+
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("waiting for Deployment update to complete",
+				"resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				if err != nil || deploy == nil {
+					return false
+				}
+				labels := deploy.GetLabels()
+				_, ok := labels["valid-deploy-label"]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+			Expect(deploy).NotTo(BeNil(), "Deployment updated")
+
+			ctrl.Log.Info("updating metadata on Gateway 2")
+			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+
+			_, err = ctrlutil.CreateOrUpdate(ctx, k8sClient, gw2, func() error {
+				gw2.SetLabels(map[string]string{
+					"stunner.l7mp.io/owned-by": "dummy-owner",          // will be overwritten on the deployment
+					"valid-gw-label":           "valid-gw-label-value", // will appear on the deployment/pod
+				})
+				gw2.SetAnnotations(map[string]string{
+					"stunner.l7mp.io/related-gateway-name": "dummy-ns/dummy-name", // will be overwritten on the deployment/pod
+					"valid-gw-ann":                         "valid-gw-ann-value",  // will appear on the deployment/pod
+				})
+
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			ctrl.Log.Info("waiting for Gateway update to complete",
+				"resource", store.GetNamespacedName(gw2))
+			// This also gets the owner-ref UID filled in, which we need for owbership
+			// testing on the Deployment
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)
+				if err != nil || gw2 == nil {
+					return false
+				}
+
+				labels := gw2.GetLabels()
+				_, ok := labels["valid-gw-label"]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+			Expect(gw2).NotTo(BeNil(), "Gateway2 updated")
+
+			ctrl.Log.Info("waiting for Deployment update to complete",
+				"resource", store.GetNamespacedName(deploy))
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), deploy)
+				if err != nil || deploy == nil || !store.IsOwner(gw2, deploy, "Gateway") {
+					return false
+				}
+				labels := deploy.GetLabels()
+				v, ok := labels["valid-gw-label"]
+				return ok && v == "valid-gw-label-value"
+			}, timeout, interval).Should(BeTrue())
+			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
+
+			// metadata
+			// labels: 3 mandatory + 1 label from the gw + 1 label from the deployment
+			labs := deploy.GetLabels()
+			Expect(labs).To(HaveLen(5))
+
+			// mandatory labels
+			v, ok := labs[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+			v, ok = labs[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "labels: related")
+			Expect(v).Should(Equal(gw2.GetName()), "related-gw label value")
+			v, ok = labs[opdefault.RelatedGatewayNamespace]
+			Expect(ok).Should(BeTrue(), "labels: related namespace")
+			Expect(v).Should(Equal(gw2.GetNamespace()), "related-gw-namespace label value")
+
+			// label from the gw
+			v, ok = labs["valid-gw-label"] // testGw has it, hw2 doesn't
+			Expect(ok).Should(BeTrue(), "gw label")
+			Expect(v).Should(Equal("valid-gw-label-value"), "gw label value")
+
+			// label from the deployment
+			v, ok = labs["valid-deploy-label"] // testGw has it, hw2 doesn't
+			Expect(ok).Should(BeTrue(), "deploy label")
+			Expect(v).Should(Equal("valid-deploy-label-value"), "deploy label value")
+
+			// annotations: 1 mandatory + 1 ann from the gw + 1 ann from the deployment
+			as := deploy.GetAnnotations()
+			Expect(as).To(HaveLen(3))
+
+			// mandatory
+			v, ok = as[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "related-gw annotation")
+			Expect(v).Should(Equal(store.GetObjectKey(gw2)), "related-gw annotation value")
+
+			// annotation from the gw
+			v, ok = as["valid-gw-ann"]
+			Expect(ok).Should(BeTrue(), "gw ann")
+			Expect(v).Should(Equal("valid-gw-ann-value"), "gw ann value")
+
+			// annotation from the deployment
+			v, ok = as["valid-deploy-ann"]
+			Expect(ok).Should(BeTrue(), "deploy ann")
+			Expect(v).Should(Equal("valid-deploy-ann-value"), "deploy ann value")
+
+			// check the label selector
+			labelSelector := deploy.Spec.Selector
+			Expect(labelSelector).NotTo(BeNil(), "selector set")
+
+			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+			Expect(err).To(Succeed())
+
+			// match "opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue" AND
+			// "stunner.l7mp.io/related-gateway-name=<gateway-name>"
+			labelToMatch := labels.Merge(
+				labels.Merge(
+					labels.Set{opdefault.AppLabelKey: opdefault.AppLabelValue},
+					labels.Set{opdefault.RelatedGatewayKey: gw2.GetName()},
+				),
+				labels.Set{opdefault.RelatedGatewayNamespace: gw2.GetNamespace()},
+			)
+			Expect(selector.Matches(labelToMatch)).Should(BeTrue(), "selector matches")
+
+			podTemplate := &deploy.Spec.Template
+			labs = podTemplate.GetLabels()
+			Expect(labs).To(HaveLen(3))
+			v, ok = labs[opdefault.AppLabelKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			v, ok = labs[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(gw2.GetName()))
+			v, ok = labs[opdefault.RelatedGatewayNamespace]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(gw2.GetNamespace()))
+
+			// deployment selector matches pod template
+			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())
+
+			// pod-level annotations:
+			as = deploy.Spec.Template.GetAnnotations()
+			Expect(as).To(HaveLen(3))
+
+			// mandatory
+			v, ok = as[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "related-gw annotation")
+			Expect(v).Should(Equal(store.GetObjectKey(gw2)), "related-gw annotation value")
+
+			// annotation from the gw
+			v, ok = as["valid-gw-ann"]
+			Expect(ok).Should(BeTrue(), "gw ann")
+			Expect(v).Should(Equal("valid-gw-ann-value"), "gw ann value")
+
+			// annotation from the deployment
+			v, ok = as["valid-deploy-pod-ann"]
+			Expect(ok).Should(BeTrue(), "deploy pod ann")
+			Expect(v).Should(Equal("valid-deploy-pod-ann-value"), "deploy pod ann value")
+		})
+
 		It("should update only Gateway 2 when Dataplane 2 changes", func() {
 			ctrl.Log.Info("updating  Dataplane 2")
 			dp2 := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{

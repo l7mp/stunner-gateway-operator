@@ -68,10 +68,10 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				v, ok = labs[opdefault.RelatedGatewayNamespace]
 				assert.True(t, ok, "labels: related")
 				assert.Equal(t, gw.GetNamespace(), v, "related-gw label value")
-				// label from the dataplane object
+				// label from the gateway
 				v, ok = labs["dummy-label"]
-				assert.True(t, ok, "labels: dataplane label copied")
-				assert.Equal(t, "dummy-value", v, "copied dataplane label value")
+				assert.True(t, ok, "labels: gateway label copied")
+				assert.Equal(t, "dummy-value", v, "copied gateway label value")
 
 				as := deploy.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
@@ -222,10 +222,10 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				v, ok = labs[opdefault.RelatedGatewayNamespace]
 				assert.True(t, ok, "labels: related")
 				assert.Equal(t, gw.GetNamespace(), v, "related-gw label value")
-				// label from the dataplane object
+				// label from the gateway
 				v, ok = labs["dummy-label"]
-				assert.True(t, ok, "labels: dataplane label copied")
-				assert.Equal(t, "dummy-value", v, "copied dataplane label value")
+				assert.True(t, ok, "labels: gateway label copied")
+				assert.Equal(t, "dummy-value", v, "copied gateway label value")
 
 				as := deploy.GetAnnotations()
 				assert.Len(t, as, 1, "annotations len")
@@ -303,6 +303,132 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.NotNil(t, podSpec.SecurityContext, "pod security context ptr")
 				assert.NotNil(t, podSpec.SecurityContext.RunAsNonRoot, "pod security context bool ptr")
 				assert.True(t, *podSpec.SecurityContext.RunAsNonRoot, "pod security context bool")
+			},
+		},
+		{
+			name: "override labels",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetLabels(map[string]string{
+					"stunner.l7mp.io/owned-by": "dummy-owner",          // will be overwritten on the deployment
+					"valid-gw-label":           "valid-gw-label-value", // will appear on the deployment
+				})
+				gw.SetAnnotations(map[string]string{
+					"stunner.l7mp.io/related-gateway-name": "dummy-ns/dummy-name", // will be overwritten on the deployment/pod
+					"valid-gw-ann":                         "valid-gw-ann-value",  // will appear on the deployment/pod
+				})
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+				c.dp, err = getDataplane(c)
+				assert.NoError(t, err, "dataplanefound")
+
+				deploy, err := r.createDeployment(c)
+				assert.NoError(t, err, "create deployment")
+
+				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
+				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
+
+				labs := deploy.GetLabels()
+				assert.Len(t, labs, 4, "labels len")
+
+				// mandatory labels
+				v, ok := labs[opdefault.OwnedByLabelKey]
+				assert.True(t, ok, "labels: owned-by")
+				assert.Equal(t, opdefault.OwnedByLabelValue, v, "owned-by label value")
+				v, ok = labs[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "labels: related")
+				assert.Equal(t, gw.GetName(), v, "related-gw label value")
+				v, ok = labs[opdefault.RelatedGatewayNamespace]
+				assert.True(t, ok, "labels: related")
+				assert.Equal(t, gw.GetNamespace(), v, "related-gw label value")
+
+				// label from the gateway
+				v, ok = labs["valid-gw-label"]
+				assert.True(t, ok, "labels: gw label copied")
+				assert.Equal(t, "valid-gw-label-value", v, "copied gw label value")
+
+				as := deploy.GetAnnotations()
+				assert.Len(t, as, 2, "annotations len")
+
+				// mandatory annotations
+				gwName, ok := as[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "annotations: related gw")
+				// annotation is gw-namespace/gw-name
+				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
+
+				// optional annotations
+				a, ok := as["valid-gw-ann"]
+				assert.True(t, ok, "annotations: valid gw ann")
+				assert.Equal(t, "valid-gw-ann-value", a, "valid gateway annotation value")
+
+				// check the label selector
+				labelSelector := deploy.Spec.Selector
+				assert.NotNil(t, labelSelector, "label selector")
+
+				selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+				assert.NoError(t, err, "label selector convert")
+
+				labelToMatch := labels.Merge(
+					labels.Merge(
+						labels.Set{opdefault.AppLabelKey: opdefault.AppLabelValue},
+						labels.Set{opdefault.RelatedGatewayKey: gw.GetName()},
+					),
+					labels.Set{opdefault.RelatedGatewayNamespace: gw.GetNamespace()},
+				)
+				assert.True(t, selector.Matches(labelToMatch), "selector matched")
+
+				// pod template spec
+				podTemplate := &deploy.Spec.Template
+				labs = podTemplate.GetLabels()
+
+				// only the manadatory labels
+				assert.Len(t, labs, 3, "labels len")
+				v, ok = labs[opdefault.AppLabelKey]
+				assert.True(t, ok, "pod labels: owned-by")
+				assert.Equal(t, opdefault.AppLabelValue, v, "pod owned-by label value")
+				v, ok = labs[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "pod related-gw label")
+				assert.Equal(t, gw.GetName(), v, "related-gw label value")
+				v, ok = labs[opdefault.RelatedGatewayNamespace]
+				assert.True(t, ok, "pod related-gw-namespace label")
+				assert.Equal(t, gw.GetNamespace(), v, "related-gw-namespace label value")
+
+				// deployment selector matches pod template
+				assert.True(t, selector.Matches(labels.Set(labs)), "selector matched")
+
+				as = podTemplate.GetAnnotations()
+				assert.Len(t, as, 2, "annotations len")
+
+				// mandatory annotations
+				gwName, ok = as[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "annotations: related gw")
+				// annotation is gw-namespace/gw-name
+				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
+
+				// optional annotations
+				a, ok = as["valid-gw-ann"]
+				assert.True(t, ok, "annotations: valid gw ann")
+				assert.Equal(t, "valid-gw-ann-value", a, "valid gateway annotation value")
 			},
 		},
 	})
