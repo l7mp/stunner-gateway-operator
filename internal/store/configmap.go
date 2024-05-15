@@ -55,7 +55,7 @@ func (s *ConfigMapStore) GetObject(nsName types.NamespacedName) *corev1.ConfigMa
 func (s *ConfigMapStore) DeepCopy() *ConfigMapStore {
 	ret := NewConfigMapStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }

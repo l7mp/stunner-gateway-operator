@@ -55,7 +55,7 @@ func (s *DeploymentStore) GetObject(nsName types.NamespacedName) *appv1.Deployme
 func (s *DeploymentStore) DeepCopy() *DeploymentStore {
 	ret := NewDeploymentStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }

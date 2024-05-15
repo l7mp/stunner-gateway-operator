@@ -55,7 +55,7 @@ func (s *ServiceStore) GetObject(nsName types.NamespacedName) *corev1.Service {
 func (s *ServiceStore) DeepCopy() *ServiceStore {
 	ret := NewServiceStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }

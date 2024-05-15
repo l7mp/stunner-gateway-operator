@@ -56,7 +56,7 @@ func (s *UDPRouteStore) GetObject(nsName types.NamespacedName) *stnrgwv1.UDPRout
 func (s *UDPRouteStore) DeepCopy() *UDPRouteStore {
 	ret := NewUDPRouteStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }

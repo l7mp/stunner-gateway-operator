@@ -55,7 +55,7 @@ func (s *DataplaneStore) GetObject(nsName types.NamespacedName) *stnrgwv1.Datapl
 func (s *DataplaneStore) DeepCopy() *DataplaneStore {
 	ret := NewDataplaneStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }

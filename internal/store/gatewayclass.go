@@ -54,7 +54,7 @@ func (s *GatewayClassStore) GetObject(nsName types.NamespacedName) *gwapiv1.Gate
 func (s *GatewayClassStore) DeepCopy() *GatewayClassStore {
 	ret := NewGatewayClassStore()
 	for _, o := range s.GetAll() {
-		ret.Upsert(o)
+		ret.Upsert(o.DeepCopy())
 	}
 	return ret
 }
