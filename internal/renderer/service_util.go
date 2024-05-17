@@ -354,7 +354,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	case "LoadBalancer":
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	default:
-		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+		svc.Spec.Type = opdefault.DefaultServiceType
 	}
 
 	mixedProto := false

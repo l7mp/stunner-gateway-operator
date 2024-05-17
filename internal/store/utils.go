@@ -146,50 +146,46 @@ func DumpObject(o client.Object) string {
 	return output
 }
 
-// // DumpObject convers an object into a human-readable form for logging.
-// func DumpObject(o client.Object) string {
-// 	// default dump
-// 	output := fmt.Sprintf("%#v", o)
+// for UDPRoutes
+func DumpParentRef(p *gwapiv1.ParentReference) string {
+	g, k, ns, sn := "<NIL>", "<NIL>", "<NIL>", "<NIL>"
+	if p.Group != nil {
+		g = string(*p.Group)
+	}
 
-// 	// copy
-// 	ro := o.DeepCopyObject()
+	if p.Kind != nil {
+		k = string(*p.Kind)
+	}
 
-// 	var tmp client.Object
-// 	switch ro := ro.(type) {
-// 	case *gwapiv1.GatewayClass:
-// 		tmp = ro
-// 	case *gwapiv1.Gateway:
-// 		tmp = ro
-// 	case *stnrgwv1.UDPRoute:
-// 		tmp = ro
-// 	case *corev1.Service:
-// 		tmp = ro
-// 	case *appv1.Deployment:
-// 		tmp = ro
-// 	case *stnrgwv1.GatewayConfig:
-// 		tmp = ro
-// 	case *stnrgwv1.StaticService:
-// 		tmp = ro
-// 	case *stnrgwv1.Dataplane:
-// 		tmp = ro
-// 	case *corev1.ConfigMap:
-// 		tmp = stripCM(ro)
-// 	default:
-// 		// this is not fatal
-// 		return output
-// 	}
+	if p.Namespace != nil {
+		ns = string(*p.Namespace)
+	}
 
-// 	// remove cruft
-// 	tmp = strip(tmp)
+	if p.SectionName != nil {
+		sn = string(*p.SectionName)
+	}
 
-// 	if json, err := json.Marshal(tmp); err != nil {
-// 		fmt.Printf("---------------ERROR-----------: %s\n", err)
-// 		return output
-// 	} else {
-// 		output = string(json)
-// 	}
-// 	return output
-// }
+	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s, SectionName: %s}",
+		g, k, ns, p.Name, sn)
+}
+
+func DumpBackendRef(b *stnrgwv1.BackendRef) string {
+	g, k, ns := "<NIL>", "<NIL>", "<NIL>"
+	if b.Group != nil {
+		g = string(*b.Group)
+	}
+
+	if b.Kind != nil {
+		k = string(*b.Kind)
+	}
+
+	if b.Namespace != nil {
+		ns = string(*b.Namespace)
+	}
+
+	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s}",
+		g, k, ns, b.Name)
+}
 
 func strip(o client.Object) client.Object {
 	as := o.GetAnnotations()

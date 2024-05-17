@@ -7,9 +7,11 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -131,14 +133,37 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch EndPoints object references by one of the ref'd Services
 	if config.EnableEndpointDiscovery {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &corev1.Endpoints{}),
-			&handler.EnqueueRequestForObject{},
-			predicate.NewPredicateFuncs(r.validateBackendForReconcile),
-		); err != nil {
-			return err
+		// try to set up a watch for EndpointSlices if the endpointslice controller was not
+		// explicitly disabled on the command line
+		if config.EndpointSliceAvailable {
+			if err := c.Watch(
+				source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
+				&handler.EnqueueRequestForObject{},
+				predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile),
+			); err == nil {
+				r.log.Info("watching endpointslice objects")
+				config.EndpointSliceAvailable = true
+			} else {
+				r.log.Info("WARNING: EndpointSlice support diabled, falling back to " +
+					"the Endpoints controller and disabling graceful backend " +
+					"shutdown, see https://github.com/l7mp/stunner/issues/138")
+				config.EndpointSliceAvailable = false
+			}
 		}
-		r.log.Info("watching endpoint objects")
+
+		// if EndpointSlices are still not available, fall back to wathing Endpoints
+		if !config.EndpointSliceAvailable {
+			if err := c.Watch(
+				source.Kind(mgr.GetCache(), &corev1.Endpoints{}),
+				&handler.EnqueueRequestForObject{},
+				predicate.NewPredicateFuncs(r.validateBackendForReconcile),
+			); err != nil {
+				return err
+			}
+
+			config.EndpointSliceAvailable = false
+			r.log.Info("watching endpoint objects")
+		}
 	}
 
 	// watch StaticService objects referenced by one of our UDPRoutes
@@ -164,7 +189,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	namespaceList := []client.Object{}
 	svcList := []client.Object{}
 	ssvcList := []client.Object{}
-	endpointsList := []client.Object{}
+	endpointList := []client.Object{}
 
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
@@ -204,14 +229,24 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 
 				if store.IsReferenceService(&ref) {
 					if svc := r.getServiceForBackend(ctx, &udproute, &ref); svc != nil {
+						r.log.V(2).Info("found service for udproute backend ref",
+							"udproute", store.GetObjectKey(&udproute),
+							"ref", store.DumpBackendRef(&ref),
+							"svc", store.GetObjectKey(svc))
 						svcList = append(svcList, svc)
 					}
 
 					if config.EnableEndpointDiscovery {
-						if e := r.getEndpointsForBackend(ctx, &udproute, &ref); e != nil {
-							endpointsList = append(endpointsList, e)
+						if config.EndpointSliceAvailable {
+							es := r.getEndpointSlicesForBackend(ctx, &udproute, &ref)
+							endpointList = append(endpointList, es...)
+						} else {
+							if e := r.getEndpointsForBackend(ctx, &udproute, &ref); e != nil {
+								endpointList = append(endpointList, e)
+							}
 						}
 					}
+
 					continue
 				}
 			}
@@ -260,10 +295,18 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 					}
 
 					if config.EnableEndpointDiscovery {
-						if e := r.getEndpointsForBackend(ctx, udproute, &ref); e != nil {
-							endpointsList = append(endpointsList, e)
+						if config.EndpointSliceAvailable {
+							es := r.getEndpointSlicesForBackend(ctx, udproute, &ref)
+							if len(es) > 0 {
+								endpointList = append(endpointList, es...)
+							}
+						} else {
+							if e := r.getEndpointsForBackend(ctx, udproute, &ref); e != nil {
+								endpointList = append(endpointList, e)
+							}
 						}
 					}
+
 					continue
 				}
 			}
@@ -293,8 +336,13 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	store.Services.Reset(svcList)
 	r.log.V(2).Info("reset Service store", "services", store.Services.String())
 
-	store.Endpoints.Reset(endpointsList)
-	r.log.V(2).Info("reset Endpoints store", "endpoints", store.Endpoints.String())
+	if config.EndpointSliceAvailable {
+		store.EndpointSlices.Reset(endpointList)
+		r.log.V(2).Info("reset EndpointSlice store", "endpointslices", store.EndpointSlices.String())
+	} else {
+		store.Endpoints.Reset(endpointList)
+		r.log.V(2).Info("reset Endpoints store", "endpoints", store.Endpoints.String())
+	}
 
 	store.StaticServices.Reset(ssvcList)
 	r.log.V(2).Info("reset StaticService store", "static-services", store.StaticServices.String())
@@ -336,10 +384,52 @@ func (r *udpRouteReconciler) validateBackendForReconcile(o client.Object) bool {
 	}
 
 	if len(routeList.Items) == 0 && len(routeListV1A2.Items) == 0 {
+		r.log.Info("validateBackendForReconcile:", "udproute", "not found")
 		return false
 	}
 
+	r.log.Info("validateBackendForReconcile:", "udproute", "found")
 	return true
+}
+
+// validateEndpointSliceForReconcile checks whether an EndpointSlice belongs to a Service that
+// belongs to a valid UDPRoute.
+func (r *udpRouteReconciler) validateEndpointSliceForReconcile(o client.Object) bool {
+	// are we given a proper EndpointSlice object?
+	esl, ok := o.(*discoveryv1.EndpointSlice)
+	if !ok {
+		return false
+	}
+
+	// r.log.Info("validateEndpointSliceForReconcile:", "namespace/name", store.GetObjectKey(esl))
+
+	// find the Service corresponding to this EndpointSlice
+	// TODO: also check ownership
+	svcName, ok := esl.GetLabels()[discoveryv1.LabelServiceName]
+	if !ok {
+		r.log.Info("validateEndpointSliceForReconcile:", "label", "not ok")
+		return false
+	}
+
+	// r.log.Info("validateEndpointSliceForReconcile:", "label", "ok")
+
+	svc := &corev1.Service{}
+	if err := r.Get(context.Background(), types.NamespacedName{
+		Namespace: esl.GetNamespace(),
+		Name:      svcName,
+	}, svc); err != nil {
+		// not fatal
+		if !apierrors.IsNotFound(err) {
+			r.log.Error(err, "error getting Service for EndpointSlice",
+				"namespace", esl.GetNamespace(),
+				"name", svcName)
+		}
+		return false
+	}
+
+	// r.log.Info("validateEndpointSliceForReconcile:", "svc", "found")
+
+	return r.validateBackendForReconcile(svc)
 }
 
 // validateStaticServiceForReconcile checks whether a Static Service belongs to a valid UDPRoute.
@@ -407,10 +497,8 @@ func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute 
 	return &svc
 }
 
-// getEndpointsForBackend finds the Endpoints associated with a backendRef
-func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) *corev1.Endpoints {
-	e := corev1.Endpoints{}
-
+// getEndpointSlicesForBackend finds all EndpointSlices associated with a backendRef
+func (r *udpRouteReconciler) getEndpointSlicesForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) []client.Object {
 	// if no explicit Endpoints namespace is provided, use the UDPRoute namespace to lookup the
 	// Endpoints
 	namespace := udproute.GetNamespace()
@@ -418,24 +506,59 @@ func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udprout
 		namespace = string(*ref.Namespace)
 	}
 
-	if err := r.Get(ctx,
-		types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
-		&e,
-	); err != nil {
+	// find the EndpointSlicce corresponding to the backend service
+	esls := discoveryv1.EndpointSliceList{}
+	labelSelector := labels.SelectorFromSet(labels.Set{discoveryv1.LabelServiceName: string(ref.Name)})
+	listOptions := &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labelSelector,
+	}
+
+	if err := r.List(ctx, &esls, listOptions); err != nil {
+		r.log.Error(err, "error getting endpointslices for backend service",
+			"namespace", namespace, "backend-name", string(ref.Name))
+		return []client.Object{}
+	}
+
+	es := make([]client.Object, len(esls.Items))
+	for i := range esls.Items {
+		es[i] = &esls.Items[i]
+	}
+
+	if len(es) == 0 {
+		r.log.Info("no endpointslice found for UDPRoute backend", "udproute",
+			store.GetObjectKey(udproute), "backend-ref",
+			store.DumpBackendRef(ref))
+	}
+
+	return es
+}
+
+// getEndpointsForBackend finds the Endpoints associated with a backendRef
+func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) client.Object {
+	// if no explicit Endpoints namespace is provided, use the UDPRoute namespace to lookup the
+	// Endpoints
+	namespace := udproute.GetNamespace()
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	ep := corev1.Endpoints{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, &ep); err != nil {
 		// not fatal
 		if !apierrors.IsNotFound(err) {
-			r.log.Error(err, "error getting Endpoints", "namespace", namespace,
-				"name", string(ref.Name))
-			return nil
+			r.log.Error(err, "error getting Endpoints", "namespace", namespace, "name",
+				string(ref.Name))
 		}
 
-		r.log.Info("no Endpoints found for UDPRoute backend", "udproute",
-			store.GetObjectKey(udproute), "namespace", namespace,
-			"name", string(ref.Name))
+		r.log.Info("no endpoint found for UDPRoute backend", "udproute",
+			store.GetObjectKey(udproute), "namespace", namespace, "name",
+			string(ref.Name))
+
 		return nil
 	}
 
-	return &e
+	return &ep
 }
 
 // getStaticServiceForBackend finds the StaticService associated with a backendRef

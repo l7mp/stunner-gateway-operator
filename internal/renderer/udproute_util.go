@@ -53,7 +53,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 			if !found {
 				r.log.V(4).Info("getUDPRoutes4Listener: parent rejected for listener",
 					"gateway", store.GetObjectKey(gw), "listener", l.Name,
-					"route", store.GetObjectKey(ro), "parent", dumpParentRef(&p),
+					"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(&p),
 					"reason", reason)
 
 				continue
@@ -66,7 +66,6 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 			// route made it this far: attach!
 			ret = append(ret, ro)
 		}
-
 	}
 
 	return ret
@@ -181,7 +180,7 @@ func (r *Renderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
 			if gc.GetName() == string(gw.Spec.GatewayClassName) {
 				r.log.V(2).Info("route is handled by this controller: accepting",
 					"route", store.GetObjectKey(ro),
-					"parent", dumpParentRef(p),
+					"parent", store.DumpParentRef(p),
 					"linked-gateway-class", gw.Spec.GatewayClassName,
 				)
 				return true
@@ -209,7 +208,7 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPR
 	ret := store.Gateways.GetObject(namespacedName) != nil && gws.GetObject(namespacedName) == nil
 
 	r.log.V(4).Info("isParentOutContext", "route", store.GetObjectKey(ro),
-		"parent", dumpParentRef(p), "gw-context-length", gws.Len(), "result", ret)
+		"parent", store.DumpParentRef(p), "gw-context-length", gws.Len(), "result", ret)
 
 	return ret
 }
@@ -218,12 +217,12 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPR
 // route status that is consistent across rendering contexts
 func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, className string) bool {
 	// r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
-	// 	"parent", dumpParentRef(p))
+	// 	"parent", store.DumpParentRef(p))
 
 	gw := r.getParentGateway(ro, p)
 	if gw == nil {
 		r.log.V(4).Info("no gateway found for Parent", "route",
-			store.GetObjectKey(ro), "parent", dumpParentRef(p))
+			store.GetObjectKey(ro), "parent", store.DumpParentRef(p))
 		return false
 	}
 
@@ -232,7 +231,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 	if className != "" && gw.Spec.GatewayClassName != gwapiv1.ObjectName(className) {
 		r.log.V(4).Info("parent links to a gateway that is being managed by another "+
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
-			dumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
+			store.DumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
 			"current-gateway-class", className)
 		return false
 	}
@@ -244,13 +243,13 @@ func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 		found, msg := resolveParentRef(ro, p, gw, &l)
 		if found {
 			r.log.V(3).Info("isParentAcceptingRoute: gateway/listener found for parent",
-				"route", store.GetObjectKey(ro), "parent", dumpParentRef(p),
+				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name)
 
 			return true
 		} else {
 			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener does not accept route",
-				"route", store.GetObjectKey(ro), "parent", dumpParentRef(p),
+				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name, "message", msg)
 		}
 	}
@@ -380,46 +379,6 @@ func setRouteAcceptedCondition(ro *stnrgwv1.UDPRoute, s *[]metav1.Condition, rea
 		Reason:             string(reason),
 		Message:            message,
 	})
-}
-
-func dumpParentRef(p *gwapiv1.ParentReference) string {
-	g, k, ns, sn := "<NIL>", "<NIL>", "<NIL>", "<NIL>"
-	if p.Group != nil {
-		g = string(*p.Group)
-	}
-
-	if p.Kind != nil {
-		k = string(*p.Kind)
-	}
-
-	if p.Namespace != nil {
-		ns = string(*p.Namespace)
-	}
-
-	if p.SectionName != nil {
-		sn = string(*p.SectionName)
-	}
-
-	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s, SectionName: %s}",
-		g, k, ns, p.Name, sn)
-}
-
-func dumpBackendRef(b *stnrgwv1.BackendRef) string {
-	g, k, ns := "<NIL>", "<NIL>", "<NIL>"
-	if b.Group != nil {
-		g = string(*b.Group)
-	}
-
-	if b.Kind != nil {
-		k = string(*b.Kind)
-	}
-
-	if b.Namespace != nil {
-		ns = string(*b.Namespace)
-	}
-
-	return fmt.Sprintf("{Group: %s, Kind: %s, Namespace: %s, Name: %s}",
-		g, k, ns, b.Name)
 }
 
 // check by pointer: namespacedname is not unique across stunnerv1 and v1a2 routes

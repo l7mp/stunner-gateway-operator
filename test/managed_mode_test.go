@@ -84,14 +84,10 @@ func testManagedMode() {
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS on
-			ctrl.Log.Info("loading GatewayClass")
-			Expect(k8sClient.Create(ctx, testGwClass)).Should(Succeed())
-
-			ctrl.Log.Info("loading GatewayConfig")
-			Expect(k8sClient.Create(ctx, testGwConfig)).Should(Succeed())
-
-			ctrl.Log.Info("loading Gateway")
-			Expect(k8sClient.Create(ctx, testGw)).Should(Succeed())
+			createOrUpdateGatewayClass(testGwClass, nil)
+			createOrUpdateGatewayConfig(testGwConfig, nil)
+			createOrUpdateGateway(testGw, nil)
+			createOrUpdateEndpointSlice(testEndpointSlice, nil)
 
 			ctrl.Log.Info("loading default Dataplane")
 			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
@@ -165,13 +161,9 @@ func testManagedMode() {
 				if err != nil {
 					return false
 				}
-
 				s := meta.FindStatusCondition(gc.Status.Conditions,
 					string(gwapiv1.GatewayClassConditionStatusAccepted))
-				if s == nil || s.Status == metav1.ConditionFalse {
-					return false
-				}
-				return true
+				return s != nil && s.Status == metav1.ConditionTrue
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(gc.Status.Conditions).To(HaveLen(1))
@@ -276,12 +268,10 @@ func testManagedMode() {
 
 		It("should survive the event of adding a route", func() {
 			ctrl.Log.Info("loading UDPRoute")
-			// fmt.Printf("%#v\n", testUDPRoute)
-			Expect(k8sClient.Create(ctx, testUDPRoute)).Should(Succeed())
+			createOrUpdateUDPRoute(testUDPRoute, nil)
 
-			ctrl.Log.Info("loading backend Service/Endpoint")
-			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
+			ctrl.Log.Info("loading backend Service")
+			createOrUpdateService(testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
@@ -293,7 +283,7 @@ func testManagedMode() {
 			}), timeout, interval).Should(BeTrue())
 		})
 
-		It("should re-render STUNner config with the new cluster", func() {
+		It("should render STUNner config with the new cluster", func() {
 			Expect(conf.Listeners).To(HaveLen(2))
 
 			// not sure about the order
@@ -350,9 +340,6 @@ func testManagedMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
-
-			// Expect(ps.ParentRef.Group).To(BeNil())
-			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
@@ -375,10 +362,10 @@ func testManagedMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(testGw, nil)
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			createOrUpdateNode(&testutils.TestNode, nil)
+			createOrUpdateNode(testNode, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
@@ -400,10 +387,10 @@ func testManagedMode() {
 
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
-			createOrUpdateSecret(&testutils.TestSecret, nil)
+			createOrUpdateSecret(testSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -472,7 +459,7 @@ func testManagedMode() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
+			createOrUpdateSecret(testSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -505,11 +492,18 @@ func testManagedMode() {
 		It("should create a Deployment for the Gateway", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
+			gw := &gwapiv1.Gateway{}
 
 			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, deploy)
-				return err == nil && deploy != nil
+				if err := k8sClient.Get(ctx, lookupKey, deploy); err != nil || deploy == nil {
+					return false
+				}
+				// must load the gw otherwise deploy.owner-ref will have invalid uid
+				if err := k8sClient.Get(ctx, lookupKey, gw); err != nil || gw == nil {
+					return false
+				}
+				return store.IsOwner(gw, deploy, "Gateway")
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
@@ -528,7 +522,7 @@ func testManagedMode() {
 			Expect(ok).Should(BeTrue(), "gw label")
 			Expect(v).Should(Equal("dummy-value"))
 
-			Expect(store.IsOwner(testGw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+			Expect(store.IsOwner(gw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
 
 			// spec
 
@@ -634,11 +628,18 @@ func testManagedMode() {
 		It("should update the Deployment after the Dataplane changed", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
+			gw := &gwapiv1.Gateway{}
 
 			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, deploy)
-				return err == nil && deploy != nil && !deploy.Spec.Template.Spec.HostNetwork
+				if err := k8sClient.Get(ctx, lookupKey, deploy); err != nil || deploy == nil ||
+					deploy.Spec.Template.Spec.HostNetwork {
+					return false
+				}
+				if err := k8sClient.Get(ctx, lookupKey, gw); err != nil || gw == nil {
+					return false
+				}
+				return store.IsOwner(gw, deploy, "Gateway")
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
@@ -657,7 +658,7 @@ func testManagedMode() {
 			Expect(ok).Should(BeTrue(), "gw label")
 			Expect(v).Should(Equal("dummy-value"))
 
-			Expect(store.IsOwner(testGw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+			Expect(store.IsOwner(gw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
 
 			// spec
 
@@ -735,10 +736,10 @@ func testManagedMode() {
 
 		It("should survive converting the route to a StaticService backend", func() {
 			ctrl.Log.Info("adding static service")
-			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
+			createOrUpdateStaticService(testStaticSvc, nil)
 
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -763,7 +764,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("updating Route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
@@ -959,7 +960,7 @@ func testManagedMode() {
 
 		It("should survive converting the route to v1a2 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1162,7 +1163,7 @@ func testManagedMode() {
 
 		It("should survive masking the v1a2 route with a stunner.v1 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1187,7 +1188,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("loading UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
+			createOrUpdateUDPRoute(testUDPRoute, nil)
 
 			// wait until v1a2 route gets invalidated
 			Eventually(func() bool {
@@ -1471,7 +1472,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{
@@ -1565,8 +1566,15 @@ func testManagedMode() {
 
 		It("should set the GatewayClass status", func() {
 			gc := &gwapiv1.GatewayClass{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
-				gc)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass), gc)
+				if err != nil {
+					return false
+				}
+				s := meta.FindStatusCondition(gc.Status.Conditions,
+					string(gwapiv1.GatewayClassConditionStatusAccepted))
+				return s != nil && s.Status == metav1.ConditionTrue
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gc.Status.Conditions).To(HaveLen(1))
 
@@ -1817,11 +1825,17 @@ func testManagedMode() {
 		It("should create a Deployment for Gateway 1", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
+			gw := &gwapiv1.Gateway{}
 
 			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, deploy)
-				return err == nil && deploy != nil
+				if err := k8sClient.Get(ctx, lookupKey, deploy); err != nil || deploy == nil {
+					return false
+				}
+				if err := k8sClient.Get(ctx, lookupKey, gw); err != nil || gw == nil {
+					return false
+				}
+				return store.IsOwner(gw, deploy, "Gateway")
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
@@ -1840,7 +1854,7 @@ func testManagedMode() {
 			Expect(ok).Should(BeTrue(), "gw label")
 			Expect(v).Should(Equal("dummy-value"))
 
-			Expect(store.IsOwner(testGw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+			Expect(store.IsOwner(gw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
 
 			// check the label selector
 			labelSelector := deploy.Spec.Selector
@@ -1907,8 +1921,13 @@ func testManagedMode() {
 
 			ctrl.Log.Info("trying to Get Deployment", "resource", store.GetNamespacedName(deploy))
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), deploy)
-				return err == nil && deploy != nil
+				if err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), deploy); err != nil || deploy == nil {
+					return false
+				}
+				if err := k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2); err != nil || gw2 == nil {
+					return false
+				}
+				return store.IsOwner(gw2, deploy, "Gateway")
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
@@ -2180,7 +2199,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{
@@ -2534,11 +2553,17 @@ func testManagedMode() {
 		It("should create a Deployment for Gateway 1", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
+			gw := &gwapiv1.Gateway{}
 
 			ctrl.Log.Info("trying to Get Deployment", "resource", lookupKey)
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupKey, deploy)
-				return err == nil && deploy != nil
+				if err := k8sClient.Get(ctx, lookupKey, deploy); err != nil || deploy == nil {
+					return false
+				}
+				if err := k8sClient.Get(ctx, lookupKey, gw); err != nil || gw == nil {
+					return false
+				}
+				return store.IsOwner(gw, deploy, "Gateway")
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploy).NotTo(BeNil(), "Deployment rendered")
@@ -2557,7 +2582,7 @@ func testManagedMode() {
 			Expect(ok).Should(BeTrue(), "gw label")
 			Expect(v).Should(Equal("dummy-value"))
 
-			Expect(store.IsOwner(testGw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
+			Expect(store.IsOwner(gw, deploy, "Gateway")).Should(BeTrue(), "ownerRef")
 
 			// check the label selector
 			labelSelector := deploy.Spec.Selector
@@ -3007,21 +3032,17 @@ func testManagedMode() {
 			ctrl.Log.Info("deleting Route")
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
 
-			// ctrl.Log.Info("deleting Service")
-			// Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
+			ctrl.Log.Info("deleting Service")
+			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
 
-			ctrl.Log.Info("deleting Endpoints")
-			Expect(k8sClient.Delete(ctx, testEndpoint)).Should(Succeed())
+			// ctrl.Log.Info("deleting Endpoints")
+			// Expect(k8sClient.Delete(ctx, testEndpoint)).Should(Succeed())
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())
 
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
-		})
-
-		It("should stabilize", func() {
-			stabilize()
 		})
 	})
 }

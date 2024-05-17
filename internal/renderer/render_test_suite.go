@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -51,6 +52,7 @@ type renderTestConfig struct {
 	svcs   []corev1.Service
 	nodes  []corev1.Node
 	eps    []corev1.Endpoints
+	esls   []discoveryv1.EndpointSlice
 	scrts  []corev1.Secret
 	ascrts []corev1.Secret
 	nss    []corev1.Namespace
@@ -121,6 +123,11 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Endpoints.Flush()
 			for i := range c.eps {
 				store.Endpoints.Upsert(&c.eps[i])
+			}
+
+			store.EndpointSlices.Flush()
+			for i := range c.esls {
+				store.EndpointSlices.Upsert(&c.esls[i])
 			}
 
 			store.TLSSecrets.Flush()

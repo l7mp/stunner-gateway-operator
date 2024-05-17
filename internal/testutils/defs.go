@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -17,6 +18,7 @@ import (
 
 var (
 	TestTrue             = true
+	TestFalse            = false
 	TestNsName           = gwapiv1.Namespace("testnamespace")
 	TestRealm            = "testrealm"
 	TestAuthType         = "static"
@@ -43,8 +45,12 @@ var (
 		Limits:   TestResourceLimit,
 		Requests: TestResourceRequest,
 	}
-	TestPort    = gwapiv1.PortNumber(1)
-	TestEndPort = gwapiv1.PortNumber(2)
+	TestPort        = gwapiv1.PortNumber(1)
+	TestEndPort     = gwapiv1.PortNumber(2)
+	TestPortUDPName = "udp-port"
+	TestProtocolUDP = corev1.ProtocolUDP
+	TestPortTCPName = "tcp-port"
+	TestProtocolTCP = corev1.ProtocolTCP
 )
 
 // Namespace
@@ -155,13 +161,13 @@ var TestSvc = corev1.Service{
 				Name:     "udp-ok",
 				Protocol: corev1.ProtocolUDP,
 				Port:     1,
-				NodePort: 30001,
+				// NodePort: 30001,
 			},
 			{
 				Name:     "tcp-ok",
 				Protocol: corev1.ProtocolTCP,
 				Port:     2,
-				NodePort: 30002,
+				// NodePort: 30002,
 			},
 		},
 	},
@@ -218,6 +224,58 @@ var TestEndpoint = corev1.Endpoints{
 		Addresses: []corev1.EndpointAddress{{
 			IP: "1.2.3.7",
 		}},
+	}},
+}
+
+// EndpointSlice for the TestSvc
+var TestEndpointSlice = discoveryv1.EndpointSlice{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testendpointslice-ok",
+		Labels: map[string]string{ // bound to the svc by a label
+			"kubernetes.io/service-name": "testservice-ok",
+		},
+	},
+	AddressType: discoveryv1.AddressTypeIPv4,
+	Endpoints: []discoveryv1.Endpoint{
+		{
+			Addresses: []string{
+				"1.2.3.4",
+				"1.2.3.5",
+			},
+			Conditions: discoveryv1.EndpointConditions{
+				Ready:       &TestTrue,
+				Serving:     &TestTrue,
+				Terminating: &TestFalse,
+			},
+		},
+		{
+			Addresses: []string{
+				"1.2.3.6",
+			},
+			Conditions: discoveryv1.EndpointConditions{
+				Ready:       &TestFalse,
+				Serving:     &TestFalse,
+				Terminating: &TestTrue,
+			},
+		},
+		{
+			Addresses: []string{
+				"1.2.3.7",
+			},
+			Conditions: discoveryv1.EndpointConditions{
+				Ready:       &TestFalse,
+				Serving:     &TestTrue,
+				Terminating: &TestFalse,
+			},
+		},
+	},
+	Ports: []discoveryv1.EndpointPort{{
+		Name:     &TestPortUDPName,
+		Protocol: &TestProtocolUDP,
+	}, {
+		Name:     &TestPortTCPName,
+		Protocol: &TestProtocolTCP,
 	}},
 }
 

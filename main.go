@@ -74,7 +74,7 @@ func init() {
 
 func main() {
 	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr string
-	var enableLeaderElection, enableEDS bool
+	var enableLeaderElection, enableEDS, disableEndpontSliceController bool
 
 	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
@@ -87,6 +87,8 @@ func main() {
 	flag.StringVar(&cdsAddr, "config-discovery-address", stnrv1.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&disableEndpontSliceController, "disable-endpontslice-controller", false,
+		"Disable the EndpointSlice controller and fall back to the legacy Endpoints controller.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -106,8 +108,10 @@ func main() {
 	buildInfo := buildinfo.BuildInfo{Version: version, CommitHash: commitHash, BuildDate: buildDate}
 	setupLog.Info(fmt.Sprintf("starting STUNner gateway operator %s", buildInfo.String()))
 
+	config.EndpointSliceAvailable = !disableEndpontSliceController // controller may override this
 	config.EnableEndpointDiscovery = enableEDS
-	setupLog.Info("endpoint discovery", "state", enableEDS)
+	setupLog.Info("endpoint discovery", "enabled", enableEDS,
+		"disable-endpointslice-controller", disableEndpontSliceController)
 
 	if dataplaneMode == opdefault.DefaultDataplaneMode {
 		// dataplane mode not overrridden on the command line: use env var

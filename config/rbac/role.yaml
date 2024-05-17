@@ -50,6 +50,7 @@ rules:
   - ""
   resources:
   - endpoints
+  - endpointslices
   - namespaces
   - nodes
   - secrets

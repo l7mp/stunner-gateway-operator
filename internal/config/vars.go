@@ -43,4 +43,12 @@ var (
 
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
 	ConfigDiscoveryAddress = stnrv1.DefaultConfigDiscoveryAddress
+
+	// EndpointSliceAvailable is a global flag indicating whether EndpointSlices are available
+	// in the current cluster. This is detected in the UDPRoute controller trying to create a
+	// Watch for EndpointSlices. If successful, only EndpointSlices will be considered and
+	// Endpoints support is disables. Otherwise, the opetator falls back to Endoints support
+	// (note that this breaks graceful backend shutdown, see
+	// https://github.com/l7mp/stunner/issues/138).
+	EndpointSliceAvailable = opdefault.DefaultEndpointSliceAvailable
 )

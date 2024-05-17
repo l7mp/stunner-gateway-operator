@@ -56,15 +56,9 @@ func testLegacyMode() {
 			config.EnableEndpointDiscovery = false
 			config.EnableRelayToClusterIP = false
 
-			ctrl.Log.Info("loading GatewayClass")
-			// fmt.Printf("%#v\n", testGwClass)
-			Expect(k8sClient.Create(ctx, testGwClass)).Should(Succeed())
-			ctrl.Log.Info("loading GatewayConfig")
-			// fmt.Printf("%#v\n", testGwConfig)
-			Expect(k8sClient.Create(ctx, testGwConfig)).Should(Succeed())
-			ctrl.Log.Info("loading Gateway")
-			// fmt.Printf("%#v\n", testGw)
-			Expect(k8sClient.Create(ctx, testGw)).Should(Succeed())
+			createOrUpdateGatewayClass(testGwClass, nil)
+			createOrUpdateGatewayConfig(testGwConfig, nil)
+			createOrUpdateGateway(testGw, nil)
 		})
 
 		It("should allow the gateway-config to be queried", func() {
@@ -198,8 +192,15 @@ func testLegacyMode() {
 
 		It("should set the GatewayClass status", func() {
 			gc := &gwapiv1.GatewayClass{}
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
-				gc)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass), gc)
+				if err != nil {
+					return false
+				}
+				s := meta.FindStatusCondition(gc.Status.Conditions,
+					string(gwapiv1.GatewayClassConditionStatusAccepted))
+				return s != nil && s.Status == metav1.ConditionTrue
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(gc.Status.Conditions).To(HaveLen(1))
 
@@ -295,8 +296,13 @@ func testLegacyMode() {
 
 		It("should survive the event of adding a route", func() {
 			ctrl.Log.Info("loading UDPRoute")
-			// fmt.Printf("%#v\n", testUDPRoute)
-			Expect(k8sClient.Create(ctx, testUDPRoute)).Should(Succeed())
+			createOrUpdateUDPRoute(testUDPRoute, nil)
+
+			ctrl.Log.Info("loading backend Service")
+			createOrUpdateService(testSvc, nil)
+
+			ctrl.Log.Info("loading backend EndpointSlice")
+			createOrUpdateEndpointSlice(testEndpointSlice, nil)
 
 			// retry, but also try to unpack inside Eventually
 			lookupKey := types.NamespacedName{
@@ -319,12 +325,11 @@ func testLegacyMode() {
 				}
 
 				// conf should have valid cluster confs
-				if len(c.Clusters) == 1 {
+				if len(c.Clusters) == 1 && c.Clusters[0].Type == "STRICT_DNS" {
 					conf = &c
 					return true
 				}
 				return false
-
 			}, timeout, interval).Should(BeTrue())
 
 			_, ok := cm.GetAnnotations()[opdefault.RelatedGatewayKey]
@@ -407,7 +412,7 @@ func testLegacyMode() {
 
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				addr := gwapiv1.IPAddressType
 				current.Spec.Addresses = []gwapiv1.GatewayAddress{{
 					Type:  &addr,
@@ -456,10 +461,10 @@ func testLegacyMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {})
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {})
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			createOrUpdateNode(&testutils.TestNode, nil)
+			createOrUpdateNode(testNode, nil)
 
 			// retry, but also check if a public address has been added
 			lookupKey := types.NamespacedName{
@@ -631,7 +636,7 @@ func testLegacyMode() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(&testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
+			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 			})
@@ -674,7 +679,7 @@ func testLegacyMode() {
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "NodePort"})
 			})
 
@@ -716,7 +721,7 @@ func testLegacyMode() {
 
 		It("should add annotations from Gateway", func() {
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "dummy-1",
@@ -827,7 +832,7 @@ func testLegacyMode() {
 			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "new-dummy-1",
@@ -869,10 +874,10 @@ func testLegacyMode() {
 
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
-			Expect(k8sClient.Create(ctx, testSecret)).Should(Succeed())
+			createOrUpdateSecret(testSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -941,7 +946,7 @@ func testLegacyMode() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
+			createOrUpdateSecret(testSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -990,7 +995,7 @@ func testLegacyMode() {
 
 		It("should update TLS key when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			createOrUpdateSecret(&testutils.TestSecret, func(current *corev1.Secret) {
+			createOrUpdateSecret(testSecret, func(current *corev1.Secret) {
 				current.Data["tls.key"] = []byte("newkey")
 			})
 
@@ -1039,10 +1044,10 @@ func testLegacyMode() {
 
 		It("should survive installing a TLS cert/key for multiple TLS/DTLS listeners", func() {
 			ctrl.Log.Info("re-loading TLS Secret with restored cert/key")
-			createOrUpdateSecret(&testutils.TestSecret, nil)
+			createOrUpdateSecret(testSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 1st listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1254,10 +1259,10 @@ func testLegacyMode() {
 
 		It("should survive converting the route to a StaticService backend", func() {
 			ctrl.Log.Info("adding static service")
-			Expect(k8sClient.Create(ctx, testStaticSvc)).Should(Succeed())
+			createOrUpdateStaticService(testStaticSvc, nil)
 
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1281,7 +1286,7 @@ func testLegacyMode() {
 			})
 
 			ctrl.Log.Info("updating Route")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
@@ -1582,7 +1587,7 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 				})
@@ -1610,7 +1615,7 @@ func testLegacyMode() {
 			})
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
+			createOrUpdateUDPRoute(testUDPRoute, nil)
 
 			lookupKey := types.NamespacedName{
 				Name:      opdefault.DefaultConfigMapName,
@@ -1801,7 +1806,7 @@ func testLegacyMode() {
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading UDPRoute")
 
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 
@@ -1998,7 +2003,7 @@ func testLegacyMode() {
 			})).Should(Succeed())
 
 			ctrl.Log.Info("recreating UDPRoute with open listener attachment")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = nil
 			})
 
@@ -2252,7 +2257,7 @@ func testLegacyMode() {
 			allowedRoutes := gwapiv1.AllowedRoutes{
 				Namespaces: &routeNamespaces,
 			}
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 				})
@@ -2508,7 +2513,7 @@ func testLegacyMode() {
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
 			sn := gwapiv1.SectionName("gateway-1-listener-dtls")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs = []gwapiv1.ParentReference{
 					{
 						Name:        "gateway-1",
@@ -3036,7 +3041,7 @@ func testLegacyMode() {
 		// external auth ref
 		It("switching to external auth refs", func() {
 			ctrl.Log.Info("loading the external auth Secret")
-			Expect(k8sClient.Create(ctx, testAuthSecret)).Should(Succeed())
+			createOrUpdateSecret(testAuthSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1.Namespace("testnamespace")
@@ -3753,11 +3758,133 @@ func testLegacyMode() {
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = false
 
+			createOrUpdateEndpointSlice(testEndpointSlice, nil)
 			createOrUpdateGateway(&testutils.TestGw, nil)
 			createOrUpdateUDPRoute(&testutils.TestUDPRoute, nil)
+			createOrUpdateService(testSvc, nil)
 
-			Expect(k8sClient.Create(ctx, testSvc)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, testEndpoint)).Should(Succeed())
+			lookupKey := types.NamespacedName{
+				Name:      opdefault.DefaultConfigMapName,
+				Namespace: string(testutils.TestNsName),
+			}
+			cm := &corev1.ConfigMap{}
+
+			ctrl.Log.Info("trying to Get STUNner configmap", "resource",
+				lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, cm)
+				if err != nil {
+					return false
+				}
+
+				c, err := store.UnpackConfigMap(cm)
+				if err != nil {
+					return false
+				}
+
+				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+					conf = &c
+					return true
+				}
+
+				return false
+
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should re-render STUNner config with one cluster", func() {
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.Routes).Should(BeEmpty())
+
+			Expect(conf.Clusters).To(HaveLen(1))
+
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
+		It("should set the Route status", func() {
+			ro := &stnrgwv1.UDPRoute{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
+				ro)).Should(Succeed())
+
+			Expect(ro.Status.Parents).To(HaveLen(1))
+			ps := ro.Status.Parents[0]
+
+			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
+			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
+			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1.Namespace("testnamespace"))))
+			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
+			// Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController("gatewayclass-ok")))
+
+			// Expect(ps.ParentRef.Group).To(BeNil())
+			// Expect(ps.ParentRef.Kind).To(BeNil())
+			Expect(ps.ParentRef.Namespace).To(BeNil())
+			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
+			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
+			Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController(config.ControllerName)))
+
+			s := meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionAccepted))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionAccepted)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			s = meta.FindStatusCondition(ps.Conditions,
+				string(gwapiv1.RouteConditionResolvedRefs))
+			Expect(s).NotTo(BeNil())
+			Expect(s.Type).Should(
+				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
+			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
+
+			// restoure
+			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+		})
+	})
+
+	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
+		conf := &stnrconfv1.StunnerConfig{}
+
+		It("should survive loading a minimal config", func() {
+			// switch EDS off
+			config.EnableEndpointDiscovery = true
+			config.EnableRelayToClusterIP = false
+
+			createOrUpdateEndpointSlice(testEndpointSlice, nil)
+			createOrUpdateGateway(testGw, nil)
+			createOrUpdateUDPRoute(testUDPRoute, nil)
+			createOrUpdateService(testSvc, nil)
 
 			lookupKey := types.NamespacedName{
 				Name:      opdefault.DefaultConfigMapName,
@@ -3869,7 +3996,7 @@ func testLegacyMode() {
 	})
 
 	// WITH EDS and RELAY-CLUSTER-IP
-	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED)", Ordered, Label("legacy"), func() {
+	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
 		conf := &stnrconfv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
@@ -3878,7 +4005,7 @@ func testLegacyMode() {
 			config.EnableRelayToClusterIP = true
 
 			ctrl.Log.Info("re-loading Gateway with 1 valid listener")
-			createOrUpdateGateway(&testutils.TestGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
 				current.Spec.Listeners = []gwapiv1.Listener{{
 					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
 					Port:     gwapiv1.PortNumber(1),
@@ -3963,10 +4090,10 @@ func testLegacyMode() {
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway with 2 valid listeners")
-			createOrUpdateGateway(&testutils.TestGw, nil)
+			createOrUpdateGateway(testGw, nil)
 
 			ctrl.Log.Info("re-loading UDPRoute")
-			createOrUpdateUDPRoute(&testutils.TestUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				current.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 			})
 

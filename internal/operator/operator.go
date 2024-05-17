@@ -162,6 +162,12 @@ func (o *Operator) eventLoop(ctx context.Context) {
 
 		case <-ctx.Done():
 			// FIXME revert gateway-class status to "Waiting..."
+
+			// delay closing the opChannel to let the manager stop - this prevents a
+			// race condition when the operator stops before the controllers, and a
+			// reconcile event triggers a write to the closed operator channel
+			time.Sleep(250 * time.Millisecond)
+
 			return
 		}
 	}

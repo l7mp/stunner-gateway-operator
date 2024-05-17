@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -31,13 +32,12 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -73,26 +73,27 @@ const (
 
 var (
 	// Resources
-	testNs           *corev1.Namespace
-	testGwClass      *gwapiv1.GatewayClass
-	testGwConfig     *stnrgwv1.GatewayConfig
-	testGw           *gwapiv1.Gateway
-	testUDPRouteV1A2 *gwapiv1a2.UDPRoute
-	testUDPRoute     *stnrgwv1.UDPRoute
-	testSvc          *corev1.Service
-	testEndpoint     *corev1.Endpoints
-	testNode         *corev1.Node
-	testSecret       *corev1.Secret
-	testAuthSecret   *corev1.Secret
-	testStaticSvc    *stnrgwv1.StaticService
-	testDataplane    *stnrgwv1.Dataplane
+	testNs            *corev1.Namespace
+	testGwClass       *gwapiv1.GatewayClass
+	testGwConfig      *stnrgwv1.GatewayConfig
+	testGw            *gwapiv1.Gateway
+	testUDPRouteV1A2  *gwapiv1a2.UDPRoute
+	testUDPRoute      *stnrgwv1.UDPRoute
+	testSvc           *corev1.Service
+	testEndpoint      *corev1.Endpoints
+	testEndpointSlice *discoveryv1.EndpointSlice
+	testNode          *corev1.Node
+	testSecret        *corev1.Secret
+	testAuthSecret    *corev1.Secret
+	testStaticSvc     *stnrgwv1.StaticService
+	testDataplane     *stnrgwv1.Dataplane
 	// Globals
-	cfg       *rest.Config
-	k8sClient client.Client
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
-	scheme    *runtime.Scheme = runtime.NewScheme()
+	cfg              *rest.Config
+	k8sClient        client.Client
+	testEnv          *envtest.Environment
+	ctx, opCtx       context.Context
+	cancel, opCancel context.CancelFunc
+	scheme           *runtime.Scheme = runtime.NewScheme()
 	// zapCfg                    = zap.Config{
 	// 	Encoding:    "console",
 	// 	OutputPaths: []string{"stderr"},
@@ -104,7 +105,8 @@ var (
 	// 		EncodeLevel: zapcore.CapitalLevelEncoder,
 	// 	},
 	// }
-	op *operator.Operator
+	op       *operator.Operator
+	setupLog logr.Logger
 )
 
 func init() {
@@ -121,7 +123,7 @@ var _ = BeforeSuite(func() {
 		Level:           zapcore.Level(loglevel),
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	setupLog := ctrl.Log.WithName("setup")
+	setupLog = ctrl.Log.WithName("setup")
 
 	ctx, cancel = context.WithCancel(context.Background())
 
@@ -161,7 +163,20 @@ var _ = BeforeSuite(func() {
 
 	setupLog.Info("creating a testing namespace")
 	Expect(k8sClient.Create(ctx, testNs)).Should(Succeed())
+})
 
+var _ = AfterSuite(func() {
+	By("removing test namespace")
+	Expect(k8sClient.Delete(ctx, testNs)).Should(Succeed())
+
+	cancel()
+
+	By("tearing down the test environment")
+	err := testEnv.Stop()
+	Expect(err).NotTo(HaveOccurred())
+})
+
+func initOperator() {
 	setupLog.Info("setting up client manager")
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
@@ -200,42 +215,32 @@ var _ = BeforeSuite(func() {
 	r.SetOperatorChannel(op.GetOperatorChannel())
 	op.SetProgressReporters(r, u, c)
 
+	opCtx, opCancel = context.WithCancel(ctx)
+
 	setupLog.Info("starting renderer thread")
-	err = r.Start(ctx)
+	err = r.Start(opCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting updater thread")
-	err = u.Start(ctx)
+	err = u.Start(opCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting config discovery server")
-	err = c.Start(ctx)
+	err = c.Start(opCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting operator thread")
-	err = op.Start(ctx)
+	err = op.Start(opCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting manager")
 	// must be explicitly cancelled!
 	go func() {
 		defer GinkgoRecover()
-		err := mgr.Start(ctx)
+		err := mgr.Start(opCtx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
-
-})
-
-var _ = AfterSuite(func() {
-	By("removing test namespace")
-	Expect(k8sClient.Delete(ctx, testNs)).Should(Succeed())
-
-	cancel()
-
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-})
+}
 
 func InitResources() {
 	testNs = testutils.TestNs.DeepCopy()
@@ -245,6 +250,7 @@ func InitResources() {
 	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
 	testSvc = testutils.TestSvc.DeepCopy()
 	testEndpoint = testutils.TestEndpoint.DeepCopy()
+	testEndpointSlice = testutils.TestEndpointSlice.DeepCopy()
 	testNode = testutils.TestNode.DeepCopy()
 	testSecret = testutils.TestSecret.DeepCopy()
 	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
@@ -271,140 +277,6 @@ func TestAPIs(t *testing.T) {
 	// )
 
 	RunSpecs(t, "Controller Suite")
-}
-
-type UDPRouteMutator func(current *stnrgwv1.UDPRoute)
-
-func createOrUpdateUDPRoute(template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
-	current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		template.Spec.DeepCopyInto(&current.Spec)
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
-type GatewayMutator func(current *gwapiv1.Gateway)
-
-func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
-	current := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		template.Spec.DeepCopyInto(&current.Spec)
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
-type GatewayConfigMutator func(current *stnrgwv1.GatewayConfig)
-
-func createOrUpdateGatewayConfig(template *stnrgwv1.GatewayConfig, f GatewayConfigMutator) {
-	current := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		template.Spec.DeepCopyInto(&current.Spec)
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
-type SecretMutator func(current *corev1.Secret)
-
-func createOrUpdateSecret(template *corev1.Secret, f SecretMutator) {
-	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		current.Type = template.Type
-		current.Data = make(map[string][]byte)
-		for k, v := range template.Data {
-			current.Data[k] = v
-		}
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
-type NodeMutator func(current *corev1.Node)
-
-func statusUpdateNode(name string, f NodeMutator) {
-	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-		Name: name,
-	}}
-
-	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current)
-	Expect(err).Should(Succeed())
-
-	if f != nil {
-		f(current)
-	}
-
-	err = k8sClient.Status().Update(ctx, current)
-	Expect(err).Should(Succeed())
-}
-
-// also updates status
-func createOrUpdateNode(template *corev1.Node, f NodeMutator) {
-	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		template.Spec.DeepCopyInto(&current.Spec)
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-
-	template.Status.DeepCopyInto(&current.Status)
-	err = k8sClient.Status().Update(ctx, current)
-	Expect(err).Should(Succeed())
-}
-
-// createOrUpdate will retry when ctrlutil.CreateOrUpdate fails. This is useful to robustify tests:
-// sometimes an update is going on while we are trying to run the next test and then the CreateOrUpdate
-// may fail with a Conflict.
-func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f ctrlutil.MutateFn) (ctrlutil.OperationResult, error) {
-	res, err := ctrlutil.CreateOrUpdate(ctx, c, obj, f)
-	if err == nil {
-		return res, err
-	}
-
-	for i := 1; i < 5; i++ {
-		res, err = ctrlutil.CreateOrUpdate(ctx, c, obj, f)
-		if err == nil {
-			return res, err
-		}
-	}
-
-	return res, err
 }
 
 // managed mode test helper
@@ -449,35 +321,89 @@ func stabilize() {
 }
 
 var _ = Describe("Integration test:", Ordered, func() {
+	// Endpoints controller
 	// LEGACY
-	Context(`When using the "legacy" dataplane mode`, func() {
-		It(`It should be possible to set the dataplane mode to "legacy"`, func() {
-			InitResources()
+	Context(`When using the "legacy" dataplane mode with the legacy endpoints controller`, func() {
+		It(`should be possible to initialize the operator`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
+			config.EndpointSliceAvailable = false
+			if opCancel != nil {
+				opCancel()
+			}
+			initOperator()
+			InitResources()
+		})
+	})
+
+	testLegacyModeEndpointController()
+
+	Context(`When terminating the operator`, func() {
+		It("should stabilize", func() {
+			stabilize()
+		})
+	})
+
+	// EndpointSlice controller
+	// LEGACY
+	Context(`When using the "legacy" dataplane mode with the legacy endpointslice controller`, func() {
+		It(`should be possible to restart the operator using ghe endpointslice controller`, func() {
+			config.DataplaneMode = config.DataplaneModeLegacy
+			config.EndpointSliceAvailable = true
+			if opCancel != nil {
+				opCancel()
+			}
+			initOperator()
+			InitResources()
 		})
 	})
 
 	testLegacyMode()
 
-	Context(`When using the "legacy" dataplane mode`, func() {
-		Context("It should be possible to reset the dataplane mode to the default", func() {
-			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+	// MANAGED
+	Context(`When using the "managed" dataplane mode with the legacy endpoints controller`, func() {
+		It(`should be possible to set the dataplane mode to "managed"`, func() {
+			config.EndpointSliceAvailable = false
+			config.DataplaneMode = config.DataplaneModeManaged
+			if opCancel != nil {
+				opCancel()
+			}
+			initOperator()
+			InitResources()
+		})
+	})
+
+	testManagedModeEndpointController()
+
+	Context(`When terminating the operator`, func() {
+		It("should stabilize", func() {
+			stabilize()
+		})
+	})
+
+	Context(`When terminating the operator`, func() {
+		It("should stabilize", func() {
+			time.Sleep(time.Second)
 		})
 	})
 
 	// MANAGED
-	Context(`When using the "managed" dataplane mode`, func() {
-		It(`It should be possible to set the dataplane mode to "managed"`, func() {
-			InitResources()
+	Context(`When using the "managed" dataplane mode with the legacy endpointslice controller`, func() {
+		It(`should be possible to set the dataplane mode to "managed"`, func() {
+			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
+			if opCancel != nil {
+				opCancel()
+			}
+			initOperator()
+			InitResources()
 		})
 	})
 
 	testManagedMode()
 
-	Context(`When using the "managed" dataplane mode`, func() {
-		Context("It should be possible to reset the dataplane mode to the default", func() {
-			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+	Context(`When terminating the operator`, func() {
+		It("should stabilize", func() {
+			stabilize()
 		})
 	})
 })

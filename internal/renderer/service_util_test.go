@@ -421,6 +421,8 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.Type = corev1.ServiceTypeNodePort
+				s1.Spec.Ports[0].NodePort = 30001
+				s1.Spec.Ports[1].NodePort = 30002
 				s1.SetOwnerReferences([]metav1.OwnerReference{{
 					APIVersion: gwapiv1.GroupVersion.String(),
 					Kind:       "Gateway",
