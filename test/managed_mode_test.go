@@ -1079,7 +1079,7 @@ func testManagedMode() {
 		})
 
 		It("should stabilize", func() {
-			stabilize()
+			op.Stabilize()
 		})
 
 		It("should not reset the replica count when it is updated externally", func() {
@@ -1800,7 +1800,7 @@ func testManagedMode() {
 		})
 
 		It("should stabilize", func() {
-			stabilize()
+			op.Stabilize()
 		})
 	})
 
@@ -2482,7 +2482,7 @@ func testManagedMode() {
 		})
 
 		It("should stabilize", func() {
-			stabilize()
+			op.Stabilize()
 		})
 	})
 

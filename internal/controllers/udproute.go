@@ -40,11 +40,12 @@ const (
 
 type udpRouteReconciler struct {
 	client.Client
-	eventCh chan event.Event
-	log     logr.Logger
+	eventCh     chan event.Event
+	terminating bool
+	log         logr.Logger
 }
 
-func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &udpRouteReconciler{
 		Client:  mgr.GetClient(),
@@ -54,7 +55,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 
 	c, err := controller.New("udproute", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("created udproute controller")
 
@@ -64,20 +65,20 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 		&handler.EnqueueRequestForObject{},
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching udproute objects")
 
 	// index UDPRoute objects as per the referenced Services
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
 		serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// index UDPRoute objects as per the referenced StaticServices
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
 		staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// watch UDPRouteV1A2 objects
@@ -86,20 +87,20 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 		&handler.EnqueueRequestForObject{},
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching udproute objects")
 
 	// index UDPRouteV1A2 objects as per the referenced Services
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
 		serviceUDPRouteIndexV1A2, serviceUDPRouteIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// index UDPRouteV1A2 objects as per the referenced StaticServices
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
 		staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
@@ -113,7 +114,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 			},
 		})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// watch Service objects referenced by one of our UDPRoutes
@@ -127,7 +128,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 			// predicate.NewPredicateFuncs(r.validateLoadBalancerReconcile),
 			loadBalancerPredicate),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching service objects")
 
@@ -158,7 +159,7 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 				&handler.EnqueueRequestForObject{},
 				predicate.NewPredicateFuncs(r.validateBackendForReconcile),
 			); err != nil {
-				return err
+				return nil, err
 			}
 
 			config.EndpointSliceAvailable = false
@@ -172,11 +173,11 @@ func RegisterUDPRouteController(mgr manager.Manager, ch chan event.Event, log lo
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateStaticServiceForReconcile),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching staticservice objects")
 
-	return nil
+	return r, nil
 }
 
 // Reconcile handles an update to a UDPRoute or a Service/Endpoints referenced by an UDPRoute.
@@ -668,4 +669,8 @@ func staticServiceUDPRouteIndexFunc(o client.Object) []string {
 	}
 
 	return staticServices
+}
+
+func (r *udpRouteReconciler) Terminate() {
+	r.terminating = true
 }

@@ -41,12 +41,13 @@ const (
 
 type gatewayReconciler struct {
 	client.Client
-	eventCh chan event.Event
-	log     logr.Logger
+	eventCh     chan event.Event
+	terminating bool
+	log         logr.Logger
 }
 
-// RegisterGatewayController registers a reconciler for Gateway and the associated Secret objects.
-func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+// NewGatewayController registers a reconciler for Gateway and the associated Secret objects.
+func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &gatewayReconciler{
 		Client:  mgr.GetClient(),
@@ -56,7 +57,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 
 	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("created gateway controller")
 
@@ -70,7 +71,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 			predicate.GenerationChangedPredicate{},
 		),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching gatewayclass objects")
 
@@ -87,20 +88,20 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 			predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
 		),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching gateway objects")
 
 	// index Gateway objects as per the referenced Secrets
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, secretGatewayIndex,
 		secretGatewayIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// index Gateway objects as per the referenced GatewayClass
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, classGatewayIndex,
 		classGatewayIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// watch Secret objects referenced by one of our Gateways
@@ -109,7 +110,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching secret objects")
 
@@ -120,7 +121,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 			&handler.EnqueueRequestForObject{},
 			predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
 		); err != nil {
-			return err
+			return nil, err
 		}
 		r.log.Info("watching deployment objects")
 	}
@@ -128,7 +129,7 @@ func RegisterGatewayController(mgr manager.Manager, ch chan event.Event, log log
 	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
 	// with backend Services)
 
-	return nil
+	return r, nil
 }
 
 // Reconcile handles updates to a Gateway managed by this controller or a Secret referenced by one
@@ -417,4 +418,8 @@ func secretGatewayIndexFunc(o client.Object) []string {
 	}
 
 	return secretReferences
+}
+
+func (r *gatewayReconciler) Terminate() {
+	r.terminating = true
 }

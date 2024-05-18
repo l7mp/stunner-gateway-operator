@@ -46,6 +46,7 @@ type OperatorConfig struct {
 type Operator struct {
 	ctx                                       context.Context
 	mgr                                       manager.Manager
+	gwConfC, dpC, gwC, rouC, nodeC            controllers.Controller
 	renderCh, operatorCh, updaterCh, configCh chan event.Event
 	manager                                   manager.Manager
 	tracker                                   *config.ProgressTracker
@@ -78,29 +79,39 @@ func (o *Operator) Start(ctx context.Context) error {
 	}
 
 	log.V(3).Info("starting GatewayConfig controller")
-	if err := controllers.RegisterGatewayConfigController(o.mgr, o.operatorCh, o.logger); err != nil {
+	c, err := controllers.NewGatewayConfigController(o.mgr, o.operatorCh, o.logger)
+	if err != nil {
 		return fmt.Errorf("cannot register gatewayconfig controller: %w", err)
 	}
+	o.gwConfC = c
 
 	log.V(3).Info("starting Dataplane controller")
-	if err := controllers.RegisterDataplaneController(o.mgr, o.operatorCh, o.logger); err != nil {
+	c, err = controllers.NewDataplaneController(o.mgr, o.operatorCh, o.logger)
+	if err != nil {
 		return fmt.Errorf("cannot register dataplane controller: %w", err)
 	}
+	o.dpC = c
 
 	log.V(3).Info("starting Gateway controller")
-	if err := controllers.RegisterGatewayController(o.mgr, o.operatorCh, o.logger); err != nil {
+	c, err = controllers.NewGatewayController(o.mgr, o.operatorCh, o.logger)
+	if err != nil {
 		return fmt.Errorf("cannot register gateway controller: %w", err)
 	}
+	o.gwC = c
 
 	log.V(3).Info("starting UDPRoute controller")
-	if err := controllers.RegisterUDPRouteController(o.mgr, o.operatorCh, o.logger); err != nil {
+	c, err = controllers.NewUDPRouteController(o.mgr, o.operatorCh, o.logger)
+	if err != nil {
 		return fmt.Errorf("cannot register udproute controller: %w", err)
 	}
+	o.rouC = c
 
 	log.V(3).Info("starting Node controller")
-	if err := controllers.RegisterNodeController(o.mgr, o.operatorCh, o.logger); err != nil {
+	c, err = controllers.NewNodeController(o.mgr, o.operatorCh, o.logger)
+	if err != nil {
 		return fmt.Errorf("cannot register node controller: %w", err)
 	}
+	o.nodeC = c
 
 	go o.eventLoop(ctx)
 
@@ -162,32 +173,9 @@ func (o *Operator) eventLoop(ctx context.Context) {
 
 		case <-ctx.Done():
 			// FIXME revert gateway-class status to "Waiting..."
-
-			// delay closing the opChannel to let the manager stop - this prevents a
-			// race condition when the operator stops before the controllers, and a
-			// reconcile event triggers a write to the closed operator channel
-			time.Sleep(250 * time.Millisecond)
+			o.Terminate()
 
 			return
 		}
 	}
-}
-
-// SetProgressReporters sets the operator subsystems that need to be queried to check the number of
-// operations in progrses. This can be used to implement graceful shutdown.
-func (o *Operator) SetProgressReporters(reporters ...config.ProgressReporter) {
-	o.progressReporters = make([]config.ProgressReporter, len(reporters))
-	copy(o.progressReporters, reporters)
-}
-
-// ProgressReport returns the number of ongoing operations (rendering processes, updates, etc) plus
-// the number of throttled rendering processes in progress.
-func (o *Operator) ProgressReport() int {
-	progress := 0
-	for _, r := range o.progressReporters {
-		progress += r.ProgressReport()
-	}
-
-	op := o.tracker.ProgressReport()
-	return progress + op
 }

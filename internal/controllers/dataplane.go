@@ -38,11 +38,12 @@ import (
 // DataplaneReconciler reconciles a Dataplane object.
 type dataplaneReconciler struct {
 	client.Client
-	eventCh chan event.Event
-	log     logr.Logger
+	eventCh     chan event.Event
+	terminating bool
+	log         logr.Logger
 }
 
-func RegisterDataplaneController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+func NewDataplaneController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
 	r := &dataplaneReconciler{
 		Client:  mgr.GetClient(),
 		eventCh: ch,
@@ -51,7 +52,7 @@ func RegisterDataplaneController(mgr manager.Manager, ch chan event.Event, log l
 
 	c, err := controller.New("dataplane", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("created dataplane controller")
 
@@ -62,11 +63,11 @@ func RegisterDataplaneController(mgr manager.Manager, ch chan event.Event, log l
 		// trigger when the Dataplane spec changes
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching dataplane objects")
 
-	return nil
+	return r, nil
 }
 
 func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -91,7 +92,13 @@ func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	store.Dataplanes.Reset(dataplaneList)
 	r.log.V(2).Info("reset Dataplane store", "configs", store.Dataplanes.String())
 
-	r.eventCh <- event.NewEventRender()
+	if !r.terminating {
+		r.eventCh <- event.NewEventRender()
+	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *dataplaneReconciler) Terminate() {
+	r.terminating = true
 }

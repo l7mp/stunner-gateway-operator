@@ -186,8 +186,4 @@ func testLegacyModeEndpointController() {
 		// ctrl.Log.Info("deleting Endpoint")
 		// Expect(k8sClient.Delete(ctx, testEndpoint)).Should(Succeed())
 	})
-
-	It("should stabilize", func() {
-		stabilize()
-	})
 }

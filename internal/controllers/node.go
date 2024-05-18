@@ -27,11 +27,12 @@ const NodeListSize = 10
 
 type nodeReconciler struct {
 	client.Client
-	eventCh chan event.Event
-	log     logr.Logger
+	eventCh     chan event.Event
+	terminating bool
+	log         logr.Logger
 }
 
-func RegisterNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+func NewNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
 	r := &nodeReconciler{
 		Client:  mgr.GetClient(),
 		eventCh: ch,
@@ -40,7 +41,7 @@ func RegisterNodeController(mgr manager.Manager, ch chan event.Event, log logr.L
 
 	c, err := controller.New("node", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("created node controller")
 
@@ -49,11 +50,11 @@ func RegisterNodeController(mgr manager.Manager, ch chan event.Event, log logr.L
 		&handler.EnqueueRequestForObject{},
 		predicate.ResourceVersionChangedPredicate{},
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching node objects")
 
-	return nil
+	return r, nil
 }
 
 func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -187,4 +188,8 @@ func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*core
 
 	return nil, "", fmt.Errorf("end of node list reached after searching through %d node(s)",
 		count)
+}
+
+func (r *nodeReconciler) Terminate() {
+	r.terminating = true
 }

@@ -379,9 +379,5 @@ func testManagedModeEndpointController() {
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())
 		})
-
-		It("should stabilize", func() {
-			stabilize()
-		})
 	})
 }

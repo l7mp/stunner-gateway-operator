@@ -302,24 +302,6 @@ func checkConfig(ch chan *stnrv1.StunnerConfig, checker ConfigChecker) bool {
 	}
 }
 
-func stabilize() {
-	d := 50 * time.Millisecond
-	start := time.Now()
-	stabilizer := func() bool {
-		progress := op.ProgressReport()
-		ctrl.Log.V(2).Info("total progress report", "report", progress)
-		return progress == 0
-	}
-	Eventually(stabilizer, time.Second*30, interval).Should(BeTrue())
-	time.Sleep(d)
-	Eventually(stabilizer, time.Second*20, interval).Should(BeTrue())
-	time.Sleep(d)
-	Eventually(stabilizer, time.Second*10, interval).Should(BeTrue())
-
-	ctrl.Log.Info("Operator has stabilized: progress counter reports no ongoing operations in 3 consecutive queries",
-		"duration", time.Since(start), "timeout-between-queries", d)
-}
-
 var _ = Describe("Integration test:", Ordered, func() {
 	// Endpoints controller
 	// LEGACY
@@ -339,7 +321,7 @@ var _ = Describe("Integration test:", Ordered, func() {
 
 	Context(`When terminating the operator`, func() {
 		It("should stabilize", func() {
-			stabilize()
+			op.Stabilize()
 		})
 	})
 
@@ -376,14 +358,7 @@ var _ = Describe("Integration test:", Ordered, func() {
 
 	Context(`When terminating the operator`, func() {
 		It("should stabilize", func() {
-			stabilize()
-		})
-	})
-
-	// EndpointSlice controller
-	Context(`When terminating the operator`, func() {
-		It("should stabilize", func() {
-			time.Sleep(time.Second)
+			op.Stabilize()
 		})
 	})
 
@@ -404,7 +379,7 @@ var _ = Describe("Integration test:", Ordered, func() {
 
 	Context(`When terminating the operator`, func() {
 		It("should stabilize", func() {
-			stabilize()
+			op.Stabilize()
 		})
 	})
 })

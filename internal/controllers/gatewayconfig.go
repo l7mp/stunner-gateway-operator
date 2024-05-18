@@ -44,11 +44,12 @@ const secretGatewayConfigIndex = "secretGatewayConfigIndex"
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
-	eventCh chan event.Event
-	log     logr.Logger
+	eventCh     chan event.Event
+	terminating bool
+	log         logr.Logger
 }
 
-func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, log logr.Logger) error {
+func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &gatewayConfigReconciler{
 		Client:  mgr.GetClient(),
@@ -58,7 +59,7 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 
 	c, err := controller.New("gatewayconfig", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("created gatewayconfig controller")
 
@@ -68,14 +69,14 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 		// trigger when the GatewayConfig spec changes
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching gatewayconfig objects")
 
 	// index GatewayConfig objects as per the referenced Secret
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.GatewayConfig{}, secretGatewayConfigIndex,
 		secretGatewayConfigIndexFunc); err != nil {
-		return err
+		return nil, err
 	}
 
 	// watch Secret objects referenced by one of our GatewayConfigs
@@ -84,11 +85,11 @@ func RegisterGatewayConfigController(mgr manager.Manager, ch chan event.Event, l
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("watching secret objects")
 
-	return nil
+	return r, nil
 }
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -154,7 +155,9 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	store.AuthSecrets.Reset(authSecretList)
 	r.log.V(2).Info("reset AuthSecret store", "secrets", store.AuthSecrets.String())
 
-	r.eventCh <- event.NewEventRender()
+	if !r.terminating {
+		r.eventCh <- event.NewEventRender()
+	}
 
 	return reconcile.Result{}, nil
 }
@@ -209,4 +212,8 @@ func secretGatewayConfigIndexFunc(o client.Object) []string {
 	}.String())
 
 	return ret
+}
+
+func (r *gatewayConfigReconciler) Terminate() {
+	r.terminating = true
 }
