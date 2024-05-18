@@ -3165,8 +3165,8 @@ func testManagedMode() {
 					"valid-gw-label":           "valid-gw-label-value", // will appear on the deployment/pod
 				})
 				gw2.SetAnnotations(map[string]string{
-					"stunner.l7mp.io/related-gateway-name": "dummy-ns/dummy-name", // will be overwritten on the deployment/pod
-					"valid-gw-ann":                         "valid-gw-ann-value",  // will appear on the deployment/pod
+					"stunner.l7mp.io/related-gateway-name": "dummy-ns/dummy-name", // will be overwritten
+					"valid-gw-ann":                         "valid-gw-ann-value",  // will not appear
 				})
 
 				return nil
@@ -3283,7 +3283,7 @@ func testManagedMode() {
 
 			// pod-level annotations:
 			as = deploy.Spec.Template.GetAnnotations()
-			Expect(as).To(HaveLen(3))
+			Expect(as).To(HaveLen(2))
 
 			// mandatory
 			v, ok = as[opdefault.RelatedGatewayKey]
@@ -3291,9 +3291,8 @@ func testManagedMode() {
 			Expect(v).Should(Equal(store.GetObjectKey(gw2)), "related-gw annotation value")
 
 			// annotation from the gw
-			v, ok = as["valid-gw-ann"]
-			Expect(ok).Should(BeTrue(), "gw ann")
-			Expect(v).Should(Equal("valid-gw-ann-value"), "gw ann value")
+			_, ok = as["valid-gw-ann"]
+			Expect(ok).Should(BeFalse(), "gw ann")
 
 			// annotation from the deployment
 			v, ok = as["valid-deploy-pod-ann"]

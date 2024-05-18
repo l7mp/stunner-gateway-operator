@@ -40,12 +40,8 @@ import (
 //   - stunner.l7mp.io/related-gateway-name=<gateway-name>
 //   - stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>
 //
-// These labels are used for the Deployment selector. Note that deployment-level labels are NOT
-// propagated to the pods to avoid unexpected conflicts.
-//
-// Pod-level annotations:
-//   - copy of annotations from the related Gateway
-//   - stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>
+// These labels are used for the Deployment selector. Note that deployment-level annotations and
+// labels are NOT propagated to the pods to avoid unexpected restarts.
 func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
 	if gw == nil {
@@ -150,10 +146,6 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 
 	annotations := store.MergeMetadata(gw.GetAnnotations(), deployment.GetAnnotations())
 	deployment.SetAnnotations(annotations)
-
-	// propagate deployment-level annotations to the pod template (labels are NOT propagated)
-	annotations = store.MergeMetadata(gw.GetAnnotations(), deployment.Spec.Template.GetAnnotations())
-	deployment.Spec.Template.SetAnnotations(annotations)
 
 	deployment.Spec.Template.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{{

@@ -417,18 +417,13 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.True(t, selector.Matches(labels.Set(labs)), "selector matched")
 
 				as = podTemplate.GetAnnotations()
-				assert.Len(t, as, 2, "annotations len")
+				assert.Len(t, as, 1, "annotations len")
 
 				// mandatory annotations
 				gwName, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 				// annotation is gw-namespace/gw-name
 				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
-
-				// optional annotations
-				a, ok = as["valid-gw-ann"]
-				assert.True(t, ok, "annotations: valid gw ann")
-				assert.Equal(t, "valid-gw-ann-value", a, "valid gateway annotation value")
 			},
 		},
 	})
