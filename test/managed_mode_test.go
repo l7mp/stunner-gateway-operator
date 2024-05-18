@@ -385,6 +385,395 @@ func testManagedMode() {
 			}), timeout, interval).Should(BeTrue())
 		})
 
+		It("should allow Gateway to set the Gateway Address", func() {
+			ctrl.Log.Info("re-loading gateway with specific address")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				addr := gwapiv1.IPAddressType
+				current.Spec.Addresses = []gwapiv1.GatewayAddress{{
+					Type:  &addr,
+					Value: "1.2.3.5",
+				}}
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "1.2.3.5" && c.Listeners[0].PublicPort == 1 {
+					conf = c
+					return true
+				}
+
+				return false
+			}), timeout, interval).Should(BeTrue())
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+		})
+
+		// we cannot set the public IP: no load-balancer operator in the envTest API server
+		// -> check the nodeport fallback
+
+		It("should install a NodePort public IP/port", func() {
+			ctrl.Log.Info("re-loading gateway")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {})
+
+			ctrl.Log.Info("loading a Kubernetes Node")
+			createOrUpdateNode(testNode, nil)
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
+					conf = c
+					return true
+				}
+
+				return false
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should update the public IP/port when node External IP changes", func() {
+			ctrl.Log.Info("re-loading Node with new External IP")
+			statusUpdateNode("testnode-ok", func(current *corev1.Node) {
+				current.Status.Addresses[1].Address = "4.3.2.1"
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "4.3.2.1" {
+					conf = c
+					return true
+				}
+
+				return false
+
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should remove the public IP/port when the node's External IP disappears", func() {
+			ctrl.Log.Info("re-loading Node with no External IP")
+			statusUpdateNode("testnode-ok", func(current *corev1.Node) {
+				current.Status.Addresses[1].Type = corev1.NodeInternalIP
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "" {
+					conf = c
+					return true
+				}
+
+				return false
+
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should find new public IP/port when a new node with a working External IP appears", func() {
+			ctrl.Log.Info("adding new Node with working External IP")
+			current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: "node-2",
+			}}
+			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, current, func() error {
+				testutils.TestNode.Spec.DeepCopyInto(&current.Spec)
+				testutils.TestNode.Status.DeepCopyInto(&current.Status)
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
+					conf = c
+					return true
+				}
+
+				return false
+
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
+			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
+			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				if c.Listeners[0].PublicAddr == "" {
+					conf = c
+					return true
+				}
+
+				return false
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
+			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
+			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+				current.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					opdefault.ServiceTypeAnnotationKey:           "dummy",
+					opdefault.ExternalTrafficPolicyAnnotationKey: opdefault.ExternalTrafficPolicyAnnotationValue,
+				}
+			})
+
+			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+				})
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				// the UDP listener should have a valid public IP set on both listeners
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
+					conf = c
+					return true
+				}
+
+				return false
+
+			}), timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				lookupKey := store.GetNamespacedName(testGw)
+				svc := &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return svc.Spec.ExternalTrafficPolicy ==
+					corev1.ServiceExternalTrafficPolicyLocal
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should add annotations from Gateway", func() {
+			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
+			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+				current.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					opdefault.ServiceTypeAnnotationKey:           "dummy",
+					opdefault.ExternalTrafficPolicyAnnotationKey: "dummy",
+				}
+			})
+
+			ctrl.Log.Info("re-loading gateway with further annotations")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.ServiceTypeAnnotationKey:           "NodePort",
+					opdefault.ExternalTrafficPolicyAnnotationKey: opdefault.ExternalTrafficPolicyAnnotationValue,
+					"someAnnotation":                             "dummy-1",
+					"someOtherAnnotation":                        "dummy-2",
+				})
+			})
+
+			// retry, but also check if a public address has been added
+			lookupKey := store.GetNamespacedName(testGw)
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				svc = &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				if svc.Spec.ExternalTrafficPolicy !=
+					corev1.ServiceExternalTrafficPolicyLocal {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as[opdefault.ServiceTypeAnnotationKey]
+				a2, ok2 := as["someAnnotation"]
+				a3, ok3 := as["someOtherAnnotation"]
+
+				if ok1 && ok2 && ok3 && a1 == "NodePort" && a2 == "dummy-1" && a3 == "dummy-2" {
+					return true
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+
+			Eventually(func() bool {
+				lookupKey := store.GetNamespacedName(testGw)
+				svc := &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return svc.Spec.ExternalTrafficPolicy ==
+					corev1.ServiceExternalTrafficPolicyLocal
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should retain externally set labels/annotations on the LoadBalancer service", func() {
+			ctrl.Log.Info("re-loading service with new labels/annotations")
+			svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+				Name:      testGw.GetName(),
+				Namespace: testGw.GetNamespace(),
+			}}
+
+			_, err := createOrUpdate(ctx, k8sClient, svc, func() error {
+				// rewrite annotations and labels
+				svc.SetLabels(map[string]string{
+					"someLabel":      "some-label-val",
+					"someOtherLabel": "some-other-label-val",
+					// this cannot be removed, otherwise the watcher ignores the service
+					opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
+				})
+				svc.SetAnnotations(map[string]string{
+					"someNewAnnotation":      "some-ann-val",
+					"someOtherNewAnnotation": "some-other-ann-val",
+				})
+
+				return nil
+			})
+			Expect(err).Should(Succeed())
+
+			lookupKey := store.GetNamespacedName(testGw)
+			Eventually(func() bool {
+				svc = &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				ls := svc.GetLabels()
+				l1, ok1 := ls["someLabel"]
+				l2, ok2 := ls["someOtherLabel"]
+				l3, ok3 := ls[opdefault.OwnedByLabelKey]
+
+				if !ok1 || !ok2 || !ok3 {
+					return false
+				}
+
+				if l1 != "some-label-val" || l2 != "some-other-label-val" ||
+					l3 != opdefault.OwnedByLabelValue {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as["someNewAnnotation"]
+				a2, ok2 := as["someOtherNewAnnotation"]
+				a3, ok3 := as[opdefault.RelatedGatewayKey]
+
+				if !ok1 || !ok2 || !ok3 {
+					return false
+				}
+
+				if a1 != "some-ann-val" || a2 != "some-other-ann-val" ||
+					a3 != store.GetObjectKey(testGw) {
+					return false
+				}
+
+				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should not change NodePort when Gateway annotations are modified", func() {
+			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+				current.Spec.LoadBalancerServiceAnnotations = map[string]string{}
+			})
+
+			lookupKey := store.GetNamespacedName(testGw)
+
+			// learn nodeports
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return len(svc.Spec.Ports) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(len(svc.Spec.Ports) == 1).To(BeTrue())
+			np1 := svc.Spec.Ports[0].NodePort
+			// np1, np2, np3 := svc.Spec.Ports[0].NodePort,
+			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
+
+			ctrl.Log.Info("re-loading gateway with further annotations")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+					"someAnnotation":                   "new-dummy-1",
+					"someOtherAnnotation":              "dummy-2",
+				})
+				// must change the spec othwewise the controller will not be
+				// triggered
+				infra := gwapiv1.GatewayInfrastructure{
+					Labels: map[gwapiv1.AnnotationKey]gwapiv1.AnnotationValue{
+						"dummy-label-key": "dummy-label-value",
+					},
+				}
+				current.Spec.Infrastructure = &infra
+			})
+
+			// retry, but also check if a public address has been added
+			Eventually(func() bool {
+				svc = &corev1.Service{}
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				if len(svc.Spec.Ports) != 1 {
+					return false
+				}
+
+				if svc.Spec.ExternalTrafficPolicy ==
+					corev1.ServiceExternalTrafficPolicyLocal {
+					return false
+				}
+
+				as := svc.GetAnnotations()
+				a1, ok1 := as[opdefault.ServiceTypeAnnotationKey]
+				a2, ok2 := as["someAnnotation"]
+				a3, ok3 := as["someOtherAnnotation"]
+
+				return ok1 && ok2 && ok3 && a1 == "NodePort" && a2 == "new-dummy-1" && a3 == "dummy-2"
+			}, timeout, interval).Should(BeTrue())
+
+			// query svc again
+			Expect(k8sClient.Get(ctx, lookupKey, svc)).Should(Succeed())
+			Expect(svc.Spec.Ports).To(HaveLen(1))
+			Expect(svc.Spec.Ports[0].NodePort).Should(Equal(np1))
+			// Expect(svc.Spec.Ports[1].NodePort).Should(Equal(np2))
+			// Expect(svc.Spec.Ports[2].NodePort).Should(Equal(np3))
+
+			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
+			Expect(ok).Should(BeTrue(), "app label")
+			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+		})
+
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
 			createOrUpdateSecret(testSecret, nil)

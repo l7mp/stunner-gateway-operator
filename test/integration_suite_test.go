@@ -344,7 +344,6 @@ var _ = Describe("Integration test:", Ordered, func() {
 	})
 
 	// EndpointSlice controller
-	// LEGACY
 	Context(`When using the "legacy" dataplane mode with the legacy endpointslice controller`, func() {
 		It(`should be possible to restart the operator using ghe endpointslice controller`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
@@ -360,6 +359,7 @@ var _ = Describe("Integration test:", Ordered, func() {
 	testLegacyMode()
 
 	// MANAGED
+	// Endpoints controller
 	Context(`When using the "managed" dataplane mode with the legacy endpoints controller`, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
 			config.EndpointSliceAvailable = false
@@ -380,6 +380,7 @@ var _ = Describe("Integration test:", Ordered, func() {
 		})
 	})
 
+	// EndpointSlice controller
 	Context(`When terminating the operator`, func() {
 		It("should stabilize", func() {
 			time.Sleep(time.Second)

@@ -513,6 +513,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -572,6 +574,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -658,6 +662,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -716,6 +722,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -777,6 +785,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -841,6 +851,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -901,6 +913,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -969,6 +983,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -1034,6 +1050,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -1094,6 +1112,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -1157,6 +1177,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -1220,6 +1242,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -1280,6 +1304,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -1345,6 +1371,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
@@ -1404,6 +1432,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 2, "service-port len")
@@ -1472,6 +1502,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				// clusterIP services do not need a health-check service-port
 				found := false
@@ -1515,6 +1547,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				// NodePort services do not need a health-check service-port
 				found := false
@@ -1559,6 +1593,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Type, "svc type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				// ClusterIPservices do not need a health-check service-port
 				found := false
@@ -1584,6 +1620,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-port"] = "8080"
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
 				gw := testutils.TestGw.DeepCopy()
 				ann := make(map[string]string)
 				ann[opdefault.ServiceTypeAnnotationKey] = "NodePort"
@@ -1607,6 +1644,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				// NodePort services do not need a health-check service-port
 				found := false
@@ -1651,6 +1690,8 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeNodePort, spec.Type, "svc type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 
 				// NodePort services do not need a health-check service-port
 				found := false
@@ -1700,6 +1741,144 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
 				assert.Equal(t, s.Spec.LoadBalancerIP, "1.1.1.1", "svc loadbalancerip")
+			},
+		},
+		{
+			name: "lb service - ext traffic policy set gwConf ",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey] =
+					opdefault.ExternalTrafficPolicyAnnotationValue
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyLocal,
+					spec.ExternalTrafficPolicy, "ext traffic policy local")
+			},
+		},
+		{
+			name: "lb service - ext traffic policy set in gw ",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey] = "dummy"
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				// override
+				gw := testutils.TestGw.DeepCopy()
+				as := make(map[string]string)
+				as[opdefault.ExternalTrafficPolicyAnnotationKey] =
+					opdefault.ExternalTrafficPolicyAnnotationValue
+				gw.SetAnnotations(as)
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyLocal,
+					spec.ExternalTrafficPolicy, "ext traffic policy local")
+			},
+		},
+
+		{
+			name: "lb service - ext traffic policy invalid",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey] =
+					opdefault.ExternalTrafficPolicyAnnotationValue
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				gw := testutils.TestGw.DeepCopy()
+				as := make(map[string]string)
+				as[opdefault.ExternalTrafficPolicyAnnotationKey] = "dummy"
+				gw.SetAnnotations(as)
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				spec := s.Spec
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
+				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
+					spec.ExternalTrafficPolicy, "ext traffic policy default")
 			},
 		},
 	})

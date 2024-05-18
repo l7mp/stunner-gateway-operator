@@ -103,8 +103,17 @@ const (
 	// If true all valid listener protocols will be added to the LB.
 	MixedProtocolAnnotationKey = "stunner.l7mp.io/enable-mixed-protocol-lb"
 
-	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs
+	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs.
 	MixedProtocolAnnotationValue = "true"
+
+	// ExternalTrafficPolicyAnnotationKey is the name(key) of the annotation that is used to
+	// control whether ExternalTrafficPolicy=Local is enabled on a LB Service that exposes a
+	// Gateway, see https://github.com/l7mp/stunner-gateway-operator/issues/47.
+	ExternalTrafficPolicyAnnotationKey = "stunner.l7mp.io/external-traffic-policy"
+
+	// ExternalTrafficPolicyAnnotationValue is the expected value in order to
+	// ExternalTrafficPolicy=Local.
+	ExternalTrafficPolicyAnnotationValue = "local"
 
 	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
 	// endpoint (if enabled).
