@@ -2,6 +2,8 @@ package renderer
 
 import (
 	"fmt"
+	"strings"
+
 	// "github.com/go-logr/logr"
 	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +18,7 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 // maxConds is the maximum number of conditions that can be stored at one in a Gateway object
@@ -38,6 +41,11 @@ func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
 		"gateways", len(ret))
 
 	return ret
+}
+
+func isManagedDataplaneDisabled(gw *gwapiv1.Gateway) bool {
+	v, ok := gw.GetAnnotations()[opdefault.ManagedDataplaneDisabledAnnotationKey]
+	return ok && strings.ToLower(v) == opdefault.ManagedDataplaneDisabledAnnotationValue
 }
 
 func pruneGatewayStatusConds(gw *gwapiv1.Gateway) *gwapiv1.Gateway {

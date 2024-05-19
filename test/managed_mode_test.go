@@ -31,6 +31,7 @@ import (
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -2389,6 +2390,48 @@ func testManagedMode() {
 			Expect(podSpec.Affinity).To(BeNil())
 		})
 
+		It("should remove the dataplane if disable-managed-dataplane annotation is added to Gateway 2", func() {
+			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			Expect(k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)).Should(Succeed())
+
+			// apply annotation
+			createOrUpdateGateway(gw2, func(current *gwapiv1.Gateway) {
+				ann := current.GetAnnotations()
+				if len(ann) == 0 {
+					ann = make(map[string]string)
+				}
+				ann[opdefault.ManagedDataplaneDisabledAnnotationKey] = opdefault.ManagedDataplaneDisabledAnnotationValue
+				current.SetAnnotations(ann)
+			})
+
+			// check
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(gw2), gw2)
+				if err != nil {
+					return false
+				}
+
+				// should have the annotation
+				_, ok := gw2.GetAnnotations()[opdefault.ManagedDataplaneDisabledAnnotationKey]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      gw2.GetName(),
+				Namespace: string(testutils.TestNsName),
+			}}
+			ctrl.Log.Info("trying to Get Deployment for Gateway 2",
+				"resource", store.GetNamespacedName(deploy))
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				return err != nil && apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should survive deleting Gateway 2", func() {
 			ctrl.Log.Info("deleting Gateway 2")
 			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
@@ -3407,7 +3450,7 @@ func testManagedMode() {
 			Expect(podSpec.TopologySpreadConstraints).To(HaveLen(0))
 		})
 
-		It("should survive a full cleanup", func() {
+		It("should survive a full cleanup for the Gateway-1 hierarchy", func() {
 			ctrl.Log.Info("deleting GatewayClass")
 			Expect(k8sClient.Delete(ctx, testGwClass)).Should(Succeed())
 
@@ -3428,18 +3471,31 @@ func testManagedMode() {
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())
+		})
+
+		It("should survive a full cleanup for the Gateway-2 hierarchy", func() {
+			ctrl.Log.Info("deleting GatewayClass")
+			gc2 := &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
+				Name: "gateway-class-2",
+			}}
+			Expect(k8sClient.Delete(ctx, gc2)).Should(Succeed())
+
+			ctrl.Log.Info("deleting GatewayConfig")
+			gwConf2 := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-config-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			Expect(k8sClient.Delete(ctx, gwConf2)).Should(Succeed())
+
+			ctrl.Log.Info("deleting Gateway")
+			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			Expect(k8sClient.Delete(ctx, gw2)).Should(Succeed())
 
 			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})
-}
-
-func contains(strs []string, val string) bool {
-	for _, s := range strs {
-		if s == val {
-			return true
-		}
-	}
-	return false
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
@@ -137,7 +138,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	// run the delete queue
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
-		if err := u.deleteObject(gc, gen); err != nil {
+		if err := u.deleteObject(gc, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("cannot delete gateway-class", "gateway-class",
 				store.DumpObject(gc), "error", err)
 			continue
@@ -145,7 +146,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	for _, gw := range q.Gateways.Objects() {
-		if err := u.deleteObject(gw, gen); err != nil {
+		if err := u.deleteObject(gw, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("cannot delete gateway", "gateway",
 				store.DumpObject(gw), "error", err)
 			continue
@@ -153,7 +154,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	for _, ro := range q.UDPRoutes.Objects() {
-		if err := u.deleteObject(ro, gen); err != nil {
+		if err := u.deleteObject(ro, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("cannot delete UDP route", "route",
 				store.DumpObject(ro), "error", err)
 			continue
@@ -161,7 +162,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	for _, svc := range q.Services.Objects() {
-		if err := u.deleteObject(svc, gen); err != nil {
+		if err := u.deleteObject(svc, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("cannot delete service", "service",
 				store.DumpObject(svc), "error", err)
 			continue
@@ -169,7 +170,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	for _, cm := range q.ConfigMaps.Objects() {
-		if err := u.deleteObject(cm, gen); err != nil {
+		if err := u.deleteObject(cm, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("cannot delete config-map", "config-map",
 				store.DumpObject(cm), "error", err)
 			continue
@@ -177,9 +178,9 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	for _, dp := range q.Deployments.Objects() {
-		if err := u.deleteObject(dp, gen); err != nil {
-			u.log.V(1).Info("cannot delete deployment", "deployment",
-				store.DumpObject(dp), "error", err)
+		if err := u.deleteObject(dp, gen); err != nil && !apierrors.IsNotFound(err) {
+			u.log.V(1).Info("cannot delete deployment",
+				"deployment", store.DumpObject(dp), "error", err)
 			continue
 		}
 	}

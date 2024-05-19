@@ -82,6 +82,7 @@ func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
 		current.SetLabels(template.GetLabels())
+		// current.SetAnnotations(template.GetAnnotations())
 		template.Spec.DeepCopyInto(&current.Spec)
 		if f != nil {
 			f(current)
@@ -278,4 +279,13 @@ func createOrUpdate(ctx context.Context, c client.Client, obj client.Object, f c
 	}
 
 	return res, err
+}
+
+func contains(strs []string, val string) bool {
+	for _, s := range strs {
+		if s == val {
+			return true
+		}
+	}
+	return false
 }

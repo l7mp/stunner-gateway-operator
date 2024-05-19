@@ -1924,5 +1924,52 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
+		{
+			name: "dataplane disabled",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{
+					opdefault.ManagedDataplaneDisabledAnnotationKey: opdefault.ManagedDataplaneDisabledAnnotationValue,
+				})
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeManaged
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				err = r.renderForGateways(c)
+				assert.NoError(t, err, "render success")
+
+				dps := c.update.UpsertQueue.Deployments
+				assert.Equal(t, 0, dps.Len(), "no deployment in upsert queue")
+
+				dps = c.update.DeleteQueue.Deployments
+				assert.Equal(t, 1, dps.Len(), "deployment found in delete queue")
+
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+			},
+		},
 	})
 }

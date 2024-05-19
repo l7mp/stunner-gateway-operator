@@ -96,6 +96,10 @@ const (
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
 
+	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
+	// endpoint (if enabled).
+	DefaultMetricsPortName = "metrics-port"
+
 	// MixedProtocolAnnotationKey is the name(key) of the annotation that is used to
 	// disable STUNner's blocking of mixed-protocol LBs for specific Gateways.
 	// If false or any other string other than true the LB's proto defaults to the first
@@ -115,9 +119,13 @@ const (
 	// ExternalTrafficPolicy=Local.
 	ExternalTrafficPolicyAnnotationValue = "local"
 
-	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
-	// endpoint (if enabled).
-	DefaultMetricsPortName = "metrics-port"
+	// ManagedDataplaneDisabledAnnotationKey is the name(key) of the annotation that is used to
+	// prevent the operator from creating a `stunnerd` dataplane Deployment for a Gateway.
+	ManagedDataplaneDisabledAnnotationKey = "stunner.l7mp.io/disable-managed-dataplane"
+
+	// ManagedDataplaneDisabledAnnotationValue is the value that can be used to disable the
+	// managed dataplane feature for a Gateway.
+	ManagedDataplaneDisabledAnnotationValue = "true"
 )
 
 var (
