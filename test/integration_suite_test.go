@@ -91,22 +91,11 @@ var (
 	cfg              *rest.Config
 	k8sClient        client.Client
 	testEnv          *envtest.Environment
-	ctx, opCtx       context.Context
+	ctx              context.Context
 	cancel, opCancel context.CancelFunc
 	scheme           *runtime.Scheme = runtime.NewScheme()
-	// zapCfg                    = zap.Config{
-	// 	Encoding:    "console",
-	// 	OutputPaths: []string{"stderr"},
-	// 	EncoderConfig: zapcore.EncoderConfig{
-	// 		MessageKey:  "message",
-	// 		TimeKey:     "time",
-	// 		EncodeTime:  zapcore.ISO8601TimeEncoder,
-	// 		LevelKey:    "level",
-	// 		EncodeLevel: zapcore.CapitalLevelEncoder,
-	// 	},
-	// }
-	op       *operator.Operator
-	setupLog logr.Logger
+	op               *operator.Operator
+	setupLog         logr.Logger
 )
 
 func init() {
@@ -176,7 +165,7 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func initOperator() {
+func initOperator(mgrCtx, opCtx context.Context) {
 	setupLog.Info("setting up client manager")
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
@@ -200,7 +189,7 @@ func initOperator() {
 	c := config.NewCDSServer(cdsServerAddr, ctrl.Log)
 
 	// make rendering fast!
-	config.ThrottleTimeout = time.Millisecond
+	config.ThrottleTimeout = 10 * time.Millisecond
 
 	setupLog.Info("setting up operator")
 	op = operator.NewOperator(operator.OperatorConfig{
@@ -213,31 +202,30 @@ func initOperator() {
 	})
 
 	r.SetOperatorChannel(op.GetOperatorChannel())
+	u.SetAckChannel(op.GetOperatorChannel())
 	op.SetProgressReporters(r, u, c)
 
-	opCtx, opCancel = context.WithCancel(ctx)
-
 	setupLog.Info("starting renderer thread")
-	err = r.Start(opCtx)
+	err = r.Start(mgrCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting updater thread")
-	err = u.Start(opCtx)
+	err = u.Start(mgrCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting config discovery server")
-	err = c.Start(opCtx)
+	err = c.Start(mgrCtx)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting operator thread")
-	err = op.Start(opCtx)
+	err = op.Start(opCtx, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("starting manager")
 	// must be explicitly cancelled!
 	go func() {
 		defer GinkgoRecover()
-		err := mgr.Start(opCtx)
+		err := mgr.Start(mgrCtx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 }
@@ -305,23 +293,23 @@ func checkConfig(ch chan *stnrv1.StunnerConfig, checker ConfigChecker) bool {
 var _ = Describe("Integration test:", Ordered, func() {
 	// Endpoints controller
 	// LEGACY
-	Context(`When using the "legacy" dataplane mode with the legacy endpoints controller`, func() {
+	Context(`When using the "legacy" dataplane mode with the legacy endpoints controller`, Ordered, func() {
 		It(`should be possible to initialize the operator`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
 			config.EndpointSliceAvailable = false
-			if opCancel != nil {
-				opCancel()
-			}
-			initOperator()
+			ctx, cancel = context.WithCancel(context.Background())
+			initOperator(ctx, ctx)
+			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
 	})
 
 	testLegacyModeEndpointController()
 
-	Context(`When terminating the operator`, func() {
+	Context(`When terminating the operator after the legacy-mode test with the endpoints controller`, Ordered, func() {
 		It("should stabilize", func() {
 			op.Stabilize()
+			cancel()
 		})
 	})
 
@@ -330,15 +318,21 @@ var _ = Describe("Integration test:", Ordered, func() {
 		It(`should be possible to restart the operator using ghe endpointslice controller`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
 			config.EndpointSliceAvailable = true
-			if opCancel != nil {
-				opCancel()
-			}
-			initOperator()
+			ctx, cancel = context.WithCancel(context.Background())
+			initOperator(ctx, ctx)
+			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
 	})
 
 	testLegacyMode()
+
+	Context(`When terminating the operator after the legacy-mode test with the endpointslice controller`, Ordered, func() {
+		It("should stabilize", func() {
+			op.Stabilize()
+			cancel()
+		})
+	})
 
 	// MANAGED
 	// Endpoints controller
@@ -346,19 +340,19 @@ var _ = Describe("Integration test:", Ordered, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
 			config.EndpointSliceAvailable = false
 			config.DataplaneMode = config.DataplaneModeManaged
-			if opCancel != nil {
-				opCancel()
-			}
-			initOperator()
+			ctx, cancel = context.WithCancel(context.Background())
+			initOperator(ctx, ctx)
+			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
 	})
 
 	testManagedModeEndpointController()
 
-	Context(`When terminating the operator`, func() {
+	Context(`When terminating the operator after the managed-mode test with the endpointslice controller`, Ordered, func() {
 		It("should stabilize", func() {
 			op.Stabilize()
+			cancel()
 		})
 	})
 
@@ -367,19 +361,44 @@ var _ = Describe("Integration test:", Ordered, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
 			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
-			if opCancel != nil {
-				opCancel()
-			}
-			initOperator()
+			ctx, cancel = context.WithCancel(context.Background())
+			initOperator(ctx, ctx)
+			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
 	})
 
 	testManagedMode()
 
-	Context(`When terminating the operator`, func() {
+	Context(`When terminating the operator after the managed-mode test with the endpointslice controller`, Ordered, func() {
 		It("should stabilize", func() {
 			op.Stabilize()
+			cancel()
 		})
 	})
+
+	// FINALIZER
+	Context(`When trying to finalize the operator`, Ordered, func() {
+		It(`should be possible to set up a new operator`, func() {
+			config.EndpointSliceAvailable = true
+			config.DataplaneMode = config.DataplaneModeManaged
+			ctx, cancel = context.WithCancel(context.Background())
+			opCtx, opC := context.WithCancel(context.Background())
+			opCancel = opC
+			initOperator(ctx, opCtx)
+			op.SetFinalizer(true) // should be the default
+			InitResources()
+			setupLog.Info("opcancel", "cancel", fmt.Sprintf("%#v", opCancel))
+		})
+	})
+
+	testFinalizer()
+
+	Context(`When terminating the operator`, Ordered, func() {
+		It("should stabilize", func() {
+			op.Stabilize()
+			// AfterSuite calls cancel()
+		})
+	})
+
 })

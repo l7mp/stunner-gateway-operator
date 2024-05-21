@@ -52,6 +52,20 @@ func (o *Operator) ProgressReport() int {
 	return progress + op
 }
 
+// GetLastAckedGeneration returns the last update generation acknowledged by the updater.
+func (o *Operator) GetLastAckedGeneration() int {
+	o.ackLock.RLock()
+	defer o.ackLock.RUnlock()
+	return o.lastAckedGen
+}
+
+// setLastAckedGeneration sets the last update generation acknowledged by the updater.
+func (o *Operator) setLastAckedGeneration(gen int) {
+	o.ackLock.Lock()
+	defer o.ackLock.Unlock()
+	o.lastAckedGen = gen
+}
+
 // Stabilize waits until all internal progress has stopped by checking if there's no activity 3 times.
 func (o *Operator) Stabilize() {
 	d := 50 * time.Millisecond
@@ -78,15 +92,7 @@ func (o *Operator) Stabilize() {
 		"duration", time.Since(start), "timeout-between-queries", d)
 }
 
-// Terminate completes the termination sequence of the operator.
-func (o *Operator) Terminate() {
-	// stop controllers
-	o.gwConfC.Terminate()
-	o.dpC.Terminate()
-	o.gwC.Terminate()
-	o.rouC.Terminate()
-	o.nodeC.Terminate()
-
-	// time.Sleep(250 * time.Millisecond)
-	o.Stabilize()
+// SetFinalizer can be used to prevent the finalizer from running on termination. This is useful for testing.
+func (o *Operator) SetFinalizer(state bool) {
+	o.finalizer = state
 }

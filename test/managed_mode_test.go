@@ -3158,6 +3158,10 @@ func testManagedMode() {
 			Expect(podSpec.Affinity).To(BeNil())
 		})
 
+		It("should stabilize", func() {
+			op.Stabilize()
+		})
+
 		It("should retain Deployment labels/annotations and propagate Gateway label/annotation updates to the Deployment", func() {
 			// existing labels/annotations should not be overwritten unless in conflict
 			ctrl.Log.Info("updating metadata on Deployment 2")

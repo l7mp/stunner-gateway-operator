@@ -72,8 +72,13 @@ func NewDataplaneController(mgr manager.Manager, ch chan event.Event, log logr.L
 
 func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("dataplane", req.String())
-	log.Info("reconciling")
 
+	if r.terminating {
+		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("reconciling")
 	dataplaneList := []client.Object{}
 
 	// find all Dataplanes
@@ -92,9 +97,7 @@ func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	store.Dataplanes.Reset(dataplaneList)
 	r.log.V(2).Info("reset Dataplane store", "configs", store.Dataplanes.String())
 
-	if !r.terminating {
-		r.eventCh <- event.NewEventRender()
-	}
+	r.eventCh <- event.NewEventReconcile()
 
 	return reconcile.Result{}, nil
 }

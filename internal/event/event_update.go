@@ -26,6 +26,7 @@ type EventUpdate struct {
 	DeleteQueue UpdateConf
 	ConfigQueue ConfigConf
 	Generation  int
+	RequestAck  bool
 }
 
 // NewEvent returns an empty event
@@ -52,6 +53,7 @@ func NewEventUpdate(generation int) *EventUpdate {
 		},
 		ConfigQueue: []*stnrv1.StunnerConfig{},
 		Generation:  generation,
+		RequestAck:  false,
 	}
 }
 
@@ -60,9 +62,11 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s (gen: %d): upsert-queue: gway-cls: %d, gway: %d, route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d / "+
-		"delete-queue: gway-cls: %d, gway: %d, route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d / config-queue: %d",
-		e.Type.String(), e.Generation,
+	return fmt.Sprintf("%s (gen: %d, ack: %t): upsert-queue: gway-cls: %d, gway: %d, "+
+		"route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d / "+
+		"delete-queue: gway-cls: %d, gway: %d, route: %d, routeV1A2: %d, "+
+		"svc: %d, confmap: %d, dp: %d / config-queue: %d",
+		e.Type.String(), e.Generation, e.RequestAck,
 		e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
 		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.UDPRoutesV1A2.Len(),
 		e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
@@ -101,4 +105,14 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 	copy(u.ConfigQueue, e.ConfigQueue)
 
 	return u
+}
+
+// GetRequestAck returns true of the event contains an acknowledgement request.
+func (e *EventUpdate) GetRequestAck() bool {
+	return e.RequestAck
+}
+
+// RequestAck asks the updater to send an acknowledgement.
+func (e *EventUpdate) SetRequestAck(b bool) {
+	e.RequestAck = b
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -195,37 +196,41 @@ func main() {
 	})
 
 	r.SetOperatorChannel(op.GetOperatorChannel())
+	u.SetAckChannel(op.GetOperatorChannel())
 	op.SetProgressReporters(r, u, c)
 
-	ctx := ctrl.SetupSignalHandler()
+	// create a general context, which will be canceled by the operator
+	mgrCtx, mgrCancel := context.WithCancel(context.Background())
+	defer mgrCancel()
 
 	setupLog.Info("starting renderer thread")
-	if err := r.Start(ctx); err != nil {
+	if err := r.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "problem running renderer")
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting updater thread")
-	if err := u.Start(ctx); err != nil {
+	if err := u.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "could not run updater")
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting config discovery server")
-	if err := c.Start(ctx); err != nil {
+	if err := c.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "could not run config discovery server")
 		os.Exit(1)
 	}
 
+	opCtx := ctrl.SetupSignalHandler()
 	setupLog.Info("starting operator thread")
-	if err := op.Start(ctx); err != nil {
+	if err := op.Start(opCtx, mgrCancel); err != nil {
 		setupLog.Error(err, "problem running operator")
-		os.Exit(1)
 	}
 
 	setupLog.Info("starting Kubernetes controller manager")
-	if err := mgr.Start(ctx); err != nil {
+	if err := mgr.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "problem running manager")
+		// no way to gracefully terminate: give up and exit with an error
 		os.Exit(1)
 	}
 }

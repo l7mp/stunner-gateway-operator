@@ -15,7 +15,6 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -94,7 +93,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
-				initGatewayStatus(gw, "dummy")
+				initGatewayStatus(gw, nil)
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				assert.Len(t, gw.Status.Addresses, 0, "status addresses")
 
@@ -128,7 +127,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
-				initGatewayStatus(gw, "dummy")
+				initGatewayStatus(gw, nil)
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				gw.ObjectMeta.SetGeneration(1)
 				c.gws = []gwapiv1.Gateway{*gw}
@@ -144,7 +143,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
-				initGatewayStatus(gw, "dummy")
+				initGatewayStatus(gw, nil)
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				assert.Len(t, gw.Status.Addresses, 0, "status addresses")
 
@@ -195,7 +194,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
 					testutils.TestNsName, "gateway-1"), "gw name found")
 
-				initGatewayStatus(gw, config.ControllerName)
+				initGatewayStatus(gw, nil)
 				conflicted := false
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]
@@ -297,7 +296,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					Port:     gwapiv1.PortNumber(2),
 					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
 				}}
-				initGatewayStatus(gw, "dummy")
+				initGatewayStatus(gw, nil)
 				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
 				gw.ObjectMeta.SetGeneration(1)
 				c.gws = []gwapiv1.Gateway{*gw}
@@ -315,7 +314,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
 					testutils.TestNsName, "gateway-1"), "gw name found")
 
-				initGatewayStatus(gw, config.ControllerName)
+				initGatewayStatus(gw, nil)
 				conflicted := false
 				for j := range gw.Spec.Listeners {
 					l := gw.Spec.Listeners[j]

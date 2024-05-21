@@ -14,7 +14,6 @@ import (
 // RenderContext contains the GatewayClass and the GatewayConfig for the current rendering task,
 // plus additional metadata
 type RenderContext struct {
-	origin event.Event
 	update *event.EventUpdate
 	gc     *gwapiv1.GatewayClass
 	gwConf *stnrgwv1.GatewayConfig
@@ -23,13 +22,12 @@ type RenderContext struct {
 	log    logr.Logger
 }
 
-func NewRenderContext(e *event.EventRender, r *Renderer, gc *gwapiv1.GatewayClass) *RenderContext {
+func NewRenderContext(r *Renderer, gc *gwapiv1.GatewayClass) *RenderContext {
 	logger := r.log
 	if gc != nil {
 		logger = r.log.WithValues("gateway-class", gc.GetName())
 	}
 	return &RenderContext{
-		origin: e,
 		update: event.NewEventUpdate(r.gen),
 		gc:     gc,
 		gws:    store.NewGatewayStore(),

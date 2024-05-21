@@ -183,8 +183,13 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 // Reconcile handles an update to a UDPRoute or a Service/Endpoints referenced by an UDPRoute.
 func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
-	log.Info("reconciling")
 
+	if r.terminating {
+		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("reconciling")
 	routeList := []client.Object{}
 	routeListV1A2 := []client.Object{}
 	namespaceList := []client.Object{}
@@ -348,7 +353,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	store.StaticServices.Reset(ssvcList)
 	r.log.V(2).Info("reset StaticService store", "static-services", store.StaticServices.String())
 
-	r.eventCh <- event.NewEventRender()
+	r.eventCh <- event.NewEventReconcile()
 
 	return reconcile.Result{}, nil
 }

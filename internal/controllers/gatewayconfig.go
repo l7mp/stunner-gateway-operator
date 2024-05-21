@@ -94,8 +94,13 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
-	log.Info("reconciling")
 
+	if r.terminating {
+		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("reconciling")
 	configList := []client.Object{}
 	authSecretList := []client.Object{}
 
@@ -156,7 +161,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	r.log.V(2).Info("reset AuthSecret store", "secrets", store.AuthSecrets.String())
 
 	if !r.terminating {
-		r.eventCh <- event.NewEventRender()
+		r.eventCh <- event.NewEventReconcile()
 	}
 
 	return reconcile.Result{}, nil

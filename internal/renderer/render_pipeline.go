@@ -20,7 +20,7 @@ import (
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
 func (r *Renderer) Render(e *event.EventRender) {
-	r.gen += 1
+	r.gen = e.Generation
 	r.log.Info("rendering configuration", "generation", r.gen, "event", e.String())
 
 	switch config.DataplaneMode {
@@ -30,6 +30,23 @@ func (r *Renderer) Render(e *event.EventRender) {
 		r.renderManagedGateways(e)
 	default:
 		r.log.Info(`unknown dataplane mode (must be either "managed" or "legacy")`)
+		return
+	}
+}
+
+// Finalize performs the finalization sequence:
+// - set all managed Kubernetes statuses to invalid
+// - remove managed dataplanes and services
+func (r *Renderer) Finalize(e *event.EventFinalize) {
+	r.gen = e.Generation
+
+	switch config.DataplaneMode {
+	case config.DataplaneModeLegacy:
+		r.log.Info("finalization not suported for legacy dataplane mode")
+	case config.DataplaneModeManaged:
+		r.finalizeManagedGateways(e)
+	default:
+		r.log.Info(`finalizer: unknown dataplane mode (must be either "managed" or "legacy")`)
 		return
 	}
 }
@@ -64,7 +81,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 	// by serializing update requests on the updaterChannel
 	for _, gc := range gcs {
 		r.log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
-		c := NewRenderContext(e, r, gc)
+		c := NewRenderContext(r, gc)
 
 		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 		var err error
@@ -99,7 +116,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 	r.log.Info("commencing dataplane render", "mode", "managed")
 
-	pipelineCtx := NewRenderContext(e, r, nil)
+	pipelineCtx := NewRenderContext(r, nil)
 
 	r.log.V(1).Info("obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
@@ -113,14 +130,13 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
 
-		gcCtx := NewRenderContext(e, r, gc)
+		gcCtx := NewRenderContext(r, gc)
 		gwConf, err := r.getGatewayConfig4Class(gcCtx)
 		if err != nil {
 			r.log.Error(err, "error obtaining gateway-config",
 				"gateway-class", gc.GetName())
 			r.invalidateGatewayClass(gcCtx, err)
-			r.operatorCh <- gcCtx.update.DeepCopy()
-
+			pipelineCtx.Merge(gcCtx)
 			continue
 		}
 		gcCtx.gwConf = gwConf
@@ -133,8 +149,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 				"gateway-config", store.GetObjectKey(gwConf),
 			)
 			r.invalidateGatewayClass(gcCtx, err)
-			r.operatorCh <- gcCtx.update.DeepCopy()
-
+			pipelineCtx.Merge(gcCtx)
 			continue
 		}
 		gcCtx.dp = dp
@@ -147,7 +162,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 				"gateway", store.GetObjectKey(gw),
 			)
 
-			gwCtx := NewRenderContext(e, r, gc)
+			gwCtx := NewRenderContext(r, gc)
 			gwCtx.gwConf = gcCtx.gwConf
 			gwCtx.dp = gcCtx.dp
 			gwCtx.gws.ResetGateways([]*gwapiv1.Gateway{gw})
@@ -159,6 +174,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 					"gateway", store.GetObjectKey(gw),
 				)
 				r.invalidateGateways(gwCtx, err)
+				gcCtx.Merge(gwCtx)
 				continue
 			}
 			gcCtx.Merge(gwCtx)
@@ -169,7 +185,42 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		pipelineCtx.Merge(gcCtx)
 	}
 
-	r.operatorCh <- pipelineCtx.update.DeepCopy()
+	// updates must be acknowledged to the operator by the updater
+	u := pipelineCtx.update.DeepCopy()
+	u.SetRequestAck(true)
+	r.operatorCh <- u
+}
+
+// finalizeManagedGateways invalidates all managed resources
+func (r *Renderer) finalizeManagedGateways(e *event.EventFinalize) {
+	r.log.Info("commencing finalization", "mode", "managed")
+
+	pipelineCtx := NewRenderContext(r, nil)
+
+	r.log.V(1).Info("obtaining gateway-class objects")
+	gcs := r.getGatewayClasses()
+	if len(gcs) == 0 {
+		r.log.Info("no gateway-class objects found", "event", e.String())
+		return
+	}
+
+	for _, gc := range gcs {
+		r.log.Info("invalidating statuses", "gateway-class", store.GetObjectKey(gc))
+
+		gcCtx := NewRenderContext(r, gc)
+
+		// generate a fake error
+		err := errors.New("operator unavailable after graceful shutdown")
+
+		// invalidate class and all the associated gateways
+		r.invalidateGatewayClass(gcCtx, err)
+		pipelineCtx.Merge(gcCtx)
+	}
+
+	// finalization updates must be acknowledged to the operator by the updater
+	u := pipelineCtx.update.DeepCopy()
+	u.SetRequestAck(true)
+	r.operatorCh <- u
 }
 
 // renderForGateways renders a configuration for a set of Gateways (c.gws)
@@ -202,7 +253,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
 
-		initGatewayStatus(gw, config.ControllerName)
+		initGatewayStatus(gw, nil)
 
 		log.V(3).Info("obtaining public address", "gateway", store.GetObjectKey(gw))
 		pubGwAddrs, err := r.getPublicAddr(gw)
@@ -384,10 +435,10 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 				c.update.UpsertQueue.ConfigMaps.Upsert(cm)
 			}
 		} else {
-			// this is the killer case: we have most probably lost our gatewayconfig and we
-			// don't know which stunner config to invalidate; for now warn, later eliminate
-			// such cases by putting a finalizer/owner-ref to GatewayConfigs once we have
-			// started using them
+			// this is the killer case: we have most probably lost our gatewayconfig
+			// and we don't know which stunner config to invalidate; for now warn,
+			// later eliminate such cases by putting a finalizer/owner-ref to
+			// GatewayConfigs once we have started using them
 			log.Info("no gateway-config: active STUNNer configuration may remain stale",
 				"gateway-class", gc.GetName())
 		}
@@ -397,7 +448,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	log.V(1).Info("invalidating all gateway objects in gateway-class",
-		"gateway-class", gc.GetName())
+		"gateway-class", gc.GetName(), "reason", reason.Error())
 
 	c.gws.ResetGateways(r.getGateways4Class(c))
 	r.invalidateGateways(c, reason)
@@ -412,7 +463,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
-		initGatewayStatus(gw, config.ControllerName)
+		initGatewayStatus(gw, reason)
 
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
@@ -425,7 +476,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 		// schedule for update
 		c.update.UpsertQueue.Gateways.Upsert(gw)
 
-		// delete dataplane configmaps and deployments for invalidated gateways
+		// delete dataplane configmaps, services and deployments for invalidated gateways
 		// we do not update the client via CDS: the deployment is going away anyway
 		if config.DataplaneMode == config.DataplaneModeManaged {
 			cm := &corev1.ConfigMap{
@@ -437,6 +488,16 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
 			log.V(2).Info("deleting dataplane ConfigMap", "generation", r.gen,
 				"deployment", store.DumpObject(cm))
+
+			svc := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw.GetName(),
+					Namespace: gw.GetNamespace(),
+				},
+			}
+			c.update.DeleteQueue.Services.Upsert(svc)
+			log.V(2).Info("deleting dataplane Service", "generation", r.gen,
+				"service", store.DumpObject(svc))
 
 			dp := &appv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{

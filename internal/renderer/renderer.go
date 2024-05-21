@@ -44,19 +44,27 @@ func (r *Renderer) Start(ctx context.Context) error {
 		for {
 			select {
 			case e := <-r.renderCh:
-				if e.GetType() != event.EventTypeRender {
+				switch e.GetType() {
+				case event.EventTypeRender:
+					// prepare a new update event Render will populate config
+					// is returned in the update event ConfigMap store
+					ev := e.(*event.EventRender)
+
+					r.ProgressUpdate(1)
+					r.Render(ev)
+					r.ProgressUpdate(-1)
+				case event.EventTypeFinalize:
+					// invaliditate all statuses and configs
+					ev := e.(*event.EventFinalize)
+
+					r.ProgressUpdate(1)
+					r.Finalize(ev)
+					r.ProgressUpdate(-1)
+				default:
 					r.log.Info("renderer thread received unknown event",
 						"event", e.String())
-					continue
 				}
-
-				// prepare a new update event Render will populate
-				// config is returned in the update event ConfigMap store
-				ev := e.(*event.EventRender)
-
-				r.ProgressUpdate(1)
-				r.Render(ev)
-				r.ProgressUpdate(-1)
+				continue
 
 			case <-ctx.Done():
 				return

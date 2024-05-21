@@ -136,8 +136,13 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 // of the Gateways managed by this controller.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
-	log.Info("reconciling")
 
+	if r.terminating {
+		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("reconciling")
 	gatewayClassList := []client.Object{}
 	gatewayList := []client.Object{}
 	secretList := []client.Object{}
@@ -254,7 +259,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	store.Deployments.Reset(deploymentList)
 	r.log.V(2).Info("reset Deployment store", "deployments", store.Deployments.String())
 
-	r.eventCh <- event.NewEventRender()
+	r.eventCh <- event.NewEventReconcile()
 
 	return reconcile.Result{}, nil
 }

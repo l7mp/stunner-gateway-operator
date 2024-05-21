@@ -1,20 +1,18 @@
 package event
 
-// import (
-// "fmt"
-// )
+import "fmt"
 
 // render event
-
 type EventRender struct {
-	Type EventType
+	Type       EventType
+	Generation int
 	// Reason string
 	// Params map[string]string
 }
 
 // NewEvent returns an empty event
-func NewEventRender() *EventRender {
-	return &EventRender{Type: EventTypeRender}
+func NewEventRender(gen int) *EventRender {
+	return &EventRender{Type: EventTypeRender, Generation: gen}
 }
 
 func (e *EventRender) GetType() EventType {
@@ -22,5 +20,5 @@ func (e *EventRender) GetType() EventType {
 }
 
 func (e *EventRender) String() string {
-	return e.Type.String()
+	return fmt.Sprintf("%s: generation: %d", e.Type.String(), e.Generation)
 }

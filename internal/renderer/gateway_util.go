@@ -72,20 +72,30 @@ func isListenerConflicted(l *gwapiv1.Listener, udpPorts portMap, tcpPorts portMa
 	return false
 }
 
-// gateway status
-func initGatewayStatus(gw *gwapiv1.Gateway, cname string) {
+// gateway status: set accepted to true and programmed to pending
+func initGatewayStatus(gw *gwapiv1.Gateway, reason error) {
 	gw.Status.Addresses = []gwapiv1.GatewayStatusAddress{}
 
-	// set accepted to true and programmed to pending
-	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-		Type:               string(gwapiv1.GatewayConditionAccepted),
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: gw.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             string(gwapiv1.GatewayReasonAccepted),
-		Message: fmt.Sprintf("gateway accepted by controller %s",
-			config.ControllerName),
-	})
+	if reason == nil {
+		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
+			Type:               string(gwapiv1.GatewayConditionAccepted),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gwapiv1.GatewayReasonAccepted),
+			Message: fmt.Sprintf("gateway accepted by controller %s",
+				config.ControllerName),
+		})
+	} else {
+		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
+			Type:               string(gwapiv1.GatewayConditionAccepted),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gwapiv1.GatewayReasonPending),
+			Message:            reason.Error(),
+		})
+	}
 
 	meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 		Type:               string(gwapiv1.GatewayConditionProgrammed),
@@ -125,7 +135,7 @@ func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, pubAddrs []gwAdd
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gwapiv1.GatewayReasonInvalid),
-			Message: fmt.Sprintf("error processing gateway by controller %q: %s",
+			Message: fmt.Sprintf("error processing gateway by controller %s: %s",
 				config.ControllerName, err.Error()),
 		})
 		return

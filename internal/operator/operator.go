@@ -3,6 +3,7 @@ package operator
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -51,6 +52,9 @@ type Operator struct {
 	manager                                   manager.Manager
 	tracker                                   *config.ProgressTracker
 	progressReporters                         []config.ProgressReporter
+	finalizer                                 bool
+	gen, lastAckedGen                         int
+	ackLock                                   sync.RWMutex
 	log, logger                               logr.Logger
 }
 
@@ -59,17 +63,24 @@ func NewOperator(cfg OperatorConfig) *Operator {
 	config.ControllerName = cfg.ControllerName
 
 	return &Operator{
-		mgr:        cfg.Manager,
-		renderCh:   cfg.RenderCh,
-		operatorCh: make(chan event.Event, channelBufferSize),
-		updaterCh:  cfg.UpdaterCh,
-		configCh:   cfg.ConfigCh,
-		tracker:    config.NewProgressTracker(),
-		logger:     cfg.Logger,
+		mgr:          cfg.Manager,
+		renderCh:     cfg.RenderCh,
+		operatorCh:   make(chan event.Event, channelBufferSize),
+		updaterCh:    cfg.UpdaterCh,
+		configCh:     cfg.ConfigCh,
+		tracker:      config.NewProgressTracker(),
+		finalizer:    true,
+		gen:          0,
+		lastAckedGen: -1,
+		logger:       cfg.Logger,
 	}
 }
 
-func (o *Operator) Start(ctx context.Context) error {
+// Start spawns the Kubernetes controllers, enters the operator main loop and terminates when the
+// provided context is canceled. On termination, Start calls the provided cancel function (if not
+// nil) to signal that it has finished running. Pass in the manager context as the second argument
+// to let the operator automatically cancel the manager on termination.
+func (o *Operator) Start(ctx context.Context, cancel context.CancelFunc) error {
 	log := o.logger.WithName("operator")
 	o.log = log
 	o.ctx = ctx
@@ -113,12 +124,12 @@ func (o *Operator) Start(ctx context.Context) error {
 	}
 	o.nodeC = c
 
-	go o.eventLoop(ctx)
+	go o.eventLoop(ctx, cancel)
 
 	return nil
 }
 
-func (o *Operator) eventLoop(ctx context.Context) {
+func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 	defer close(o.operatorCh)
 
 	throttler := time.NewTicker(config.ThrottleTimeout)
@@ -137,7 +148,7 @@ func (o *Operator) eventLoop(ctx context.Context) {
 				// notify the config discovery server
 				o.configCh <- e
 
-			case event.EventTypeRender:
+			case event.EventTypeReconcile:
 				// rate-limit rendering requests before passing on to the renderer
 				// render request in progress: do nothing
 				if throttling {
@@ -154,9 +165,14 @@ func (o *Operator) eventLoop(ctx context.Context) {
 				o.log.V(3).Info("initiating new rendering request", "event",
 					e.String())
 
+			case event.EventTypeAck:
+				// administer
+				o.setLastAckedGeneration(e.(*event.EventAck).Generation)
+
 			default:
-				o.log.Info("internal error: unknown event received %#v", e)
-				continue
+				o.log.Info("internal error: operator received a request it should "+
+					"never receive", "type", e.String(),
+					"event-dump", fmt.Sprintf("%#v", e))
 			}
 
 		case <-throttler.C:
@@ -169,13 +185,89 @@ func (o *Operator) eventLoop(ctx context.Context) {
 			if o.tracker.ProgressReport() > 0 {
 				o.tracker.ProgressUpdate(-1)
 			}
-			o.renderCh <- event.NewEventRender()
+
+			o.log.Info("starting new reconcile generation", "generation", o.gen,
+				"last-acked-generation", o.GetLastAckedGeneration())
+			o.gen += 1
+			o.renderCh <- event.NewEventRender(o.gen)
 
 		case <-ctx.Done():
-			// FIXME revert gateway-class status to "Waiting..."
 			o.Terminate()
 
+			if cancel != nil {
+				cancel()
+			}
+
 			return
+		}
+	}
+}
+
+// Terminate completes the termination sequence of the operator.
+func (o *Operator) Terminate() {
+	o.log.Info("commencing the termination sequence", "generation", o.gen)
+
+	// stop controllers (actually only prevent them from sending further reconcile events)
+	o.gwConfC.Terminate()
+	o.dpC.Terminate()
+	o.gwC.Terminate()
+	o.rouC.Terminate()
+	o.nodeC.Terminate()
+
+	// wait for ongoing activity to finish
+	o.Stabilize()
+	o.Stabilize()
+
+	// perform the finalize sequence if requested
+	if o.finalizer {
+		o.Finalize()
+	}
+}
+
+// Finalize invalidates the status on all the managed resources. Note that Finalize must be called
+// with the main even loop blocked.
+func (o *Operator) Finalize() {
+	// get the last update generation
+	lastGen := o.GetLastAckedGeneration()
+	o.log.Info("commencing the finalizer sequence", "generation", o.gen,
+		"last-acked-generation", lastGen)
+
+	// send the finalize event to the renderer
+	finalGen := o.gen + 1
+	o.renderCh <- event.NewEventFinalize(finalGen)
+
+	o.log.V(2).Info("finalizer request sent to renderer, waiting for response",
+		"last-acked-generation", lastGen)
+
+	// event loop is blocked: we must handle message passing ourselves
+	u := <-o.operatorCh
+
+	o.log.V(2).Info("renderer ready, initiating the updater",
+		"event", u.String())
+
+	// send to the updater
+	o.updaterCh <- u
+
+	// wait for the updater to finish with lastGen+1
+	if o.GetLastAckedGeneration() == finalGen {
+		return
+	}
+
+	timeout := time.After(2 * time.Second)
+	for {
+		select {
+		case <-o.operatorCh:
+			if o.GetLastAckedGeneration() != finalGen {
+				o.log.V(2).Info("update ready, exiting finalizer",
+					"gen", o.gen, "last-acked-generation", lastGen)
+				return
+			}
+
+			o.log.V(2).Info("ignoring out-of-order ack from updater",
+				"gen", o.gen, "last-acked-generation", lastGen)
+
+		case <-timeout:
+			o.log.V(2).Info("cound not finish the finalization sequence in 2 sec, exiting anyway")
 		}
 	}
 }

@@ -1426,9 +1426,9 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					gw.Status.Conditions[0].Type, "conditions accepted")
 				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
 					"conditions gen")
-				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
+				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[0].Status,
 					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonAccepted),
+				assert.Equal(t, string(gwapiv1.GatewayReasonPending),
 					gw.Status.Conditions[0].Reason, "reason")
 
 				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),

@@ -59,8 +59,13 @@ func NewNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger
 
 func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("node", req.String())
-	log.Info("reconciling")
 
+	if r.terminating {
+		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("reconciling")
 	var node corev1.Node
 	found := true
 
@@ -119,7 +124,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 
 			store.Nodes.Upsert(&node)
 
-			r.eventCh <- event.NewEventRender()
+			r.eventCh <- event.NewEventReconcile()
 			return reconcile.Result{}, nil
 		}
 
@@ -137,7 +142,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		r.log.Info("failed to find node with valid external address", "reason",
 			err.Error())
 
-		r.eventCh <- event.NewEventRender()
+		r.eventCh <- event.NewEventReconcile()
 		return reconcile.Result{}, nil
 	}
 
@@ -146,7 +151,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 
 	store.Nodes.Upsert(newNode)
 
-	r.eventCh <- event.NewEventRender()
+	r.eventCh <- event.NewEventReconcile()
 	return reconcile.Result{}, nil
 }
 
