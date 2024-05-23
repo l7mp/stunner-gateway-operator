@@ -290,9 +290,32 @@ func checkConfig(ch chan *stnrv1.StunnerConfig, checker ConfigChecker) bool {
 	}
 }
 
+// -----------------------
+// Test cases
+// -----------------------
 var _ = Describe("Integration test:", Ordered, func() {
-	// Endpoints controller
 	// LEGACY
+	// Endpoints controller
+	legacyModeEndpointControllerTest()
+
+	// LEGACY
+	// EndpointSlice controller
+	legacyModeTest()
+
+	// MANAGED
+	// Endpoints controller
+	managedModeEndpointControllerTest()
+
+	// MANAGED
+	// EndpointSlice controller
+	managedModeTest()
+
+	// MANAGED
+	// FINALIZER
+	finalizerTest()
+})
+
+func legacyModeEndpointControllerTest() {
 	Context(`When using the "legacy" dataplane mode with the legacy endpoints controller`, Ordered, func() {
 		It(`should be possible to initialize the operator`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
@@ -312,8 +335,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 			cancel()
 		})
 	})
+}
 
-	// EndpointSlice controller
+func legacyModeTest() {
 	Context(`When using the "legacy" dataplane mode with the legacy endpointslice controller`, func() {
 		It(`should be possible to restart the operator using ghe endpointslice controller`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
@@ -333,9 +357,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 			cancel()
 		})
 	})
+}
 
-	// MANAGED
-	// Endpoints controller
+func managedModeEndpointControllerTest() {
 	Context(`When using the "managed" dataplane mode with the legacy endpoints controller`, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
 			config.EndpointSliceAvailable = false
@@ -355,8 +379,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 			cancel()
 		})
 	})
+}
 
-	// MANAGED
+func managedModeTest() {
 	Context(`When using the "managed" dataplane mode with the legacy endpointslice controller`, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
 			config.EndpointSliceAvailable = true
@@ -376,8 +401,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 			cancel()
 		})
 	})
+}
 
-	// FINALIZER
+func finalizerTest() {
 	Context(`When trying to finalize the operator`, Ordered, func() {
 		It(`should be possible to set up a new operator`, func() {
 			config.EndpointSliceAvailable = true
@@ -400,5 +426,4 @@ var _ = Describe("Integration test:", Ordered, func() {
 			// AfterSuite calls cancel()
 		})
 	})
-
-})
+}
