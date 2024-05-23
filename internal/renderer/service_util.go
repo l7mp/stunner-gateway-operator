@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -378,6 +379,29 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
 	}
 
+	// nodeport
+	listenerNodeports := make(map[string]int)
+	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.NodePortAnnotationKey]; ok {
+		if kvs, err := parseNodePortsFromAnnotation(v); err != nil {
+			r.log.Error(err, "invalid GatewayConfig nodeport annotation (required: JSON formatted "+
+				"listener-nodeport key-value pairs), ignoring", "gateway",
+				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
+				"annotation", v)
+		} else {
+			listenerNodeports = kvs
+		}
+	}
+	if v, ok := gw.GetAnnotations()[opdefault.NodePortAnnotationKey]; ok {
+		if kvs, err := parseNodePortsFromAnnotation(v); err != nil {
+			r.log.Error(err, "invalid Gateway nodeport setting in annotation (required: "+
+				"JSON formatted listener-nodeport key-value pairs), ignoting", "gateway",
+				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
+				"annotation", v)
+		} else {
+			listenerNodeports = kvs
+		}
+	}
+
 	// copy all listener ports/protocols from the gateway
 	ports := []corev1.ServicePort{}
 	serviceProto := ""
@@ -411,6 +435,22 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	}
 
 	svc.Spec.Ports = mergeServicePorts(svc.Spec.Ports, ports)
+
+	// update nodeports if requested
+	for _, l := range gw.Spec.Listeners {
+		if nodeport, ok := listenerNodeports[string(l.Name)]; ok {
+			// find the service port
+			for i, sp := range svc.Spec.Ports {
+				if sp.Name == string(l.Name) {
+					svc.Spec.Ports[i].NodePort = int32(nodeport)
+					r.log.V(1).Info("using NodePort for listener",
+						"gateway", store.GetObjectKey(gw), "listener-name",
+						l.Name, "nodeport", nodeport)
+					break
+				}
+			}
+		}
+	}
 
 	// Open the health-check port for LoadBalancer Services only
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
@@ -499,6 +539,23 @@ func mergeServicePorts(ps1, ps2 []corev1.ServicePort) []corev1.ServicePort {
 	}
 
 	return ret
+}
+
+func parseNodePortsFromAnnotation(v string) (map[string]int, error) {
+	// parse as JSON
+	var ret error
+	kvs := make(map[string]int)
+	if err := json.Unmarshal([]byte(v), &kvs); err != nil {
+		ret = err
+		// try our best to parse: add missing curlies
+		v = "{" + v + "}"
+		if err := json.Unmarshal([]byte(v), &kvs); err != nil {
+			// return the original error
+			return map[string]int{}, ret
+		}
+	}
+
+	return kvs, nil
 }
 
 func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {

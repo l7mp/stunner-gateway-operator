@@ -1834,7 +1834,6 @@ func TestRenderServiceUtil(t *testing.T) {
 					spec.ExternalTrafficPolicy, "ext traffic policy local")
 			},
 		},
-
 		{
 			name: "lb service - ext traffic policy invalid",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
@@ -1879,6 +1878,176 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
 				assert.Equal(t, corev1.ServiceExternalTrafficPolicyCluster,
 					spec.ExternalTrafficPolicy, "ext traffic policy default")
+			},
+		},
+		{
+			name: "lb service - nodeport annotation parsing",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *Renderer) {
+				// default parsing
+				a := `{"force-np1":1,"force-np2":2,"force-np3":1000}`
+				nps, err := parseNodePortsFromAnnotation(a)
+				assert.NoError(t, err, "nodeport ann parse 1")
+				assert.Len(t, nps, 3, "nodeport ann parse 1 - len")
+				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
+					"nodeport ann parse 1 - res")
+
+				// without curlies
+				a = `"force-np1":1,"force-np2":2,"force-np3":1000`
+				nps, err = parseNodePortsFromAnnotation(a)
+				assert.NoError(t, err, "nodeport ann parse 2")
+				assert.Len(t, nps, 3, "nodeport ann parse 2 - len")
+				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
+					"nodeport ann parse 2 - res")
+
+				// empty list ok 1
+				a = `{}`
+				nps, err = parseNodePortsFromAnnotation(a)
+				assert.NoError(t, err, "nodeport ann parse 4")
+				assert.Len(t, nps, 0, "nodeport ann parse 4 - len")
+				assert.Equal(t, map[string]int{}, nps,
+					"nodeport ann parse 4 - res")
+
+				// empty list ok 2
+				a = ``
+				nps, err = parseNodePortsFromAnnotation(a)
+				assert.NoError(t, err, "nodeport ann parse 5")
+				assert.Len(t, nps, 0, "nodeport ann parse 5 - len")
+				assert.Equal(t, map[string]int{}, nps,
+					"nodeport ann parse 5 - res")
+
+				// wrong format 1
+				a = `["force-np1":1`
+				_, err = parseNodePortsFromAnnotation(a)
+				assert.Error(t, err, "nodeport ann parse err 1")
+
+				// wrong format 2
+				a = `"dummy"`
+				_, err = parseNodePortsFromAnnotation(a)
+				assert.Error(t, err, "nodeport ann parse err 2")
+
+				// wrong format 3
+				a = `{"force-np1":1,"force-np2":2,"force-np3":1000,"c":{"a":1,"b":2}}`
+				_, err = parseNodePortsFromAnnotation(a)
+				assert.Error(t, err, "nodeport ann parse 3")
+			},
+		},
+		{
+			name: "lb service - nodeport enforced in the GatewayConfig",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					opdefault.NodePortAnnotationKey: "{\"force-np1\":101,\"force-np2\":102,\"force-np3\":103}",
+				}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("random-np"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("force-np1"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("force-np2"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+				ports := s.Spec.Ports
+				assert.Len(t, ports, 3, "service-port len")
+				assert.Equal(t, "random-np", ports[0].Name, "port 1 name")
+				assert.Equal(t, int32(0), ports[0].NodePort, "port 1 np") // default
+				assert.Equal(t, "force-np1", ports[1].Name, "port 1 name")
+				assert.Equal(t, int32(101), ports[1].NodePort, "port 1 np")
+				assert.Equal(t, "force-np2", ports[2].Name, "port 2 name")
+				assert.Equal(t, int32(102), ports[2].NodePort, "port 2 np")
+			},
+		},
+		{
+			name: "lb service - nodeport enforced in annotation",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					opdefault.NodePortAnnotationKey: `{\"dummy-data-in-the-wrong-format`,
+				}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{
+					opdefault.NodePortAnnotationKey: "{\"force-np1\":101,\"force-np2\":102,\"force-np3\":103}",
+				})
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("random-np"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("force-np1"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("force-np2"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("UDP"),
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+				ports := s.Spec.Ports
+				assert.Len(t, ports, 3, "service-port len")
+				assert.Equal(t, "random-np", ports[0].Name, "port 1 name")
+				assert.Equal(t, int32(0), ports[0].NodePort, "port 1 np") // default
+				assert.Equal(t, "force-np1", ports[1].Name, "port 1 name")
+				assert.Equal(t, int32(101), ports[1].NodePort, "port 1 np")
+				assert.Equal(t, "force-np2", ports[2].Name, "port 2 name")
+				assert.Equal(t, int32(102), ports[2].NodePort, "port 2 np")
 			},
 		},
 	})

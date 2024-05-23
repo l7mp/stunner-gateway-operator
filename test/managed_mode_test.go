@@ -20,6 +20,7 @@ import (
 	// "context"
 
 	"context"
+	"fmt"
 	"time"
 
 	// "reflect"
@@ -773,6 +774,70 @@ func testManagedMode() {
 			v, ok := svc.GetLabels()[opdefault.OwnedByLabelKey]
 			Expect(ok).Should(BeTrue(), "app label")
 			Expect(v).Should(Equal(opdefault.OwnedByLabelValue))
+		})
+
+		It("should stabilize", func() {
+			op.Stabilize()
+		})
+
+		It("should use a specific NodePort when requested in a Gateway annotation", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+
+			// learn nodeport
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("dummy"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}}
+			})
+
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return len(svc.Spec.Ports) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			nodeport := svc.Spec.Ports[1].NodePort
+			switch nodeport {
+			case 32767:
+				nodeport = 32766 // max nodeport
+			default:
+				nodeport += 1
+			}
+
+			// set nodeport
+			ann := fmt.Sprintf("{\"gateway-1-listener-udp\": %d}", nodeport)
+			ctrl.Log.Info("re-loading gateway with the nodeport annotation")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+					opdefault.NodePortAnnotationKey:    ann,
+				})
+				// must apply again, otherwise we fall back to testGw listeners
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("dummy"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}}
+			})
+
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return len(svc.Spec.Ports) == 2 && svc.Spec.Ports[1].NodePort == nodeport
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should install TLS cert/keys", func() {

@@ -100,32 +100,40 @@ const (
 	// endpoint (if enabled).
 	DefaultMetricsPortName = "metrics-port"
 
-	// MixedProtocolAnnotationKey is the name(key) of the annotation that is used to
-	// disable STUNner's blocking of mixed-protocol LBs for specific Gateways.
-	// If false or any other string other than true the LB's proto defaults to the first
-	// valid listener protocol in the Gateway spec.
-	// If true all valid listener protocols will be added to the LB.
+	// Annotations
+
+	// MixedProtocolAnnotationKey is the name(key) of the Gateway annotation that is used to
+	// disable STUNner's blocking of mixed-protocol LBs for specific Gateways.  If false or any
+	// other string other than true, the LB's proto defaults to the first valid listener
+	// protocol in the Gateway spec.  If true all valid listener protocols will be added to the
+	// LB.
 	MixedProtocolAnnotationKey = "stunner.l7mp.io/enable-mixed-protocol-lb"
 
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs.
 	MixedProtocolAnnotationValue = "true"
 
-	// ExternalTrafficPolicyAnnotationKey is the name(key) of the annotation that is used to
-	// control whether ExternalTrafficPolicy=Local is enabled on a LB Service that exposes a
-	// Gateway, see https://github.com/l7mp/stunner-gateway-operator/issues/47.
+	// ExternalTrafficPolicyAnnotationKey is the name(key) of the Gateway annotation that is
+	// used to control whether ExternalTrafficPolicy=Local is enabled on a LB Service that
+	// exposes a Gateway, see https://github.com/l7mp/stunner-gateway-operator/issues/47.
 	ExternalTrafficPolicyAnnotationKey = "stunner.l7mp.io/external-traffic-policy"
 
 	// ExternalTrafficPolicyAnnotationValue is the expected value in order to
 	// ExternalTrafficPolicy=Local.
 	ExternalTrafficPolicyAnnotationValue = "local"
 
-	// ManagedDataplaneDisabledAnnotationKey is the name(key) of the annotation that is used to
-	// prevent the operator from creating a `stunnerd` dataplane Deployment for a Gateway.
+	// ManagedDataplaneDisabledAnnotationKey is the name(key) of the Gateway annotation that is
+	// used to prevent the operator from creating a `stunnerd` dataplane Deployment for a
+	// Gateway.
 	ManagedDataplaneDisabledAnnotationKey = "stunner.l7mp.io/disable-managed-dataplane"
 
 	// ManagedDataplaneDisabledAnnotationValue is the value that can be used to disable the
 	// managed dataplane feature for a Gateway.
 	ManagedDataplaneDisabledAnnotationValue = "true"
+
+	// NodePortAnnotationKey is the name(key) of the Gateway annotation that is used to select
+	// particular nodeports per listener for the LB service, see
+	// https://github.com/l7mp/stunner/issues/137.
+	NodePortAnnotationKey = "stunner.l7mp.io/nodeport"
 )
 
 var (
