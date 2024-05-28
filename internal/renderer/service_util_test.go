@@ -1881,7 +1881,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - nodeport annotation parsing",
+			name: "lb service - JSON formatted nodeport annotation parsing",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -1891,7 +1891,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			tester: func(t *testing.T, r *Renderer) {
 				// default parsing
 				a := `{"force-np1":1,"force-np2":2,"force-np3":1000}`
-				nps, err := parseNodePortsFromAnnotation(a)
+				nps, err := getServiceNodePorts(a)
 				assert.NoError(t, err, "nodeport ann parse 1")
 				assert.Len(t, nps, 3, "nodeport ann parse 1 - len")
 				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
@@ -1899,7 +1899,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				// without curlies
 				a = `"force-np1":1,"force-np2":2,"force-np3":1000`
-				nps, err = parseNodePortsFromAnnotation(a)
+				nps, err = getServiceNodePorts(a)
 				assert.NoError(t, err, "nodeport ann parse 2")
 				assert.Len(t, nps, 3, "nodeport ann parse 2 - len")
 				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
@@ -1907,7 +1907,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				// empty list ok 1
 				a = `{}`
-				nps, err = parseNodePortsFromAnnotation(a)
+				nps, err = getServiceNodePorts(a)
 				assert.NoError(t, err, "nodeport ann parse 4")
 				assert.Len(t, nps, 0, "nodeport ann parse 4 - len")
 				assert.Equal(t, map[string]int{}, nps,
@@ -1915,7 +1915,7 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				// empty list ok 2
 				a = ``
-				nps, err = parseNodePortsFromAnnotation(a)
+				nps, err = getServiceNodePorts(a)
 				assert.NoError(t, err, "nodeport ann parse 5")
 				assert.Len(t, nps, 0, "nodeport ann parse 5 - len")
 				assert.Equal(t, map[string]int{}, nps,
@@ -1923,22 +1923,22 @@ func TestRenderServiceUtil(t *testing.T) {
 
 				// wrong format 1
 				a = `["force-np1":1`
-				_, err = parseNodePortsFromAnnotation(a)
+				_, err = getServiceNodePorts(a)
 				assert.Error(t, err, "nodeport ann parse err 1")
 
 				// wrong format 2
 				a = `"dummy"`
-				_, err = parseNodePortsFromAnnotation(a)
+				_, err = getServiceNodePorts(a)
 				assert.Error(t, err, "nodeport ann parse err 2")
 
 				// wrong format 3
 				a = `{"force-np1":1,"force-np2":2,"force-np3":1000,"c":{"a":1,"b":2}}`
-				_, err = parseNodePortsFromAnnotation(a)
+				_, err = getServiceNodePorts(a)
 				assert.Error(t, err, "nodeport ann parse 3")
 			},
 		},
 		{
-			name: "lb service - nodeport enforced in the GatewayConfig",
+			name: "lb service - JSON formatted nodeport annotation in the GatewayConfig enforced",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -1993,7 +1993,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - nodeport enforced in annotation",
+			name: "lb service - JSON formatted nodeport annotation enforced",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -2050,5 +2050,52 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, int32(102), ports[2].NodePort, "port 2 np")
 			},
 		},
+		// not implemented
+		// {
+		// 	name: "lb service - single-listener numeric nodeport annotation enforced",
+		// 	cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+		// 	cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+		// 	gws:  []gwapiv1.Gateway{testutils.TestGw},
+		// 	rs:   []stnrgwv1.UDPRoute{},
+		// 	svcs: []corev1.Service{testutils.TestSvc},
+		// 	prep: func(c *renderTestConfig) {
+		// 		w := testutils.TestGwConfig.DeepCopy()
+		// 		w.Spec.LoadBalancerServiceAnnotations = map[string]string{
+		// 			opdefault.NodePortAnnotationKey: `{\"dummy-data-in-the-wrong-format`,
+		// 		}
+		// 		c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+		// 		gw := testutils.TestGw.DeepCopy()
+		// 		gw.SetAnnotations(map[string]string{
+		// 			opdefault.NodePortAnnotationKey: "101",
+		// 		})
+		// 		gw.Spec.Listeners = []gwapiv1.Listener{{
+		// 			Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+		// 			Port:     gwapiv1.PortNumber(1),
+		// 			Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+		// 		}}
+		// 		c.gws = []gwapiv1.Gateway{*gw}
+		// 	},
+		// 	tester: func(t *testing.T, r *Renderer) {
+		// 		gc, err := r.getGatewayClass()
+		// 		assert.NoError(t, err, "gw-class found")
+		// 		c := &RenderContext{gc: gc, log: logr.Discard()}
+		// 		c.gwConf, err = r.getGatewayConfig4Class(c)
+		// 		assert.NoError(t, err, "gw-conf found")
+
+		// 		gws := r.getGateways4Class(c)
+		// 		assert.Len(t, gws, 1, "gateways for class")
+		// 		gw := gws[0]
+
+		// 		s := r.createLbService4Gateway(c, gw)
+		// 		assert.NotNil(t, s, "svc create")
+		// 		assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+		// 		assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+		// 		ports := s.Spec.Ports
+		// 		assert.Len(t, ports, 1, "service-port len")
+		// 		assert.Equal(t, "gateway-1-listener-udp", ports[0].Name, "port 1 name")
+		// 		assert.Equal(t, int32(101), ports[0].NodePort, "port 1 np") // default
+		// 	},
+		// },
 	})
 }

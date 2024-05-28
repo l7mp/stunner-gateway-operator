@@ -382,7 +382,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// nodeport
 	listenerNodeports := make(map[string]int)
 	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.NodePortAnnotationKey]; ok {
-		if kvs, err := parseNodePortsFromAnnotation(v); err != nil {
+		if kvs, err := getServiceNodePorts(v); err != nil {
 			r.log.Error(err, "invalid GatewayConfig nodeport annotation (required: JSON formatted "+
 				"listener-nodeport key-value pairs), ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
@@ -392,13 +392,29 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		}
 	}
 	if v, ok := gw.GetAnnotations()[opdefault.NodePortAnnotationKey]; ok {
-		if kvs, err := parseNodePortsFromAnnotation(v); err != nil {
-			r.log.Error(err, "invalid Gateway nodeport setting in annotation (required: "+
-				"JSON formatted listener-nodeport key-value pairs), ignoting", "gateway",
+		if kvs, err := getServiceNodePorts(v); err != nil {
+			r.log.Error(err, "invalid Gateway nodeport annotation, ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
 				"annotation", v)
 		} else {
 			listenerNodeports = kvs
+		}
+	}
+
+	if len(listenerNodeports) != 0 {
+		for k, v := range listenerNodeports {
+			found := false
+			for _, l := range gw.Spec.Listeners {
+				if string(l.Name) == k {
+					found = true
+					break
+				}
+			}
+			if !found {
+				// no need to delete: later we won't use this listener key anyway
+				r.log.Info("could not enforce nodeport: unknown listener", "gateway",
+					store.GetObjectKey(gw), "listener-name", k, "nodeport", v)
+			}
 		}
 	}
 
@@ -541,7 +557,7 @@ func mergeServicePorts(ps1, ps2 []corev1.ServicePort) []corev1.ServicePort {
 	return ret
 }
 
-func parseNodePortsFromAnnotation(v string) (map[string]int, error) {
+func getServiceNodePorts(v string) (map[string]int, error) {
 	// parse as JSON
 	var ret error
 	kvs := make(map[string]int)
@@ -550,13 +566,29 @@ func parseNodePortsFromAnnotation(v string) (map[string]int, error) {
 		// try our best to parse: add missing curlies
 		v = "{" + v + "}"
 		if err := json.Unmarshal([]byte(v), &kvs); err != nil {
-			// return the original error
-			return map[string]int{}, ret
+			// Service return the original error
+			return map[string]int{}, fmt.Errorf("could node parse nodeport annotation "+
+				"as a JSON formatted list of listener-nodeport key-value pairs: %w", ret)
 		}
 	}
 
 	return kvs, nil
 }
+
+// // fallback
+// func getServiceNodePortForSingleListener(v string, gw *gwapiv1.Gateway) (map[string]int, error) {
+// 	// parse as int
+// 	kvs := make(map[string]int)
+// 	if gw != nil && len(gw.Spec.Listeners) == 1 {
+// 		if i, err := strconv.Atoi(v); err != nil {
+// 			return map[string]int{}, fmt.Errorf("could not parse "+
+// 				"nodeport annotation as int (listener-num: 1): %w", ret)
+// 		}
+// 		kvs[string(gw.Spec.Listeners[0].Name)] = i
+// 	}
+
+// 	return kvs, nil
+// }
 
 func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {
 	var healthCheckPort int32
