@@ -45,7 +45,7 @@ func NewEventType(raw string) (EventType, error) {
 	case eventTypeAckResponseStr:
 		return EventTypeAck, nil
 	default:
-		return EventTypeUnknown, fmt.Errorf("unknown event type: %q", raw)
+		return EventTypeUnknown, fmt.Errorf("Unknown event type: %q", raw)
 	}
 }
 

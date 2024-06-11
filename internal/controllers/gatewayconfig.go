@@ -61,7 +61,7 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 	if err != nil {
 		return nil, err
 	}
-	r.log.Info("created gatewayconfig controller")
+	r.log.Info("Created GatewayConfig controller")
 
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &stnrgwv1.GatewayConfig{}),
@@ -71,7 +71,7 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 	); err != nil {
 		return nil, err
 	}
-	r.log.Info("watching gatewayconfig objects")
+	r.log.Info("Watching GatewayConfig objects")
 
 	// index GatewayConfig objects as per the referenced Secret
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.GatewayConfig{}, secretGatewayConfigIndex,
@@ -87,7 +87,7 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 	); err != nil {
 		return nil, err
 	}
-	r.log.Info("watching secret objects")
+	r.log.Info("Watching Secret objects")
 
 	return r, nil
 }
@@ -96,24 +96,24 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	log := r.log.WithValues("resource", req.String())
 
 	if r.terminating {
-		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("reconciling")
+	log.Info("Reconciling")
 	configList := []client.Object{}
 	authSecretList := []client.Object{}
 
 	// find all GatewayConfigs
 	gcList := &stnrgwv1.GatewayConfigList{}
 	if err := r.List(ctx, gcList); err != nil {
-		r.log.Info("no gateway-configs found")
+		r.log.Info("No GatewayConfigs found")
 		return reconcile.Result{}, err
 	}
 
 	for _, gc := range gcList.Items {
 		gc := gc
-		r.log.V(1).Info("processing GatewayConfig", "name", store.GetObjectKey(&gc))
+		r.log.V(1).Info("Processing GatewayConfig", "name", store.GetObjectKey(&gc))
 
 		configList = append(configList, &gc)
 
@@ -138,27 +138,27 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 		if err := r.Get(ctx, secretKey, &secret); err != nil {
 			// not fatal
 			if !apierrors.IsNotFound(err) {
-				r.log.Error(err, "error getting Secret", "secret", secretKey)
+				r.log.Error(err, "Error getting Secret", "secret", secretKey)
 				continue
 			}
 
-			r.log.Info("no Secret found for external auth ref", "GatewayConfig",
+			r.log.Info("No Secret found for external auth ref", "GatewayConfig",
 				store.GetObjectKey(&gc), "secret", secretKey)
 
 			continue
 		}
 
-		r.log.V(1).Info("found Secret for external auth ref", "GatewayConfig",
+		r.log.V(1).Info("Found Secret for external auth ref", "GatewayConfig",
 			store.GetObjectKey(&gc), "secret", secretKey)
 
 		authSecretList = append(authSecretList, &secret)
 	}
 
 	store.GatewayConfigs.Reset(configList)
-	r.log.V(2).Info("reset GatewayConfig store", "configs", store.GatewayConfigs.String())
+	r.log.V(2).Info("Reset GatewayConfig store", "configs", store.GatewayConfigs.String())
 
 	store.AuthSecrets.Reset(authSecretList)
-	r.log.V(2).Info("reset AuthSecret store", "secrets", store.AuthSecrets.String())
+	r.log.V(2).Info("Reset AuthSecret store", "secrets", store.AuthSecrets.String())
 
 	if !r.terminating {
 		r.eventCh <- event.NewEventReconcile()
@@ -175,7 +175,7 @@ func (r *gatewayConfigReconciler) validateSecretForReconcile(obj client.Object) 
 	if err := r.List(context.Background(), gcList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretGatewayConfigIndex, secretName),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated GatewayConfigs", "secret", secretName)
+		r.log.Error(err, "Unable to find associated GatewayConfigs", "secret", secretName)
 		return false
 	}
 

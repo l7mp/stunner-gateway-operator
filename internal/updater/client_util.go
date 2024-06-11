@@ -19,7 +19,7 @@ import (
 )
 
 func (u *Updater) updateGatewayClass(gc *gwapiv1.GatewayClass, gen int) error {
-	u.log.V(2).Info("update gateway class", "resource", store.GetObjectKey(gc), "generation",
+	u.log.V(2).Info("Update gateway class", "resource", store.GetObjectKey(gc), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
@@ -39,14 +39,14 @@ func (u *Updater) updateGatewayClass(gc *gwapiv1.GatewayClass, gen int) error {
 		return err
 	}
 
-	u.log.V(1).Info("gateway-class updated", "resource", store.GetObjectKey(gc), "generation",
+	u.log.V(1).Info("GatewayClass updated", "resource", store.GetObjectKey(gc), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return nil
 }
 
 func (u *Updater) updateGateway(gw *gwapiv1.Gateway, gen int) error {
-	u.log.V(2).Info("updating gateway", "resource", store.GetObjectKey(gw), "generation",
+	u.log.V(2).Info("Updating Gateway", "resource", store.GetObjectKey(gw), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
@@ -65,14 +65,14 @@ func (u *Updater) updateGateway(gw *gwapiv1.Gateway, gen int) error {
 		return err
 	}
 
-	u.log.V(1).Info("gateway updated", "resource", store.GetObjectKey(gw), "generation", gen,
+	u.log.V(1).Info("Gateway updated", "resource", store.GetObjectKey(gw), "generation", gen,
 		"result", store.DumpObject(current))
 
 	return nil
 }
 
 func (u *Updater) updateUDPRoute(ro *stnrgwv1.UDPRoute, gen int) error {
-	u.log.V(2).Info("updating UDP-route", "resource", store.GetObjectKey(ro), "generation",
+	u.log.V(2).Info("Updating UDPRoute", "resource", store.GetObjectKey(ro), "generation",
 		gen)
 
 	cli := u.manager.GetClient()
@@ -91,14 +91,14 @@ func (u *Updater) updateUDPRoute(ro *stnrgwv1.UDPRoute, gen int) error {
 		return err
 	}
 
-	u.log.V(1).Info("UDP-route updated", "resource", store.GetObjectKey(ro), "generation",
+	u.log.V(1).Info("UDPRoute updated", "resource", store.GetObjectKey(ro), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return nil
 }
 
 func (u *Updater) updateUDPRouteV1A2(ro *stnrgwv1.UDPRoute, gen int) error {
-	u.log.V(2).Info("updating UDPRouteV1A2", "resource", store.GetObjectKey(ro), "generation", gen)
+	u.log.V(2).Info("Updating UDPRouteV1A2", "resource", store.GetObjectKey(ro), "generation", gen)
 
 	cli := u.manager.GetClient()
 	current := &gwapiv1a2.UDPRoute{ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +123,7 @@ func (u *Updater) updateUDPRouteV1A2(ro *stnrgwv1.UDPRoute, gen int) error {
 }
 
 func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("upsert service", "resource", store.GetObjectKey(svc), "generation", gen)
+	u.log.V(2).Info("Upserting Service", "resource", store.GetObjectKey(svc), "generation", gen)
 
 	client := u.manager.GetClient()
 	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -143,18 +143,18 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 	})
 
 	if err != nil {
-		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert service %q: %w",
+		return ctrlutil.OperationResultNone, fmt.Errorf("Cannot upsert service %q: %w",
 			store.GetObjectKey(svc), err)
 	}
 
-	u.log.V(1).Info("service upserted", "resource", store.GetObjectKey(svc), "generation",
+	u.log.V(1).Info("Service upserted", "resource", store.GetObjectKey(svc), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return op, nil
 }
 
 func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("upsert config-map", "resource", store.GetObjectKey(cm), "generation",
+	u.log.V(2).Info("Upserting ConfigMap", "resource", store.GetObjectKey(cm), "generation",
 		gen)
 
 	client := u.manager.GetClient()
@@ -184,18 +184,18 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	})
 
 	if err != nil {
-		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert config-map %q: %w",
+		return ctrlutil.OperationResultNone, fmt.Errorf("Cannot upsert config-map %q: %w",
 			store.GetObjectKey(cm), err)
 	}
 
-	u.log.V(1).Info("config-map upserted", "resource", store.GetObjectKey(cm), "generation",
+	u.log.V(1).Info("ConfigMap upserted", "resource", store.GetObjectKey(cm), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return op, nil
 }
 
 func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.OperationResult, error) {
-	u.log.V(2).Info("upsert deployment", "resource", store.GetObjectKey(dp), "generation", gen)
+	u.log.V(2).Info("Upserting Deployment", "resource", store.GetObjectKey(dp), "generation", gen)
 
 	client := u.manager.GetClient()
 	current := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
@@ -273,27 +273,22 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 			}
 		}
 
-		// u.log.Info("after", "deploy", fmt.Sprintf("%#v\n", current))
-
 		return nil
 	})
 
-	// u.log.V(4).Info("upserting deployment", "resource", store.GetObjectKey(dp), "generation",
-	// 	gen, "deployment", store.DumpObject(dp))
-
 	if err != nil {
-		return ctrlutil.OperationResultNone, fmt.Errorf("cannot upsert deployment %q: %w",
+		return ctrlutil.OperationResultNone, fmt.Errorf("Cannot upsert Deployment %q: %w",
 			store.GetObjectKey(dp), err)
 	}
 
-	u.log.V(1).Info("deployment upserted", "resource", store.GetObjectKey(dp), "generation",
+	u.log.V(1).Info("Deployment upserted", "resource", store.GetObjectKey(dp), "generation",
 		gen, "result", store.DumpObject(current))
 
 	return op, nil
 }
 
 func (u *Updater) deleteObject(o client.Object, gen int) error {
-	u.log.V(2).Info("delete object", "resource", store.GetObjectKey(o), "generation", gen)
+	u.log.V(2).Info("Delete object", "resource", store.GetObjectKey(o), "generation", gen)
 
 	return u.manager.GetClient().Delete(u.ctx, o)
 }

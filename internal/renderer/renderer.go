@@ -61,8 +61,7 @@ func (r *Renderer) Start(ctx context.Context) error {
 					r.Finalize(ev)
 					r.ProgressUpdate(-1)
 				default:
-					r.log.Info("renderer thread received unknown event",
-						"event", e.String())
+					r.log.Info("Renderer thread received unknown event", "event", e.String())
 				}
 				continue
 

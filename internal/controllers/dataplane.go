@@ -74,28 +74,28 @@ func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	log := r.log.WithValues("dataplane", req.String())
 
 	if r.terminating {
-		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("reconciling")
+	log.Info("Reconciling")
 	dataplaneList := []client.Object{}
 
 	// find all Dataplanes
 	dpList := &stnrgwv1.DataplaneList{}
 	if err := r.List(ctx, dpList); err != nil {
-		r.log.Info("no dataplane resource found")
+		r.log.Info("No Dataplane resource found")
 		return reconcile.Result{}, err
 	}
 
 	for _, dp := range dpList.Items {
 		dp := dp
-		r.log.V(1).Info("processing Dataplane", "dataplane", store.GetObjectKey(&dp))
+		r.log.V(1).Info("Processing Dataplane", "dataplane", store.GetObjectKey(&dp))
 		dataplaneList = append(dataplaneList, &dp)
 	}
 
 	store.Dataplanes.Reset(dataplaneList)
-	r.log.V(2).Info("reset Dataplane store", "configs", store.Dataplanes.String())
+	r.log.V(2).Info("Reset Dataplane store", "configs", store.Dataplanes.String())
 
 	r.eventCh <- event.NewEventReconcile()
 

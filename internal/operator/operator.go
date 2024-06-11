@@ -86,41 +86,41 @@ func (o *Operator) Start(ctx context.Context, cancel context.CancelFunc) error {
 	o.ctx = ctx
 
 	if o.mgr == nil {
-		return fmt.Errorf("controller runtime manager uninitialized")
+		return fmt.Errorf("Controller runtime manager uninitialized")
 	}
 
-	log.V(3).Info("starting GatewayConfig controller")
+	log.V(3).Info("Starting GatewayConfig controller")
 	c, err := controllers.NewGatewayConfigController(o.mgr, o.operatorCh, o.logger)
 	if err != nil {
-		return fmt.Errorf("cannot register gatewayconfig controller: %w", err)
+		return fmt.Errorf("Cannot register gatewayconfig controller: %w", err)
 	}
 	o.gwConfC = c
 
-	log.V(3).Info("starting Dataplane controller")
+	log.V(3).Info("Starting Dataplane controller")
 	c, err = controllers.NewDataplaneController(o.mgr, o.operatorCh, o.logger)
 	if err != nil {
-		return fmt.Errorf("cannot register dataplane controller: %w", err)
+		return fmt.Errorf("Cannot register dataplane controller: %w", err)
 	}
 	o.dpC = c
 
-	log.V(3).Info("starting Gateway controller")
+	log.V(3).Info("Starting Gateway controller")
 	c, err = controllers.NewGatewayController(o.mgr, o.operatorCh, o.logger)
 	if err != nil {
-		return fmt.Errorf("cannot register gateway controller: %w", err)
+		return fmt.Errorf("Cannot register gateway controller: %w", err)
 	}
 	o.gwC = c
 
-	log.V(3).Info("starting UDPRoute controller")
+	log.V(3).Info("Starting UDPRoute controller")
 	c, err = controllers.NewUDPRouteController(o.mgr, o.operatorCh, o.logger)
 	if err != nil {
-		return fmt.Errorf("cannot register udproute controller: %w", err)
+		return fmt.Errorf("Cannot register udproute controller: %w", err)
 	}
 	o.rouC = c
 
-	log.V(3).Info("starting Node controller")
+	log.V(3).Info("Starting Node controller")
 	c, err = controllers.NewNodeController(o.mgr, o.operatorCh, o.logger)
 	if err != nil {
-		return fmt.Errorf("cannot register node controller: %w", err)
+		return fmt.Errorf("Cannot register node controller: %w", err)
 	}
 	o.nodeC = c
 
@@ -152,7 +152,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				// rate-limit rendering requests before passing on to the renderer
 				// render request in progress: do nothing
 				if throttling {
-					o.log.V(3).Info("rendering request throttled", "event",
+					o.log.V(3).Info("Rendering request throttled", "event",
 						e.String())
 					continue
 				}
@@ -162,7 +162,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				throttler.Reset(config.ThrottleTimeout)
 				o.tracker.ProgressUpdate(1)
 
-				o.log.V(3).Info("initiating new rendering request", "event",
+				o.log.V(3).Info("Initiating new rendering request", "event",
 					e.String())
 
 			case event.EventTypeAck:
@@ -170,7 +170,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				o.setLastAckedGeneration(e.(*event.EventAck).Generation)
 
 			default:
-				o.log.Info("internal error: operator received a request it should "+
+				o.log.Info("Internal error: operator received a request it should "+
 					"never receive", "type", e.String(),
 					"event-dump", fmt.Sprintf("%#v", e))
 			}
@@ -186,7 +186,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				o.tracker.ProgressUpdate(-1)
 			}
 
-			o.log.Info("starting new reconcile generation", "generation", o.gen,
+			o.log.Info("Starting new reconcile generation", "generation", o.gen,
 				"last-acked-generation", o.GetLastAckedGeneration())
 			o.gen += 1
 			o.renderCh <- event.NewEventRender(o.gen)
@@ -205,7 +205,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 
 // Terminate completes the termination sequence of the operator.
 func (o *Operator) Terminate() {
-	o.log.Info("commencing the termination sequence", "generation", o.gen)
+	o.log.Info("Commencing termination sequence", "generation", o.gen)
 
 	// stop controllers (actually only prevent them from sending further reconcile events)
 	o.gwConfC.Terminate()
@@ -229,21 +229,20 @@ func (o *Operator) Terminate() {
 func (o *Operator) Finalize() {
 	// get the last update generation
 	lastGen := o.GetLastAckedGeneration()
-	o.log.Info("commencing the finalizer sequence", "generation", o.gen,
-		"last-acked-generation", lastGen)
+	o.log.Info("Commencing finalizer sequence", "generation", o.gen, "last-acked-generation",
+		lastGen)
 
 	// send the finalize event to the renderer
 	finalGen := o.gen + 1
 	o.renderCh <- event.NewEventFinalize(finalGen)
 
-	o.log.V(2).Info("finalizer request sent to renderer, waiting for response",
+	o.log.V(2).Info("Finalizer request sent to renderer, waiting for response",
 		"last-acked-generation", lastGen)
 
 	// event loop is blocked: we must handle message passing ourselves
 	u := <-o.operatorCh
 
-	o.log.V(2).Info("renderer ready, initiating the updater",
-		"event", u.String())
+	o.log.V(2).Info("Renderer ready, initiating the updater", "event", u.String())
 
 	// send to the updater
 	o.updaterCh <- u
@@ -258,16 +257,16 @@ func (o *Operator) Finalize() {
 		select {
 		case <-o.operatorCh:
 			if o.GetLastAckedGeneration() != finalGen {
-				o.log.V(2).Info("update ready, exiting finalizer",
+				o.log.V(2).Info("Update ready, exiting finalizer",
 					"gen", o.gen, "last-acked-generation", lastGen)
 				return
 			}
 
-			o.log.V(2).Info("ignoring out-of-order ack from updater",
+			o.log.V(2).Info("Ignoring out-of-order ack from updater",
 				"gen", o.gen, "last-acked-generation", lastGen)
 
 		case <-timeout:
-			o.log.V(2).Info("cound not finish the finalization sequence in 2 sec, exiting anyway")
+			o.log.V(2).Info("Cound not finish the finalization sequence in 2 sec, exiting anyway")
 		}
 	}
 }

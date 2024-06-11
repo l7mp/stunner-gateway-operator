@@ -25,7 +25,7 @@ func (r *Renderer) allUDPRoutes() []*stnrgwv1.UDPRoute {
 
 	for _, uv1a2 := range store.UDPRoutesV1A2.GetAll() {
 		if isRouteMasked(uv1a2) {
-			r.log.Info("ignoring gwapiv1a2.UDPRoute masking a stunnerv1.UDPRoute:",
+			r.log.Info("Ignoring gwapiv1a2.UDPRoute masking a stunnerv1.UDPRoute:",
 				"name", uv1a2.GetName(), "namespace", uv1a2.GetNamespace())
 			continue
 		}
@@ -42,7 +42,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 	rs := r.allUDPRoutes()
 	for i := range rs {
 		ro := rs[i]
-		r.log.V(4).Info("getUDPRoutes4Listener: considering route for listener", "gateway",
+		r.log.V(4).Info("Considering route for listener", "gateway",
 			store.GetObjectKey(gw), "listener", l.Name, "route",
 			store.GetObjectKey(ro))
 
@@ -51,7 +51,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 
 			found, reason := resolveParentRef(ro, &p, gw, l)
 			if !found {
-				r.log.V(4).Info("getUDPRoutes4Listener: parent rejected for listener",
+				r.log.V(4).Info("UDPRoute parent rejected for listener",
 					"gateway", store.GetObjectKey(gw), "listener", l.Name,
 					"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(&p),
 					"reason", reason)
@@ -59,7 +59,7 @@ func (r *Renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 				continue
 			}
 
-			r.log.V(4).Info("getUDPRoutes4Listener: route found", "gateway",
+			r.log.V(4).Info("Route found", "gateway",
 				store.GetObjectKey(gw), "listener", l.Name, "route",
 				store.GetObjectKey(ro), "V1A2", isRouteV1A2(ro))
 
@@ -178,7 +178,7 @@ func (r *Renderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
 		// obtain the gatewayclass
 		for _, gc := range gcs {
 			if gc.GetName() == string(gw.Spec.GatewayClassName) {
-				r.log.V(2).Info("route is handled by this controller: accepting",
+				r.log.V(2).Info("Route is handled by this controller: accepting",
 					"route", store.GetObjectKey(ro),
 					"parent", store.DumpParentRef(p),
 					"linked-gateway-class", gw.Spec.GatewayClassName,
@@ -188,9 +188,8 @@ func (r *Renderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
 		}
 	}
 
-	r.log.V(2).Info("route is handled by another controller: rejecting",
-		"route", store.GetObjectKey(ro),
-	)
+	r.log.V(2).Info("Route is handled by another controller: rejecting",
+		"route", store.GetObjectKey(ro))
 
 	return false
 }
@@ -207,7 +206,7 @@ func (r *Renderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPR
 	namespacedName := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
 	ret := store.Gateways.GetObject(namespacedName) != nil && gws.GetObject(namespacedName) == nil
 
-	r.log.V(4).Info("isParentOutContext", "route", store.GetObjectKey(ro),
+	r.log.V(4).Info("Parent context check ready", "route", store.GetObjectKey(ro),
 		"parent", store.DumpParentRef(p), "gw-context-length", gws.Len(), "result", ret)
 
 	return ret
@@ -221,7 +220,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 
 	gw := r.getParentGateway(ro, p)
 	if gw == nil {
-		r.log.V(4).Info("no gateway found for Parent", "route",
+		r.log.V(4).Info("No gateway found for parent", "route",
 			store.GetObjectKey(ro), "parent", store.DumpParentRef(p))
 		return false
 	}
@@ -229,7 +228,7 @@ func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 	// does the parent belong to the class we are processing: we don't want to generate routes
 	// for gateways that link to other classes
 	if className != "" && gw.Spec.GatewayClassName != gwapiv1.ObjectName(className) {
-		r.log.V(4).Info("parent links to a gateway that is being managed by another "+
+		r.log.V(4).Info("Parent links to a gateway that is being managed by another "+
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
 			store.DumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
 			"current-gateway-class", className)
@@ -242,19 +241,19 @@ func (r *Renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 
 		found, msg := resolveParentRef(ro, p, gw, &l)
 		if found {
-			r.log.V(3).Info("isParentAcceptingRoute: gateway/listener found for parent",
+			r.log.V(3).Info("Gateway and/or listener found for parent",
 				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name)
 
 			return true
 		} else {
-			r.log.V(4).Info("isParentAcceptingRoute: gateway/listener does not accept route",
+			r.log.V(4).Info("Gateway and/or listener does not accept route",
 				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name, "message", msg)
 		}
 	}
 
-	r.log.V(4).Info("isParentAcceptingRoute result", "route", store.GetObjectKey(ro),
+	r.log.V(4).Info("Checked route parent ready", "route", store.GetObjectKey(ro),
 		"parent", fmt.Sprintf("%#v", *p), "result", "rejected")
 
 	return false

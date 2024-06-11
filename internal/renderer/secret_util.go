@@ -43,17 +43,17 @@ import (
 func getSecretNameFromRef(ref *gwapiv1.SecretObjectReference, namespace string) (types.NamespacedName, error) {
 	ret := types.NamespacedName{}
 	if ref == nil {
-		return ret, errors.New("internal error obtaining Secret: called with nil pointer")
+		return ret, errors.New("Internal error obtaining Secret: called with nil pointer")
 	}
 
 	// - group MUST be set to "" (corev1.GroupName), "v1", or omitted,
 	if ref.Group != nil && (string(*ref.Group) != corev1.GroupName && string(*ref.Group) != "v1") {
-		return ret, fmt.Errorf("internal error obtaining Secret: invalid Group")
+		return ret, fmt.Errorf("Internal error obtaining Secret: invalid Group")
 	}
 
 	// - kind MUST be set to "Secret" or omitted,
 	if ref.Kind != nil && string(*ref.Kind) != "Secret" {
-		return ret, fmt.Errorf("internal error obtaining Secret: invalid Kind")
+		return ret, fmt.Errorf("Internal error obtaining Secret: invalid Kind")
 	}
 
 	// - namespace MAY be omitted, in which case it defaults to the namespace of

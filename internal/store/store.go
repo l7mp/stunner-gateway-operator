@@ -52,17 +52,14 @@ func NewStore() Store {
 }
 
 func (s *storeImpl) Get(nsName types.NamespacedName) client.Object {
-	// s.log.V(3).Info("get", "key", nsName)
 	s.lock.RLock()
 	o, found := s.objects[nsName.String()]
 	s.lock.RUnlock()
 
 	if !found {
-		// s.log.V(4).Info("get", "key", nsName, "result", "not-found")
 		return nil
 	}
 
-	// s.log.V(4).Info("get", "key", nsName, "result", GetObjectKey(o))
 	return o
 }
 
@@ -81,7 +78,6 @@ func (s *storeImpl) Reset(objects []client.Object) {
 }
 
 func (s *storeImpl) UpsertIfChanged(new client.Object) bool {
-	// s.log.V(3).Info("upsert", "key", GetObjectKey(new))
 	key := GetObjectKey(new)
 
 	s.lock.RLock()
@@ -89,31 +85,24 @@ func (s *storeImpl) UpsertIfChanged(new client.Object) bool {
 	s.lock.RUnlock()
 
 	if found && compareObjects(old, new) {
-		// s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "unchanged")
 		return false
 	}
 
 	s.Upsert(new)
 
-	// s.log.V(4).Info("upsert", "key", GetObjectKey(new), "status", "new/changed")
-
 	return true
 }
 
 func (s *storeImpl) Upsert(new client.Object) {
-	// s.log.V(3).Info("upsert", "key", GetObjectKey(new))
 	key := GetObjectKey(new)
 
 	// lock for writing
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.objects[key] = new
-
-	// s.log.V(4).Info("upsert", "key", GetObjectKey(new))
 }
 
 func (s *storeImpl) Remove(nsName types.NamespacedName) {
-	// s.log.V(3).Info("remove", "key", nsName)
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

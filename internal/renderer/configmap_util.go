@@ -22,7 +22,7 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 	if conf != nil {
 		sc, err := json.Marshal(*conf)
 		if err != nil {
-			r.log.Error(err, "error marshaling dataplane config to JSON", "configmap", conf)
+			r.log.Error(err, "Error marshaling dataplane config to JSON", "configmap", conf)
 			return nil, NewCriticalError(RenderingError)
 		}
 		s = string(sc)
@@ -32,7 +32,7 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		gw := c.gws.GetFirst()
 		if gw == nil {
-			r.log.Info("ERROR: renderConfig called with empty Gateway ref in managed mode")
+			r.log.Info("Internal error: config renderer called with empty Gateway ref in managed mode")
 			return nil, NewCriticalError(RenderingError)
 		}
 		relatedGateway = store.GetObjectKey(gw)
@@ -73,7 +73,7 @@ func (r *Renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 	}
 
 	if err := controllerutil.SetOwnerReference(owner, cm, r.scheme); err != nil {
-		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(owner),
+		r.log.Error(err, "Cannot set owner reference", "owner", store.GetObjectKey(owner),
 			"reference", store.GetObjectKey(cm))
 		return nil, NewCriticalError(RenderingError)
 	}

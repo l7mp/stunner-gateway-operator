@@ -21,22 +21,16 @@ import (
 )
 
 func GetObjectKey(object client.Object) string {
-	// s.log.V(5).Info("GetObjectKey", "object", fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName()))
-
 	n := types.NamespacedName{Namespace: object.GetNamespace(), Name: object.GetName()}
 	return n.String()
 }
 
 func GetNamespacedName(object client.Object) types.NamespacedName {
-	// s.log.V(5).Info("GetObjectKey", "object", fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName()))
-
 	return types.NamespacedName(client.ObjectKeyFromObject(object))
 }
 
 // FIXME this is not safe against K8s changing the namespace-name separator
 func GetNameFromKey(key string) types.NamespacedName {
-	// s.log.V(5).Info("GetNameFromKey", "key", key)
-
 	ns := strings.SplitN(key, "/", 2)
 	return types.NamespacedName{Namespace: ns[0], Name: ns[1]}
 }
@@ -58,7 +52,7 @@ func UnpackConfigMap(cm *corev1.ConfigMap) (stnrconfv1.StunnerConfig, error) {
 
 	jsonConf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 	if !found {
-		return conf, fmt.Errorf("error unpacking configmap data: %s not found",
+		return conf, fmt.Errorf("Error unpacking configmap data: %s not found",
 			opdefault.DefaultStunnerdConfigfileName)
 	}
 

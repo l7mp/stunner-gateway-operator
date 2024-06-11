@@ -11,9 +11,6 @@ import (
 )
 
 func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
-	gwConf := c.gwConf
-	r.log.V(3).Info("renderAuth", "gateway-config", store.GetObjectKey(gwConf), "spec", gwConf.Spec)
-
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)
@@ -23,12 +20,9 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) 
 }
 
 func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
-	gwConf := c.gwConf
-	// r.log.V(4).Info("renderInlineAuth", "gateway-config", store.GetObjectKey(gwConf))
-
 	realm := stnrconfv1.DefaultRealm
-	if gwConf.Spec.Realm != nil {
-		realm = *gwConf.Spec.Realm
+	if c.gwConf.Spec.Realm != nil {
+		realm = *c.gwConf.Spec.Realm
 	}
 
 	auth := stnrconfv1.AuthConfig{
@@ -36,25 +30,25 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, e
 		Credentials: make(map[string]string),
 	}
 
-	atype, err := getAuthType(gwConf.Spec.AuthType)
+	atype, err := getAuthType(c.gwConf.Spec.AuthType)
 	if err != nil {
 		return nil, err
 	}
 
 	switch atype {
 	case stnrconfv1.AuthTypePlainText:
-		if gwConf.Spec.Username == nil || gwConf.Spec.Password == nil {
+		if c.gwConf.Spec.Username == nil || c.gwConf.Spec.Password == nil {
 			return nil, NewCriticalError(InvalidUsernamePassword)
 		}
 
-		auth.Credentials["username"] = *gwConf.Spec.Username
-		auth.Credentials["password"] = *gwConf.Spec.Password
+		auth.Credentials["username"] = *c.gwConf.Spec.Username
+		auth.Credentials["password"] = *c.gwConf.Spec.Password
 
 	case stnrconfv1.AuthTypeLongTerm:
-		if gwConf.Spec.SharedSecret == nil {
+		if c.gwConf.Spec.SharedSecret == nil {
 			return nil, NewCriticalError(InvalidSharedSecret)
 		}
-		auth.Credentials["secret"] = *gwConf.Spec.SharedSecret
+		auth.Credentials["secret"] = *c.gwConf.Spec.SharedSecret
 	}
 
 	auth.Type = atype.String()
@@ -64,8 +58,8 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, e
 		return nil, NewCriticalError(InvalidAuthConfig)
 	}
 
-	r.log.V(2).Info("renderInlineAuth ready", "gateway-config", store.GetObjectKey(gwConf), "result",
-		fmt.Sprintf("%#v", auth))
+	r.log.V(2).Info("Rendering inline auth config ready", "gateway-config",
+		store.GetObjectKey(c.gwConf), "result", fmt.Sprintf("%#v", auth))
 
 	return &auth, nil
 }
@@ -88,7 +82,7 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig,
 	n, err := getSecretNameFromRef(ref, gwConf.GetNamespace())
 	if err != nil {
 		// report concrete error here, return a critical error
-		r.log.Info("invalid auth Secret", "gateway-config", store.GetObjectKey(c.gwConf),
+		r.log.Info("Invalid auth Secret", "gateway-config", store.GetObjectKey(c.gwConf),
 			"ref", dumpSecretRef(ref, gwConf.GetNamespace()), "error", err.Error())
 		return nil, NewCriticalError(ExternalAuthCredentialsNotFound)
 	}
@@ -96,13 +90,13 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig,
 	secret := store.AuthSecrets.GetObject(n)
 	if secret == nil {
 		// report concrete error here, return a critical error
-		r.log.Info("auth Secret not found", "gateway-config", store.GetObjectKey(c.gwConf),
+		r.log.Info("Auth Secret not found", "gateway-config", store.GetObjectKey(c.gwConf),
 			"ref", dumpSecretRef(ref, gwConf.GetNamespace()), "name", n)
 		return nil, NewCriticalError(ExternalAuthCredentialsNotFound)
 	}
 
 	if secret.Type != corev1.SecretTypeOpaque {
-		r.log.Info("expecting Secret of type \"Opaque\" (trying to use Secret anyway)",
+		r.log.Info("Expecting Secret of type \"Opaque\" (trying to use Secret anyway)",
 			"gateway-config", store.GetObjectKey(c.gwConf), "secret", n.String())
 	}
 
@@ -150,7 +144,7 @@ func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig,
 		return nil, NewCriticalError(InvalidAuthConfig)
 	}
 
-	r.log.V(2).Info("renderExternalAuth ready", "gateway-config", store.GetObjectKey(gwConf),
+	r.log.V(2).Info("Finished rendering external auth config", "gateway-config", store.GetObjectKey(gwConf),
 		"secret", n.String(), "result", fmt.Sprintf("%#v", auth))
 
 	return &auth, nil

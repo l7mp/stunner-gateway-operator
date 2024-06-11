@@ -37,14 +37,14 @@ func (c *Server) Start(ctx context.Context) error {
 			select {
 			case e := <-c.configCh:
 				if e.GetType() != event.EventTypeUpdate {
-					c.log.Info("config discovery server received unknown event",
+					c.log.Info("Config discovery server received unknown event",
 						"event", e.String())
 					continue
 				}
 
 				c.ProgressUpdate(1)
 				if err := c.ProcessUpdate(e.(*event.EventUpdate)); err != nil {
-					c.log.Error(err, "could not process config update event", "event",
+					c.log.Error(err, "Could not process config update event", "event",
 						e.String())
 				}
 				c.ProgressUpdate(-1)
@@ -67,14 +67,14 @@ func (c *Server) GetConfigUpdateChannel() chan event.Event {
 // ProcessUpdate processes new config events and updates the server with the current
 // state-of-the-world.
 func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
-	c.log.Info("processing config update event", "generation", e.Generation, "update",
+	c.log.Info("Processing config update event", "generation", e.Generation, "update",
 		e.String())
 
 	configs := []cdsserver.Config{}
 
 	for _, conf := range e.ConfigQueue {
 		id := conf.Admin.Name
-		c.log.V(4).Info("config update", "generation", e.Generation, "client", id, "config",
+		c.log.V(4).Info("Config update", "generation", e.Generation, "client", id, "config",
 			conf.String())
 		configs = append(configs, cdsserver.Config{
 			Id:     id,

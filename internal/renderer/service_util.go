@@ -63,7 +63,7 @@ func (r *Renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
 		status[i] = "<nil>"
 		ap, err := r.getPublicListenerAddr(svc, gw, &gw.Spec.Listeners[i])
 		if err != nil {
-			r.log.Info("could not find public adddress for listener",
+			r.log.Info("Could not find public adddress for listener",
 				"gateway", store.GetObjectKey(gw), "listener", l.Name,
 				"error", err.Error())
 			retErr = NewNonCriticalError(PublicListenerAddressNotFound)
@@ -73,7 +73,7 @@ func (r *Renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
 		status[i] = ap.String()
 	}
 
-	r.log.V(4).Info("searching public address for gateway: ready",
+	r.log.V(4).Info("Searching public address for gateway: ready",
 		"gateway", store.GetObjectKey(gw),
 		"address", strings.Join(status, ","))
 
@@ -84,19 +84,19 @@ func (r *Renderer) getPublicSvc(gw *gwapiv1.Gateway) (*corev1.Service, error) {
 	var pubSvc *corev1.Service
 	for _, svc := range store.Services.GetAll() {
 		if !isServiceAnnotated4Gateway(svc, gw) {
-			r.log.V(4).Info("skipping service: not annotated for gateway", "svc",
+			r.log.V(4).Info("Skipping service: not annotated for gateway", "svc",
 				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
 			continue
 		}
 
 		if !store.IsOwner(gw, svc, "Gateway") {
-			r.log.V(4).Info("skipping service: no owner-reference to gateway", "svc",
+			r.log.V(4).Info("Skipping service: no owner-reference to gateway", "svc",
 				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
 			continue
 		}
 
 		if isSvcPreferred(pubSvc, svc) {
-			r.log.V(4).Info("found service", "svc", store.GetObjectKey(svc))
+			r.log.V(4).Info("Found service", "svc", store.GetObjectKey(svc))
 			pubSvc = svc
 		}
 	}
@@ -160,7 +160,7 @@ func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 	}
 
 	if sp == nil {
-		return gwAddrPort{}, errors.New("cannot find matching service-port for listener" +
+		return gwAddrPort{}, errors.New("Cannot find matching service-port for listener" +
 			"(hint: enable mixed-protocol-LB support)")
 	}
 
@@ -179,7 +179,7 @@ func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 			port:  int(sp.Port),
 		}
 
-		r.log.V(4).Info("using requested address from Gateway spec for listener",
+		r.log.V(4).Info("Using requested address from Gateway spec for listener",
 			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
 			"listener", l.Name, "address", ap.String())
 
@@ -189,7 +189,7 @@ func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 	// 2. If Address is not set, we use the LoadBalancer IP and the above listener port
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		if ap := getLBAddr(svc, spIndex); ap != nil {
-			r.log.V(4).Info("using LoadBalancer address for listener",
+			r.log.V(4).Info("Using LoadBalancer address for listener",
 				"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
 				"listener", l.Name, "address", ap.String())
 			return *ap, nil
@@ -205,14 +205,14 @@ func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 			port:  int(sp.NodePort),
 		}
 
-		r.log.V(4).Info("using NodePort address for listener",
+		r.log.V(4).Info("Using NodePort address for listener",
 			"service", store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw),
 			"listener", l.Name, "address", ap.String())
 
 		return ap, nil
 	}
 
-	return gwAddrPort{}, errors.New("could not usable public address for listener")
+	return gwAddrPort{}, errors.New("Could not find usable public address for listener")
 }
 
 // first matching service-port and load-balancer service status
@@ -383,7 +383,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	listenerNodeports := make(map[string]int)
 	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.NodePortAnnotationKey]; ok {
 		if kvs, err := getServiceNodePorts(v); err != nil {
-			r.log.Error(err, "invalid GatewayConfig nodeport annotation (required: JSON formatted "+
+			r.log.Error(err, "Invalid GatewayConfig nodeport annotation (required: JSON formatted "+
 				"listener-nodeport key-value pairs), ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
 				"annotation", v)
@@ -393,7 +393,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	}
 	if v, ok := gw.GetAnnotations()[opdefault.NodePortAnnotationKey]; ok {
 		if kvs, err := getServiceNodePorts(v); err != nil {
-			r.log.Error(err, "invalid Gateway nodeport annotation, ignoring", "gateway",
+			r.log.Error(err, "Invalid Gateway nodeport annotation, ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
 				"annotation", v)
 		} else {
@@ -412,7 +412,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			}
 			if !found {
 				// no need to delete: later we won't use this listener key anyway
-				r.log.Info("could not enforce nodeport: unknown listener", "gateway",
+				r.log.Info("Could not enforce nodeport: unknown listener", "gateway",
 					store.GetObjectKey(gw), "listener-name", k, "nodeport", v)
 			}
 		}
@@ -459,7 +459,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			for i, sp := range svc.Spec.Ports {
 				if sp.Name == string(l.Name) {
 					svc.Spec.Ports[i].NodePort = int32(nodeport)
-					r.log.V(1).Info("using NodePort for listener",
+					r.log.V(1).Info("Using NodePort for listener",
 						"gateway", store.GetObjectKey(gw), "listener-name",
 						l.Name, "nodeport", nodeport)
 					break
@@ -472,9 +472,9 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		healthCheckPort, err := setHealthCheck(svc.GetAnnotations(), svc)
 		if err != nil {
-			c.log.V(1).Info("could not set health check port", "error", err.Error())
+			c.log.V(1).Info("Could not set health check port", "error", err.Error())
 		} else if healthCheckPort != 0 {
-			c.log.V(1).Info("health check port opened", "port", healthCheckPort)
+			c.log.V(1).Info("Health check port opened", "port", healthCheckPort)
 		}
 	}
 
@@ -495,7 +495,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	}
 
 	if err := controllerutil.SetOwnerReference(gw, svc, r.scheme); err != nil {
-		r.log.Error(err, "cannot set owner reference", "owner",
+		r.log.Error(err, "Cannot set owner reference", "owner",
 			store.GetObjectKey(gw), "reference",
 			store.GetObjectKey(svc))
 	}
@@ -567,7 +567,7 @@ func getServiceNodePorts(v string) (map[string]int, error) {
 		v = "{" + v + "}"
 		if err := json.Unmarshal([]byte(v), &kvs); err != nil {
 			// Service return the original error
-			return map[string]int{}, fmt.Errorf("could node parse nodeport annotation "+
+			return map[string]int{}, fmt.Errorf("Could node parse nodeport annotation "+
 				"as a JSON formatted list of listener-nodeport key-value pairs: %w", ret)
 		}
 	}
@@ -581,7 +581,7 @@ func getServiceNodePorts(v string) (map[string]int, error) {
 // 	kvs := make(map[string]int)
 // 	if gw != nil && len(gw.Spec.Listeners) == 1 {
 // 		if i, err := strconv.Atoi(v); err != nil {
-// 			return map[string]int{}, fmt.Errorf("could not parse "+
+// 			return map[string]int{}, fmt.Errorf("Could not parse "+
 // 				"nodeport annotation as int (listener-num: 1): %w", ret)
 // 		}
 // 		kvs[string(gw.Spec.Listeners[0].Name)] = i
@@ -613,7 +613,7 @@ func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, 
 			case "TCP", "HTTP":
 				healthCheckProtocol = "TCP"
 			default:
-				return 0, errors.New("unknown health check protocol")
+				return 0, errors.New("Unknown health check protocol")
 			}
 		}
 	}

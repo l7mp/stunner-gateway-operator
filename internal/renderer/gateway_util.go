@@ -37,8 +37,8 @@ func (r *Renderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
 		}
 	}
 
-	r.log.V(4).Info("getGateways4Class: ready", "gateway-class", store.GetObjectKey(c.gc),
-		"gateways", len(ret))
+	r.log.V(4).Info("Ready searching gateways for gateway-class",
+		"gateway-class", store.GetObjectKey(c.gc), "gateways", len(ret))
 
 	return ret
 }

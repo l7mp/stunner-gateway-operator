@@ -88,7 +88,7 @@ func (o *Operator) Stabilize() {
 	time.Sleep(d)
 	stabilizer()
 
-	o.log.Info("operator has stabilized: progress counter reports no ongoing operations in 3 consecutive queries",
+	o.log.Info("Operator has stabilized: progress counter reports no ongoing operations in 3 consecutive queries",
 		"duration", time.Since(start), "timeout-between-queries", d)
 }
 

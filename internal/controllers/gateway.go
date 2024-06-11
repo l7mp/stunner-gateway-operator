@@ -59,7 +59,7 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 	if err != nil {
 		return nil, err
 	}
-	r.log.Info("created gateway controller")
+	r.log.Info("Created Gateway controller")
 
 	// watch GatewayClass objects that match this controller name
 	if err := c.Watch(
@@ -73,7 +73,7 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 	); err != nil {
 		return nil, err
 	}
-	r.log.Info("watching gatewayclass objects")
+	r.log.Info("Watching GatewayClass objects")
 
 	// watch Gateway objects that match the controller name
 	if err := c.Watch(
@@ -90,7 +90,7 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 	); err != nil {
 		return nil, err
 	}
-	r.log.Info("watching gateway objects")
+	r.log.Info("Watching Gateway objects")
 
 	// index Gateway objects as per the referenced Secrets
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, secretGatewayIndex,
@@ -112,7 +112,7 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 	); err != nil {
 		return nil, err
 	}
-	r.log.Info("watching secret objects")
+	r.log.Info("watching Secret objects")
 
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		// watch Deployment objects referenced by one of our Gateways
@@ -123,7 +123,7 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 		); err != nil {
 			return nil, err
 		}
-		r.log.Info("watching deployment objects")
+		r.log.Info("Watching Deployment objects")
 	}
 
 	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
@@ -138,11 +138,11 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	log := r.log.WithValues("resource", req.String())
 
 	if r.terminating {
-		r.log.V(2).Info("controller terminating, suppressing reconciliation")
+		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("reconciling")
+	log.Info("Reconciling")
 	gatewayClassList := []client.Object{}
 	gatewayList := []client.Object{}
 	secretList := []client.Object{}
@@ -151,7 +151,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	// find Gateways managed by this controller
 	gwClasses := &gwapiv1.GatewayClassList{}
 	if err := r.List(ctx, gwClasses); err != nil {
-		r.log.Error(err, "error obtaining  GatewayClasses", "name", config.ControllerName)
+		r.log.Error(err, "Error obtaining GatewayClasses", "name", config.ControllerName)
 		return reconcile.Result{}, err
 	}
 
@@ -164,26 +164,26 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 		// is class valid?
 		if err := validateGatewayClass(&gc); err != nil {
-			r.log.Error(err, "invalid GatewayClass", "name", store.GetObjectKey(&gc),
+			r.log.Error(err, "Invalid GatewayClass", "name", store.GetObjectKey(&gc),
 				"gateway-class", fmt.Sprintf("%#v", gc))
 			continue
 		}
 
 		gatewayClassList = append(gatewayClassList, &gc)
-		r.log.V(2).Info("found GatewayClass", "name", store.GetObjectKey(&gc))
+		r.log.V(2).Info("Found GatewayClass", "name", store.GetObjectKey(&gc))
 
 		// get gateways for this class
 		gateways := &gwapiv1.GatewayList{}
 		if err := r.List(ctx, gateways, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gc.GetName()),
 		}); err != nil {
-			r.log.Info("no associated Gateways found for GatewayClass", "name", config.ControllerName)
+			r.log.Info("No associated Gateways found for GatewayClass", "name", config.ControllerName)
 			return reconcile.Result{}, err
 		}
 
 		for _, gw := range gateways.Items {
 			gw := gw
-			r.log.V(1).Info("found Gateway", "namespace", gw.Namespace, "name", gw.Name)
+			r.log.V(1).Info("Found Gateway", "namespace", gw.Namespace, "name", gw.Name)
 
 			gatewayList = append(gatewayList, &gw)
 
@@ -216,12 +216,12 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 					); err != nil {
 						// not fatal
 						if !apierrors.IsNotFound(err) {
-							r.log.Error(err, "error getting Secret", "namespace",
+							r.log.Error(err, "Error getting Secret", "namespace",
 								secretNamespace, "name", string(ref.Name))
 							continue
 						}
 
-						r.log.Info("no Secret found for Gateway", "gateway",
+						r.log.Info("No Secret found for Gateway", "gateway",
 							store.GetObjectKey(&gw), "listener", listener.Name,
 							"namespace", secretNamespace, "name", string(ref.Name))
 						continue
@@ -368,21 +368,21 @@ func (r *gatewayReconciler) validateDeploymentForReconcile(obj client.Object) bo
 func validateGatewayClass(gc *gwapiv1.GatewayClass) error {
 	ref := gc.Spec.ParametersRef
 	if ref == nil {
-		return fmt.Errorf("empty ParametersRef in GatewayClassSpec: %#v", gc.Spec)
+		return fmt.Errorf("Empty ParametersRef in GatewayClassSpec: %#v", gc.Spec)
 	}
 
 	if string(ref.Group) != stnrgwv1.GroupVersion.Group {
-		return fmt.Errorf("invalid group in ParametersRef %q, expecting %q",
+		return fmt.Errorf("Invalid group in ParametersRef %q, expecting %q",
 			string(ref.Group), stnrgwv1.GroupVersion.Group)
 	}
 
 	if string(ref.Kind) != "GatewayConfig" {
-		return fmt.Errorf("invalid Kind in ParametersRef %q, expecting %q",
+		return fmt.Errorf("Invalid Kind in ParametersRef %q, expecting %q",
 			string(ref.Kind), "GatewayConfig")
 	}
 
 	if ref.Namespace == nil {
-		return fmt.Errorf("invalid Namespace in ParametersRef: namespace must be set")
+		return fmt.Errorf("Invalid Namespace in ParametersRef: namespace must be set")
 	}
 
 	return nil

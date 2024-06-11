@@ -15,7 +15,7 @@ import (
 )
 
 func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
-	r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
+	// r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
 	// track down the backendref
 	rs := ro.Spec.Rules
@@ -24,7 +24,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 	}
 
 	if len(rs) > 1 {
-		r.log.V(1).Info("renderCluster: too many rules (%d) in route %q, "+
+		r.log.V(1).Info("Cluster rendering error: too many rules (%d) in route %q, "+
 			"considering only the first one", len(rs), store.GetObjectKey(ro))
 	}
 
@@ -41,7 +41,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 		if b.Group != nil && string(*b.Group) != corev1.GroupName &&
 			string(*b.Group) != stnrgwv1.GroupVersion.Group {
 			routeError = NewNonCriticalError(InvalidBackendGroup)
-			r.log.V(2).Info("renderCluster: invalid backend Group", "route",
+			r.log.V(2).Info("Cluster rendering error: invalid backend Group", "route",
 				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b), "group",
 				*b.Group, "error", routeError.Error())
 			continue
@@ -49,7 +49,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 
 		if b.Kind != nil && string(*b.Kind) != "Service" && string(*b.Kind) != "StaticService" {
 			routeError = NewNonCriticalError(InvalidBackendKind)
-			r.log.V(2).Info("renderCluster: invalid backend Kind", "route",
+			r.log.V(2).Info("Cluster rendering error: invalid backend Kind", "route",
 				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b), "kind", *b.Kind,
 				"error", routeError)
 			continue
@@ -70,7 +70,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 			if config.EnableEndpointDiscovery {
 				epEDS, ctypeEDS, err := getEndpointsForService(ref, ns)
 				if err != nil {
-					r.log.V(1).Info("renderCluster: error rendering Endpoints for Service backend",
+					r.log.V(1).Info("Cluster rendering error: could not render Endpoints for Service backend",
 						"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 						"error", err)
 					errEDS = err
@@ -84,7 +84,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 			// the clusterIP or STRICT_DNS cluster if EDS is disabled
 			epCluster, ctypeCluster, errCluster := getClusterRouteForService(ref, ns)
 			if errCluster != nil {
-				r.log.V(1).Info("renderCluster: error rendering service-route (ClusterIP/DNS "+
+				r.log.V(1).Info("Cluster rendering error: could not render service-route (ClusterIP/DNS "+
 					"route) for Service backend", "route",
 					store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 					"error", errCluster)
@@ -97,7 +97,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 
 			if errCluster != nil && errEDS != nil {
 				// both attempts failed: skip backend
-				r.log.V(1).Info("renderCluster: skipping Service backend", "route",
+				r.log.V(1).Info("Cluster rendering: skipping Service backend", "route",
 					store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 					"reason", routeError)
 				routeError = NewNonCriticalError(BackendNotFound)
@@ -109,7 +109,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 			ep, ctype, err = getEndpointsForStaticService(ref, ns)
 			if err != nil {
 				routeError = err
-				r.log.Info("renderCluster: error rendering endpoints for StaticService backend",
+				r.log.Info("Cluster rendering error: could not render endpoints for StaticService backend",
 					"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 					"error", routeError)
 				continue
@@ -118,20 +118,20 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 			// error could also be InvalidBackendGroup: both are reported with the same
 			// reason in the route status
 			routeError = NewNonCriticalError(InvalidBackendKind)
-			r.log.Info("renderCluster: invalid backend Kind and/or Group", "route", store.GetObjectKey(ro),
+			r.log.Info("Cluster rendering error: invalid backend Kind and/or Group", "route", store.GetObjectKey(ro),
 				"backendRef", store.DumpBackendRef(&b), "error", routeError)
 			continue
 		}
 
 		if IsNonCriticalError(routeError, BackendNotFound) {
-			r.log.Info("renderCluster: skipping backend", "route", store.GetObjectKey(ro),
+			r.log.Info("Cluster rendering: skipping backend", "route", store.GetObjectKey(ro),
 				"backendRef", store.DumpBackendRef(&b))
 			continue
 		}
 
 		if prevCType != stnrconfv1.ClusterTypeUnknown && prevCType != ctype {
 			routeError = NewNonCriticalError(InconsitentClusterType)
-			r.log.Info("renderCluster: inconsistent cluster type", "route",
+			r.log.Info("Cluster rendering error: inconsistent cluster type", "route",
 				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
 				"prevous-ctype", fmt.Sprintf("%#v", prevCType))
 			continue
@@ -139,13 +139,13 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 
 		if err := injectPortRange(&b, ep, ctype); err != nil {
 			routeError = NewNonCriticalError(InvalidPortRange)
-			r.log.Info("renderCluster: error", "route",
+			r.log.Info("Cluster rendering error", "route",
 				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
 				"cluster-ctype", ctype.String(), "error", err.Error())
 			continue
 		}
 
-		r.log.V(2).Info("renderCluster: adding Endpoints for backend", "route",
+		r.log.V(2).Info("Cluster rendering: adding Endpoints for backend", "route",
 			store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
 			"cluster-type", ctype.String(), "endpoints", ep)
 
@@ -172,7 +172,7 @@ func (r *Renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConf
 	if routeError != nil {
 		backendStatus = routeError.Error()
 	}
-	r.log.V(2).Info("renderCluster ready", "route", store.GetObjectKey(ro), "result",
+	r.log.V(2).Info("Finished rendering cluster config", "route", store.GetObjectKey(ro), "result",
 		fmt.Sprintf("%#v", cluster), "backend-error", backendStatus)
 
 	return &cluster, routeError

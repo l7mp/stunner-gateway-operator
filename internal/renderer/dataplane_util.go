@@ -45,7 +45,7 @@ import (
 func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
 	if gw == nil {
-		r.log.Info("ERROR: createDeployment called with empty Gateway ref in managed mode")
+		r.log.Info("Internal error: trying to create Deployment with empty Gateway ref in managed mode")
 		return nil, NewCriticalError(RenderingError)
 	}
 
@@ -55,7 +55,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 		if c.gwConf != nil && c.gwConf.Spec.Dataplane != nil {
 			dataplaneName = *c.gwConf.Spec.Dataplane
 		}
-		r.log.Error(err, "cannot find Dataplane for Gateway",
+		r.log.Error(err, "Cannot find Dataplane for Gateway",
 			"gateway-config", store.GetObjectKey(c.gwConf),
 			"dataplane", dataplaneName)
 
@@ -242,7 +242,7 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 	}
 
 	if !found {
-		r.log.Info("cannot find stunnerd container in dataplane Deployment template",
+		r.log.Info("Cannot find stunnerd container in dataplane Deployment template",
 			"deployment", store.DumpObject(&deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
@@ -283,12 +283,12 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 
 	// owned by the Gateway
 	if err := controllerutil.SetOwnerReference(gw, &deployment, r.scheme); err != nil {
-		r.log.Error(err, "cannot set owner reference", "owner", store.GetObjectKey(gw),
+		r.log.Error(err, "Cannot set owner reference", "owner", store.GetObjectKey(gw),
 			"reference", store.GetObjectKey(&deployment))
 		return nil, NewCriticalError(RenderingError)
 	}
 
-	r.log.V(2).Info("createDeployment: ready",
+	r.log.V(2).Info("Fnished creating Deployment",
 		"gateway-class", store.GetObjectKey(c.gc),
 		"gateway-config", store.GetObjectKey(c.gwConf),
 		"gateway", store.GetObjectKey(gw),

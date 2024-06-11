@@ -20,8 +20,8 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 }
 
 func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort) (*stnrconfv1.ListenerConfig, error) {
-	r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
-		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
+	// r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
+	// 	store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
 	proto, err := r.getProtocol(l.Protocol)
 	if err != nil {
@@ -55,7 +55,7 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 	tmp.Cert = "<SECRET>"
 	tmp.Key = "<SECRET>"
 
-	r.log.V(2).Info("renderListener ready", "gateway", store.GetObjectKey(gw), "gateway-config",
+	r.log.V(2).Info("Finished rendering listener config", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "result",
 		fmt.Sprintf("%#v", tmp))
 
@@ -74,13 +74,13 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 	}
 
 	if len(l.TLS.CertificateRefs) == 0 {
-		r.log.Info("no CertificateRef found in Gateway listener", "gateway", store.GetObjectKey(gw),
+		r.log.Info("No certificate reference found in Gateway listener", "gateway", store.GetObjectKey(gw),
 			"listener", l.Name)
 		return "", "", false
 	}
 
 	if len(l.TLS.CertificateRefs) > 1 {
-		r.log.Info("too many CertificateRef found in Gateway listener, using the first one",
+		r.log.Info("Too many certificate references found in Gateway listener, using the first one",
 			"gateway", store.GetObjectKey(gw), "listener", l.Name)
 	}
 
@@ -89,7 +89,7 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 
 		n, err := getSecretNameFromRef(&ref, gw.GetNamespace())
 		if err != nil {
-			r.log.Info("ignoring secret-reference to an unknown or invalid object",
+			r.log.Info("Ignoring secret-reference to an unknown or invalid object",
 				"gateway", store.GetObjectKey(gw),
 				"ref", dumpSecretRef(&ref, gw.GetNamespace()),
 				"error", err.Error())
@@ -98,14 +98,14 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 
 		secret := store.TLSSecrets.GetObject(n)
 		if secret == nil {
-			r.log.Info("secret not found", "gateway", store.GetObjectKey(gw),
+			r.log.Info("Secret not found", "gateway", store.GetObjectKey(gw),
 				"listener", l.Name, "secret", n.String())
 			// fall through: we may find another workable cert-ref
 			continue
 		}
 
 		if secret.Type != corev1.SecretTypeTLS {
-			r.log.Info("expecting Secret of type \"kubernetes.io/tls\" (trying to "+
+			r.log.Info("Expecting Secret of type \"kubernetes.io/tls\" (trying to "+
 				"use Secret anyway)", "gateway", store.GetObjectKey(gw), "listener",
 				l.Name, "secret", n.String())
 		}
@@ -125,7 +125,7 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 		}
 
 		if !certOk || !keyOk {
-			r.log.Info("cannot find cert and/or key in Secret", "gateway",
+			r.log.Info("Cannot find cert and/or key in Secret", "gateway",
 				store.GetObjectKey(gw), "listener", l.Name, "secret", n.String())
 			continue
 		}
@@ -143,20 +143,20 @@ func (r *Renderer) getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerP
 	switch protocol {
 	case "UDP":
 		protocol = "TURN-UDP" // v0.16: resolves to TURN-UDP
-		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "UDP",
-			"valid-protocol", "TURN-UDP")
+		r.log.Info("Deprecated protocol", "protocol", "UDP", "valid-protocol", "TURN-UDP")
+
 	case "TCP":
 		protocol = "TURN-TCP" // v0.16: resolves to TURN-TCP
-		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "TCP",
-			"valid-protocol", "TURN-TCP")
+		r.log.Info("Deprecated protocol", "protocol", "TCP", "valid-protocol", "TURN-TCP")
+
 	case "TLS":
 		protocol = "TURN-TLS" // v0.16: resolves to TURN-TLS
-		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "TLS",
-			"valid-protocol", "TURN-TLS")
+		r.log.Info("Deprecated protocol", "protocol", "TLS", "valid-protocol", "TURN-TLS")
+
 	case "DTLS":
 		protocol = "TURN-DTLS" // v0.16: resolves to TURN-DTLS
-		r.log.Info("use of DEPRECATED protocol", "deprecated-protocol", "DTLS",
-			"valid-protocol", "TURN-DTLS")
+		r.log.Info("Deprecated protocol", "protocol", "DTLS", "valid-protocol",
+			"TURN-DTLS")
 	}
 
 	ret, err := stnrconfv1.NewListenerProtocol(protocol)

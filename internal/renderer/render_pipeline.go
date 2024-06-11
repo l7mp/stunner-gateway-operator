@@ -21,7 +21,7 @@ import (
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
 func (r *Renderer) Render(e *event.EventRender) {
 	r.gen = e.Generation
-	r.log.Info("rendering configuration", "generation", r.gen, "event", e.String())
+	r.log.Info("Rendering configuration", "generation", r.gen, "event", e.String())
 
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
@@ -29,7 +29,7 @@ func (r *Renderer) Render(e *event.EventRender) {
 	case config.DataplaneModeManaged:
 		r.renderManagedGateways(e)
 	default:
-		r.log.Info(`unknown dataplane mode (must be either "managed" or "legacy")`)
+		r.log.Info(`Unknown dataplane mode (must be either "managed" or "legacy")`)
 		return
 	}
 }
@@ -42,24 +42,24 @@ func (r *Renderer) Finalize(e *event.EventFinalize) {
 
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
-		r.log.Info("finalization not suported for legacy dataplane mode")
+		r.log.Info("Finalization not suported for legacy dataplane mode")
 	case config.DataplaneModeManaged:
 		r.finalizeManagedGateways(e)
 	default:
-		r.log.Info(`finalizer: unknown dataplane mode (must be either "managed" or "legacy")`)
+		r.log.Info(`Finalizer: unknown dataplane mode (must be either "managed" or "legacy")`)
 		return
 	}
 }
 
 // renderGatewayClass generates and sets a STUNner daemon configuration in the "legacy" dataplane mode.
 func (r *Renderer) renderGatewayClass(e *event.EventRender) {
-	r.log.Info("commencing dataplane render", "mode", "legacy")
+	r.log.Info("Starting dataplane render", "mode", "legacy")
 
-	r.log.V(1).Info("obtaining gateway-class objects")
+	r.log.V(1).Info("Obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
 
 	if len(gcs) == 0 {
-		r.log.Info("no gateway-class objects found", "event", e.String())
+		r.log.Info("No gateway-class objects found", "event", e.String())
 		return
 	}
 
@@ -69,7 +69,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 			names = append(names, fmt.Sprintf("%q", store.GetObjectKey(gc)))
 		}
 
-		r.log.Info("multiple gateway-class objects found: this is most probably UNINTENED - "+
+		r.log.Info("Multiple gateway-class objects found: this is most probably UNINTENED - "+
 			"the operator will attempt to render a configuration for each gateway-class but there "+
 			"is no guarantee that this will work - this mode is UNSUPPORTED, "+
 			"if unsure, remove one of the gateway-class objects", "names", strings.Join(names, ", "))
@@ -80,20 +80,20 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 	// pipeline to render into the same configmap, but at least we can prevent race conditions
 	// by serializing update requests on the updaterChannel
 	for _, gc := range gcs {
-		r.log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
+		r.log.Info("Rendering configuration", "gateway-class", store.GetObjectKey(gc))
 		c := NewRenderContext(r, gc)
 
-		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
+		r.log.V(1).Info("Obtaining gateway-config", "gateway-class", gc.GetName())
 		var err error
 		c.gwConf, err = r.getGatewayConfig4Class(c)
 		if err != nil {
-			r.log.Error(err, "error obtaining gateway-config",
+			r.log.Error(err, "Error obtaining gateway-config",
 				"gateway-class", gc.GetName())
 			r.invalidateGatewayClass(c, err)
 			continue
 		}
 
-		r.log.V(1).Info("finding gateways", "gateway-class", store.GetObjectKey(gc))
+		r.log.V(1).Info("Finding gateways", "gateway-class", store.GetObjectKey(gc))
 		gws := r.getGateways4Class(c)
 		c.gws.ResetGateways(gws)
 
@@ -101,7 +101,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 		if err := r.renderForGateways(c); err != nil {
 			// an irreparable error happened, invalidate the config and set all related
 			// object statuses to signal the error
-			r.log.Error(err, "rendering", "gateway-class", store.GetObjectKey(gc))
+			r.log.Error(err, "Rendering error", "gateway-class", store.GetObjectKey(gc))
 			r.invalidateGatewayClass(c, err)
 		}
 
@@ -114,27 +114,26 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 
 // renderManagedGateways generates and sets a STUNner daemon configuration for the "managed" dataplane mode.
 func (r *Renderer) renderManagedGateways(e *event.EventRender) {
-	r.log.Info("commencing dataplane render", "mode", "managed")
+	r.log.Info("Starting dataplane render", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
 
-	r.log.V(1).Info("obtaining gateway-class objects")
+	r.log.V(1).Info("Obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
 	if len(gcs) == 0 {
-		r.log.Info("no gateway-class objects found", "event", e.String())
+		r.log.Info("No gateway-class objects found", "event", e.String())
 		return
 	}
 
 	for _, gc := range gcs {
-		r.log.Info("rendering configuration", "gateway-class", store.GetObjectKey(gc))
+		r.log.Info("Rendering configuration", "gateway-class", store.GetObjectKey(gc))
 
-		r.log.V(1).Info("obtaining gateway-config", "gateway-class", gc.GetName())
+		r.log.V(1).Info("Obtaining gateway-config", "gateway-class", gc.GetName())
 
 		gcCtx := NewRenderContext(r, gc)
 		gwConf, err := r.getGatewayConfig4Class(gcCtx)
 		if err != nil {
-			r.log.Error(err, "error obtaining gateway-config",
-				"gateway-class", gc.GetName())
+			r.log.Error(err, "Error obtaining gateway-config", "gateway-class", gc.GetName())
 			r.invalidateGatewayClass(gcCtx, err)
 			pipelineCtx.Merge(gcCtx)
 			continue
@@ -144,7 +143,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		// don't even start rendering if Dataplane is not available
 		dp, err := getDataplane(gcCtx)
 		if err != nil {
-			r.log.Error(err, "error obtaining Dataplane",
+			r.log.Error(err, "Error obtaining Dataplane",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway-config", store.GetObjectKey(gwConf),
 			)
@@ -157,7 +156,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 		for _, gw := range r.getGateways4Class(gcCtx) {
 			gw := gw
 
-			r.log.V(1).Info("rendering for gateway",
+			r.log.V(1).Info("Rendering for gateway",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway", store.GetObjectKey(gw),
 			)
@@ -169,8 +168,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 			// render for this gateway
 			if err := r.renderForGateways(gwCtx); err != nil {
-				r.log.Error(err, "rendering",
-					"gateway-class", store.GetObjectKey(gc),
+				r.log.Error(err, "Rendering", "gateway-class", store.GetObjectKey(gc),
 					"gateway", store.GetObjectKey(gw),
 				)
 				r.invalidateGateways(gwCtx, err)
@@ -193,24 +191,24 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 
 // finalizeManagedGateways invalidates all managed resources
 func (r *Renderer) finalizeManagedGateways(e *event.EventFinalize) {
-	r.log.Info("commencing finalization", "mode", "managed")
+	r.log.Info("Stating finalization", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
 
-	r.log.V(1).Info("obtaining gateway-class objects")
+	r.log.V(1).Info("Obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
 	if len(gcs) == 0 {
-		r.log.Info("no gateway-class objects found", "event", e.String())
+		r.log.Info("No gateway-class objects found", "event", e.String())
 		return
 	}
 
 	for _, gc := range gcs {
-		r.log.Info("invalidating statuses", "gateway-class", store.GetObjectKey(gc))
+		r.log.Info("Invalidating statuses", "gateway-class", store.GetObjectKey(gc))
 
 		gcCtx := NewRenderContext(r, gc)
 
 		// generate a fake error
-		err := errors.New("operator unavailable after graceful shutdown")
+		err := errors.New("Operator unavailable after graceful shutdown")
 
 		// invalidate class and all the associated gateways
 		r.invalidateGatewayClass(gcCtx, err)
@@ -234,14 +232,14 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	targetName, targetNamespace := getTarget(c)
 
-	log.V(1).Info("rendering admin config")
+	log.V(1).Info("Rendering admin config")
 	admin, err := r.renderAdmin(c)
 	if err != nil {
 		return err
 	}
 	conf.Admin = *admin
 
-	log.V(1).Info("rendering auth config")
+	log.V(1).Info("Rendering auth config")
 	auth, err := r.renderAuth(c)
 	if err != nil {
 		return err
@@ -250,15 +248,15 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 
 	conf.Listeners = []stnrconfv1.ListenerConfig{}
 	for _, gw := range c.gws.GetAll() {
-		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num",
+		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
 
 		initGatewayStatus(gw, nil)
 
-		log.V(3).Info("obtaining public address", "gateway", store.GetObjectKey(gw))
+		log.V(3).Info("Obtaining public address", "gateway", store.GetObjectKey(gw))
 		pubGwAddrs, err := r.getPublicAddr(gw)
 		if err != nil {
-			log.V(1).Info("cannot find public address", "gateway", store.GetObjectKey(gw),
+			log.V(1).Info("Cannot find public address", "gateway", store.GetObjectKey(gw),
 				"error", err.Error())
 		}
 
@@ -266,7 +264,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
 		// be reflected back to the service
 		if s := r.createLbService4Gateway(c, gw); s != nil {
-			log.Info("creating public service for gateway", "service",
+			log.Info("Creating public service for gateway", "service",
 				store.GetObjectKey(s), "gateway", store.GetObjectKey(gw),
 				"service", store.DumpObject(s))
 
@@ -278,12 +276,12 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
 
-			log.V(3).Info("obtaining routes", "gateway", store.GetObjectKey(gw), "listener",
+			log.V(3).Info("Obtaining routes", "gateway", store.GetObjectKey(gw), "listener",
 				l.Name)
 			rs := r.getUDPRoutes4Listener(gw, &l)
 
 			if isListenerConflicted(&l, udpPorts, tcpPorts) {
-				log.Info("listener protocol/port conflict", "gateway", store.GetObjectKey(gw),
+				log.Info("Listener protocol/port conflict", "gateway", store.GetObjectKey(gw),
 					"listener", l.Name)
 				setListenerStatus(gw, &l, NewNonCriticalError(PortUnavailable), true, len(rs))
 				continue
@@ -293,7 +291,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 			if err != nil {
 				// all listener rendering errors are critical: prevent the
 				// rendering of the listener config
-				log.Info("error rendering configuration for listener", "gateway",
+				log.Info("Error rendering configuration for listener", "gateway",
 					store.GetObjectKey(gw), "listener", l.Name, "error", err.Error())
 
 				setListenerStatus(gw, &l, err, false, 0)
@@ -311,10 +309,10 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		c.update.UpsertQueue.Gateways.Upsert(gw)
 	}
 
-	log.V(1).Info("processing UDPRoutes")
+	log.V(1).Info("Processing UDPRoutes")
 	conf.Clusters = []stnrconfv1.ClusterConfig{}
 	for _, ro := range r.allUDPRoutes() {
-		log.V(2).Info("considering", "route", ro.GetName())
+		log.V(2).Info("Considering", "route", ro.GetName())
 
 		if !r.isRouteControlled(ro) {
 			continue
@@ -337,12 +335,12 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		criticalErr := err
 		if err != nil {
 			if IsNonCritical(err) {
-				log.Info("non-critical error rendering cluster", "route",
+				log.Info("Non-critical error rendering cluster", "route",
 					store.GetObjectKey(ro), "error", err.Error())
 				// note error but otherwise ignore
 				criticalErr = nil
 			} else {
-				log.Error(err, "fatal error rendering cluster", "route",
+				log.Error(err, "Fatal error rendering cluster", "route",
 					ro.GetName())
 			}
 		}
@@ -371,7 +369,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		}
 	}
 	r.invalidateMaskedRoutes(c)
-	r.log.Info(c.update.String())
+	r.log.Info("Update queue ready", "queue", c.update.String())
 
 	// schedule for update
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
@@ -420,7 +418,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log := r.log
 	gc := c.gc
 
-	log.Info("invalidating configuration", "gateway-class", store.GetObjectKey(gc),
+	log.Info("Invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
 
 	if config.DataplaneMode == config.DataplaneModeLegacy {
@@ -429,7 +427,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 			targetNamespace := c.gwConf.GetNamespace()
 			targetName := opdefault.DefaultConfigMapName
 			if cm, err := r.renderConfig(c, targetName, targetNamespace, nil); err != nil {
-				log.Error(err, "error invalidating ConfigMap", "target",
+				log.Error(err, "Error invalidating ConfigMap", "target",
 					fmt.Sprintf("%s/%s", targetNamespace, targetName))
 			} else {
 				c.update.UpsertQueue.ConfigMaps.Upsert(cm)
@@ -439,7 +437,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 			// and we don't know which stunner config to invalidate; for now warn,
 			// later eliminate such cases by putting a finalizer/owner-ref to
 			// GatewayConfigs once we have started using them
-			log.Info("no gateway-config: active STUNNer configuration may remain stale",
+			log.Info("No gateway-config: active STUNNer configuration may remain stale",
 				"gateway-class", gc.GetName())
 		}
 	}
@@ -447,7 +445,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	setGatewayClassStatusAccepted(gc, reason)
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
-	log.V(1).Info("invalidating all gateway objects in gateway-class",
+	log.V(1).Info("Invalidating all gateway objects in gateway-class",
 		"gateway-class", gc.GetName(), "reason", reason.Error())
 
 	c.gws.ResetGateways(r.getGateways4Class(c))
@@ -460,14 +458,15 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 	gc := c.gc
 
 	for _, gw := range c.gws.GetAll() {
-		log.V(2).Info("considering", "gateway", store.GetObjectKey(gw), "listener-num", len(gw.Spec.Listeners))
+		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw),
+			"listener-num", len(gw.Spec.Listeners))
 
 		// this also re-inits listener statuses
 		initGatewayStatus(gw, reason)
 
 		for j := range gw.Spec.Listeners {
 			l := gw.Spec.Listeners[j]
-			setListenerStatus(gw, &l, errors.New("invalid"), false, 0)
+			setListenerStatus(gw, &l, errors.New("Invalid"), false, 0)
 		}
 
 		setGatewayStatusProgrammed(gw, reason, nil)
@@ -486,7 +485,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 				},
 			}
 			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
-			log.V(2).Info("deleting dataplane ConfigMap", "generation", r.gen,
+			log.V(2).Info("Deleting dataplane ConfigMap", "generation", r.gen,
 				"deployment", store.DumpObject(cm))
 
 			svc := &corev1.Service{
@@ -496,7 +495,7 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 				},
 			}
 			c.update.DeleteQueue.Services.Upsert(svc)
-			log.V(2).Info("deleting dataplane Service", "generation", r.gen,
+			log.V(2).Info("Deleting dataplane Service", "generation", r.gen,
 				"service", store.DumpObject(svc))
 
 			dp := &appv1.Deployment{
@@ -506,14 +505,14 @@ func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
 				},
 			}
 			c.update.DeleteQueue.Deployments.Upsert(dp)
-			log.V(2).Info("deleting dataplane Deployment", "generation", r.gen,
+			log.V(2).Info("Deleting dataplane Deployment", "generation", r.gen,
 				"deployment", store.DumpObject(dp))
 		}
 	}
 
-	log.V(1).Info("processing UDPRoutes")
+	log.V(1).Info("Processing UDPRoutes")
 	for _, ro := range r.allUDPRoutes() {
-		log.V(2).Info("considering", "route", ro.GetName())
+		log.V(2).Info("Considering", "route", ro.GetName())
 
 		initRouteStatus(ro)
 

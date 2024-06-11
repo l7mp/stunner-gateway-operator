@@ -46,7 +46,7 @@ func (u *Updater) Start(ctx context.Context) error {
 			select {
 			case e := <-u.updaterCh:
 				if e.GetType() != event.EventTypeUpdate {
-					u.log.Info("updater thread received unknown event",
+					u.log.Info("Updater thread received unknown event",
 						"event", e.String())
 					continue
 				}
@@ -56,7 +56,7 @@ func (u *Updater) Start(ctx context.Context) error {
 				u.ProgressUpdate(1)
 				err := u.ProcessUpdate(update)
 				if err != nil {
-					u.log.Error(err, "could not process update event", "event",
+					u.log.Error(err, "Could not process update event", "event",
 						e.String())
 				}
 
@@ -82,37 +82,35 @@ func (u *Updater) GetUpdaterChannel() chan event.Event {
 
 func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	gen := e.Generation
-	u.log.Info("processing update event", "generation", gen, "update", e.String())
+	u.log.Info("Processing update event", "generation", gen, "update", e.String())
 
 	// run the upsert queue
 	q := e.UpsertQueue
 	for _, gc := range q.GatewayClasses.GetAll() {
 		if err := u.updateGatewayClass(gc, gen); err != nil {
-			u.log.Error(err, "cannot update gateway-class",
-				"gateway-class", store.DumpObject(gc))
+			u.log.Error(err, "Cannot update GatewayClass", "gateway-class",
+				store.DumpObject(gc))
 			continue
 		}
 	}
 
 	for _, gw := range q.Gateways.GetAll() {
 		if err := u.updateGateway(gw, gen); err != nil {
-			u.log.Error(err, "cannot update gateway",
-				"gateway", store.DumpObject(gw))
+			u.log.Error(err, "Cannot update Gateway", "gateway", store.DumpObject(gw))
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutes.GetAll() {
 		if err := u.updateUDPRoute(ro, gen); err != nil {
-			u.log.Error(err, "cannot update UDP route",
-				"route", store.DumpObject(ro))
+			u.log.Error(err, "Cannot update UDP route", "route", store.DumpObject(ro))
 			continue
 		}
 	}
 
 	for _, ro := range q.UDPRoutesV1A2.GetAll() {
 		if err := u.updateUDPRouteV1A2(ro, gen); err != nil {
-			u.log.Error(err, "cannot update UDPRouteV1A2", "route",
+			u.log.Error(err, "Cannot update UDPRouteV1A2", "route",
 				store.DumpObject(stnrgwv1.ConvertV1UDPRouteToV1A2(ro)))
 			continue
 		}
@@ -120,7 +118,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, svc := range q.Services.GetAll() {
 		if op, err := u.upsertService(svc, gen); err != nil {
-			u.log.Error(err, "cannot update service", "operation", op,
+			u.log.Error(err, "Cannot update Service", "operation", op,
 				"service", store.DumpObject(svc))
 			continue
 		}
@@ -128,7 +126,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, cm := range q.ConfigMaps.GetAll() {
 		if op, err := u.upsertConfigMap(cm, gen); err != nil {
-			u.log.Error(err, "cannot upsert config-map", "operation", op,
+			u.log.Error(err, "Cannot upsert ConfigMap", "operation", op,
 				"config-map", store.DumpObject(cm))
 			continue
 		}
@@ -136,7 +134,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, dp := range q.Deployments.GetAll() {
 		if op, err := u.upsertDeployment(dp, gen); err != nil {
-			u.log.Error(err, "cannot upsert deployment", "operation", op,
+			u.log.Error(err, "Cannot upsert Deployment", "operation", op,
 				"deployment", store.DumpObject(dp))
 			continue
 		}
@@ -146,7 +144,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
 		if err := u.deleteObject(gc, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete gateway-class", "gateway-class",
+			u.log.V(1).Info("Cannot delete GatewayClass", "gateway-class",
 				store.DumpObject(gc), "error", err)
 			continue
 		}
@@ -154,7 +152,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, gw := range q.Gateways.Objects() {
 		if err := u.deleteObject(gw, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete gateway", "gateway",
+			u.log.V(1).Info("Cannot delete Gateway", "gateway",
 				store.DumpObject(gw), "error", err)
 			continue
 		}
@@ -162,7 +160,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, ro := range q.UDPRoutes.Objects() {
 		if err := u.deleteObject(ro, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete UDP route", "route",
+			u.log.V(1).Info("Cannot delete UDPRoute", "route",
 				store.DumpObject(ro), "error", err)
 			continue
 		}
@@ -170,7 +168,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, svc := range q.Services.Objects() {
 		if err := u.deleteObject(svc, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete service", "service",
+			u.log.V(1).Info("Cannot delete Service", "service",
 				store.DumpObject(svc), "error", err)
 			continue
 		}
@@ -178,7 +176,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, cm := range q.ConfigMaps.Objects() {
 		if err := u.deleteObject(cm, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete config-map", "config-map",
+			u.log.V(1).Info("Cannot delete config-map", "config-map",
 				store.DumpObject(cm), "error", err)
 			continue
 		}
@@ -186,8 +184,8 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	for _, dp := range q.Deployments.Objects() {
 		if err := u.deleteObject(dp, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("cannot delete deployment",
-				"deployment", store.DumpObject(dp), "error", err)
+			u.log.V(1).Info("Cannot delete deployment", "deployment",
+				store.DumpObject(dp), "error", err)
 			continue
 		}
 	}

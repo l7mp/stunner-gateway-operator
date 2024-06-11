@@ -22,12 +22,12 @@ func (r *Renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayCo
 
 	gwConf := store.GatewayConfigs.GetObject(gwConfName)
 	if gwConf == nil {
-		return nil, fmt.Errorf("no GatewayConfig found for name: %s",
+		return nil, fmt.Errorf("No GatewayConfig found for name: %s",
 			gwConfName.String())
 	}
 
-	r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc), "result",
-		store.GetObjectKey(gwConf))
+	r.log.V(4).Info("Finished searching gateways for gateway-class", "gateway-class", store.GetObjectKey(c.gc),
+		"result", store.GetObjectKey(gwConf))
 
 	return gwConf, nil
 }
