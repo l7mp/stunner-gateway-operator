@@ -238,13 +238,14 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 
 		// rest is optional
 		if dpspec.TerminationGracePeriodSeconds != nil {
-			currentspec.TerminationGracePeriodSeconds = dpspec.TerminationGracePeriodSeconds
+			grace := *dpspec.TerminationGracePeriodSeconds
+			currentspec.TerminationGracePeriodSeconds = &grace
 		}
 
 		currentspec.HostNetwork = dpspec.HostNetwork
 
 		if dpspec.Affinity != nil {
-			dpspec.Affinity.DeepCopyInto(currentspec.Affinity)
+			currentspec.Affinity = dpspec.Affinity.DeepCopy()
 		}
 
 		if dpspec.Tolerations != nil {

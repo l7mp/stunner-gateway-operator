@@ -3437,6 +3437,22 @@ func testManagedMode() {
 					MaxSkew:           int32(21),
 					WhenUnsatisfiable: corev1.ScheduleAnyway,
 				}}
+				grace := int64(10)
+				dp2.Spec.TerminationGracePeriodSeconds = &grace
+				selector := corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+						MatchExpressions: []corev1.NodeSelectorRequirement{{
+							Key:      "dummy_key",
+							Operator: corev1.NodeSelectorOpIn,
+							Values:   []string{"dummy_val"},
+						}},
+					}},
+				}
+				nodeAff := corev1.NodeAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: &selector,
+				}
+				aff := corev1.Affinity{NodeAffinity: &nodeAff}
+				dp2.Spec.Affinity = &aff
 				return nil
 			})
 			Expect(err).Should(Succeed())
@@ -3494,6 +3510,16 @@ func testManagedMode() {
 			Expect(podSpec.SecurityContext).NotTo(BeNil())
 			Expect(podSpec.SecurityContext.RunAsNonRoot).NotTo(BeNil())
 			Expect(*podSpec.SecurityContext.RunAsNonRoot).To(BeTrue())
+			Expect(podSpec.Affinity).NotTo(BeNil())
+			Expect(podSpec.Affinity.NodeAffinity).NotTo(BeNil())
+			req := podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+			Expect(req).NotTo(BeNil())
+			Expect(req.NodeSelectorTerms).To(HaveLen(1))
+			Expect(req.NodeSelectorTerms[0].MatchExpressions).To(HaveLen(1))
+			Expect(req.NodeSelectorTerms[0].MatchExpressions[0].Key).To(Equal("dummy_key"))
+			Expect(req.NodeSelectorTerms[0].MatchExpressions[0].Operator).To(Equal(corev1.NodeSelectorOpIn))
+			Expect(req.NodeSelectorTerms[0].MatchExpressions[0].Values).To(HaveLen(1))
+			Expect(req.NodeSelectorTerms[0].MatchExpressions[0].Values[0]).To(Equal("dummy_val"))
 
 			// gateway 1 should not change
 			deploy = &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
