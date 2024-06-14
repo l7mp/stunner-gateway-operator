@@ -249,7 +249,7 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 		}
 
 		if dpspec.Tolerations != nil {
-			currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Containers))
+			currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Tolerations))
 			for i := range dpspec.Tolerations {
 				dpspec.Tolerations[i].DeepCopyInto(&currentspec.Tolerations[i])
 			}
