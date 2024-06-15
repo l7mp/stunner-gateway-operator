@@ -2097,5 +2097,74 @@ func TestRenderServiceUtil(t *testing.T) {
 		// 		assert.Equal(t, int32(101), ports[0].NodePort, "port 1 np") // default
 		// 	},
 		// },
+		{
+			name: "lb service - STUNner-specific annotation removed unless GW also sets it",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				as := make(map[string]string)
+				// valid in both
+				as[opdefault.ExternalTrafficPolicyAnnotationKey] = "testpolicy"
+				// valid in both but gw overrides
+				as[opdefault.ManagedDataplaneDisabledAnnotationKey] = "dummymanageddisabled"
+				// only in gw
+				as[opdefault.MixedProtocolAnnotationKey] = "testmixedproto"
+				gw.SetAnnotations(as)
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				s1 := testutils.TestSvc.DeepCopy()
+				as = make(map[string]string)
+				// valid in both
+				as[opdefault.ExternalTrafficPolicyAnnotationKey] = "testpolicy"
+				// valid in both but gw overrides
+				as[opdefault.ManagedDataplaneDisabledAnnotationKey] = "random"
+				// only in svc
+				as[opdefault.NodePortAnnotationKey] = "testnodeport"
+				s1.SetAnnotations(as)
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				as := s.GetAnnotations()
+				// valid in both
+				v, ok := as[opdefault.ExternalTrafficPolicyAnnotationKey]
+				assert.True(t, ok, "ann valid in both - ok")
+				assert.Equal(t, "testpolicy", v, "ann valid in both - val ok")
+				// valid in both but gw overrides
+				v, ok = as[opdefault.ManagedDataplaneDisabledAnnotationKey]
+				assert.True(t, ok, "ann valid in both - ok")
+				assert.Equal(t, "dummymanageddisabled", v, "ann valid in both - val ok")
+				// only in gw
+				v, ok = as[opdefault.MixedProtocolAnnotationKey]
+				assert.True(t, ok, "ann valid in both - ok")
+				assert.Equal(t, "testmixedproto", v, "ann valid in both - val ok")
+				// only in svc
+				_, ok = as[opdefault.NodePortAnnotationKey]
+				assert.False(t, ok, "ann valid in both - ok")
+			},
+		},
 	})
 }

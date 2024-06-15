@@ -17,6 +17,7 @@ import (
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -316,7 +317,8 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	} else {
 		// mandatory labels and annotations must always be there
 		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
-		svc.SetAnnotations(mergeMaps(svc.GetAnnotations(), mandatoryAnnotations))
+		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(),
+			mergeMaps(gw.GetAnnotations(), mandatoryAnnotations)))
 	}
 
 	// set selectors
@@ -648,6 +650,28 @@ func mergeMaps(maps ...map[string]string) map[string]string {
 	for _, m := range maps {
 		for k, v := range m {
 			mergedMap[k] = v
+		}
+	}
+
+	return mergedMap
+}
+
+// mergeAnnotations takes care of removing STUNner-specific annotations added by the user to the LB
+// Service
+func mergeAnnotations(svcA, gwA map[string]string) map[string]string {
+	// add all annotations from the gw
+	mergedMap := mergeMaps(svcA, gwA)
+
+	// remove STUNner-specific annotations that do not exist in the gw
+	for k := range svcA {
+		// only STUNner-specifc annotations are special-cased, everything else are free to
+		// be set by the user
+		if !strings.HasPrefix(strings.ToLower(k), stnrgwv1.GroupVersion.Group) {
+			continue
+		}
+
+		if _, ok := gwA[k]; !ok {
+			delete(mergedMap, k)
 		}
 	}
 

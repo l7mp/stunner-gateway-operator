@@ -2497,6 +2497,41 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("should restore the dataplane if disable-managed-dataplane annotation is removed from Gateway 2", func() {
+			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-2",
+				Namespace: string(testutils.TestNsName),
+			}}
+			Expect(k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)).Should(Succeed())
+
+			// make sure
+			v, ok := gw2.GetAnnotations()[opdefault.ManagedDataplaneDisabledAnnotationKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).NotTo(Equal(opdefault.ManagedDataplaneDisabledAnnotationKey))
+
+			// remove annotation
+			createOrUpdateGateway(gw2, func(current *gwapiv1.Gateway) {
+				ann := current.GetAnnotations()
+				if len(ann) == 0 {
+					ann = make(map[string]string)
+				}
+				delete(ann, opdefault.ManagedDataplaneDisabledAnnotationKey)
+				current.SetAnnotations(ann)
+			})
+
+			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Name:      gw2.GetName(),
+				Namespace: string(testutils.TestNsName),
+			}}
+			ctrl.Log.Info("trying to Get Deployment for Gateway 2",
+				"resource", store.GetNamespacedName(deploy))
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, store.GetNamespacedName(deploy), deploy)
+				return err != nil && deploy != nil
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should survive deleting Gateway 2", func() {
 			ctrl.Log.Info("deleting Gateway 2")
 			gw2 := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
