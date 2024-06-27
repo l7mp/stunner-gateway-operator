@@ -3,6 +3,7 @@ package renderer
 import (
 	// "context"
 	//"fmt"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -183,6 +184,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				runAsNonRoot := true
 				dp.Spec.SecurityContext = &corev1.PodSecurityContext{RunAsNonRoot: &runAsNonRoot}
 				dp.Spec.ContainerSecurityContext = &corev1.SecurityContext{RunAsNonRoot: &runAsNonRoot}
+				dp.Spec.Labels = map[string]string{"dummy-label-key": "dummy-value", "app": "conflicted-value"}
+				dp.Spec.Annotations = map[string]string{"dummy-annotation-key": "dummy-value",
+					opdefault.RelatedGatewayKey: "conflicted-value"}
 
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
@@ -257,7 +261,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				// pod template spec
 				podTemplate := &deploy.Spec.Template
 				labs = podTemplate.GetLabels()
-				assert.Len(t, labs, 3, "labels len")
+				assert.Len(t, labs, 4, "labels len")
 				v, ok = labs[opdefault.AppLabelKey]
 				assert.True(t, ok, "pod labels: owned-by")
 				assert.Equal(t, opdefault.AppLabelValue, v, "pod owned-by label value")
@@ -267,6 +271,19 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				v, ok = labs[opdefault.RelatedGatewayNamespace]
 				assert.True(t, ok, "pod related-gw-namespace label")
 				assert.Equal(t, gw.GetNamespace(), v, "related-gw-namespace label value")
+				v, ok = labs["dummy-label-key"]
+				assert.True(t, ok, "pod labels from dataplane spec labels")
+				assert.Equal(t, "dummy-value", v, "pod labels from Dataplane spec labels value")
+
+				as = podTemplate.GetAnnotations()
+				assert.Len(t, as, 2, "pod anns len")
+				v, ok = as[opdefault.RelatedGatewayKey]
+				assert.True(t, ok, "pod anns: related-gw")
+				assert.Equal(t, fmt.Sprintf("%s/%s", gw.GetNamespace(), gw.GetName()), v,
+					"pod anns: related-gw value")
+				v, ok = as["dummy-annotation-key"]
+				assert.True(t, ok, "pod anns from dataplane spec key")
+				assert.Equal(t, "dummy-value", v, "pod anns from dataplane spec label")
 
 				// deployment selector matches pod template
 				assert.True(t, selector.Matches(labels.Set(labs)), "selector matched")

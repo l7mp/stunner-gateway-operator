@@ -69,6 +69,22 @@ type DataplaneSpec struct {
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
+	// Custom labels to add to dataplane pods. Note that this does not affect the labels added
+	// to the Deployment (those come from the Gateway), just the pods. Note also that mandatory
+	// pod labels override whatever you set here on conflict. The only way to set pod labels is
+	// here: whatever you set manually on the dataplane pod will be reset by the opetator.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Custom annotations to add to dataplane pods. Note that this does not affect the
+	// annotations added to the Deployment (this come from the correspnding Gateway), just the
+	// pods. Note also that mandatory pod annotations override whatever you set here on
+	// conflict, and the annotations set here override annotations manually added to the pods.
+	//
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
 	// Entrypoint array. Defaults: "stunnerd".
 	//
 	// +optional

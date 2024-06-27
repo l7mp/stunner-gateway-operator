@@ -1052,6 +1052,12 @@ func testManagedMode() {
 				current.Spec.HostNetwork = false
 				current.Spec.DisableHealthCheck = true
 				current.Spec.EnableMetricsEnpoint = true
+
+				current.Spec.Labels = map[string]string{"dummy-label-key": "dummy-value",
+					"app": "conflicted-value"}
+				current.Spec.Annotations = map[string]string{"dummy-annotation-key": "dummy-value",
+					opdefault.RelatedGatewayKey: "conflicted-value"}
+
 				return nil
 			})
 			Expect(err).Should(Succeed())
@@ -1120,6 +1126,31 @@ func testManagedMode() {
 			podTemplate := &deploy.Spec.Template
 			podSpec := &podTemplate.Spec
 
+			labs = podTemplate.GetLabels()
+			Expect(labs).To(HaveLen(4))
+			v, ok = labs[opdefault.AppLabelKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(opdefault.AppLabelValue))
+			v, ok = labs[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(testGw.GetName()))
+			v, ok = labs[opdefault.RelatedGatewayNamespace]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal(testGw.GetNamespace()))
+			v, ok = labs["dummy-label-key"]
+			Expect(ok).Should(BeTrue())
+			Expect(v).Should(Equal("dummy-value"))
+
+			as := podTemplate.GetAnnotations()
+			Expect(as).To(HaveLen(2))
+			v, ok = as[opdefault.RelatedGatewayKey]
+			Expect(ok).Should(BeTrue(), "related-gw ann")
+			Expect(v).Should(Equal(fmt.Sprintf("%s/%s",
+				testGw.GetNamespace(), testGw.GetName())))
+			v, ok = as["dummy-annotation-key"]
+			Expect(ok).Should(BeTrue(), "dummy ann key")
+			Expect(v).Should(Equal("dummy-value"))
+
 			Expect(podSpec.Containers).To(HaveLen(1))
 
 			container := podSpec.Containers[0]
@@ -1159,6 +1190,9 @@ func testManagedMode() {
 			}}
 			_, err := createOrUpdate(ctx, k8sClient, dp, func() error {
 				dp.Spec.Replicas = &replicas
+				// reset labels and anns for later tests
+				dp.Spec.Labels = map[string]string{}
+				dp.Spec.Annotations = map[string]string{}
 				return nil
 			})
 			Expect(err).Should(Succeed())

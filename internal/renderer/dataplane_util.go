@@ -124,17 +124,19 @@ func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error)
 			Selector: &selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						opdefault.AppLabelKey:             opdefault.AppLabelValue,
-						opdefault.RelatedGatewayKey:       gw.GetName(),
-						opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
-					},
-					Annotations: map[string]string{
-						opdefault.RelatedGatewayKey: types.NamespacedName{
-							Namespace: gw.GetNamespace(),
-							Name:      gw.GetName(),
-						}.String(),
-					},
+					Labels: store.MergeMetadata(dataplane.Spec.Labels,
+						map[string]string{
+							opdefault.AppLabelKey:             opdefault.AppLabelValue,
+							opdefault.RelatedGatewayKey:       gw.GetName(),
+							opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+						}),
+					Annotations: store.MergeMetadata(dataplane.Spec.Annotations,
+						map[string]string{
+							opdefault.RelatedGatewayKey: types.NamespacedName{
+								Namespace: gw.GetNamespace(),
+								Name:      gw.GetName(),
+							}.String(),
+						}),
 				},
 			},
 		},
