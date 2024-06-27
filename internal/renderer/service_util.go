@@ -362,7 +362,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// MixedProtocolLB (we use the annotations from the svc: already merged from the gwConf and gw)
 	mixedProto := false
 	if isMixedProtocolEnabled, found := svc.GetAnnotations()[opdefault.MixedProtocolAnnotationKey]; found {
-		mixedProto = isMixedProtocolEnabled == opdefault.MixedProtocolAnnotationValue
+		mixedProto = strings.ToLower(isMixedProtocolEnabled) == opdefault.MixedProtocolAnnotationValue
 	}
 
 	// ExternalTrafficPolicy
@@ -470,8 +470,17 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		}
 	}
 
-	// Open the health-check port for LoadBalancer Services only
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+	// Open the health-check port for LoadBalancer Services, and only if not disabled
+	healthCheckExposeDisabled := false
+	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DisableHealthCheckExposeAnnotationKey]; ok && strings.ToLower(v) == opdefault.DisableHealthCheckExposeAnnotationValue {
+		healthCheckExposeDisabled = true
+	} else {
+		if v, ok = gw.GetAnnotations()[opdefault.DisableHealthCheckExposeAnnotationKey]; ok && strings.ToLower(v) == opdefault.DisableHealthCheckExposeAnnotationValue {
+			healthCheckExposeDisabled = true
+		}
+	}
+
+	if !healthCheckExposeDisabled && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		healthCheckPort, err := setHealthCheck(svc.GetAnnotations(), svc)
 		if err != nil {
 			c.log.V(1).Info("Could not set health check port", "error", err.Error())

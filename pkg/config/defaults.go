@@ -134,6 +134,18 @@ const (
 	// particular nodeports per listener for the LB service, see
 	// https://github.com/l7mp/stunner/issues/137.
 	NodePortAnnotationKey = "stunner.l7mp.io/nodeport"
+
+	// DisableHealthCheckExposeAnnotationKey is the name(key) of the Gateway annotation that is
+	// used to disable the LB service to expose the health-check port. Adding the health-check
+	// service-port seems to be required by some cloud providers for exposing UDP listeners on
+	// LB Services (hence the default), but this annotation allows to disable this on a
+	// per-Gayteway basis due to the potential security implications, see
+	// https://github.com/l7mp/stunner-gateway-operator/issues/49.
+	DisableHealthCheckExposeAnnotationKey = "stunner.l7mp.io/disable-health-check-expose"
+
+	// DisableHealthCheckExposeAnnotationValue is the value that can be used to disable the
+	// exposing the health-check port.
+	DisableHealthCheckExposeAnnotationValue = "true"
 )
 
 var (

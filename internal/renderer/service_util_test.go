@@ -1126,6 +1126,44 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - lb health check disabled (aws)",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-port"] = "8080"
+				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"] = "HTTP"
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DisableHealthCheckExposeAnnotationKey] =
+					opdefault.DisableHealthCheckExposeAnnotationValue
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+
+				sp := s.Spec.Ports
+				assert.Len(t, sp, 1, "service-port len")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp 1 - name")
+				assert.Equal(t, "UDP", string(sp[0].Protocol), "sp 1 - proto")
+				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp 1 - port")
+			},
+		},
+		{
 			name: "lb service - lb health check annotations (do)",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
