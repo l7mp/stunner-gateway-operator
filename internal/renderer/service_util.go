@@ -375,10 +375,13 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		extTrafficPolicy = p
 	}
 
-	if strings.ToLower(extTrafficPolicy) == opdefault.ExternalTrafficPolicyAnnotationValue {
+	if strings.ToLower(extTrafficPolicy) == opdefault.ExternalTrafficPolicyAnnotationValue &&
+		// spec.externalTrafficPolicy may only be set when `type` is 'NodePort' or 'LoadBalancer'
+		// https://github.com/l7mp/stunner/issues/150
+		(svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer) {
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 	} else {
-		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyType("")
 	}
 
 	// nodeport

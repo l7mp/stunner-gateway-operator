@@ -520,6 +520,8 @@ func testManagedMode() {
 			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
+				current.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey] =
+					opdefault.ExternalTrafficPolicyAnnotationValue
 			})
 
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
@@ -535,6 +537,22 @@ func testManagedMode() {
 
 				return false
 			}), timeout, interval).Should(BeTrue())
+
+		})
+
+		It("should reset spec.ExternalTrafficPolicy=local for the ClusterIP service", func() {
+			// spec.ExternalTrafficPolicy cannot be set for cluterip services
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				lookupKey := store.GetNamespacedName(testGw)
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return svc.Spec.ExternalTrafficPolicy !=
+					corev1.ServiceExternalTrafficPolicyLocal
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(svc.Spec.ExternalTrafficPolicy).Should(Equal(corev1.ServiceExternalTrafficPolicyType("")))
 		})
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
@@ -568,7 +586,9 @@ func testManagedMode() {
 				return false
 
 			}), timeout, interval).Should(BeTrue())
+		})
 
+		It("should restore spec.ExternalTrafficPolicy=local for the NodePort service", func() {
 			Eventually(func() bool {
 				lookupKey := store.GetNamespacedName(testGw)
 				svc := &corev1.Service{}
