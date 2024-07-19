@@ -288,7 +288,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
 		opdefault.RelatedGatewayKey:       gw.GetName(),
 	}
-	mandatoryAnnotations := mergeMaps(
+	requestedAnnotations := mergeMaps(
 		// base: GatewayConfig.Spec.LBServiceAnnotations
 		c.gwConf.Spec.LoadBalancerServiceAnnotations,
 		// Gateway annotations override base
@@ -306,7 +306,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				Namespace:   gw.GetNamespace(),
 				Name:        gw.GetName(),
 				Labels:      mandatoryLabels,
-				Annotations: mandatoryAnnotations,
+				Annotations: requestedAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     opdefault.DefaultServiceType,
@@ -318,7 +318,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		// mandatory labels and annotations must always be there
 		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
 		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(),
-			mergeMaps(gw.GetAnnotations(), mandatoryAnnotations)))
+			mergeMaps(gw.GetAnnotations(), requestedAnnotations)))
 	}
 
 	// set selectors
@@ -359,23 +359,18 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		svc.Spec.Type = opdefault.DefaultServiceType
 	}
 
-	// MixedProtocolLB (we use the annotations from the svc: already merged from the gwConf and gw)
+	// annotations: use the svc, annotations have already been merged from the gwConf and gw
+	annotations := svc.GetAnnotations()
+
+	// MixedProtocolLB
 	mixedProto := false
-	if isMixedProtocolEnabled, found := svc.GetAnnotations()[opdefault.MixedProtocolAnnotationKey]; found {
+	if isMixedProtocolEnabled, found := annotations[opdefault.MixedProtocolAnnotationKey]; found {
 		mixedProto = strings.ToLower(isMixedProtocolEnabled) == opdefault.MixedProtocolAnnotationValue
 	}
 
 	// ExternalTrafficPolicy
-	extTrafficPolicy := ""
-	if p, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey]; ok {
-		extTrafficPolicy = p
-	}
-
-	if p, ok := gw.GetAnnotations()[opdefault.ExternalTrafficPolicyAnnotationKey]; ok {
-		extTrafficPolicy = p
-	}
-
-	if strings.ToLower(extTrafficPolicy) == opdefault.ExternalTrafficPolicyAnnotationValue &&
+	if extTrafficPolicy, ok := annotations[opdefault.ExternalTrafficPolicyAnnotationKey]; ok &&
+		strings.ToLower(extTrafficPolicy) == opdefault.ExternalTrafficPolicyAnnotationValue &&
 		// spec.externalTrafficPolicy may only be set when `type` is 'NodePort' or 'LoadBalancer'
 		// https://github.com/l7mp/stunner/issues/150
 		(svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer) {
@@ -386,19 +381,10 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 	// nodeport
 	listenerNodeports := make(map[string]int)
-	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.NodePortAnnotationKey]; ok {
+	if v, ok := annotations[opdefault.NodePortAnnotationKey]; ok {
 		if kvs, err := getServiceNodePorts(v); err != nil {
-			r.log.Error(err, "Invalid GatewayConfig nodeport annotation (required: JSON formatted "+
+			r.log.Error(err, "Invalid Gateway nodeport annotation (required: JSON formatted "+
 				"listener-nodeport key-value pairs), ignoring", "gateway",
-				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
-				"annotation", v)
-		} else {
-			listenerNodeports = kvs
-		}
-	}
-	if v, ok := gw.GetAnnotations()[opdefault.NodePortAnnotationKey]; ok {
-		if kvs, err := getServiceNodePorts(v); err != nil {
-			r.log.Error(err, "Invalid Gateway nodeport annotation, ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
 				"annotation", v)
 		} else {
@@ -475,12 +461,9 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 	// Open the health-check port for LoadBalancer Services, and only if not disabled
 	healthCheckExposeDisabled := false
-	if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.DisableHealthCheckExposeAnnotationKey]; ok && strings.ToLower(v) == opdefault.DisableHealthCheckExposeAnnotationValue {
+	if v, ok := annotations[opdefault.DisableHealthCheckExposeAnnotationKey]; ok &&
+		strings.ToLower(v) == opdefault.DisableHealthCheckExposeAnnotationValue {
 		healthCheckExposeDisabled = true
-	} else {
-		if v, ok = gw.GetAnnotations()[opdefault.DisableHealthCheckExposeAnnotationKey]; ok && strings.ToLower(v) == opdefault.DisableHealthCheckExposeAnnotationValue {
-			healthCheckExposeDisabled = true
-		}
 	}
 
 	if !healthCheckExposeDisabled && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
