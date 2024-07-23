@@ -53,7 +53,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -90,7 +90,7 @@ func TestRenderListenerRender(t *testing.T) {
 					addr: "1.2.3.4",
 					port: 1234,
 				}
-				_, err = r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr)
+				_, err = r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 				assert.Error(t, err, "render fails")
 			},
 		},
@@ -121,7 +121,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
@@ -166,7 +166,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -212,7 +212,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				_, err = r.renderListener(gw, c.gwConf, &l, rs, addr)
+				_, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.Error(t, err, "wrong-proto")
 			},
 		},
@@ -272,7 +272,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -282,7 +282,7 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "", lc.Key, "key")
 
 				l = ls[1]
-				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -292,7 +292,7 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 
 				l = ls[2]
-				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-dtls", lc.Name, "name")
 				assert.Equal(t, "TURN-DTLS", lc.Protocol, "proto")
@@ -353,7 +353,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -406,7 +406,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -461,7 +461,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -516,7 +516,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -575,7 +575,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -634,7 +634,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -693,7 +693,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -752,7 +752,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -814,7 +814,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -878,7 +878,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr)
+				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")

@@ -19,7 +19,7 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort) (*stnrconfv1.ListenerConfig, error) {
+func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
 	// r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 	// 	store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -28,11 +28,18 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 		return nil, err
 	}
 
+	port := int(l.Port)
+	if targetPorts != nil {
+		if p, ok := targetPorts[string(l.Name)]; ok {
+			port = p
+		}
+	}
+
 	lc := stnrconfv1.ListenerConfig{
 		Name:     stnrListenerName(gw, l),
 		Protocol: proto.String(),
 		Addr:     "$STUNNER_ADDR", // Addr will be filled in from the pod environment
-		Port:     int(l.Port),
+		Port:     port,
 	}
 
 	// set public address-port

@@ -37,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -800,6 +801,8 @@ func testManagedMode() {
 			op.Stabilize()
 		})
 
+		var nodeport int32
+
 		It("should use a specific NodePort when requested in a Gateway annotation", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 
@@ -824,7 +827,7 @@ func testManagedMode() {
 				return len(svc.Spec.Ports) == 2
 			}, timeout, interval).Should(BeTrue())
 
-			nodeport := svc.Spec.Ports[1].NodePort
+			nodeport = svc.Spec.Ports[1].NodePort
 			switch nodeport {
 			case 32767:
 				nodeport = 32766 // max nodeport
@@ -860,12 +863,87 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("should use also use a specific target port when requested in a Gateway annotation", func() {
+			// set target port
+			targetPort := 12345
+			ann := fmt.Sprintf("{\"gateway-1-listener-udp\": %d, \"random-listener\": 321}", targetPort)
+			ctrl.Log.Info("re-loading gateway with the nodeport annotation")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.TargetPortAnnotationKey: ann,
+				})
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-random-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("dummy"),
+					Port:     gwapiv1.PortNumber(2),
+					Protocol: gwapiv1.ProtocolType("dummy"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}}
+			})
+
+			lookupKey := store.GetNamespacedName(testGw)
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				// the dummy listener is not added
+				return len(svc.Spec.Ports) == 2 &&
+					svc.Spec.Ports[1].TargetPort == intstr.FromInt(targetPort)
+			}, timeout, interval).Should(BeTrue())
+
+			// to be on the safe side
+			Expect(svc.Spec.Ports[1].Port).Should(Equal(int32(3)))
+			Expect(svc.Spec.Ports[1].TargetPort).Should(Equal(intstr.FromInt(targetPort)))
+
+			// get the config: the targetport should be enforced!
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				// conf should have valid listener confs
+				if len(c.Listeners) == 2 && c.Listeners[1].Name == "testnamespace/gateway-1/gateway-1-listener-udp" &&
+					c.Listeners[1].Port == targetPort {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
+
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-random-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-random-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(targetPort))
+		})
+
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
 			createOrUpdateSecret(testSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
 			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{})
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{

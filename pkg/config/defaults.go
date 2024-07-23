@@ -135,6 +135,11 @@ const (
 	// https://github.com/l7mp/stunner/issues/137.
 	NodePortAnnotationKey = "stunner.l7mp.io/nodeport"
 
+	// TargetPortAnnotationKey is the name(key) of the Gateway annotation that is used to select
+	// particular targetports per listener for the LB service, see
+	// https://github.com/l7mp/stunner/issues/137.
+	TargetPortAnnotationKey = "stunner.l7mp.io/targetport"
+
 	// DisableHealthCheckExposeAnnotationKey is the name(key) of the Gateway annotation that is
 	// used to disable the LB service to expose the health-check port. Adding the health-check
 	// service-port seems to be required by some cloud providers for exposing UDP listeners on

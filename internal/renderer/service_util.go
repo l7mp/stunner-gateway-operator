@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -276,10 +277,10 @@ func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
 	return nil
 }
 
-func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) *corev1.Service {
+func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) (*corev1.Service, map[string]int) {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
-		return nil
+		return nil, nil
 	}
 
 	// mandatory labels and annotations
@@ -382,7 +383,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// nodeport
 	listenerNodeports := make(map[string]int)
 	if v, ok := annotations[opdefault.NodePortAnnotationKey]; ok {
-		if kvs, err := getServiceNodePorts(v); err != nil {
+		if kvs, err := getServicePortsFromAnn(v); err != nil {
 			r.log.Error(err, "Invalid Gateway nodeport annotation (required: JSON formatted "+
 				"listener-nodeport key-value pairs), ignoring", "gateway",
 				store.GetObjectKey(gw), "key", opdefault.NodePortAnnotationKey,
@@ -406,6 +407,34 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				r.log.Info("Could not enforce nodeport: unknown listener", "gateway",
 					store.GetObjectKey(gw), "listener-name", k, "nodeport", v)
 			}
+		}
+	}
+
+	// targetport
+	var listenerTargetPorts map[string]int
+	if v, ok := annotations[opdefault.TargetPortAnnotationKey]; ok {
+		if kvs, err := getServicePortsFromAnn(v); err != nil {
+			r.log.Error(err, "Invalid Gateway targetport annotation (required: JSON formatted "+
+				"listener-targetport key-value pairs), ignoring", "gateway",
+				store.GetObjectKey(gw), "key", opdefault.TargetPortAnnotationKey,
+				"annotation", v)
+		} else {
+			listenerTargetPorts = kvs
+		}
+	}
+
+	for k, v := range listenerTargetPorts {
+		found := false
+		for _, l := range gw.Spec.Listeners {
+			if string(l.Name) == k {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// no need to delete: later we won't use this listener key anyway
+			r.log.Info("Could not enforce targetport: unknown listener", "gateway",
+				store.GetObjectKey(gw), "listener-name", k, "targetport", v)
 		}
 	}
 
@@ -443,16 +472,29 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 	svc.Spec.Ports = mergeServicePorts(svc.Spec.Ports, ports)
 
-	// update nodeports if requested
+	// update nodeports/targetports if requested
 	for _, l := range gw.Spec.Listeners {
 		if nodeport, ok := listenerNodeports[string(l.Name)]; ok {
 			// find the service port
 			for i, sp := range svc.Spec.Ports {
 				if sp.Name == string(l.Name) {
 					svc.Spec.Ports[i].NodePort = int32(nodeport)
-					r.log.V(1).Info("Using NodePort for listener",
-						"gateway", store.GetObjectKey(gw), "listener-name",
-						l.Name, "nodeport", nodeport)
+					r.log.V(1).Info("Using nodeport for listener",
+						"gateway", store.GetObjectKey(gw), "listener",
+						l.Name, "port", nodeport)
+					break
+				}
+			}
+		}
+
+		if targetport, ok := listenerTargetPorts[string(l.Name)]; ok {
+			// find the service port
+			for i, sp := range svc.Spec.Ports {
+				if sp.Name == string(l.Name) {
+					svc.Spec.Ports[i].TargetPort = intstr.FromInt(targetport)
+					r.log.V(1).Info("Using target port for listener",
+						"gateway", store.GetObjectKey(gw), "listener",
+						l.Name, "port", targetport)
 					break
 				}
 			}
@@ -488,7 +530,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	if len(svc.Spec.Ports) == 0 {
 		c.log.V(1).Info("createLbService4Gateway: refusing to create a LB service as "+
 			"there is no valid listener found", "gateway", store.GetObjectKey(gw))
-		return nil
+		return nil, nil
 	}
 
 	if err := controllerutil.SetOwnerReference(gw, svc, r.scheme); err != nil {
@@ -497,7 +539,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			store.GetObjectKey(svc))
 	}
 
-	return svc
+	return svc, listenerTargetPorts
 }
 
 // getServiceProtocol returns the sercice-compatible protocol for a listener
@@ -554,7 +596,7 @@ func mergeServicePorts(ps1, ps2 []corev1.ServicePort) []corev1.ServicePort {
 	return ret
 }
 
-func getServiceNodePorts(v string) (map[string]int, error) {
+func getServicePortsFromAnn(v string) (map[string]int, error) {
 	// parse as JSON
 	var ret error
 	kvs := make(map[string]int)
@@ -564,8 +606,8 @@ func getServiceNodePorts(v string) (map[string]int, error) {
 		v = "{" + v + "}"
 		if err := json.Unmarshal([]byte(v), &kvs); err != nil {
 			// Service return the original error
-			return map[string]int{}, fmt.Errorf("Could node parse nodeport annotation "+
-				"as a JSON formatted list of listener-nodeport key-value pairs: %w", ret)
+			return map[string]int{}, fmt.Errorf("Could node parse port annotation as a "+
+				"formatted list of key-value pairs: %w", ret)
 		}
 	}
 

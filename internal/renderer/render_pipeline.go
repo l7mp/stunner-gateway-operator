@@ -263,12 +263,14 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 		// recreate the LoadBalancer service, otherwise a changed
 		// GatewayConfig.Spec.LoadBalancerServiceAnnotation or Gateway annotation may not
 		// be reflected back to the service
-		if s := r.createLbService4Gateway(c, gw); s != nil {
+		targetPorts := map[string]int{} // when the user selects a particular target port
+		if s, ports := r.createLbService4Gateway(c, gw); s != nil {
 			log.Info("Creating public service for gateway", "service",
 				store.GetObjectKey(s), "gateway", store.GetObjectKey(gw),
 				"service", store.DumpObject(s))
 
 			c.update.UpsertQueue.Services.Upsert(s)
+			targetPorts = ports
 		}
 
 		udpPorts := make(map[int]bool)
@@ -287,7 +289,9 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 				continue
 			}
 
-			lc, err := r.renderListener(gw, c.gwConf, &l, rs, pubGwAddrs[j])
+			// the Gateway may remap the listener's target port from an annotation:
+			// this is indicated in targetPorts
+			lc, err := r.renderListener(gw, c.gwConf, &l, rs, pubGwAddrs[j], targetPorts)
 			if err != nil {
 				// all listener rendering errors are critical: prevent the
 				// rendering of the listener config

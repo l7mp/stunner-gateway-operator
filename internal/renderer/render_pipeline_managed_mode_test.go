@@ -1971,5 +1971,95 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
+		{
+			name: "targetport enforced",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{
+					opdefault.TargetPortAnnotationKey: "{\"gateway-1-listener-udp\":11,\"dummy\":12,\"gateway-1-listener-tcp\":13}",
+				})
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				// update owner ref so that we accept the public IP
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				config.DataplaneMode = config.DataplaneModeManaged
+				config.EnableEndpointDiscovery = true
+				config.EnableRelayToClusterIP = true
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				err = r.renderForGateways(c)
+				assert.NoError(t, err, "render success")
+
+				// config-queue
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "configmap ready")
+				conf := cs[0]
+
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, conf.Admin.LogLevel,
+					"loglevel")
+
+				assert.Equal(t, testutils.TestRealm, conf.Auth.Realm, "realm")
+				assert.Equal(t, "static", conf.Auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, conf.Auth.Credentials["username"],
+					"username")
+				assert.Equal(t, testutils.TestPassword, conf.Auth.Credentials["password"],
+					"password")
+
+				assert.Len(t, conf.Listeners, 2, "listener num")
+				lc := conf.Listeners[0]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
+				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, 11, lc.Port, "port") // targetport!!!!
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 1, lc.PublicPort, "public-port")
+				assert.Len(t, lc.Routes, 1, "route num")
+				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+
+				lc = conf.Listeners[1]
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
+				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, 13, lc.Port, "port") // targetport!!!
+				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
+				assert.Equal(t, 2, lc.PublicPort, "public-port")
+				assert.Len(t, lc.Routes, 0, "route num")
+
+				// restore EDS
+				config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+			},
+		},
 	})
 }

@@ -204,7 +204,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					}
 
 					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*stnrgwv1.UDPRoute{}, addr)
+						[]*stnrgwv1.UDPRoute{}, addr, nil)
 
 					if err != nil {
 						setListenerStatus(gw, &l, err, conflicted, 0)
@@ -324,7 +324,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 					}
 
 					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*stnrgwv1.UDPRoute{}, addr)
+						[]*stnrgwv1.UDPRoute{}, addr, nil)
 
 					if err != nil {
 						setListenerStatus(gw, &l, err, conflicted, 0)
