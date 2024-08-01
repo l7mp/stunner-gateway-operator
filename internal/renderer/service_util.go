@@ -310,9 +310,10 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				Annotations: requestedAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
-				Type:     opdefault.DefaultServiceType,
-				Selector: map[string]string{},
-				Ports:    []corev1.ServicePort{},
+				Type:            opdefault.DefaultServiceType,
+				Selector:        map[string]string{},
+				Ports:           []corev1.ServicePort{},
+				SessionAffinity: corev1.ServiceAffinityClientIP,
 			},
 		}
 	} else {
