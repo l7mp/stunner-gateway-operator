@@ -380,6 +380,9 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyType("")
 	}
 
+	// session affinity: to ensure that the same client always hits the same pod
+	svc.Spec.SessionAffinity = corev1.ServiceAffinityClientIP
+
 	// nodeport
 	listenerNodeports := make(map[string]int)
 	if v, ok := annotations[opdefault.NodePortAnnotationKey]; ok {
