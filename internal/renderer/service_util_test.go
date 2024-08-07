@@ -519,6 +519,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
 				assert.Equal(t, defaultExternalTrafficPolicy, spec.ExternalTrafficPolicy,
 					"ext traffic policy default")
+				assert.Equal(t, corev1.ServiceAffinityClientIP, spec.SessionAffinity,
+					"session affinity")
 
 				sp := spec.Ports
 				assert.Len(t, sp, 1, "service-port len")
