@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image for PR
 
 on:
   pull_request:
@@ -11,6 +11,7 @@ jobs:
 
   push_to_registry:
     name: Push Docker image to DockerHub
+    if: github.repository == 'l7mp/stunner-gateway-operator'
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +46,7 @@ jobs:
         with:
           script: |
             const prNumber = context.issue.number;
-            const comment = `The Docker image for this pull request (#${prNumber}) has been successfully built and pushed to DockerHub as \`l7mp/stunner-gateway-operator:pr-${prNumber}\`.`;
+            const comment = `The Docker image for this pull request (#${prNumber}) has been successfully built and pushed to DockerHub as \`docker.io/l7mp/stunner-gateway-operator:pr-${prNumber}\`.`;
             github.rest.issues.createComment({
               issue_number: prNumber,
               owner: context.repo.owner,
