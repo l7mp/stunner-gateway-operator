@@ -221,7 +221,7 @@ func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
 	for _, ingressStatus := range svc.Status.LoadBalancer.Ingress {
 		// if status contains per-service-port status
-		if ingressStatus.Ports != nil && len(ingressStatus.Ports) != 0 && spIndex < len(ingressStatus.Ports) {
+		if len(ingressStatus.Ports) > 0 && spIndex < len(ingressStatus.Ports) {
 			// find the status for our service-port
 			spStatus := ingressStatus.Ports[spIndex]
 			if spStatus.Port != svc.Spec.Ports[spIndex].Port ||
