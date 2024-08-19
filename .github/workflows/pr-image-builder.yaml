@@ -9,9 +9,9 @@ jobs:
   #   name: Run unit tests
   #   uses: l7mp/stunner-gateway-operator/.github/workflows/test.yml@main
 
-  push_to_registry:
+  build_image_and_push_to_registry:
+    if: github.event.action != 'closed' && github.repository == 'l7mp/stunner-gateway-operator'
     name: Push Docker image to DockerHub
-    if: github.repository == 'l7mp/stunner-gateway-operator'
     runs-on: ubuntu-latest
 
     steps:
@@ -53,3 +53,18 @@ jobs:
               repo: context.repo.repo,
               body: comment,
             });
+
+  delete_docker_image_tag:
+    if: github.event.action == 'closed' && github.repository == 'l7mp/stunner-gateway-operator'
+    name: Delete Docker Image Tag from DockerHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Docker Image Tag
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          curl -s -u "$DOCKER_USER:$DOCKER_TOKEN" \
+            -X DELETE "https://hub.docker.com/v2/repositories/l7mp/stunner-gateway-operator/tags/pr-$PR_NUMBER/" \
+            -w "HTTP Response Code: %{http_code}\n"
