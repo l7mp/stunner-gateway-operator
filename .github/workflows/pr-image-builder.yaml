@@ -59,12 +59,21 @@ jobs:
     name: Delete Docker Image Tag from DockerHub
     runs-on: ubuntu-latest
     steps:
-      - name: Delete Docker Image Tag
+      - name: Get Docker Hub Token
+        id: get_token
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
         run: |
+          TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
+            -H "Content-Type: application/json" \
+            -d '{"username": "'$DOCKER_USER'", "password": "'$DOCKER_TOKEN'"}' | jq -r .token)
+          echo "token=$TOKEN" >> $GITHUB_ENV
+      - name: Delete Docker Image Tag
+        env:
+          TOKEN: ${{ env.token }}
+        run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
-          curl -s -u "$DOCKER_USER:$DOCKER_TOKEN" \
+          curl -s -H "Authorization: Bearer $TOKEN" \
             -X DELETE "https://hub.docker.com/v2/repositories/l7mp/stunner-gateway-operator/tags/pr-$PR_NUMBER/" \
             -w "HTTP Response Code: %{http_code}\n"
