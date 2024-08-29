@@ -75,7 +75,7 @@ func init() {
 
 func main() {
 	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr string
-	var enableLeaderElection, enableEDS, disableEndpontSliceController bool
+	var enableLeaderElection, enableEDS, disableEndpontSliceController, enableFinalizer bool
 
 	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
@@ -93,6 +93,9 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableFinalizer, "enable-finalizer", opdefault.DefaultEnableFinalizer,
+		"Clean up allocated resources and invalidate resource statuses on operator exit.")
+
 	opts := zap.Options{
 		Development:     true,
 		DestWriter:      os.Stderr,
@@ -109,10 +112,13 @@ func main() {
 	buildInfo := buildinfo.BuildInfo{Version: version, CommitHash: commitHash, BuildDate: buildDate}
 	setupLog.Info(fmt.Sprintf("starting STUNner gateway operator %s", buildInfo.String()))
 
-	config.EndpointSliceAvailable = !disableEndpontSliceController // controller may override this
 	config.EnableEndpointDiscovery = enableEDS
-	setupLog.Info("endpoint discovery", "enabled", enableEDS,
-		"disable-endpointslice-controller", disableEndpontSliceController)
+	config.EndpointSliceAvailable = !disableEndpontSliceController // controller may override this
+	config.EnableFinalizer = enableFinalizer
+	setupLog.Info("operator flags",
+		"endpoint discovery", config.EnableEndpointDiscovery,
+		"endpointslice-controller", config.EndpointSliceAvailable,
+		"finalizer", config.EnableFinalizer)
 
 	if dataplaneMode == opdefault.DefaultDataplaneMode {
 		// dataplane mode not overrridden on the command line: use env var

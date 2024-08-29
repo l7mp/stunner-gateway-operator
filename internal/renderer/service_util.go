@@ -381,7 +381,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyType("")
 	}
 
-	// nodeport
+	// NodePort
 	listenerNodeports := make(map[string]int)
 	if v, ok := annotations[opdefault.NodePortAnnotationKey]; ok {
 		if kvs, err := getServicePortsFromAnn(v); err != nil {

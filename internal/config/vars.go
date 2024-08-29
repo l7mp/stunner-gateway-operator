@@ -51,4 +51,10 @@ var (
 	// (note that this breaks graceful backend shutdown, see
 	// https://github.com/l7mp/stunner/issues/138).
 	EndpointSliceAvailable = opdefault.DefaultEndpointSliceAvailable
+
+	// EnableFinalizer is a global config to switch operator finalization on. The finalizer
+	// will clean up all allocaeted Kubernetes resources (like dataplane deployments and
+	// LoadBalancer Services) on exit and invalidate Gateway API resource statuses. Use with
+	// caution: enabling this will caluse client connections to break on operator restart.
+	EnableFinalizer = opdefault.DefaultEnableFinalizer
 )

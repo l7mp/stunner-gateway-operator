@@ -69,7 +69,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 		updaterCh:    cfg.UpdaterCh,
 		configCh:     cfg.ConfigCh,
 		tracker:      config.NewProgressTracker(),
-		finalizer:    true,
+		finalizer:    config.EnableFinalizer,
 		gen:          0,
 		lastAckedGen: -1,
 		logger:       cfg.Logger,
@@ -193,7 +193,6 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 
 		case <-ctx.Done():
 			o.Terminate()
-
 			if cancel != nil {
 				cancel()
 			}

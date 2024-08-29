@@ -30,6 +30,9 @@ const (
 	// DefaultEndpointSliceAvailable enables the EndpointSlice controller.
 	DefaultEndpointSliceAvailable = true
 
+	// DefaultEnableFinalizer controls whether to enable the operator finalizer.
+	DefaultEnableFinalizer = false
+
 	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
 	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
 	// that the Deployments and Services created by the operator will have both the AppLabelKey
