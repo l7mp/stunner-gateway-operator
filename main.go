@@ -231,6 +231,7 @@ func main() {
 	setupLog.Info("starting operator thread")
 	if err := op.Start(opCtx, mgrCancel); err != nil {
 		setupLog.Error(err, "problem running operator")
+		os.Exit(1)
 	}
 
 	setupLog.Info("starting Kubernetes controller manager")
