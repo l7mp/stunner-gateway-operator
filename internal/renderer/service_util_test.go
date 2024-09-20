@@ -1770,6 +1770,40 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - disabling session affinity (Oracle Kubernetes)",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DisableSessionAffiffinityAnnotationKey] =
+					opdefault.DisableSessionAffiffinityAnnotationValue
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *Renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, gw.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, gw.GetName(), s.GetName(), "name ok")
+
+				assert.True(t, string(s.Spec.SessionAffinity) == "" ||
+					s.Spec.SessionAffinity == corev1.ServiceAffinityNone, "session affinity disabled")
+			},
+		},
+		{
 			name: "public address hint in Gateway Spec",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},

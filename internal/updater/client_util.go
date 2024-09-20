@@ -164,11 +164,8 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 	}}
 
 	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
-		// thing that might have been changed by the controler: the owner ref, annotations
-		// and the data
-
-		// u.log.Info("before", "cm", fmt.Sprintf("%#v\n", current))
-
+		// settings that might have been changed by the controler: the owner ref,
+		// annotations and the data
 		if err := setMetadata(current, cm); err != nil {
 			return nil
 		}
@@ -177,8 +174,6 @@ func (u *Updater) upsertConfigMap(cm *corev1.ConfigMap, gen int) (ctrlutil.Opera
 		for k, v := range cm.Data {
 			current.Data[k] = v
 		}
-
-		// u.log.Info("after", "cm", fmt.Sprintf("%#v\n", current))
 
 		return nil
 	})

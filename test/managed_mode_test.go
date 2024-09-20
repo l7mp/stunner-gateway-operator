@@ -556,6 +556,39 @@ func testManagedMode() {
 			Expect(svc.Spec.ExternalTrafficPolicy).Should(Equal(corev1.ServiceExternalTrafficPolicyType("")))
 		})
 
+		It("should handle session-affinity", func() {
+			svc := &corev1.Service{}
+
+			// default is SessionAffinity=clientIP
+			Eventually(func() bool {
+				lookupKey := store.GetNamespacedName(testGw)
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return svc.Spec.SessionAffinity == corev1.ServiceAffinityClientIP
+			}, timeout, interval).Should(BeTrue())
+			Expect(svc.Spec.SessionAffinity).Should(Equal(corev1.ServiceAffinityClientIP))
+
+			// disable session-affinity
+			ctrl.Log.Info("re-loading gateway with annotation: stunner.l7mp.io/disable-session-affinity=true")
+			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{
+					opdefault.DisableSessionAffiffinityAnnotationKey: // newline
+					opdefault.DisableSessionAffiffinityAnnotationValue,
+				})
+			})
+
+			Eventually(func() bool {
+				lookupKey := store.GetNamespacedName(testGw)
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+
+				return svc.Spec.SessionAffinity == corev1.ServiceAffinityNone ||
+					string(svc.Spec.SessionAffinity) == ""
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
 			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {

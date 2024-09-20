@@ -154,6 +154,21 @@ const (
 	// DisableHealthCheckExposeAnnotationValue is the value that can be used to disable the
 	// exposing the health-check port.
 	DisableHealthCheckExposeAnnotationValue = "true"
+
+	// DisableSessionAffiffinityAnnotationKey is a Gateway annotation to prevent STUNner from
+	// applying the sessionAffinity=client setting in the LB service. Normally this setting
+	// improves stability by ensuring that TURN sessions are pinned to the right dataplane
+	// pod. However, certain ingress controllers (in particular, Oracle Kubernetes) reject UDP
+	// LB services that have this setting on, breaking STUNner installations on these systems,
+	// see https://github.com/l7mp/stunner/issues/155. Setting this annotation to "true" for a
+	// Gateway will remove this setting from the LB Service created STUNner for the Gateway in
+	// order to improve compatibility with Kubernetes deployments that reject it. Default is to
+	// apply the session affinity setting.
+	DisableSessionAffiffinityAnnotationKey = "stunner.l7mp.io/disable-session-affinity"
+
+	// DisableSessionAffiffinityAnnotationValue is the value that can be used to remove
+	// session-affinity settings from the LB service.
+	DisableSessionAffiffinityAnnotationValue = "true"
 )
 
 var (

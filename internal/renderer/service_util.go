@@ -310,10 +310,9 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				Annotations: requestedAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
-				Type:            opdefault.DefaultServiceType,
-				Selector:        map[string]string{},
-				Ports:           []corev1.ServicePort{},
-				SessionAffinity: corev1.ServiceAffinityClientIP,
+				Type:     opdefault.DefaultServiceType,
+				Selector: map[string]string{},
+				Ports:    []corev1.ServicePort{},
 			},
 		}
 	} else {
@@ -500,6 +499,20 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				}
 			}
 		}
+	}
+
+	// Set session affinity
+	disableSessionAffinity := false
+	if v, ok := annotations[opdefault.DisableSessionAffiffinityAnnotationKey]; ok &&
+		strings.ToLower(v) == opdefault.DisableSessionAffiffinityAnnotationValue {
+		disableSessionAffinity = true
+	}
+
+	if disableSessionAffinity {
+		svc.Spec.SessionAffinity = corev1.ServiceAffinityNone
+		svc.Spec.SessionAffinityConfig = nil
+	} else {
+		svc.Spec.SessionAffinity = corev1.ServiceAffinityClientIP
 	}
 
 	// Open the health-check port for LoadBalancer Services, and only if not disabled
