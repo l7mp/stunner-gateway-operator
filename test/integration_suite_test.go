@@ -28,8 +28,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	// "k8s.io/client-go/kubernetes/scheme"
-
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
