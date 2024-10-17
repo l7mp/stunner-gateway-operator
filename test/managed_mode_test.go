@@ -1398,6 +1398,10 @@ func testManagedMode() {
 						Kind:  &kind,
 						Name:  "teststaticservice-ok",
 					},
+				}, {
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
+						Name: "testservice-ok",
+					},
 				}}
 			})
 
@@ -1446,10 +1450,14 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(3))
+			Expect(c.Endpoints).To(HaveLen(8))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.14"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.15"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the status correctly", func() {
@@ -1612,8 +1620,10 @@ func testManagedMode() {
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
-				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
-					len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "1.2.3.4") {
+				if len(c.Listeners) == 2 &&
+					(len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
+					len(c.Clusters) == 1 &&
+					!contains(c.Clusters[0].Endpoints, "10.11.12.13") {
 					conf = c
 					return true
 				}
