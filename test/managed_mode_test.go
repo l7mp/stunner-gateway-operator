@@ -75,7 +75,7 @@ func testManagedMode() {
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())
-			Expect(cdsClient.Watch(clientCtx, ch)).Should(Succeed())
+			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
 		})
 
 		AfterAll(func() {
@@ -2065,10 +2065,10 @@ func testManagedMode() {
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", logger)
 			Expect(err).Should(Succeed())
-			Expect(cdsClient1.Watch(clientCtx, ch1)).Should(Succeed())
+			Expect(cdsClient1.Watch(clientCtx, ch1, false)).Should(Succeed())
 			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", logger)
 			Expect(err).Should(Succeed())
-			Expect(cdsClient2.Watch(clientCtx, ch2)).Should(Succeed())
+			Expect(cdsClient2.Watch(clientCtx, ch2, false)).Should(Succeed())
 		})
 
 		AfterAll(func() {
@@ -2824,10 +2824,10 @@ func testManagedMode() {
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", logger)
 			Expect(err).Should(Succeed())
-			Expect(cdsClient1.Watch(clientCtx, ch1)).Should(Succeed())
+			Expect(cdsClient1.Watch(clientCtx, ch1, false)).Should(Succeed())
 			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", logger)
 			Expect(err).Should(Succeed())
-			Expect(cdsClient2.Watch(clientCtx, ch2)).Should(Succeed())
+			Expect(cdsClient2.Watch(clientCtx, ch2, false)).Should(Succeed())
 		})
 
 		AfterAll(func() {

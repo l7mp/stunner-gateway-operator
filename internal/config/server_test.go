@@ -93,9 +93,9 @@ func TestConfigDiscovery(t *testing.T) {
 	defer close(ch1)
 	ch2 := make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch2)
-	err = cdsc1.Watch(ctx, ch1)
+	err = cdsc1.Watch(ctx, ch1, true)
 	assert.NoError(t, err, "watcher setup 1")
-	err = cdsc2.Watch(ctx, ch2)
+	err = cdsc2.Watch(ctx, ch2, true)
 	assert.NoError(t, err, "watcher setup 2")
 
 	time.Sleep(50 * time.Millisecond)
@@ -215,7 +215,7 @@ func TestConfigDiscovery(t *testing.T) {
 	ch3 := make(chan *stnrv1.StunnerConfig, 10)
 	defer close(ch3)
 	ctx2, cancel2 := context.WithCancel(context.Background())
-	err = cdsc3.Watch(ctx2, ch3)
+	err = cdsc3.Watch(ctx2, ch3, false)
 	assert.NoError(t, err, "watcher setup")
 
 	time.Sleep(50 * time.Millisecond)
@@ -326,7 +326,7 @@ func TestConfigDiscovery(t *testing.T) {
 	defer close(ch3)
 	ctx2, cancel2 = context.WithCancel(context.Background())
 	defer cancel2()
-	err = cdsc3.Watch(ctx2, ch3)
+	err = cdsc3.Watch(ctx2, ch3, false)
 	assert.NoError(t, err, "watcher setup")
 	time.Sleep(50 * time.Millisecond)
 

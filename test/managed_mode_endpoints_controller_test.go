@@ -66,7 +66,7 @@ func testManagedModeEndpointController() {
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())
-			Expect(cdsClient.Watch(clientCtx, ch)).Should(Succeed())
+			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
 		})
 
 		AfterAll(func() {
