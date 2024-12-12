@@ -57,11 +57,9 @@ func NewDataplaneController(mgr manager.Manager, ch chan event.Event, log logr.L
 	r.log.Info("created dataplane controller")
 
 	if err := c.Watch(
-		// &source.Kind{Type: &stnrgwv1.Dataplane{}},
-		source.Kind(mgr.GetCache(), &stnrgwv1.Dataplane{}),
-		&handler.EnqueueRequestForObject{},
-		// trigger when the Dataplane spec changes
-		predicate.GenerationChangedPredicate{},
+		source.Kind(mgr.GetCache(), &stnrgwv1.Dataplane{},
+			&handler.TypedEnqueueRequestForObject[*stnrgwv1.Dataplane]{},
+			predicate.TypedGenerationChangedPredicate[*stnrgwv1.Dataplane]{}), // trigger when the Dataplane spec changes
 	); err != nil {
 		return nil, err
 	}

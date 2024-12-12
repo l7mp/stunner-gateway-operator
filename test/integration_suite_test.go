@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -131,17 +132,17 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = clientgoscheme.AddToScheme(scheme)
+	err = clientgoscheme.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
 
 	// Gateway API schemes
-	err = gwapiv1.AddToScheme(scheme)
+	err = gwapiv1.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1a2.AddToScheme(scheme)
+	err = gwapiv1a2.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
-	err = stnrgwv1.AddToScheme(scheme)
+	err = stnrgwv1.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -165,8 +166,10 @@ var _ = AfterSuite(func() {
 
 func initOperator(mgrCtx, opCtx context.Context) {
 	setupLog.Info("setting up client manager")
+	on := true
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme,
+		Scheme:     scheme,
+		Controller: ctrlcfg.Controller{SkipNameValidation: &on},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

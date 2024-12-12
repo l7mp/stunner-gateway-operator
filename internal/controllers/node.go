@@ -46,9 +46,9 @@ func NewNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger
 	r.log.Info("created node controller")
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Node{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.ResourceVersionChangedPredicate{},
+		source.Kind(mgr.GetCache(), &corev1.Node{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Node]{},
+			predicate.TypedResourceVersionChangedPredicate[*corev1.Node]{}),
 	); err != nil {
 		return nil, err
 	}

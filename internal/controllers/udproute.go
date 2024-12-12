@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,9 +62,9 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 
 	// watch UDPRoute objects
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &stnrgwv1.UDPRoute{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{},
+		source.Kind(mgr.GetCache(), &stnrgwv1.UDPRoute{},
+			&handler.TypedEnqueueRequestForObject[*stnrgwv1.UDPRoute]{},
+			predicate.TypedGenerationChangedPredicate[*stnrgwv1.UDPRoute]{}),
 	); err != nil {
 		return nil, err
 	}
@@ -83,9 +84,9 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 
 	// watch UDPRouteV1A2 objects
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+			&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
+			predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
 	); err != nil {
 		return nil, err
 	}
@@ -104,7 +105,8 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
-	loadBalancerPredicate, err := predicate.LabelSelectorPredicate(
+	// loadBalancerPredicate, err := predicate.LabelSelectorPredicate(
+	loadBalancerPredicate, err := ServiceLabelSelectorPredicate(
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				// LB services have both "app:stunner" and
@@ -119,14 +121,13 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 
 	// watch Service objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		&handler.EnqueueRequestForObject{},
-		// trigger when either a gateway-loadbalancer service (svc annotated as a
-		// related-service for a gateway) or a backend-service changes
-		predicate.Or(
-			predicate.NewPredicateFuncs(r.validateBackendForReconcile),
-			// predicate.NewPredicateFuncs(r.validateLoadBalancerReconcile),
-			loadBalancerPredicate),
+		source.Kind(mgr.GetCache(), &corev1.Service{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Service]{},
+			// trigger when either a gateway-loadbalancer service (svc annotated as a
+			// related-service for a gateway) or a backend-service changes
+			predicate.Or(
+				predicate.NewTypedPredicateFuncs[*corev1.Service](r.validateBackendServiceForReconcile),
+				loadBalancerPredicate)),
 	); err != nil {
 		return nil, err
 	}
@@ -138,9 +139,9 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 		// explicitly disabled on the command line
 		if config.EndpointSliceAvailable {
 			if err := c.Watch(
-				source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
-				&handler.EnqueueRequestForObject{},
-				predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile),
+				source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
+					&handler.TypedEnqueueRequestForObject[*discoveryv1.EndpointSlice]{},
+					predicate.NewTypedPredicateFuncs[*discoveryv1.EndpointSlice](r.validateEndpointSliceForReconcile)),
 			); err == nil {
 				r.log.Info("Watching EndpointSlice objects")
 				config.EndpointSliceAvailable = true
@@ -155,9 +156,9 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 		// if EndpointSlices are still not available, fall back to wathing Endpoints
 		if !config.EndpointSliceAvailable {
 			if err := c.Watch(
-				source.Kind(mgr.GetCache(), &corev1.Endpoints{}),
-				&handler.EnqueueRequestForObject{},
-				predicate.NewPredicateFuncs(r.validateBackendForReconcile),
+				source.Kind(mgr.GetCache(), &corev1.Endpoints{},
+					&handler.TypedEnqueueRequestForObject[*corev1.Endpoints]{},
+					predicate.NewTypedPredicateFuncs[*corev1.Endpoints](r.validateBackendEndpointsForReconcile)),
 			); err != nil {
 				return nil, err
 			}
@@ -169,9 +170,9 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 
 	// watch StaticService objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &stnrgwv1.StaticService{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateStaticServiceForReconcile),
+		source.Kind(mgr.GetCache(), &stnrgwv1.StaticService{},
+			&handler.TypedEnqueueRequestForObject[*stnrgwv1.StaticService]{},
+			predicate.NewTypedPredicateFuncs[*stnrgwv1.StaticService](r.validateStaticServiceForReconcile)),
 	); err != nil {
 		return nil, err
 	}
@@ -358,19 +359,20 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	return reconcile.Result{}, nil
 }
 
-// validateBackendForReconcile checks whether the Service belongs to a valid UDPRoute.
-func (r *udpRouteReconciler) validateBackendForReconcile(o client.Object) bool {
-	// are we given a service or an endpoints object?
-	key := ""
-	if svc, ok := o.(*corev1.Service); ok {
-		key = store.GetObjectKey(svc)
-	} else if e, ok := o.(*corev1.Endpoints); ok {
-		// endpoints and services are of the same name
-		key = store.GetObjectKey(e)
-	} else {
-		return false
-	}
+func (r *udpRouteReconciler) validateBackendServiceForReconcile(svc *corev1.Service) bool {
+	return r.validateBackendForReconcile(store.GetObjectKey(svc))
+}
 
+func (r *udpRouteReconciler) validateStaticServiceForReconcile(svc *stnrgwv1.StaticService) bool {
+	return r.validateBackendForReconcile(store.GetObjectKey(svc))
+}
+
+func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *corev1.Endpoints) bool {
+	return r.validateBackendForReconcile(store.GetObjectKey(e))
+}
+
+// validateBackendForReconcile checks whether the Service belongs to a valid UDPRoute.
+func (r *udpRouteReconciler) validateBackendForReconcile(key string) bool {
 	// find the routes referring to this service
 	routeList := &stnrgwv1.UDPRouteList{}
 	if err := r.List(context.Background(), routeList, &client.ListOptions{
@@ -400,15 +402,7 @@ func (r *udpRouteReconciler) validateBackendForReconcile(o client.Object) bool {
 
 // validateEndpointSliceForReconcile checks whether an EndpointSlice belongs to a Service that
 // belongs to a valid UDPRoute.
-func (r *udpRouteReconciler) validateEndpointSliceForReconcile(o client.Object) bool {
-	// are we given a proper EndpointSlice object?
-	esl, ok := o.(*discoveryv1.EndpointSlice)
-	if !ok {
-		return false
-	}
-
-	// r.log.Info("validateEndpointSliceForReconcile:", "namespace/name", store.GetObjectKey(esl))
-
+func (r *udpRouteReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.EndpointSlice) bool {
 	// find the Service corresponding to this EndpointSlice
 	// TODO: also check ownership
 	svcName, ok := esl.GetLabels()[discoveryv1.LabelServiceName]
@@ -433,48 +427,11 @@ func (r *udpRouteReconciler) validateEndpointSliceForReconcile(o client.Object) 
 		return false
 	}
 
-	// r.log.Info("validateEndpointSliceForReconcile:", "svc", "found")
-
-	return r.validateBackendForReconcile(svc)
-}
-
-// validateStaticServiceForReconcile checks whether a Static Service belongs to a valid UDPRoute.
-func (r *udpRouteReconciler) validateStaticServiceForReconcile(o client.Object) bool {
-	// are we given a service or an endpoints object?
-	key := ""
-	if svc, ok := o.(*stnrgwv1.StaticService); ok {
-		key = store.GetObjectKey(svc)
-	} else {
-		return false
-	}
-
-	// find the routes referring to this static service
-	routeList := &stnrgwv1.UDPRouteList{}
-	if err := r.List(context.Background(), routeList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(staticServiceUDPRouteIndex, key),
-	}); err != nil {
-		r.log.Error(err, "Unable to find associated UDPRoute", "static-service", key)
-		return false
-	}
-
-	routeListV1A2 := &gwapiv1a2.UDPRouteList{}
-	if err := r.List(context.Background(), routeListV1A2, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(staticServiceUDPRouteIndexV1A2, key),
-	}); err != nil {
-		r.log.Error(err, "Unable to find associated UDPRouteV1A2", "static-service", key)
-		return false
-	}
-
-	if len(routeList.Items) == 0 && len(routeListV1A2.Items) == 0 {
-		return false
-	}
-
-	return true
+	return r.validateBackendServiceForReconcile(svc)
 }
 
 // getServiceForBackend finds the Service associated with a backendRef
 func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) *corev1.Service {
-	svc := corev1.Service{}
 
 	// if no explicit Service namespace is provided, use the UDPRoute namespace to lookup the
 	// Service
@@ -483,6 +440,7 @@ func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute 
 		namespace = string(*ref.Namespace)
 	}
 
+	svc := corev1.Service{}
 	if err := r.Get(ctx,
 		types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
 		&svc,
@@ -678,4 +636,17 @@ func staticServiceUDPRouteIndexFunc(o client.Object) []string {
 
 func (r *udpRouteReconciler) Terminate() {
 	r.terminating = true
+}
+
+// TypedLabelSelectorPredicate is the generic version of LabelSelectorPredicate that somehow seems
+// to be missing in controller-runtime to construct a TypedPredicate from a LabelSelector.  Only
+// objects matching the LabelSelector will be admitted.
+func ServiceLabelSelectorPredicate(s metav1.LabelSelector) (predicate.TypedPredicate[*v1.Service], error) {
+	selector, err := metav1.LabelSelectorAsSelector(&s)
+	if err != nil {
+		return predicate.TypedFuncs[*v1.Service]{}, err
+	}
+	return predicate.NewTypedPredicateFuncs[*v1.Service](func(o *v1.Service) bool {
+		return selector.Matches(labels.Set(o.GetLabels()))
+	}), nil
 }

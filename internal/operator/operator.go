@@ -29,10 +29,10 @@ const (
 var scheme = runtime.NewScheme()
 
 func init() {
-	_ = gwapiv1a2.AddToScheme(scheme)
-	_ = gwapiv1.AddToScheme(scheme)
-	_ = stnrgwv1.AddToScheme(scheme)
-	_ = apiv1.AddToScheme(scheme)
+	_ = gwapiv1a2.AddToScheme(scheme) //nolint:staticcheck
+	_ = gwapiv1.AddToScheme(scheme)   //nolint:staticcheck
+	_ = stnrgwv1.AddToScheme(scheme)  //nolint:staticcheck
+	_ = apiv1.AddToScheme(scheme)     //nolint:staticcheck
 }
 
 type OperatorConfig struct {

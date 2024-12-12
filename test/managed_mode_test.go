@@ -787,7 +787,7 @@ func testManagedMode() {
 				// must change the spec othwewise the controller will not be
 				// triggered
 				infra := gwapiv1.GatewayInfrastructure{
-					Labels: map[gwapiv1.AnnotationKey]gwapiv1.AnnotationValue{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"dummy-label-key": "dummy-label-value",
 					},
 				}

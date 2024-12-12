@@ -5,6 +5,39 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - endpoints/status
+  - namespaces
+  - nodes
+  - nodes/status
+  - secrets
+  - services/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -26,67 +59,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  - namespaces
-  - nodes
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - endpoints/status
-  - nodes/status
-  - services/status
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - discovery.k8s.io
   resources:
   - endpointslices
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - discovery.k8s.io
-  resources:
   - endpointslices/status
   verbs:
   - get

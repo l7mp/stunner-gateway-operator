@@ -64,10 +64,9 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 	r.log.Info("Created GatewayConfig controller")
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &stnrgwv1.GatewayConfig{}),
-		&handler.EnqueueRequestForObject{},
-		// trigger when the GatewayConfig spec changes
-		predicate.GenerationChangedPredicate{},
+		source.Kind(mgr.GetCache(), &stnrgwv1.GatewayConfig{},
+			&handler.TypedEnqueueRequestForObject[*stnrgwv1.GatewayConfig]{},
+			predicate.TypedGenerationChangedPredicate[*stnrgwv1.GatewayConfig]{}),
 	); err != nil {
 		return nil, err
 	}
@@ -81,9 +80,9 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 
 	// watch Secret objects referenced by one of our GatewayConfigs
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Secret{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+		source.Kind(mgr.GetCache(), &corev1.Secret{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
+			predicate.NewTypedPredicateFuncs[*corev1.Secret](r.validateSecretForReconcile)),
 	); err != nil {
 		return nil, err
 	}
@@ -168,8 +167,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 }
 
 // validateSecretForReconcile checks whether the Secret belongs to a valid GatewayConfig.
-func (r *gatewayConfigReconciler) validateSecretForReconcile(obj client.Object) bool {
-	secret := obj.(*corev1.Secret)
+func (r *gatewayConfigReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
 	gcList := &stnrgwv1.GatewayConfigList{}
 	secretName := store.GetNamespacedName(secret).String()
 	if err := r.List(context.Background(), gcList, &client.ListOptions{

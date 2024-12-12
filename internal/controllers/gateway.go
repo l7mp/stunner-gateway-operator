@@ -63,12 +63,11 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 
 	// watch GatewayClass objects that match this controller name
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{}),
-		&handler.EnqueueRequestForObject{},
-		// trigger when the spec changes on a GatewayClass we manage
-		predicate.And(
-			predicate.NewPredicateFuncs(r.hasMatchingController),
-			predicate.GenerationChangedPredicate{},
+		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{},
+			&handler.TypedEnqueueRequestForObject[*gwapiv1.GatewayClass]{},
+			predicate.And( // trigger when the spec changes on a GatewayClass we manage
+				predicate.NewTypedPredicateFuncs[*gwapiv1.GatewayClass](r.hasMatchingController),
+				predicate.TypedGenerationChangedPredicate[*gwapiv1.GatewayClass]{}),
 		),
 	); err != nil {
 		return nil, err
@@ -77,15 +76,14 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 
 	// watch Gateway objects that match the controller name
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.Gateway{}),
-		&handler.EnqueueRequestForObject{},
-		//trigger when the Spec or an annotation changes on a Gateway we manage
-		predicate.And(
-			predicate.Or(
-				predicate.GenerationChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
-			),
-			predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+		source.Kind(mgr.GetCache(), &gwapiv1.Gateway{},
+			&handler.TypedEnqueueRequestForObject[*gwapiv1.Gateway]{},
+			predicate.And( //trigger when the Spec or an annotation changes on a Gateway we manage
+				predicate.Or(
+					predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
+					predicate.TypedAnnotationChangedPredicate[*gwapiv1.Gateway]{},
+				),
+				predicate.NewTypedPredicateFuncs[*gwapiv1.Gateway](r.validateGatewayForReconcile)),
 		),
 	); err != nil {
 		return nil, err
@@ -106,9 +104,9 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 
 	// watch Secret objects referenced by one of our Gateways
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Secret{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+		source.Kind(mgr.GetCache(), &corev1.Secret{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
+			predicate.NewTypedPredicateFuncs[*corev1.Secret](r.validateSecretForReconcile)),
 	); err != nil {
 		return nil, err
 	}
@@ -117,9 +115,9 @@ func NewGatewayController(mgr manager.Manager, ch chan event.Event, log logr.Log
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		// watch Deployment objects referenced by one of our Gateways
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &appv1.Deployment{}),
-			&handler.EnqueueRequestForObject{},
-			predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+			source.Kind(mgr.GetCache(), &appv1.Deployment{},
+				&handler.TypedEnqueueRequestForObject[*appv1.Deployment]{},
+				predicate.NewTypedPredicateFuncs[*appv1.Deployment](r.validateDeploymentForReconcile)),
 		); err != nil {
 			return nil, err
 		}
@@ -266,23 +264,13 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 // hasMatchingController returns true if the provided object is a GatewayClass with a
 // Spec.Controller string matching the controller string, or false otherwise.
-func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
-	gc, ok := obj.(*gwapiv1.GatewayClass)
-	if !ok {
-		return false
-	}
-
-	if string(gc.Spec.ControllerName) == config.ControllerName {
-		return true
-	}
-
-	return false
+func (r *gatewayReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) bool {
+	return string(gc.Spec.ControllerName) == config.ControllerName
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway using a
 // GatewayClass matching the configured gatewayclass controller name.
-func (r *gatewayReconciler) validateGatewayForReconcile(o client.Object) bool {
-	gw := o.(*gwapiv1.Gateway)
+func (r *gatewayReconciler) validateGatewayForReconcile(gw *gwapiv1.Gateway) bool {
 	gc := &gwapiv1.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 	if err := r.Get(context.Background(), key, gc); err != nil {
@@ -299,8 +287,7 @@ func (r *gatewayReconciler) validateGatewayForReconcile(o client.Object) bool {
 }
 
 // validateSecretForReconcile checks whether the Secret belongs to a valid Gateway.
-func (r *gatewayReconciler) validateSecretForReconcile(obj client.Object) bool {
-	secret := obj.(*corev1.Secret)
+func (r *gatewayReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
 	gwList := &gwapiv1.GatewayList{}
 	secretName := store.GetNamespacedName(secret).String()
 	if err := r.List(context.Background(), gwList, &client.ListOptions{
@@ -326,13 +313,11 @@ func (r *gatewayReconciler) validateSecretForReconcile(obj client.Object) bool {
 
 // validateDeploymentForReconcile checks whether there is a Gateway with the same name as the
 // Deployment and the Deployment is owned by us.
-func (r *gatewayReconciler) validateDeploymentForReconcile(obj client.Object) bool {
+func (r *gatewayReconciler) validateDeploymentForReconcile(deployment *appv1.Deployment) bool {
 	// we don't watch Deployments in legacy mode
 	if config.DataplaneMode != config.DataplaneModeManaged {
 		return false
 	}
-
-	deployment := obj.(*appv1.Deployment)
 
 	// is deployment owned by us?
 	val, ok := deployment.GetLabels()[opdefault.OwnedByLabelKey]

@@ -37,9 +37,9 @@ var (
 )
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1.AddToScheme(scheme))
-	utilruntime.Must(stnrgwv1.AddToScheme(scheme))
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme)) //nolint:staticcheck
+	utilruntime.Must(gwapiv1.AddToScheme(scheme))        //nolint:staticcheck
+	utilruntime.Must(stnrgwv1.AddToScheme(scheme))       //nolint:staticcheck
 }
 
 type renderTestConfig struct {
