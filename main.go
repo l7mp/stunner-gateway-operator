@@ -44,6 +44,7 @@ import (
 	"github.com/l7mp/stunner/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
@@ -54,8 +55,9 @@ import (
 )
 
 const (
-	envVarMode    = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
-	envVarAddress = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
+	envVarMode        = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
+	envVarAddress     = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
+	envVarCustomerKey = "CUSTOMER_KEY"
 )
 
 var (
@@ -131,6 +133,13 @@ func main() {
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
+	customerKey, keyStatus := "", "MISSING"
+	if key, ok := os.LookupEnv(envVarCustomerKey); ok {
+		customerKey = key
+		keyStatus = "AVAILABLE"
+	}
+	setupLog.Info("subscriber key", "status", keyStatus)
+
 	// CDS address not overrridden on the command line: use env var
 	config.ConfigDiscoveryAddress = cdsAddr
 	if podAddr, ok := os.LookupEnv(envVarAddress); ok {
@@ -176,10 +185,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("setting up STUNner config renderer")
+	setupLog.Info("setting up license manager")
+	m := licensemgr.NewManager(licensemgr.Config{
+		CustomerKey: customerKey,
+		Logger:      logger,
+	})
+
+	setupLog.Info("setting up config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
-		Scheme: scheme,
-		Logger: logger,
+		Scheme:         scheme,
+		LicenseManager: m,
+		Logger:         logger,
 	})
 
 	setupLog.Info("setting up updater client")
@@ -201,6 +217,7 @@ func main() {
 		Logger:         logger,
 	})
 
+	m.SetOperatorChannel(op.GetOperatorChannel())
 	r.SetOperatorChannel(op.GetOperatorChannel())
 	u.SetAckChannel(op.GetOperatorChannel())
 	op.SetProgressReporters(r, u, c)
@@ -209,15 +226,27 @@ func main() {
 	mgrCtx, mgrCancel := context.WithCancel(context.Background())
 	defer mgrCancel()
 
-	setupLog.Info("starting renderer thread")
-	if err := r.Start(mgrCtx); err != nil {
-		setupLog.Error(err, "problem running renderer")
+	setupLog.Info("starting the license manager")
+	if err := m.Start(mgrCtx); err != nil {
+		setupLog.Error(err, "error running the license manager")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting updater thread")
+	setupLog.Info("starting the license manager")
+	if err := m.Start(mgrCtx); err != nil {
+		setupLog.Error(err, "error running the license manager")
+		os.Exit(1)
+	}
+
+	setupLog.Info("starting the renderer")
+	if err := r.Start(mgrCtx); err != nil {
+		setupLog.Error(err, "error running the renderer")
+		os.Exit(1)
+	}
+
+	setupLog.Info("starting the updater")
 	if err := u.Start(mgrCtx); err != nil {
-		setupLog.Error(err, "could not run updater")
+		setupLog.Error(err, "error running the updater")
 		os.Exit(1)
 	}
 
@@ -228,13 +257,13 @@ func main() {
 	}
 
 	opCtx := ctrl.SetupSignalHandler()
-	setupLog.Info("starting operator thread")
+	setupLog.Info("starting the operator")
 	if err := op.Start(opCtx, mgrCancel); err != nil {
 		setupLog.Error(err, "problem running operator")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting Kubernetes controller manager")
+	setupLog.Info("starting the Kubernetes controller manager")
 	if err := mgr.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		// no way to gracefully terminate: give up and exit with an error

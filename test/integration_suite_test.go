@@ -44,6 +44,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
@@ -54,7 +55,8 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-var _ = fmt.Sprintf("%d", 1)
+// Empty subscriber key for testing
+var customerTestKey string
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
@@ -173,10 +175,17 @@ func initOperator(mgrCtx, opCtx context.Context) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	setupLog.Info("setting up STUNner config renderer")
+	setupLog.Info("setting up license manager")
+	m := licensemgr.NewManager(licensemgr.Config{
+		CustomerKey: customerTestKey,
+		Logger:      ctrl.Log,
+	})
+
+	setupLog.Info("setting up config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
-		Scheme: scheme,
-		Logger: ctrl.Log,
+		Scheme:         scheme,
+		LicenseManager: m,
+		Logger:         ctrl.Log,
 	})
 	Expect(r).NotTo(BeNil())
 
@@ -202,6 +211,7 @@ func initOperator(mgrCtx, opCtx context.Context) {
 		Logger:         ctrl.Log,
 	})
 
+	m.SetOperatorChannel(op.GetOperatorChannel())
 	r.SetOperatorChannel(op.GetOperatorChannel())
 	u.SetAckChannel(op.GetOperatorChannel())
 	op.SetProgressReporters(r, u, c)

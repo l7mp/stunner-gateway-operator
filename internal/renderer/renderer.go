@@ -8,16 +8,19 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 )
 
 type RendererConfig struct {
-	Scheme *runtime.Scheme
-	Logger logr.Logger
+	Scheme         *runtime.Scheme
+	LicenseManager licensemgr.Manager
+	Logger         logr.Logger
 }
 
 type Renderer struct {
 	ctx                  context.Context
 	scheme               *runtime.Scheme
+	licmgr               licensemgr.Manager
 	gen                  int
 	renderCh, operatorCh chan event.Event
 	*config.ProgressTracker
@@ -28,6 +31,7 @@ type Renderer struct {
 func NewRenderer(cfg RendererConfig) *Renderer {
 	return &Renderer{
 		scheme:          cfg.Scheme,
+		licmgr:          cfg.LicenseManager,
 		renderCh:        make(chan event.Event, 10),
 		gen:             0,
 		ProgressTracker: config.NewProgressTracker(),
