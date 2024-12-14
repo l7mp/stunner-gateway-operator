@@ -5,8 +5,11 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
+
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 	licensecfg "github.com/l7mp/stunner/pkg/config/license"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
 var licenseManagerConstructor = NewStubManager
@@ -19,6 +22,8 @@ type Manager interface {
 	Validate(feature licensecfg.Feature) bool
 	// SubscriptionType returns the current subscription type (e.g., free, member, enterprise).
 	SubscriptionType() string
+	// Generate a license configuration for the dataplane.
+	GenerateLicenseConfig() (stnrv1.LicenseConfig, error)
 	// SetOperatorChannel sets up the operator channel where the manager can send rendering
 	SetOperatorChannel(c chan event.Event)
 	// LastError returns the last license manager error.

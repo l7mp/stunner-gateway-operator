@@ -32,7 +32,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -61,7 +61,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -89,7 +89,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -117,7 +117,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -157,7 +157,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -188,7 +188,7 @@ func TestRenderClusterRender(t *testing.T) {
 				gw.Spec.GatewayClassName = gwapiv1.ObjectName("dummy")
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -207,7 +207,7 @@ func TestRenderClusterRender(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -249,7 +249,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -289,7 +289,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[0].Group = &group
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -332,7 +332,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[0].Kind = &kind
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -373,7 +373,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[0].Namespace = &ns
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -420,7 +420,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[2].Name = "testservice-ok-2"
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -462,7 +462,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -502,7 +502,7 @@ func TestRenderClusterRender(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -549,7 +549,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -594,7 +594,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s.Spec.ClusterIP = "4.3.2.1"
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -639,7 +639,7 @@ func TestRenderClusterRender(t *testing.T) {
 				s.Spec.ClusterIP = "None"
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -686,7 +686,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -727,7 +727,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[0].Group = &group
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -771,7 +771,7 @@ func TestRenderClusterRender(t *testing.T) {
 				udp.Spec.Rules[0].BackendRefs[0].Kind = &kind
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -824,7 +824,7 @@ func TestRenderClusterRender(t *testing.T) {
 				e.SetNamespace("dummy")
 				c.esls = []discoveryv1.EndpointSlice{*e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -912,7 +912,7 @@ func TestRenderClusterRender(t *testing.T) {
 				}}
 				c.esls = []discoveryv1.EndpointSlice{*e1, *e2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -999,7 +999,7 @@ func TestRenderClusterRender(t *testing.T) {
 				}}
 				c.esls = []discoveryv1.EndpointSlice{*e1, *e2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1086,7 +1086,7 @@ func TestRenderClusterRender(t *testing.T) {
 				c.esls = []discoveryv1.EndpointSlice{*e}
 
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1137,7 +1137,7 @@ func TestRenderClusterRender(t *testing.T) {
 				}}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1172,7 +1172,7 @@ func TestRenderClusterRender(t *testing.T) {
 				}}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1209,7 +1209,7 @@ func TestRenderClusterRender(t *testing.T) {
 				}}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1265,7 +1265,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ssvc2.Spec.Prefixes = []string{"0.0.0.0/1", "128.0.0.0/1"}
 				c.ssvcs = []stnrgwv1.StaticService{testutils.TestStaticSvc, *ssvc2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 
@@ -1332,7 +1332,7 @@ func TestRenderClusterRender(t *testing.T) {
 				ssvc2.Spec.Prefixes = []string{"0.0.0.0/1", "128.0.0.0/1"}
 				c.ssvcs = []stnrgwv1.StaticService{testutils.TestStaticSvc, *ssvc2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				rs := r.allUDPRoutes()
 				assert.Len(t, rs, 1, "route len")
 

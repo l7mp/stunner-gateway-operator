@@ -138,7 +138,7 @@ func main() {
 		customerKey = key
 		keyStatus = "AVAILABLE"
 	}
-	setupLog.Info("subscriber key", "status", keyStatus)
+	setupLog.Info("customer key", "status", keyStatus)
 
 	// CDS address not overrridden on the command line: use env var
 	config.ConfigDiscoveryAddress = cdsAddr

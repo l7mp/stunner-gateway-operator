@@ -3,8 +3,10 @@ package licensemanager
 import (
 	"context"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 	licensecfg "github.com/l7mp/stunner/pkg/config/license"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
 // license manager stub
@@ -17,3 +19,6 @@ func (_ *stubMgr) Validate(_ licensecfg.Feature) bool    { return true }
 func (_ *stubMgr) SubscriptionType() string              { return "free" }
 func (_ *stubMgr) LastError() error                      { return nil }
 func (_ *stubMgr) SetOperatorChannel(_ chan event.Event) {}
+func (_ *stubMgr) GenerateLicenseConfig() (stnrv1.LicenseConfig, error) {
+	return stnrv1.LicenseConfig{}, nil
+}

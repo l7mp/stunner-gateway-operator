@@ -10,7 +10,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-func (r *Renderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
+func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
 	// r.log.V(4).Info("renderAdmin", "gateway-config", store.GetObjectKey(c.gwConf))
 
 	loglevel := stnrconfv1.DefaultLogLevel

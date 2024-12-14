@@ -35,7 +35,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
@@ -190,7 +190,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
@@ -340,7 +340,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				})
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}

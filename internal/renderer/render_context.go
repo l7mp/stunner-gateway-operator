@@ -22,7 +22,7 @@ type RenderContext struct {
 	log    logr.Logger
 }
 
-func NewRenderContext(r *Renderer, gc *gwapiv1.GatewayClass) *RenderContext {
+func NewRenderContext(r *DefaultRenderer, gc *gwapiv1.GatewayClass) *RenderContext {
 	logger := r.log
 	if gc != nil {
 		logger = r.log.WithValues("gateway-class", gc.GetName())

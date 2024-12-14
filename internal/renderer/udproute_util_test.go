@@ -30,7 +30,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -89,7 +89,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2, *udp3, *udp4}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -126,7 +126,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udpv1a2.SetName("udproute-ok-v1a2")
 				c.rsV1A2 = []stnrgwv1.UDPRoute{*udpv1a2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -162,7 +162,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udpv1a2.SetName("udproute-ok")
 				c.rsV1A2 = []stnrgwv1.UDPRoute{*udpv1a2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -216,7 +216,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -318,7 +318,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -369,7 +369,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -404,7 +404,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -450,7 +450,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -492,7 +492,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{testutils.TestUDPRoute, *udp1, *udp2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -566,7 +566,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -674,7 +674,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				}
 				c.rs = []stnrgwv1.UDPRoute{*udp1, *udp2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -715,7 +715,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -782,7 +782,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1.Spec.CommonRouteSpec.ParentRefs[0].SectionName = &sn
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
@@ -853,7 +853,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				}
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
@@ -909,7 +909,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				}
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
@@ -963,7 +963,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				}}
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 
@@ -1040,7 +1040,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				c.rs = []stnrgwv1.UDPRoute{*udp1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 

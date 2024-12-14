@@ -19,7 +19,7 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
+func (r *DefaultRenderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
 	// r.log.V(4).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 	// 	store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
@@ -69,7 +69,7 @@ func (r *Renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayC
 	return &lc, nil
 }
 
-func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool) {
+func (r *DefaultRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool) {
 	proto, err := r.getProtocol(l.Protocol)
 	if err != nil {
 		return "", "", false
@@ -145,7 +145,7 @@ func (r *Renderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, str
 }
 
 // normalize protocol aliases
-func (r *Renderer) getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
+func (r *DefaultRenderer) getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
 	protocol := string(proto)
 	switch protocol {
 	case "UDP":

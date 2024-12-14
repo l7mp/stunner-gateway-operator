@@ -51,7 +51,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				// switch EDS off
@@ -298,7 +298,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -399,7 +399,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -500,7 +500,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -601,7 +601,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -741,7 +741,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					}}
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -881,7 +881,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				// switch EDS off
@@ -1371,7 +1371,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				gc, err := r.getGatewayClass()
@@ -1528,7 +1528,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}}
 				c.esls = []discoveryv1.EndpointSlice{testutils.TestEndpointSlice, *dummyEp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				config.EnableEndpointDiscovery = true
@@ -1939,7 +1939,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				})
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 
 				gc, err := r.getGatewayClass()
@@ -1996,7 +1996,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.DataplaneMode = config.DataplaneModeManaged
 				config.EnableEndpointDiscovery = true
 				config.EnableRelayToClusterIP = true

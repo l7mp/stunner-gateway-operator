@@ -26,7 +26,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -52,7 +52,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			eps:  []corev1.Endpoints{testutils.TestEndpoint},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -81,7 +81,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				e.SetName("dummy")
 				c.eps = []corev1.Endpoints{*e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -108,7 +108,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				e.SetNamespace("dummy")
 				c.eps = []corev1.Endpoints{*e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -135,7 +135,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				e.SetName("dummy")
 				c.eps = []corev1.Endpoints{testutils.TestEndpoint, *e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = false
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -164,7 +164,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -192,7 +192,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -223,7 +223,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				e.SetLabels(map[string]string{"kubernetes.io/service-name": "dummy"})
 				c.esls = []discoveryv1.EndpointSlice{*e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -250,7 +250,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				e.SetNamespace("dummy")
 				c.esls = []discoveryv1.EndpointSlice{*e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")
@@ -285,7 +285,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 				}}
 				c.esls = []discoveryv1.EndpointSlice{testutils.TestEndpointSlice, *e}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				config.EndpointSliceAvailable = true
 				svcs := store.Services.GetAll()
 				assert.NotEmpty(t, svcs, "svcs exist")

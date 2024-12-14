@@ -35,7 +35,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw.Spec.GatewayClassName = "dummy"
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -57,7 +57,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw.ObjectMeta.SetGeneration(4)
 				c.gws = []gwapiv1.Gateway{*gw, testutils.TestGw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -82,7 +82,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -132,7 +132,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw.ObjectMeta.SetGeneration(1)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -181,7 +181,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				// u.Spec.
 				// 	c.rs = []gwapiv1.UDPRoute{*u, testutils.TestUDPRoute}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}
@@ -301,7 +301,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw.ObjectMeta.SetGeneration(1)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: logr.Discard()}

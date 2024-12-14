@@ -30,7 +30,7 @@ func TestRenderAdminRender(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				dpMode := config.DataplaneMode
 				config.DataplaneMode = config.DataplaneModeLegacy
 
@@ -58,7 +58,7 @@ func TestRenderAdminRender(t *testing.T) {
 			svcs: []corev1.Service{},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				dpMode := config.DataplaneMode
 				config.DataplaneMode = config.DataplaneModeManaged
 
@@ -103,7 +103,7 @@ func TestRenderAdminRender(t *testing.T) {
 				dp.Spec.DisableHealthCheck = true
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				dpMode := config.DataplaneMode
 				config.DataplaneMode = config.DataplaneModeManaged
 

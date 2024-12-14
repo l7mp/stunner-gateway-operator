@@ -11,13 +11,22 @@ import (
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 )
 
+var NewRenderer = NewDefaultRenderer
+
+type Renderer interface {
+	config.ProgressReporter
+	Start(ctx context.Context) error
+	GetRenderChannel() chan event.Event
+	SetOperatorChannel(ch chan event.Event)
+}
+
 type RendererConfig struct {
 	Scheme         *runtime.Scheme
 	LicenseManager licensemgr.Manager
 	Logger         logr.Logger
 }
 
-type Renderer struct {
+type DefaultRenderer struct {
 	ctx                  context.Context
 	scheme               *runtime.Scheme
 	licmgr               licensemgr.Manager
@@ -27,9 +36,9 @@ type Renderer struct {
 	log logr.Logger
 }
 
-// NewRenderer creates a new Renderer.
-func NewRenderer(cfg RendererConfig) *Renderer {
-	return &Renderer{
+// NewDefaultRenderer creates a new default Renderer.
+func NewDefaultRenderer(cfg RendererConfig) Renderer {
+	return &DefaultRenderer{
 		scheme:          cfg.Scheme,
 		licmgr:          cfg.LicenseManager,
 		renderCh:        make(chan event.Event, 10),
@@ -39,7 +48,7 @@ func NewRenderer(cfg RendererConfig) *Renderer {
 	}
 }
 
-func (r *Renderer) Start(ctx context.Context) error {
+func (r *DefaultRenderer) Start(ctx context.Context) error {
 	r.ctx = ctx
 
 	go func() {
@@ -79,11 +88,11 @@ func (r *Renderer) Start(ctx context.Context) error {
 }
 
 // GetRenderChannel returns the channel onn which the renderer listenens to rendering requests.
-func (r *Renderer) GetRenderChannel() chan event.Event {
+func (r *DefaultRenderer) GetRenderChannel() chan event.Event {
 	return r.renderCh
 }
 
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens.
-func (r *Renderer) SetOperatorChannel(ch chan event.Event) {
+func (r *DefaultRenderer) SetOperatorChannel(ch chan event.Event) {
 	r.operatorCh = ch
 }

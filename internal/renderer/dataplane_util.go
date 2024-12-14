@@ -42,7 +42,7 @@ import (
 //
 // These labels are used for the Deployment selector. Note that deployment-level annotations and
 // labels are NOT propagated to the pods to avoid unexpected restarts.
-func (r *Renderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
+func (r *DefaultRenderer) createDeployment(c *RenderContext) (*appv1.Deployment, error) {
 	gw := c.gws.GetFirst()
 	if gw == nil {
 		r.log.Info("Internal error: trying to create Deployment with empty Gateway ref in managed mode")

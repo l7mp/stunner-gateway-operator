@@ -49,7 +49,7 @@ func (ap gwAddrPort) String() string {
 
 // returns the preferred address/port exposition for all listeners of the gateway
 // preference order: loadbalancer svc > nodeport svc
-func (r *Renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
+func (r *DefaultRenderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
 	aps := make([]gwAddrPort, len(gw.Spec.Listeners))
 
 	// find our service
@@ -82,7 +82,7 @@ func (r *Renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
 	return aps, retErr
 }
 
-func (r *Renderer) getPublicSvc(gw *gwapiv1.Gateway) (*corev1.Service, error) {
+func (r *DefaultRenderer) getPublicSvc(gw *gwapiv1.Gateway) (*corev1.Service, error) {
 	var pubSvc *corev1.Service
 	for _, svc := range store.Services.GetAll() {
 		if !isServiceAnnotated4Gateway(svc, gw) {
@@ -144,7 +144,7 @@ func isSvcPreferred(a, b *corev1.Service) bool {
 	return false
 }
 
-func (r *Renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gateway, l *gwapiv1.Listener) (gwAddrPort, error) {
+func (r *DefaultRenderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gateway, l *gwapiv1.Listener) (gwAddrPort, error) {
 	serviceProto, err := r.getServiceProtocol(l.Protocol)
 	if err != nil {
 		return gwAddrPort{}, err
@@ -277,7 +277,7 @@ func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
 	return nil
 }
 
-func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) (*corev1.Service, map[string]int) {
+func (r *DefaultRenderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) (*corev1.Service, map[string]int) {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
 		return nil, nil
@@ -557,7 +557,7 @@ func (r *Renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 }
 
 // getServiceProtocol returns the sercice-compatible protocol for a listener
-func (r *Renderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error) {
+func (r *DefaultRenderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error) {
 	protocol, err := r.getProtocol(proto)
 	if err != nil {
 		return "", err

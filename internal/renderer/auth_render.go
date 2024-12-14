@@ -10,7 +10,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+func (r *DefaultRenderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)
@@ -19,7 +19,7 @@ func (r *Renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) 
 	return r.renderInlineAuth(c)
 }
 
-func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+func (r *DefaultRenderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	realm := stnrconfv1.DefaultRealm
 	if c.gwConf.Spec.Realm != nil {
 		realm = *c.gwConf.Spec.Realm
@@ -64,7 +64,7 @@ func (r *Renderer) renderInlineAuth(c *RenderContext) (*stnrconfv1.AuthConfig, e
 	return &auth, nil
 }
 
-func (r *Renderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+func (r *DefaultRenderer) renderExternalAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	gwConf := c.gwConf
 	// r.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 

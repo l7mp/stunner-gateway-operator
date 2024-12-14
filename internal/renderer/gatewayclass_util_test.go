@@ -27,7 +27,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -44,7 +44,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.SetName("dummy")
 				c.cls = []gwapiv1.GatewayClass{testutils.TestGwClass, *cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gcs := r.getGatewayClasses()
 				assert.Len(t, gcs, 2, "gw-classes found")
 			},
@@ -61,7 +61,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.Spec.ControllerName = gwapiv1.GatewayController("dummy")
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -78,7 +78,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.Spec.ParametersRef = nil
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -95,7 +95,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.Spec.ParametersRef.Group = gwapiv1.Group("dummy")
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -112,7 +112,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.Spec.ParametersRef.Name = ""
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -129,7 +129,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.Spec.ParametersRef.Namespace = nil
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -146,7 +146,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				*cls2.Spec.ParametersRef.Namespace = ""
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-class not found")
 			},
@@ -159,7 +159,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 
@@ -188,7 +188,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 				cls2.ObjectMeta.SetGeneration(1)
 				c.cls = []gwapiv1.GatewayClass{*cls2}
 			},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 
@@ -212,7 +212,7 @@ func TestRenderGatewayClassUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *Renderer) {
+			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 

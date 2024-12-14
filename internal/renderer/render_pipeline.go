@@ -19,7 +19,7 @@ import (
 )
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
-func (r *Renderer) Render(e *event.EventRender) {
+func (r *DefaultRenderer) Render(e *event.EventRender) {
 	r.gen = e.Generation
 	r.log.Info("Rendering configuration", "generation", r.gen, "event", e.String())
 
@@ -37,7 +37,7 @@ func (r *Renderer) Render(e *event.EventRender) {
 // Finalize performs the finalization sequence:
 // - set all managed Kubernetes statuses to invalid
 // - remove managed dataplanes and services
-func (r *Renderer) Finalize(e *event.EventFinalize) {
+func (r *DefaultRenderer) Finalize(e *event.EventFinalize) {
 	r.gen = e.Generation
 
 	switch config.DataplaneMode {
@@ -52,7 +52,7 @@ func (r *Renderer) Finalize(e *event.EventFinalize) {
 }
 
 // renderGatewayClass generates and sets a STUNner daemon configuration in the "legacy" dataplane mode.
-func (r *Renderer) renderGatewayClass(e *event.EventRender) {
+func (r *DefaultRenderer) renderGatewayClass(e *event.EventRender) {
 	r.log.Info("Starting dataplane render", "mode", "legacy")
 
 	r.log.V(1).Info("Obtaining gateway-class objects")
@@ -113,7 +113,7 @@ func (r *Renderer) renderGatewayClass(e *event.EventRender) {
 }
 
 // renderManagedGateways generates and sets a STUNner daemon configuration for the "managed" dataplane mode.
-func (r *Renderer) renderManagedGateways(e *event.EventRender) {
+func (r *DefaultRenderer) renderManagedGateways(e *event.EventRender) {
 	r.log.Info("Starting dataplane render", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
@@ -190,7 +190,7 @@ func (r *Renderer) renderManagedGateways(e *event.EventRender) {
 }
 
 // finalizeManagedGateways invalidates all managed resources
-func (r *Renderer) finalizeManagedGateways(e *event.EventFinalize) {
+func (r *DefaultRenderer) finalizeManagedGateways(e *event.EventFinalize) {
 	r.log.Info("Stating finalization", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
@@ -222,7 +222,7 @@ func (r *Renderer) finalizeManagedGateways(e *event.EventFinalize) {
 }
 
 // renderForGateways renders a configuration for a set of Gateways (c.gws)
-func (r *Renderer) renderForGateways(c *RenderContext) error {
+func (r *DefaultRenderer) renderForGateways(c *RenderContext) error {
 	log := r.log
 	gc := c.gc
 
@@ -418,7 +418,7 @@ func (r *Renderer) renderForGateways(c *RenderContext) error {
 }
 
 // invalidateGatewayClass invalidates an entire gateway-class, with all the gateways underneath
-func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
+func (r *DefaultRenderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	log := r.log
 	gc := c.gc
 
@@ -457,7 +457,7 @@ func (r *Renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 }
 
 // invalidateGateways invalidates a set of Gateways
-func (r *Renderer) invalidateGateways(c *RenderContext, reason error) {
+func (r *DefaultRenderer) invalidateGateways(c *RenderContext, reason error) {
 	log := r.log
 	gc := c.gc
 
