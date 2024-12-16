@@ -138,6 +138,24 @@ type GatewayConfigSpec struct {
 	//
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
+
+	// UserQuota limits the number of allocations active at one time for a given TURN username
+	// (see RFC8656/Section 5). Overlimit allocations are rejected with a 486 (Allocation Quota
+	// Reached) error. Default is no quota. Not supported in the free tier.
+	//
+	// +optional
+	UserQuota int `json:"userQuota,omitempty"`
+
+	// STUNMode toggles STUN-server mode. In this mode only STUN binding requests are handled,
+	// but no TURN allocations are allowed by the gateway. This is useful to prevent a DDoS
+	// vector when STUNner is deployed as a user-facing STUN server, where a client creates and
+	// removes empty allocations in a fast loop to overload the TURN server. When STUN-mode is
+	// enabled TURN credentials are optional and ignored even if provided, otherwise TURN
+	// credentials are mandatory. Default is false, which disables pure-STUN mode. Not
+	// supported in the free tier.
+	//
+	// +optional
+	STUNMode bool `json:"stunMode,omitempty"`
 }
 
 // +kubebuilder:object:root=true
