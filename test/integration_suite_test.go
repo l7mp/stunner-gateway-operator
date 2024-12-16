@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,15 +56,17 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
+// auxiliary tests
+var auxiliaryTest = func() {}
+
 // Empty subscriber key for testing
 var customerTestKey string
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	cdsServerAddr = ":63478"
-	newCert64     = "bmV3Y2VydA==" // newcert
-	newKey64      = "bmV3a2V5"     // newkey
-	timeout       = time.Second * 10
+	newCert64 = "bmV3Y2VydA==" // newcert
+	newKey64  = "bmV3a2V5"     // newkey
+	timeout   = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
 	loglevel = -4
@@ -88,6 +91,7 @@ var (
 	testAuthSecret    *corev1.Secret
 	testStaticSvc     *stnrgwv1.StaticService
 	testDataplane     *stnrgwv1.Dataplane
+
 	// Globals
 	cfg              *rest.Config
 	k8sClient        client.Client
@@ -96,6 +100,7 @@ var (
 	cancel, opCancel context.CancelFunc
 	scheme           *runtime.Scheme = runtime.NewScheme()
 	op               *operator.Operator
+	cdsServerAddr    string
 	setupLog         logr.Logger
 )
 
@@ -195,6 +200,7 @@ func initOperator(mgrCtx, opCtx context.Context) {
 		Logger:  ctrl.Log,
 	})
 
+	cdsServerAddr = fmt.Sprintf(":%d", rand.Intn(1<<15)+1<<15)
 	setupLog.Info("setting up CDS server", "address", cdsServerAddr)
 	c := config.NewCDSServer(cdsServerAddr, ctrl.Log)
 
@@ -320,6 +326,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 	// MANAGED
 	// EndpointSlice controller
 	managedModeTest()
+
+	// Auxiliary
+	auxiliaryTest()
 
 	// MANAGED
 	// FINALIZER
