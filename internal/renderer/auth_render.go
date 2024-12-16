@@ -167,7 +167,7 @@ func getAuthType(hint *string) (stnrconfv1.AuthType, error) {
 
 	atype, err := stnrconfv1.NewAuthType(authType)
 	if err != nil {
-		return stnrconfv1.AuthTypeUnknown, NewCriticalError(InvalidAuthType)
+		return stnrconfv1.AuthTypeNone, NewCriticalError(InvalidAuthType)
 	}
 
 	return atype, nil
