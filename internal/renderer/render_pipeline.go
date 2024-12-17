@@ -388,19 +388,27 @@ func (r *DefaultRenderer) renderForGateways(c *RenderContext) error {
 			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
 
 			// create deployment
-			dp, err := r.createDeployment(c)
+			dp, err := r.generateDataplane(c)
 			if err != nil {
 				return err
 			}
 			if isManagedDataplaneDisabled(gw) {
-				c.update.DeleteQueue.Deployments.Upsert(dp)
-				log.V(1).Info("Removing STUNner dataplane for Gateway",
+				if dep, ok := dp.(*appv1.Deployment); ok {
+					c.update.DeleteQueue.Deployments.Upsert(dep)
+				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
+					c.update.DeleteQueue.DaemonSets.Upsert(ds)
+				}
+				log.V(1).Info("Removing STUNner dataplane resource for Gateway",
 					"gateway", store.DumpObject(gw),
 					"disable-dataplane-annotation", true)
 			} else {
-				c.update.UpsertQueue.Deployments.Upsert(dp)
-				log.Info("STUNner dataplane Deployment ready",
-					"generation", r.gen, "deployment", store.DumpObject(dp))
+				if dep, ok := dp.(*appv1.Deployment); ok {
+					c.update.UpsertQueue.Deployments.Upsert(dep)
+				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
+					c.update.UpsertQueue.DaemonSets.Upsert(ds)
+				}
+				log.Info("STUNner dataplane resource ready",
+					"generation", r.gen, "resource", store.DumpObject(dp))
 			}
 		}
 	} else {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -51,8 +52,11 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				gw := gws[0]
 				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
-				deploy, err := r.createDeployment(c)
+				obj, err := r.generateDataplane(c)
 				assert.NoError(t, err, "create deployment")
+
+				deploy, ok := obj.(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
 
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
@@ -208,8 +212,11 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				c.dp, err = getDataplane(c)
 				assert.NoError(t, err, "dataplanefound")
 
-				deploy, err := r.createDeployment(c)
+				obj, err := r.generateDataplane(c)
 				assert.NoError(t, err, "create deployment")
+
+				deploy, ok := obj.(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
 
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
@@ -358,8 +365,11 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				c.dp, err = getDataplane(c)
 				assert.NoError(t, err, "dataplanefound")
 
-				deploy, err := r.createDeployment(c)
+				obj, err := r.generateDataplane(c)
 				assert.NoError(t, err, "create deployment")
+
+				deploy, ok := obj.(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
 
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")

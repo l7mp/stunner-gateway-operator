@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
@@ -28,6 +29,12 @@ type configRenderer interface {
 	render(c *RenderContext) (stnrconfv1.Config, error)
 }
 
+// resourceGenerator is a generic interface for the generator components that can create K8s
+// resources.
+type resourceGenerator interface {
+	generate(c *RenderContext) (client.Object, error)
+}
+
 type RendererConfig struct {
 	Scheme         *runtime.Scheme
 	LicenseManager licensemgr.Manager
@@ -39,6 +46,7 @@ type DefaultRenderer struct {
 	scheme                      *runtime.Scheme
 	licmgr                      licensemgr.Manager
 	adminRenderer, authRenderer configRenderer
+	dataplaneGenerator          resourceGenerator
 	gen                         int
 	renderCh, operatorCh        chan event.Event
 	*config.ProgressTracker
@@ -48,14 +56,15 @@ type DefaultRenderer struct {
 // NewDefaultRenderer creates a new default Renderer.
 func NewDefaultRenderer(cfg RendererConfig) Renderer {
 	r := &DefaultRenderer{
-		scheme:          cfg.Scheme,
-		licmgr:          cfg.LicenseManager,
-		adminRenderer:   newAdminRenderer(),
-		authRenderer:    newAuthRenderer(),
-		renderCh:        make(chan event.Event, 10),
-		gen:             0,
-		ProgressTracker: config.NewProgressTracker(),
-		log:             cfg.Logger.WithName("renderer"),
+		scheme:             cfg.Scheme,
+		licmgr:             cfg.LicenseManager,
+		adminRenderer:      newAdminRenderer(),
+		authRenderer:       newAuthRenderer(),
+		dataplaneGenerator: newDataplaneGenerator(cfg.Scheme),
+		renderCh:           make(chan event.Event, 10),
+		gen:                0,
+		ProgressTracker:    config.NewProgressTracker(),
+		log:                cfg.Logger.WithName("renderer"),
 	}
 	r.log.V(4).Info("Renderer thread created (**default** renderer)")
 	return r
@@ -126,4 +135,13 @@ func (r *DefaultRenderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, 
 		return nil, err
 	}
 	return conf.(*stnrconfv1.AuthConfig), nil
+}
+
+// generateDataplane is a wrapper for dataplaneGenerator.generate()
+func (r *DefaultRenderer) generateDataplane(c *RenderContext) (client.Object, error) {
+	obj, err := r.dataplaneGenerator.generate(c)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }

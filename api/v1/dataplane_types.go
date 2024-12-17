@@ -28,6 +28,13 @@ func init() {
 	SchemeBuilder.Register(&Dataplane{}, &DataplaneList{})
 }
 
+type DataplaneResourceType string
+
+const (
+	DataplaneResourceDeployment DataplaneResourceType = "Deployment"
+	DataplaneResourceDaemonSet  DataplaneResourceType = "DaemonSet"
+)
+
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
@@ -46,7 +53,8 @@ type Dataplane struct {
 	Spec DataplaneSpec `json:"spec,omitempty"`
 }
 
-// this must be kept in sync with Renderer.createDeployment and Updater.upsertDeployment
+// this must be kept in sync with Renderer.createDeployment and generateDaemonSet, as well as
+// Updater.upsertDeployment and Updater.upsertDaemonSet
 
 // DataplaneSpec describes the prefixes reachable via a Dataplane.
 type DataplaneSpec struct {
@@ -69,18 +77,28 @@ type DataplaneSpec struct {
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
+	// DataplaneResource defines the Kubernetes resource kind to use to deploy the dataplane,
+	// can be either Deployment (default) or DaemonSet (not supported in the free tier).
+	//
+	// +optional
+	// +kubebuilder:default=Deployment
+	// +kubebuilder:validation:Enum="Deployment";"DaemonSet"
+	DataplaneResource *DataplaneResourceType `json:"dataplaneResource,omitempty"`
+
 	// Custom labels to add to dataplane pods. Note that this does not affect the labels added
-	// to the Deployment (those come from the Gateway), just the pods. Note also that mandatory
-	// pod labels override whatever you set here on conflict. The only way to set pod labels is
-	// here: whatever you set manually on the dataplane pod will be reset by the opetator.
+	// to the dataplane resource (Deployment or DaemonSet) as those are copied from the
+	// Gateway, just the pods. Note also that mandatory pod labels override whatever you set
+	// here on conflict. The only way to set pod labels is here: whatever you set manually on
+	// the dataplane pod will be reset by the opetator.
 	//
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// Custom annotations to add to dataplane pods. Note that this does not affect the
-	// annotations added to the Deployment (this come from the correspnding Gateway), just the
-	// pods. Note also that mandatory pod annotations override whatever you set here on
-	// conflict, and the annotations set here override annotations manually added to the pods.
+	// annotations added to the dataplane resource (Deployment or DaemonSet) as those are
+	// copied from the correspnding Gateway, just the pods. Note also that mandatory pod
+	// annotations override whatever you set here on conflict, and the annotations set here
+	// override annotations manually added to the pods.
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
@@ -110,9 +128,9 @@ type DataplaneSpec struct {
 	// +optional
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 
-	// Number of desired pods. If empty or set to 1, use whatever is in the target Deployment.
-	// Otherwise, enforce this setting, overwiting whatever is set in the Deployment (this may
-	// block autoscaling the dataplane though). Defaults to 1.
+	// Number of desired pods. If empty or set to 1, use whatever is in the target Deployment,
+	// otherwise overwite whatever is in the Deployment (this may block autoscaling the
+	// dataplane though). Ignored if the dataplane is deployed into a DaemonSet. Defaults to 1.
 	//
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`

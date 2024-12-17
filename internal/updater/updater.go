@@ -140,6 +140,14 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 		}
 	}
 
+	for _, ds := range q.DaemonSets.GetAll() {
+		if op, err := u.upsertDaemonSet(ds, gen); err != nil {
+			u.log.Error(err, "Cannot upsert DaemonSet", "operation", op,
+				"daemonSet", store.DumpObject(ds))
+			continue
+		}
+	}
+
 	// run the delete queue
 	q = e.DeleteQueue
 	for _, gc := range q.GatewayClasses.Objects() {
@@ -186,6 +194,14 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 		if err := u.deleteObject(dp, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("Cannot delete deployment", "deployment",
 				store.DumpObject(dp), "error", err)
+			continue
+		}
+	}
+
+	for _, ds := range q.DaemonSets.Objects() {
+		if err := u.deleteObject(ds, gen); err != nil && !apierrors.IsNotFound(err) {
+			u.log.V(1).Info("Cannot delete daemonSet", "daemonSet",
+				store.DumpObject(ds), "error", err)
 			continue
 		}
 	}

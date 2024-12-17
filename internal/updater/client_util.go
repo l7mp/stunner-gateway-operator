@@ -283,6 +283,93 @@ func (u *Updater) upsertDeployment(dp *appv1.Deployment, gen int) (ctrlutil.Oper
 	return op, nil
 }
 
+func (u *Updater) upsertDaemonSet(ds *appv1.DaemonSet, gen int) (ctrlutil.OperationResult, error) {
+	u.log.V(2).Info("Upserting DaemonSet", "resource", store.GetObjectKey(ds), "generation", gen)
+
+	client := u.manager.GetClient()
+	current := &appv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
+		Name:      ds.GetName(),
+		Namespace: ds.GetNamespace(),
+	}}
+
+	// use CreateOrPatch: hopefully more clever than CreateOrUpdate
+	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
+		if err := setMetadata(current, ds); err != nil {
+			return nil
+		}
+
+		current.Spec.Selector = ds.Spec.Selector
+
+		// pod-labels: copy verbatim
+		current.Spec.Template.SetLabels(ds.Spec.Template.GetLabels())
+		// retain existing pod annotations but overwrite the mandatory anns from the gw and dataplane
+		podAs := store.MergeMetadata(current.Spec.Template.GetAnnotations(), ds.Spec.Template.GetAnnotations())
+		current.Spec.Template.SetAnnotations(podAs)
+
+		dpspec := &ds.Spec.Template.Spec
+		currentspec := &current.Spec.Template.Spec
+
+		currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
+		for i := range dpspec.Containers {
+			dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
+		}
+
+		currentspec.Volumes = make([]corev1.Volume, len(dpspec.Volumes))
+		for i := range dpspec.Volumes {
+			dpspec.Volumes[i].DeepCopyInto(&currentspec.Volumes[i])
+		}
+
+		// rest is optional
+		if dpspec.TerminationGracePeriodSeconds != nil {
+			grace := *dpspec.TerminationGracePeriodSeconds
+			currentspec.TerminationGracePeriodSeconds = &grace
+		}
+
+		currentspec.HostNetwork = dpspec.HostNetwork
+
+		if dpspec.Affinity != nil {
+			currentspec.Affinity = dpspec.Affinity.DeepCopy()
+		}
+
+		if dpspec.Tolerations != nil {
+			currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Tolerations))
+			for i := range dpspec.Tolerations {
+				dpspec.Tolerations[i].DeepCopyInto(&currentspec.Tolerations[i])
+			}
+		}
+
+		if dpspec.SecurityContext != nil {
+			currentspec.SecurityContext = dpspec.SecurityContext.DeepCopy()
+		}
+
+		if len(dpspec.ImagePullSecrets) != 0 {
+			currentspec.ImagePullSecrets = make([]corev1.LocalObjectReference, len(dpspec.ImagePullSecrets))
+			for i := range dpspec.ImagePullSecrets {
+				dpspec.ImagePullSecrets[i].DeepCopyInto(&currentspec.ImagePullSecrets[i])
+			}
+		}
+
+		if len(dpspec.TopologySpreadConstraints) != 0 {
+			currentspec.TopologySpreadConstraints =
+				make([]corev1.TopologySpreadConstraint, len(dpspec.TopologySpreadConstraints))
+			for i := range dpspec.TopologySpreadConstraints {
+				dpspec.TopologySpreadConstraints[i].DeepCopyInto(&currentspec.TopologySpreadConstraints[i])
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return ctrlutil.OperationResultNone, fmt.Errorf("Cannot upsert DaemonSet %q: %w",
+			store.GetObjectKey(ds), err)
+	}
+
+	u.log.V(1).Info("DaemonSet upserted", "resource", store.GetObjectKey(ds), "generation",
+		gen, "result", store.DumpObject(current))
+
+	return op, nil
+}
+
 func (u *Updater) deleteObject(o client.Object, gen int) error {
 	u.log.V(2).Info("Delete object", "resource", store.GetObjectKey(o), "generation", gen)
 

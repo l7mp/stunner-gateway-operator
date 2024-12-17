@@ -153,6 +153,11 @@ func (in *DataplaneSpec) DeepCopyInto(out *DataplaneSpec) {
 		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
+	if in.DataplaneResource != nil {
+		in, out := &in.DataplaneResource, &out.DataplaneResource
+		*out = new(DataplaneResourceType)
+		**out = **in
+	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))

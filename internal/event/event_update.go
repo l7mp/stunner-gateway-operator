@@ -18,6 +18,7 @@ type UpdateConf struct {
 	Services       *store.ServiceStore
 	ConfigMaps     *store.ConfigMapStore
 	Deployments    *store.DeploymentStore
+	DaemonSets     *store.DaemonSetStore
 }
 
 type EventUpdate struct {
@@ -41,6 +42,7 @@ func NewEventUpdate(generation int) *EventUpdate {
 			Services:       store.NewServiceStore(),
 			ConfigMaps:     store.NewConfigMapStore(),
 			Deployments:    store.NewDeploymentStore(),
+			DaemonSets:     store.NewDaemonSetStore(),
 		},
 		DeleteQueue: UpdateConf{
 			GatewayClasses: store.NewGatewayClassStore(),
@@ -50,6 +52,7 @@ func NewEventUpdate(generation int) *EventUpdate {
 			Services:       store.NewServiceStore(),
 			ConfigMaps:     store.NewConfigMapStore(),
 			Deployments:    store.NewDeploymentStore(),
+			DaemonSets:     store.NewDaemonSetStore(),
 		},
 		ConfigQueue: []*stnrv1.StunnerConfig{},
 		Generation:  generation,
@@ -63,18 +66,18 @@ func (e *EventUpdate) GetType() EventType {
 
 func (e *EventUpdate) String() string {
 	return fmt.Sprintf("%s (gen: %d, ack: %t): upsert-queue: gway-cls: %d, gway: %d, "+
-		"route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d / "+
+		"route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d, ds: %d / "+
 		"delete-queue: gway-cls: %d, gway: %d, route: %d, routeV1A2: %d, "+
-		"svc: %d, confmap: %d, dp: %d / config-queue: %d",
+		"svc: %d, confmap: %d, dp: %d, ds: %d / config-queue: %d",
 		e.Type.String(), e.Generation, e.RequestAck,
 		e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
 		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.UDPRoutesV1A2.Len(),
 		e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
-		e.UpsertQueue.Deployments.Len(),
+		e.UpsertQueue.Deployments.Len(), e.UpsertQueue.DaemonSets.Len(),
 		e.DeleteQueue.GatewayClasses.Len(), e.DeleteQueue.Gateways.Len(),
 		e.DeleteQueue.UDPRoutes.Len(), e.DeleteQueue.UDPRoutesV1A2.Len(),
 		e.DeleteQueue.Services.Len(), e.DeleteQueue.ConfigMaps.Len(),
-		e.DeleteQueue.Deployments.Len(),
+		e.DeleteQueue.Deployments.Len(), e.DeleteQueue.DaemonSets.Len(),
 		len(e.ConfigQueue))
 }
 
@@ -91,6 +94,7 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 	u.UpsertQueue.Services = q.Services.DeepCopy()
 	u.UpsertQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
 	u.UpsertQueue.Deployments = q.Deployments.DeepCopy()
+	u.UpsertQueue.DaemonSets = q.DaemonSets.DeepCopy()
 
 	q = e.DeleteQueue
 	u.DeleteQueue.GatewayClasses = q.GatewayClasses.DeepCopy()
@@ -100,6 +104,7 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 	u.DeleteQueue.Services = q.Services.DeepCopy()
 	u.DeleteQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
 	u.DeleteQueue.Deployments = q.Deployments.DeepCopy()
+	u.DeleteQueue.DaemonSets = q.DaemonSets.DeepCopy()
 
 	u.ConfigQueue = make([]*stnrv1.StunnerConfig, len(e.ConfigQueue))
 	copy(u.ConfigQueue, e.ConfigQueue)
