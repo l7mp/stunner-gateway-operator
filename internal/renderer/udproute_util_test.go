@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +32,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -92,7 +91,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -129,7 +128,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -165,7 +164,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -219,7 +218,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -321,7 +320,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -372,7 +371,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -407,7 +406,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -453,7 +452,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -495,7 +494,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -569,7 +568,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -677,7 +676,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
@@ -718,7 +717,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")

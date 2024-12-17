@@ -10,8 +10,16 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
-	// r.log.V(4).Info("renderAdmin", "gateway-config", store.GetObjectKey(c.gwConf))
+var _ configRenderer = &adminRenderer{}
+
+type adminRenderer struct{}
+
+func newAdminRenderer() configRenderer {
+	return &adminRenderer{}
+}
+
+func (r *adminRenderer) render(c *RenderContext) (stnrconfv1.Config, error) {
+	c.log.V(8).Info("renderAdmin (**default**)", "gateway-config", store.GetObjectKey(c.gwConf))
 
 	loglevel := stnrconfv1.DefaultLogLevel
 	if c.gwConf.Spec.LogLevel != nil {
@@ -40,7 +48,7 @@ func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig
 		return nil, err
 	}
 
-	r.log.V(2).Info("Render admin-config ready", "gateway-config", store.GetObjectKey(c.gwConf),
+	c.log.V(2).Info("Render admin-config ready", "gateway-config", store.GetObjectKey(c.gwConf),
 		"result", fmt.Sprintf("%#v", admin))
 
 	return &admin, nil

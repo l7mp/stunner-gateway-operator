@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +33,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -74,7 +73,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -105,7 +104,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -147,7 +146,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -193,7 +192,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -255,7 +254,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -336,7 +335,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -389,7 +388,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -444,7 +443,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -499,7 +498,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -558,7 +557,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -617,7 +616,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -676,7 +675,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -735,7 +734,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -797,7 +796,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -861,7 +860,7 @@ func TestRenderListenerRender(t *testing.T) {
 			tester: func(t *testing.T, r *DefaultRenderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 

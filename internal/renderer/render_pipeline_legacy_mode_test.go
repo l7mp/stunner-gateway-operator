@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -45,7 +44,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -95,7 +94,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -206,7 +205,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -319,7 +318,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -432,7 +431,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -530,7 +529,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -682,7 +681,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
@@ -767,7 +766,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
@@ -942,7 +941,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "gatewayclass-ok", gc.GetName(),
 					"gatewayclass name")
 
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
@@ -1031,7 +1030,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "dummy-gateway-class", gc.GetName(),
 					"gatewayclass name")
 
-				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c = &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
@@ -1146,7 +1145,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
@@ -1352,7 +1351,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 		// 		assert.Len(t, gcs, 1, "gw-classes found")
 
 		// 		// render our own gatewayclass
-		// 		c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: logr.Discard()}
+		// 		c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: log}
 		// 		c.update = event.NewEventUpdate(0)
 		// 		assert.NotNil(t, c.update, "update event create")
 
@@ -1416,7 +1415,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, gcs, 1, "gw-classes found")
 
 				// render our own gatewayclass
-				c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: logr.Discard()}
+				c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: log}
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 

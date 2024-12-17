@@ -13,10 +13,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/types"
-	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -34,6 +31,7 @@ var testerLogLevel = zapcore.ErrorLevel
 
 var (
 	scheme = runtime.NewScheme()
+	log    logr.Logger
 )
 
 func init() {
@@ -68,7 +66,7 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
 	z, err := zc.Build()
 	assert.NoError(t, err, "logger created")
-	log := zapr.NewLogger(z)
+	log = zapr.NewLogger(z)
 
 	for i := range testConf {
 		c := testConf[i]

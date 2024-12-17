@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -36,7 +35,7 @@ func TestRenderAdminRender(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
@@ -64,7 +63,7 @@ func TestRenderAdminRender(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				c.dp, err = getDataplane(c)
@@ -109,7 +108,7 @@ func TestRenderAdminRender(t *testing.T) {
 
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc, log: logr.Discard()}
+				c := &RenderContext{gc: gc, log: log}
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 				c.dp, err = getDataplane(c)

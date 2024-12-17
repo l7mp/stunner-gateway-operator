@@ -6,6 +6,8 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
@@ -20,6 +22,12 @@ type Renderer interface {
 	SetOperatorChannel(ch chan event.Event)
 }
 
+// configRenderer is a generic interface for the rendering components that can generate components
+// of the dataplane config.
+type configRenderer interface {
+	render(c *RenderContext) (stnrconfv1.Config, error)
+}
+
 type RendererConfig struct {
 	Scheme         *runtime.Scheme
 	LicenseManager licensemgr.Manager
@@ -27,25 +35,30 @@ type RendererConfig struct {
 }
 
 type DefaultRenderer struct {
-	ctx                  context.Context
-	scheme               *runtime.Scheme
-	licmgr               licensemgr.Manager
-	gen                  int
-	renderCh, operatorCh chan event.Event
+	ctx                         context.Context
+	scheme                      *runtime.Scheme
+	licmgr                      licensemgr.Manager
+	adminRenderer, authRenderer configRenderer
+	gen                         int
+	renderCh, operatorCh        chan event.Event
 	*config.ProgressTracker
 	log logr.Logger
 }
 
 // NewDefaultRenderer creates a new default Renderer.
 func NewDefaultRenderer(cfg RendererConfig) Renderer {
-	return &DefaultRenderer{
+	r := &DefaultRenderer{
 		scheme:          cfg.Scheme,
 		licmgr:          cfg.LicenseManager,
+		adminRenderer:   newAdminRenderer(),
+		authRenderer:    newAuthRenderer(),
 		renderCh:        make(chan event.Event, 10),
 		gen:             0,
 		ProgressTracker: config.NewProgressTracker(),
 		log:             cfg.Logger.WithName("renderer"),
 	}
+	r.log.V(4).Info("Renderer thread created (**default** renderer)")
+	return r
 }
 
 func (r *DefaultRenderer) Start(ctx context.Context) error {
@@ -95,4 +108,22 @@ func (r *DefaultRenderer) GetRenderChannel() chan event.Event {
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens.
 func (r *DefaultRenderer) SetOperatorChannel(ch chan event.Event) {
 	r.operatorCh = ch
+}
+
+// renderAdmin is a wrapper for adminRenderer.render()
+func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
+	conf, err := r.adminRenderer.render(c)
+	if err != nil {
+		return nil, err
+	}
+	return conf.(*stnrconfv1.AdminConfig), nil
+}
+
+// renderAuth is a wrapper for authRenderer.render()
+func (r *DefaultRenderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+	conf, err := r.authRenderer.render(c)
+	if err != nil {
+		return nil, err
+	}
+	return conf.(*stnrconfv1.AuthConfig), nil
 }
