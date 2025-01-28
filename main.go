@@ -186,10 +186,7 @@ func main() {
 	}
 
 	setupLog.Info("setting up license manager")
-	m := licensemgr.NewManager(licensemgr.Config{
-		CustomerKey: customerKey,
-		Logger:      logger,
-	})
+	m := licensemgr.NewManager(customerKey, logger)
 
 	setupLog.Info("setting up config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
@@ -225,12 +222,6 @@ func main() {
 	// create a general context, which will be canceled by the operator
 	mgrCtx, mgrCancel := context.WithCancel(context.Background())
 	defer mgrCancel()
-
-	setupLog.Info("starting the license manager")
-	if err := m.Start(mgrCtx); err != nil {
-		setupLog.Error(err, "error running the license manager")
-		os.Exit(1)
-	}
 
 	setupLog.Info("starting the license manager")
 	if err := m.Start(mgrCtx); err != nil {

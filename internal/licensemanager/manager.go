@@ -21,7 +21,7 @@ type Manager interface {
 	// Validate checks whether a client is entitled to use a feature.
 	Validate(feature licensecfg.Feature) bool
 	// SubscriptionType returns the current subscription type (e.g., free, member, enterprise).
-	SubscriptionType() string
+	SubscriptionType() licensecfg.SubscriptionType
 	// Generate a license configuration for the dataplane.
 	GenerateLicenseConfig() (stnrv1.LicenseConfig, error)
 	// SetOperatorChannel sets up the operator channel where the manager can send rendering
@@ -30,12 +30,6 @@ type Manager interface {
 	LastError() error
 }
 
-type Config struct {
-	CustomerKey          string
-	LicenseManagerClient any
-	Logger               logr.Logger
-}
-
-func NewManager(config Config) Manager {
-	return licenseManagerConstructor(config)
+func NewManager(key string, logger logr.Logger) Manager {
+	return licenseManagerConstructor(key, logger)
 }
