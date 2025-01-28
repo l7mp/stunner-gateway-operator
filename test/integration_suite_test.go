@@ -181,10 +181,7 @@ func initOperator(mgrCtx, opCtx context.Context) {
 	Expect(err).NotTo(HaveOccurred())
 
 	setupLog.Info("setting up license manager")
-	m := licensemgr.NewManager(licensemgr.Config{
-		CustomerKey: customerTestKey,
-		Logger:      ctrl.Log,
-	})
+	m := licensemgr.NewManager(customerTestKey, ctrl.Log)
 
 	setupLog.Info("setting up config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
