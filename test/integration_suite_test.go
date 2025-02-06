@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"go.uber.org/zap/zapcore"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -91,6 +92,7 @@ var (
 	testAuthSecret    *corev1.Secret
 	testStaticSvc     *stnrgwv1.StaticService
 	testDataplane     *stnrgwv1.Dataplane
+	testDaemonSet     *appv1.DaemonSet
 
 	// Globals
 	cfg              *rest.Config
@@ -259,6 +261,7 @@ func InitResources() {
 	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
 	testDataplane = testutils.TestDataplane.DeepCopy()
 	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
+	testDaemonSet = testutils.TestDaemonSet.DeepCopy()
 }
 
 func TimestampEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {

@@ -78,12 +78,7 @@ type DataplaneSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// DataplaneResource defines the Kubernetes resource kind to use to deploy the dataplane,
-	// can be either Deployment (default) or DaemonSet (not supported in the free tier).
-	//
-	// Note: changing the dataplaneResource under a running config is unsafe because the old
-	// resource-types (e.g., the old Deployments when switching to DaemonSet) are not cleaned
-	// up. Delete the Gateway, update the dataplaneResource in the underlying Dataplane, and
-	// only then recreate the Gateway.
+	// can be either Deployment (default) or DaemonSet (supported only in the premium tier).
 	//
 	// +optional
 	// +kubebuilder:default=Deployment

@@ -213,6 +213,16 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.True(t, podSpec.HostNetwork, "hostnetwork")
 				assert.Nil(t, podSpec.Affinity, "affinity")
 
+				// should delete lingering daemonsets
+				dss := c.update.DeleteQueue.DaemonSets.Objects()
+				assert.Len(t, dps, 1, "deamonset num")
+				ds, ok := dss[0].(*appv1.DaemonSet)
+				assert.True(t, ok, "daemonset cast")
+				assert.Equal(t, gw.GetName(), ds.GetName(), "deleted daemonset name")
+				assert.Equal(t, gw.GetNamespace(), ds.GetNamespace(), "deleted daemonset namespace")
+				assert.Equal(t, deploy.GetName(), ds.GetName(), "deleted daemonset name")
+				assert.Equal(t, deploy.GetNamespace(), ds.GetNamespace(), "deleted daemonset namespace")
+
 				// gateway status
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
 

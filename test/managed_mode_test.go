@@ -102,6 +102,9 @@ func testManagedMode() {
 			})
 			Expect(err).Should(Succeed())
 
+			// add a deamonset with the gateway's name: this allows to check later
+			// whether lingering dataplane resources are properly cleaned up
+			Expect(k8sClient.Create(ctx, testDaemonSet)).Should(Succeed())
 		})
 
 		It("should allow the gateway-config to be queried", func() {
@@ -1165,6 +1168,17 @@ func testManagedMode() {
 			Expect(*podSpec.TerminationGracePeriodSeconds).Should(Equal(testutils.TestTerminationGrace))
 			Expect(podSpec.HostNetwork).Should(BeTrue())
 			Expect(podSpec.Affinity).To(BeNil())
+		})
+
+		It("should clean up lingering dataplane resources", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+			ds := &appv1.DaemonSet{}
+
+			ctrl.Log.Info("trying to Get dataplane DaemonSet", "resource", lookupKey)
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupKey, ds)
+				return err != nil && apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should update config when the Dataplane changes", func() {

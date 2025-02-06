@@ -404,10 +404,22 @@ func (r *DefaultRenderer) renderForGateways(c *RenderContext) error {
 			} else {
 				if dep, ok := dp.(*appv1.Deployment); ok {
 					c.update.UpsertQueue.Deployments.Upsert(dep)
+					// delete lingering DeamonSets
+					ds := &appv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
+						Namespace: dep.GetNamespace(),
+						Name:      dep.GetName(),
+					}}
+					c.update.DeleteQueue.DaemonSets.Upsert(ds)
 				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
 					c.update.UpsertQueue.DaemonSets.Upsert(ds)
+					// delete lingering Deployments
+					dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+						Namespace: ds.GetNamespace(),
+						Name:      ds.GetName(),
+					}}
+					c.update.DeleteQueue.Deployments.Upsert(dep)
 				}
-				log.Info("STUNner dataplane resource ready",
+				log.Info("STUNner dataplane resource rendering ready",
 					"generation", r.gen, "resource", store.DumpObject(dp))
 			}
 		}
