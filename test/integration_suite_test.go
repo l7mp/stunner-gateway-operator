@@ -60,7 +60,7 @@ import (
 // auxiliary tests
 var auxiliaryTest = func() {}
 
-// Empty subscriber key for testing
+// Empty customer key for testing
 var customerTestKey string
 
 // Define utility constants for object names and testing timeouts/durations and intervals.

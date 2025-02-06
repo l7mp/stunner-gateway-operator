@@ -134,7 +134,7 @@ func main() {
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 
 	customerKey, keyStatus := "", "MISSING"
-	if key, ok := os.LookupEnv(envVarCustomerKey); ok {
+	if key, ok := os.LookupEnv(envVarCustomerKey); ok && key != "" {
 		customerKey = key
 		keyStatus = "AVAILABLE"
 	}
