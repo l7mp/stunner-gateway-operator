@@ -164,7 +164,7 @@ func TestConfigDiscovery(t *testing.T) {
 	licenseStatus := stnrv1.LicenseStatus{
 		EnabledFeatures:  []string{"a", "b", "c"},
 		SubscriptionType: "test",
-		ValidUntil:       "forever",
+		LastUpdated:      "never",
 		LastError:        "",
 	}
 	e.LicenseStatus = licenseStatus
