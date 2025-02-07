@@ -14,7 +14,7 @@ import (
 
 var licenseManagerConstructor = NewStubManager
 
-// Manager is a global license manager that encapsulates the license management logics
+// Manager is a global license manager that encapsulates the license management logics.
 type Manager interface {
 	// Start runs the license manager.
 	Start(context.Context) error
@@ -28,6 +28,8 @@ type Manager interface {
 	SetOperatorChannel(c chan event.Event)
 	// LastError returns the last license manager error.
 	LastError() error
+	// Status returns the current licensing status.
+	Status() stnrv1.LicenseStatus
 }
 
 func NewManager(key string, logger logr.Logger) Manager {

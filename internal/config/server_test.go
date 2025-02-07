@@ -150,13 +150,32 @@ func TestConfigDiscovery(t *testing.T) {
 	c1s := cStore.Get("ns/gw1")
 	assert.True(t, c1s.DeepEqual(c1Ok), "config ok")
 
+	// license status client should return a nil license status
+	lc, err := cdsclient.NewLicenseStatusClient(addr1, logger.NewLogger("license-status"))
+	assert.NoError(t, err, "license client setup")
+	status, err := lc.LicenseStatus(ctx)
+	assert.NoError(t, err, "loading status 1 ok")
+	assert.Equal(t, stnrv1.NewEmptyLicenseStatus(), status, "license 1 ok")
+
 	log.Info("creating a config for the 2nd client", "id", "ns/gw2")
 	c2Ok := zeroConfig("ns", "gw2", "realm2")
 	e = event.NewEventUpdate(0)
 	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok, c2Ok}
+	licenseStatus := stnrv1.LicenseStatus{
+		EnabledFeatures:  []string{"a", "b", "c"},
+		SubscriptionType: "test",
+		ValidUntil:       "forever",
+		LastError:        "",
+	}
+	e.LicenseStatus = licenseStatus
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
+
+	// license status client should return the new license status
+	status, err = lc.LicenseStatus(ctx)
+	assert.NoError(t, err, "loading status 1 ok")
+	assert.Equal(t, licenseStatus, status, "license 1 ok")
 
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client 1 config ok")

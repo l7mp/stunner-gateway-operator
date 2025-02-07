@@ -183,9 +183,11 @@ func (r *DefaultRenderer) renderManagedGateways(e *event.EventRender) {
 		pipelineCtx.Merge(gcCtx)
 	}
 
-	// updates must be acknowledged to the operator by the updater
 	u := pipelineCtx.update.DeepCopy()
+
+	// updates must be acknowledged to the operator by the updater
 	u.SetRequestAck(true)
+
 	r.operatorCh <- u
 }
 

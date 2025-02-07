@@ -21,6 +21,7 @@ import (
 
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	// "reflect"
@@ -64,6 +65,7 @@ func testManagedMode() {
 		var clientCancel context.CancelFunc
 		var ch chan *stnrv1.StunnerConfig
 		var cdsClient cdsclient.Client
+		var licenseClient cdsclient.LicenseStatusClient
 
 		BeforeAll(func() {
 			config.EnableEndpointDiscovery = true
@@ -72,10 +74,12 @@ func testManagedMode() {
 			clientCtx, clientCancel = context.WithCancel(context.Background())
 			ch = make(chan *stnrv1.StunnerConfig, 128)
 			var err error
-			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
-				logger.NewLoggerFactory(stunnerLogLevel))
+			log := logger.NewLoggerFactory(stunnerLogLevel)
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", log)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
+			licenseClient, err = cdsclient.NewLicenseStatusClient(cdsServerAddr, log.NewLogger("license-status"))
+			Expect(err).Should(Succeed())
 		})
 
 		AfterAll(func() {
@@ -122,6 +126,13 @@ func testManagedMode() {
 				"GatewayClass name")
 			Expect(gwConfig.GetNamespace()).To(Equal(testutils.TestGwConfig.GetNamespace()),
 				"GatewayClass namespace")
+		})
+
+		It("should return a default licensing status", func() {
+			Eventually(func() bool {
+				status, err := licenseClient.LicenseStatus(ctx)
+				return err == nil && reflect.DeepEqual(status, stnrv1.NewEmptyLicenseStatus())
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {

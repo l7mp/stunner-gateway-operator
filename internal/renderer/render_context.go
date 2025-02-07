@@ -27,8 +27,11 @@ func NewRenderContext(r *DefaultRenderer, gc *gwapiv1.GatewayClass) *RenderConte
 	if gc != nil {
 		logger = r.log.WithValues("gateway-class", gc.GetName())
 	}
+	update := event.NewEventUpdate(r.gen)
+	update.LicenseStatus = r.licmgr.Status()
+
 	return &RenderContext{
-		update: event.NewEventUpdate(r.gen),
+		update: update,
 		gc:     gc,
 		gws:    store.NewGatewayStore(),
 		log:    logger,

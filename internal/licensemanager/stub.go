@@ -15,13 +15,14 @@ type stubMgr struct{}
 
 func NewStubManager(_ string, _ logr.Logger) Manager { return &stubMgr{} }
 
-func (_ *stubMgr) Start(_ context.Context) error      { return nil }
-func (_ *stubMgr) Validate(_ licensecfg.Feature) bool { return true }
-func (_ *stubMgr) SubscriptionType() licensecfg.SubscriptionType {
-	return licensecfg.SubscriptionTypeFree
-}
+func (_ *stubMgr) Start(_ context.Context) error         { return nil }
+func (_ *stubMgr) Validate(_ licensecfg.Feature) bool    { return true }
+func (_ *stubMgr) Status() stnrv1.LicenseStatus          { return stnrv1.NewEmptyLicenseStatus() }
 func (_ *stubMgr) LastError() error                      { return nil }
 func (_ *stubMgr) SetOperatorChannel(_ chan event.Event) {}
 func (_ *stubMgr) GenerateLicenseConfig() (stnrv1.LicenseConfig, error) {
 	return stnrv1.LicenseConfig{}, nil
+}
+func (_ *stubMgr) SubscriptionType() licensecfg.SubscriptionType {
+	return licensecfg.NewNilSubscriptionType()
 }

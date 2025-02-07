@@ -22,12 +22,13 @@ type UpdateConf struct {
 }
 
 type EventUpdate struct {
-	Type        EventType
-	UpsertQueue UpdateConf
-	DeleteQueue UpdateConf
-	ConfigQueue ConfigConf
-	Generation  int
-	RequestAck  bool
+	Type          EventType
+	UpsertQueue   UpdateConf
+	DeleteQueue   UpdateConf
+	ConfigQueue   ConfigConf
+	LicenseStatus stnrv1.LicenseStatus
+	Generation    int
+	RequestAck    bool
 }
 
 // NewEvent returns an empty event
@@ -54,9 +55,10 @@ func NewEventUpdate(generation int) *EventUpdate {
 			Deployments:    store.NewDeploymentStore(),
 			DaemonSets:     store.NewDaemonSetStore(),
 		},
-		ConfigQueue: []*stnrv1.StunnerConfig{},
-		Generation:  generation,
-		RequestAck:  false,
+		ConfigQueue:   []*stnrv1.StunnerConfig{},
+		LicenseStatus: stnrv1.NewEmptyLicenseStatus(),
+		Generation:    generation,
+		RequestAck:    false,
 	}
 }
 
@@ -65,11 +67,11 @@ func (e *EventUpdate) GetType() EventType {
 }
 
 func (e *EventUpdate) String() string {
-	return fmt.Sprintf("%s (gen: %d, ack: %t): upsert-queue: gway-cls: %d, gway: %d, "+
+	return fmt.Sprintf("%s (gen: %d, ack: %t, license: %s): upsert-queue: gway-cls: %d, gway: %d, "+
 		"route: %d, routeV1A2: %d, svc: %d, confmap: %d, dp: %d, ds: %d / "+
 		"delete-queue: gway-cls: %d, gway: %d, route: %d, routeV1A2: %d, "+
 		"svc: %d, confmap: %d, dp: %d, ds: %d / config-queue: %d",
-		e.Type.String(), e.Generation, e.RequestAck,
+		e.Type.String(), e.Generation, e.RequestAck, e.LicenseStatus.String(),
 		e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),
 		e.UpsertQueue.UDPRoutes.Len(), e.UpsertQueue.UDPRoutesV1A2.Len(),
 		e.UpsertQueue.Services.Len(), e.UpsertQueue.ConfigMaps.Len(),
@@ -105,6 +107,8 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 	u.DeleteQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
 	u.DeleteQueue.Deployments = q.Deployments.DeepCopy()
 	u.DeleteQueue.DaemonSets = q.DaemonSets.DeepCopy()
+
+	u.LicenseStatus = e.LicenseStatus
 
 	u.ConfigQueue = make([]*stnrv1.StunnerConfig, len(e.ConfigQueue))
 	copy(u.ConfigQueue, e.ConfigQueue)

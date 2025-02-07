@@ -71,7 +71,6 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 		e.String())
 
 	configs := []cdsserver.Config{}
-
 	for _, conf := range e.ConfigQueue {
 		id := conf.Admin.Name
 		c.log.V(4).Info("Config update", "generation", e.Generation, "client", id, "config",
@@ -85,6 +84,8 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 	if err := c.Server.UpdateConfig(configs); err != nil {
 		return err
 	}
+
+	c.Server.UpdateLicenseStatus(e.LicenseStatus)
 
 	return nil
 }
