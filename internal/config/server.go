@@ -19,9 +19,13 @@ type Server struct {
 }
 
 func NewCDSServer(addr string, logger logr.Logger) *Server {
+	return newCDSServer(addr, nil, logger)
+}
+
+func newCDSServer(addr string, patcher cdsserver.ConfigPatcher, logger logr.Logger) *Server {
 	log := logger.WithName("cds-server")
 	return &Server{
-		Server:          cdsserver.New(addr, nil, log),
+		Server:          cdsserver.New(addr, patcher, log),
 		configCh:        make(chan event.Event, 10),
 		ProgressTracker: NewProgressTracker(),
 		log:             log,

@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-logr/zapr"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/pkg/config/client"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -63,9 +63,25 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsclient.WriteWait = 400 * time.Millisecond
 	cdsclient.RetryPeriod = 400 * time.Millisecond
 
+	nodeStore := store.NewNodeStore()
+	n1 := testutils.TestNode.DeepCopy()
+	nodeStore.Upsert(n1)
+
 	testCDSAddr := getRandCDSAddr()
 	log.Info("create server", "address", testCDSAddr)
-	srv := NewCDSServer(testCDSAddr, zlogger)
+	patcher := func(conf *stnrv1.StunnerConfig, node string) (*stnrv1.StunnerConfig, error) {
+		if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
+			// rewrite the realm to the node name
+			for _, a := range n.Status.Addresses {
+				if a.Type == corev1.NodeExternalIP {
+					conf.Auth.Realm = a.Address
+					return conf, nil
+				}
+			}
+		}
+		return conf, nil
+	}
+	srv := newCDSServer(testCDSAddr, patcher, zlogger)
 	assert.NotNil(t, srv, "server")
 
 	log.Info("starting CDS server")
@@ -80,13 +96,13 @@ func TestConfigDiscovery(t *testing.T) {
 	id1 := "ns/gw1"
 	addr1 := "http://" + testCDSAddr
 	log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
-	cdsc1, err := cdsclient.New(addr1, id1, logger)
+	cdsc1, err := cdsclient.New(addr1, id1, "testnode-ok", logger)
 	assert.NoError(t, err, "cds client setup")
 
 	id2 := "ns/gw2"
 	addr2 := "http://" + testCDSAddr
 	log.Info("creating CDS client instance 2", "address", addr2, "id", id2)
-	cdsc2, err := cdsclient.New(addr2, id2, logger)
+	cdsc2, err := cdsclient.New(addr2, id2, "", logger)
 	assert.NoError(t, err, "cds client setup")
 
 	ch1 := make(chan *stnrv1.StunnerConfig, 10)
@@ -129,6 +145,8 @@ func TestConfigDiscovery(t *testing.T) {
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client config ok")
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 
 	c2, err = cdsc2.Load()
@@ -138,6 +156,8 @@ func TestConfigDiscovery(t *testing.T) {
 	// we should have received a config update
 	c1 = watchConfig(ch1, 1500*time.Millisecond)
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 
 	// no config update from client 2
@@ -180,6 +200,8 @@ func TestConfigDiscovery(t *testing.T) {
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client 1 config ok")
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 	c2, err = cdsc2.Load()
 	assert.NoError(t, err, "loading client 2 config ok")
@@ -213,6 +235,8 @@ func TestConfigDiscovery(t *testing.T) {
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client config ok")
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 	c2, err = cdsc2.Load()
 	assert.NoError(t, err, "loading client config ok")
@@ -228,7 +252,7 @@ func TestConfigDiscovery(t *testing.T) {
 	// watcher3
 	id3 := "ns/gw3"
 	log.Info("creating CDS client instance 3", "address", addr2, "id", id3)
-	cdsc3, err := cdsclient.New(addr2, id3, logger)
+	cdsc3, err := cdsclient.New(addr2, id3, "", logger)
 	assert.NoError(t, err, "cds client setup")
 
 	ch3 := make(chan *stnrv1.StunnerConfig, 10)
@@ -267,6 +291,8 @@ func TestConfigDiscovery(t *testing.T) {
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client config ok")
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 	c2, err = cdsc2.Load()
 	assert.NoError(t, err, "loading client config ok")
@@ -309,6 +335,8 @@ func TestConfigDiscovery(t *testing.T) {
 	c1, err = cdsc1.Load()
 	assert.NoError(t, err, "loading client config ok")
 	assert.NotNil(t, c1)
+	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
+	c1.Auth.Realm = "realm1" // reset
 	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
 	c2, err = cdsc2.Load()
 	assert.Error(t, err, "load")

@@ -63,7 +63,7 @@ func testManagedModeEndpointController() {
 			clientCtx, clientCancel = context.WithCancel(context.Background())
 			ch = make(chan *stnrv1.StunnerConfig, 128)
 			var err error
-			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1",
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())
 			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
