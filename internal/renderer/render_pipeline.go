@@ -108,7 +108,7 @@ func (r *DefaultRenderer) renderGatewayClass(e *event.EventRender) {
 		setGatewayClassStatusAccepted(gc, nil)
 
 		// send the update back to the operator
-		r.operatorCh <- c.update.DeepCopy()
+		r.operatorCh.Channel() <- c.update.DeepCopy()
 	}
 }
 
@@ -188,7 +188,7 @@ func (r *DefaultRenderer) renderManagedGateways(e *event.EventRender) {
 	// updates must be acknowledged to the operator by the updater
 	u.SetRequestAck(true)
 
-	r.operatorCh <- u
+	r.operatorCh.Channel() <- u
 }
 
 // finalizeManagedGateways invalidates all managed resources
@@ -220,7 +220,7 @@ func (r *DefaultRenderer) finalizeManagedGateways(e *event.EventFinalize) {
 	// finalization updates must be acknowledged to the operator by the updater
 	u := pipelineCtx.update.DeepCopy()
 	u.SetRequestAck(true)
-	r.operatorCh <- u
+	r.operatorCh.Channel() <- u
 }
 
 // renderForGateways renders a configuration for a set of Gateways (c.gws)

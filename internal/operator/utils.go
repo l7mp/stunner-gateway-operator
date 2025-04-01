@@ -23,7 +23,7 @@ func (o *Operator) GetLogger() logr.Logger {
 }
 
 // GetOperatorChannel returns the channel on which the operator event dispatcher listens
-func (o *Operator) GetOperatorChannel() chan event.Event {
+func (o *Operator) GetOperatorChannel() event.EventChannel {
 	return o.operatorCh
 }
 

@@ -20,7 +20,7 @@ type Renderer interface {
 	config.ProgressReporter
 	Start(ctx context.Context) error
 	GetRenderChannel() chan event.Event
-	SetOperatorChannel(ch chan event.Event)
+	SetOperatorChannel(ch event.EventChannel)
 }
 
 // configRenderer is a generic interface for the rendering components that can generate components
@@ -48,7 +48,8 @@ type DefaultRenderer struct {
 	adminRenderer, authRenderer configRenderer
 	dataplaneGenerator          resourceGenerator
 	gen                         int
-	renderCh, operatorCh        chan event.Event
+	renderCh                    chan event.Event
+	operatorCh                  event.EventChannel
 	*config.ProgressTracker
 	log logr.Logger
 }
@@ -74,7 +75,12 @@ func (r *DefaultRenderer) Start(ctx context.Context) error {
 	r.ctx = ctx
 
 	go func() {
-		defer close(r.renderCh)
+		defer func() {
+			close(r.renderCh)
+			if r.operatorCh != nil {
+				r.operatorCh.Put()
+			}
+		}()
 
 		for {
 			select {
@@ -115,8 +121,9 @@ func (r *DefaultRenderer) GetRenderChannel() chan event.Event {
 }
 
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens.
-func (r *DefaultRenderer) SetOperatorChannel(ch chan event.Event) {
+func (r *DefaultRenderer) SetOperatorChannel(ch event.EventChannel) {
 	r.operatorCh = ch
+	ch.Get()
 }
 
 // renderAdmin is a wrapper for adminRenderer.render()

@@ -44,12 +44,12 @@ const secretGatewayConfigIndex = "secretGatewayConfigIndex"
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
-	eventCh     chan event.Event
+	eventCh     event.EventChannel
 	terminating bool
 	log         logr.Logger
 }
 
-func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
+func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &gatewayConfigReconciler{
 		Client:  mgr.GetClient(),
@@ -61,6 +61,10 @@ func NewGatewayConfigController(mgr manager.Manager, ch chan event.Event, log lo
 	if err != nil {
 		return nil, err
 	}
+
+	// increase the ref count on the channel
+	r.eventCh.Get()
+
 	r.log.Info("Created GatewayConfig controller")
 
 	if err := c.Watch(
@@ -160,7 +164,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	r.log.V(2).Info("Reset AuthSecret store", "secrets", store.AuthSecrets.String())
 
 	if !r.terminating {
-		r.eventCh <- event.NewEventReconcile()
+		r.eventCh.Channel() <- event.NewEventReconcile()
 	}
 
 	return reconcile.Result{}, nil
@@ -219,4 +223,5 @@ func secretGatewayConfigIndexFunc(o client.Object) []string {
 
 func (r *gatewayConfigReconciler) Terminate() {
 	r.terminating = true
+	r.eventCh.Put()
 }

@@ -45,27 +45,29 @@ type OperatorConfig struct {
 }
 
 type Operator struct {
-	ctx                                       context.Context
-	mgr                                       manager.Manager
-	gwConfC, dpC, gwC, rouC, nodeC            controllers.Controller
-	renderCh, operatorCh, updaterCh, configCh chan event.Event
-	manager                                   manager.Manager
-	tracker                                   *config.ProgressTracker
-	progressReporters                         []config.ProgressReporter
-	finalizer                                 bool
-	gen, lastAckedGen                         int
-	ackLock                                   sync.RWMutex
-	log, logger                               logr.Logger
+	ctx                            context.Context
+	mgr                            manager.Manager
+	gwConfC, dpC, gwC, rouC, nodeC controllers.Controller
+	operatorCh                     event.EventChannel
+	renderCh, updaterCh, configCh  chan event.Event
+	manager                        manager.Manager
+	tracker                        *config.ProgressTracker
+	progressReporters              []config.ProgressReporter
+	finalizer                      bool
+	gen, lastAckedGen              int
+	ackLock                        sync.RWMutex
+	log, logger                    logr.Logger
 }
 
 // NewOperator creates a new Operator
 func NewOperator(cfg OperatorConfig) *Operator {
 	config.ControllerName = cfg.ControllerName
 
+	opCh := make(chan event.Event, channelBufferSize)
 	return &Operator{
 		mgr:          cfg.Manager,
 		renderCh:     cfg.RenderCh,
-		operatorCh:   make(chan event.Event, channelBufferSize),
+		operatorCh:   event.NewEventChannel(opCh),
 		updaterCh:    cfg.UpdaterCh,
 		configCh:     cfg.ConfigCh,
 		tracker:      config.NewProgressTracker(),
@@ -88,6 +90,9 @@ func (o *Operator) Start(ctx context.Context, cancel context.CancelFunc) error {
 	if o.mgr == nil {
 		return fmt.Errorf("Controller runtime manager uninitialized")
 	}
+
+	// increment the refcount on our operator channel
+	o.operatorCh.Get()
 
 	log.V(3).Info("Starting GatewayConfig controller")
 	c, err := controllers.NewGatewayConfigController(o.mgr, o.operatorCh, o.logger)
@@ -130,7 +135,7 @@ func (o *Operator) Start(ctx context.Context, cancel context.CancelFunc) error {
 }
 
 func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
-	defer close(o.operatorCh)
+	defer o.operatorCh.Close()
 
 	throttler := time.NewTicker(config.ThrottleTimeout)
 	throttler.Stop()
@@ -139,7 +144,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 	for {
 		select {
 
-		case e := <-o.operatorCh:
+		case e := <-o.operatorCh.Channel():
 			switch e.GetType() {
 			case event.EventTypeUpdate:
 				// pass through to the updater
@@ -221,6 +226,9 @@ func (o *Operator) Terminate() {
 	if o.finalizer {
 		o.Finalize()
 	}
+
+	// release our channel
+	o.operatorCh.Put()
 }
 
 // Finalize invalidates the status on all the managed resources. Note that Finalize must be called
@@ -239,7 +247,7 @@ func (o *Operator) Finalize() {
 		"last-acked-generation", lastGen)
 
 	// event loop is blocked: we must handle message passing ourselves
-	u := <-o.operatorCh
+	u := <-o.operatorCh.Channel()
 
 	o.log.V(2).Info("Renderer ready, initiating the updater", "event", u.String())
 
@@ -254,7 +262,7 @@ func (o *Operator) Finalize() {
 	timeout := time.After(2 * time.Second)
 	for {
 		select {
-		case <-o.operatorCh:
+		case <-o.operatorCh.Channel():
 			if o.GetLastAckedGeneration() != finalGen {
 				o.log.V(2).Info("Update ready, exiting finalizer",
 					"gen", o.gen, "last-acked-generation", lastGen)

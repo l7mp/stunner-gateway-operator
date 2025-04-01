@@ -41,12 +41,12 @@ const (
 
 type udpRouteReconciler struct {
 	client.Client
-	eventCh     chan event.Event
+	eventCh     event.EventChannel
 	terminating bool
 	log         logr.Logger
 }
 
-func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
+func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &udpRouteReconciler{
 		Client:  mgr.GetClient(),
@@ -58,6 +58,10 @@ func NewUDPRouteController(mgr manager.Manager, ch chan event.Event, log logr.Lo
 	if err != nil {
 		return nil, err
 	}
+
+	// increase the ref count on the channel
+	r.eventCh.Get()
+
 	r.log.Info("Created UDPRoute controller")
 
 	// watch UDPRoute objects
@@ -354,7 +358,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	store.StaticServices.Reset(ssvcList)
 	r.log.V(2).Info("Reset StaticService store", "static-services", store.StaticServices.String())
 
-	r.eventCh <- event.NewEventReconcile()
+	r.eventCh.Channel() <- event.NewEventReconcile()
 
 	return reconcile.Result{}, nil
 }
@@ -636,6 +640,7 @@ func staticServiceUDPRouteIndexFunc(o client.Object) []string {
 
 func (r *udpRouteReconciler) Terminate() {
 	r.terminating = true
+	r.eventCh.Put()
 }
 
 // TypedLabelSelectorPredicate is the generic version of LabelSelectorPredicate that somehow seems

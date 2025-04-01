@@ -28,12 +28,12 @@ const NodeListSize = 10
 
 type nodeReconciler struct {
 	client.Client
-	eventCh     chan event.Event
+	eventCh     event.EventChannel
 	terminating bool
 	log         logr.Logger
 }
 
-func NewNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger) (Controller, error) {
+func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
 	r := &nodeReconciler{
 		Client:  mgr.GetClient(),
 		eventCh: ch,
@@ -44,6 +44,10 @@ func NewNodeController(mgr manager.Manager, ch chan event.Event, log logr.Logger
 	if err != nil {
 		return nil, err
 	}
+
+	// increase the ref count on the channel
+	r.eventCh.Get()
+
 	r.log.Info("created node controller")
 
 	if err := c.Watch(
@@ -69,6 +73,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	log.Info("Reconciling")
 
 	// the node being reconciled
+	eventCh := r.eventCh.Channel()
 	node := &corev1.Node{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -78,7 +83,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		log.Info("node removed: triggering reconcile")
 		store.Nodes.Remove(req.NamespacedName)
 
-		r.eventCh <- event.NewEventReconcile()
+		eventCh <- event.NewEventReconcile()
 		return reconcile.Result{}, nil
 	}
 
@@ -87,7 +92,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		log.Info("node added: triggering reconcile")
 		store.Nodes.Upsert(node)
 
-		r.eventCh <- event.NewEventReconcile()
+		eventCh <- event.NewEventReconcile()
 		return reconcile.Result{}, nil
 
 	}
@@ -101,10 +106,11 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	log.Info("node addresses changed: triggering reconcile")
 	store.Nodes.Upsert(node)
 
-	r.eventCh <- event.NewEventReconcile()
+	eventCh <- event.NewEventReconcile()
 	return reconcile.Result{}, nil
 }
 
 func (r *nodeReconciler) Terminate() {
 	r.terminating = true
+	r.eventCh.Put()
 }

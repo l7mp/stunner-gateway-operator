@@ -25,7 +25,7 @@ type Manager interface {
 	// Generate a license configuration for the dataplane.
 	GenerateLicenseConfig() (stnrv1.LicenseConfig, error)
 	// SetOperatorChannel sets up the operator channel where the manager can send rendering
-	SetOperatorChannel(c chan event.Event)
+	SetOperatorChannel(c event.EventChannel)
 	// LastError returns the last license manager error.
 	LastError() error
 	// Status returns the current licensing status.

@@ -20,9 +20,10 @@ type UpdaterConfig struct {
 }
 
 type Updater struct {
-	ctx             context.Context
-	manager         manager.Manager
-	updaterCh, opCh chan event.Event
+	ctx       context.Context
+	manager   manager.Manager
+	updaterCh chan event.Event
+	opCh      event.EventChannel
 	*config.ProgressTracker
 	log logr.Logger
 }
@@ -41,6 +42,7 @@ func (u *Updater) Start(ctx context.Context) error {
 
 	go func() {
 		defer close(u.updaterCh)
+		defer u.opCh.Put()
 
 		for {
 			select {
@@ -61,7 +63,7 @@ func (u *Updater) Start(ctx context.Context) error {
 				}
 
 				if update.GetRequestAck() {
-					u.opCh <- event.NewEventAck(update.Generation)
+					u.opCh.Channel() <- event.NewEventAck(update.Generation)
 				}
 
 				u.ProgressUpdate(-1)
@@ -210,6 +212,7 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 }
 
 // SetAckChannel sets the channel to send acks to the operator.
-func (u *Updater) SetAckChannel(ch chan event.Event) {
+func (u *Updater) SetAckChannel(ch event.EventChannel) {
 	u.opCh = ch
+	ch.Get()
 }
