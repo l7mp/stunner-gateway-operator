@@ -185,6 +185,20 @@ type DataplaneSpec struct {
 	//
 	// +optional
 	EnableMetricsEnpoint bool `json:"enableMetricsEndpoint,omitempty"`
+
+	// OffloadEngine defines the dataplane offload mode, either "None", "XDP", "TC", or
+	// "Auto". Set to "Auto" to let STUNner find the optimal offload mode. Default is "None".
+	//
+	// +optional
+	// +kubebuilder:default=None
+	// +kubebuilder:validation:Pattern=`^None|XDP|TC|Auto$`
+	OffloadEngine string `json:"offload_engine,omitempty"`
+
+	// OffloadInterfaces explicitly specifies the interfaces on which to enable the offload
+	// engine. Empty list means to enable offload on all interfaces (this is the default).
+	//
+	// +optional
+	OffloadInterfaces []string `json:"offload_interfaces,omitempty"`
 }
 
 // +kubebuilder:object:root=true

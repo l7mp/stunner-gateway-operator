@@ -81,6 +81,10 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, opdefault.DefaultHealthCheckEndpoint, *admin.HealthCheckEndpoint,
 					"health-check")
 
+				// the admin-config validator sets the default
+				assert.Equal(t, "None", admin.OffloadEngine, "offload-engine")
+				assert.Len(t, admin.OffloadInterfaces, 0, "offload-intfs len")
+
 				config.DataplaneMode = dpMode
 			},
 		},
@@ -121,6 +125,45 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, stnrconfv1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, opdefault.DefaultMetricsEndpoint, admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "", *admin.HealthCheckEndpoint, "health-check default on")
+
+				config.DataplaneMode = dpMode
+			},
+		},
+		{
+			name: "admin ok - offload",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				dp := c.dps[0].DeepCopy()
+				dp.Spec.OffloadEngine = "XDP"
+				dp.Spec.OffloadInterfaces = []string{"lo", "eth0"}
+				c.dps = []stnrgwv1.Dataplane{*dp}
+			},
+			tester: func(t *testing.T, r *DefaultRenderer) {
+				dpMode := config.DataplaneMode
+				config.DataplaneMode = config.DataplaneModeManaged
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.dp, err = getDataplane(c)
+				assert.NoError(t, err, "dataplane found")
+
+				admin, err := r.renderAdmin(c)
+				assert.NoError(t, err, "renderAdmin")
+
+				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
+				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, "XDP", admin.OffloadEngine, "offload-engine")
+				assert.Len(t, admin.OffloadInterfaces, 2, "offload-intfs len")
+				assert.Contains(t, admin.OffloadInterfaces, "lo", "offload-intfs lo")
+				assert.Contains(t, admin.OffloadInterfaces, "eth0", "offload-intfs eth0")
 
 				config.DataplaneMode = dpMode
 			},

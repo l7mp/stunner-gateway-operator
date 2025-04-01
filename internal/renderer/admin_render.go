@@ -36,11 +36,20 @@ func (r *adminRenderer) render(c *RenderContext) (stnrconfv1.Config, error) {
 		he = ""
 	}
 
+	offload := ""
+	var offloadIntfs []string
+	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil {
+		offload = c.dp.Spec.OffloadEngine
+		offloadIntfs = c.dp.Spec.OffloadInterfaces
+	}
+
 	admin := stnrconfv1.AdminConfig{
 		Name:                opdefault.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
 		LogLevel:            loglevel,
 		MetricsEndpoint:     me,
 		HealthCheckEndpoint: &he,
+		OffloadEngine:       offload,
+		OffloadInterfaces:   offloadIntfs,
 	}
 
 	// validate so that defaults get filled in
