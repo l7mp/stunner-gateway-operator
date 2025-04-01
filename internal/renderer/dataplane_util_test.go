@@ -4,6 +4,7 @@ import (
 	// "context"
 	//"fmt"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,10 +19,12 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -156,9 +159,28 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				}
 				assert.Equal(t, probe, *container.ReadinessProbe, "container 1 - readiness probe")
 
+				assert.Len(t, container.Env, 5, "container 1 - env len")
+				podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
+				podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+				assert.Contains(t, container.Env,
+					corev1.EnvVar{Name: "STUNNER_ADDR", ValueFrom: &podAddrEnvVarSource},
+					"container 1 - env: addr")
+				nodeNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}
+				nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarNodeName,
+					ValueFrom: &nodeNameEnvVarSource}, "container 1 - env: nodename")
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarName,
+					Value: gw.GetName()}, "container 1 - env: name")
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarNamespace,
+					Value: gw.GetNamespace()}, "container 1 - env: namespace")
+				cdsAddr := &url.URL{Scheme: "http", Host: config.ConfigDiscoveryAddress}
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarConfigOrigin,
+					Value: cdsAddr.String()}, "container 1 - env: origin")
+
 				// remainder
 				assert.NotNil(t, podSpec.TerminationGracePeriodSeconds, "termination grace ptr")
-				assert.Equal(t, testutils.TestTerminationGrace, *podSpec.TerminationGracePeriodSeconds, "termination grace")
+				assert.Equal(t, testutils.TestTerminationGrace, *podSpec.TerminationGracePeriodSeconds,
+					"termination grace")
 				assert.True(t, podSpec.HostNetwork, "hostnetwork")
 				assert.Nil(t, podSpec.Affinity, "affinity")
 			},

@@ -130,6 +130,8 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 	gw := c.gws.GetFirst()
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+	nodeNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}
+	nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
 	// CDS server address
@@ -158,13 +160,16 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,
 			}, {
-				Name:  "STUNNER_NAME", // gateway name for creating the stunnerd id
+				Name:  stnrconfv1.DefaultEnvVarName, // gateway name for creating the stunnerd id
 				Value: gw.GetName(),
 			}, {
-				Name:  "STUNNER_NAMESPACE", // gateway namespace for creating the stunnerd id
+				Name:  stnrconfv1.DefaultEnvVarNamespace, // gateway namespace for creating the stunnerd id
 				Value: gw.GetNamespace(),
 			}, {
-				Name:  "STUNNER_CONFIG_ORIGIN", // CDS server address
+				Name:      stnrconfv1.DefaultEnvVarNodeName, // nodename
+				ValueFrom: &nodeNameEnvVarSource,
+			}, {
+				Name:  stnrconfv1.DefaultEnvVarConfigOrigin, // CDS server address
 				Value: cdsAddr.String(),
 			}},
 			Resources: corev1.ResourceRequirements{
