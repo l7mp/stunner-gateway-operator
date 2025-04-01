@@ -2,8 +2,9 @@ package controllers
 
 import (
 	"context"
+	"reflect"
+
 	// "errors"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,133 +67,42 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	}
 
 	log.Info("Reconciling")
-	var node corev1.Node
-	found := true
 
 	// the node being reconciled
-	err := r.Get(ctx, req.NamespacedName, &node)
-	if err != nil {
+	node := &corev1.Node{}
+	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get Node")
 			return reconcile.Result{}, err
 		}
-		found = false
-	}
-
-	// the node stored locally
-	nodes := store.Nodes.GetAll()
-	if len(nodes) > 1 {
-		log.Error(err, "Internal error: more than one node found in store", "nodes", len(nodes))
-		return reconcile.Result{}, err
-	}
-
-	var stored *corev1.Node
-	if len(nodes) == 1 {
-		stored = nodes[0]
-	}
-
-	// no action neeeded if a node other than the one stored locally is being deleted, added or
-	// modified
-	if stored != nil && store.GetNamespacedName(stored) != req.NamespacedName {
-		log.V(2).Info("Ignoring event on untracked node", "stored", store.GetNamespacedName(stored).String())
-		return reconcile.Result{}, nil
-	}
-
-	// locally stored node is being deleted
-	if !found && stored != nil && store.GetNamespacedName(stored) == req.NamespacedName {
-		log.V(1).Info("Deleting locally stored node")
+		log.Info("node removed: triggering reconcile")
 		store.Nodes.Remove(req.NamespacedName)
-		stored = nil
-	}
-
-	// locally stored node is being modified
-	if found && stored != nil && store.GetNamespacedName(stored) == req.NamespacedName {
-		log.V(1).Info("Modifying locally stored node")
-
-		oldAddr := store.GetExternalAddress(stored)
-		newAddr := store.GetExternalAddress(&node)
-
-		// address remains the same
-		if oldAddr == newAddr {
-			return reconcile.Result{}, nil
-		}
-
-		if newAddr != "" {
-			log.V(2).Info("External node address has changed", "node",
-				store.GetObjectKey(&node), "former-address", oldAddr,
-				"new-address", newAddr)
-
-			store.Nodes.Upsert(&node)
-
-			r.eventCh <- event.NewEventReconcile()
-			return reconcile.Result{}, nil
-		}
-
-		// node address is going away
-		store.Nodes.Remove(req.NamespacedName)
-	}
-
-	// find a new new node with a workable external address if one the 3 possible cases happens
-	// - stored node deleted
-	// - stored node modified and the new version has no external address
-	// - no node stored
-	newNode, addr, err := r.findNodeWithExternalAddress(ctx)
-	if err != nil {
-		// this is not fatal
-		r.log.Info("failed to find node with valid external address", "reason",
-			err.Error())
 
 		r.eventCh <- event.NewEventReconcile()
 		return reconcile.Result{}, nil
 	}
 
-	log.V(2).Info("Found node with a usable external address", "node",
-		store.GetObjectKey(newNode), "address", addr)
+	storedNode := store.Nodes.GetObject(req.NamespacedName)
+	if storedNode == nil {
+		log.Info("node added: triggering reconcile")
+		store.Nodes.Upsert(node)
 
-	store.Nodes.Upsert(newNode)
+		r.eventCh <- event.NewEventReconcile()
+		return reconcile.Result{}, nil
+
+	}
+
+	// only reconcile if addresses have changed
+	if reflect.DeepEqual(storedNode.Status.Addresses, node.Status.Addresses) {
+		// ignore event
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("node addresses changed: triggering reconcile")
+	store.Nodes.Upsert(node)
 
 	r.eventCh <- event.NewEventReconcile()
 	return reconcile.Result{}, nil
-}
-
-func (r *nodeReconciler) findNodeWithExternalAddress(ctx context.Context) (*corev1.Node, string, error) {
-	r.log.V(1).Info("trying to find  node with a usable external address")
-	count := 0
-
-	// list only at most NodeListSize number of nodes in one go
-	continueToken := ""
-	lo := &client.ListOptions{
-		Limit:    NodeListSize,
-		Continue: continueToken,
-	}
-
-	for {
-		nodes := &corev1.NodeList{}
-		if err := r.List(ctx, nodes, lo); err != nil {
-			return nil, "", err
-		}
-
-		for _, node := range nodes.Items {
-			node := node
-			r.log.V(2).Info("processing node", "name", node.GetName())
-
-			if addr := store.GetExternalAddress(&node); addr != "" {
-				return &node, addr, nil
-			}
-
-			count = count + 1
-		}
-
-		if len(nodes.Items) < NodeListSize || nodes.Continue == "" {
-			break
-		}
-
-		// no luck yet: search on
-		lo.Continue = nodes.Continue
-	}
-
-	return nil, "", fmt.Errorf("End of node list reached after searching through %d node(s)",
-		count)
 }
 
 func (r *nodeReconciler) Terminate() {
