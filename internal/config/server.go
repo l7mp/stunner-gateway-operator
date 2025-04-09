@@ -22,7 +22,7 @@ func NewCDSServer(addr string, logger logr.Logger) *Server {
 	return newCDSServer(addr, nil, logger)
 }
 
-func newCDSServer(addr string, patcher cdsserver.ConfigPatcher, logger logr.Logger) *Server {
+func newCDSServer(addr string, patcher cdsserver.ConfigNodePatcher, logger logr.Logger) *Server {
 	log := logger.WithName("cds-server")
 	return &Server{
 		Server:          cdsserver.New(addr, patcher, log),
@@ -79,10 +79,13 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 		id := conf.Admin.Name
 		c.log.V(4).Info("Config update", "generation", e.Generation, "client", id, "config",
 			conf.String())
-		configs = append(configs, cdsserver.Config{
-			Id:     id,
-			Config: conf,
-		})
+		if namespace, name, ok := cdsserver.NamespacedName(id); ok {
+			configs = append(configs, cdsserver.Config{
+				Name:      name,
+				Namespace: namespace,
+				Config:    conf,
+			})
+		}
 	}
 
 	if err := c.Server.UpdateConfig(configs); err != nil {

@@ -69,17 +69,17 @@ func TestConfigDiscovery(t *testing.T) {
 
 	testCDSAddr := getRandCDSAddr()
 	log.Info("create server", "address", testCDSAddr)
-	patcher := func(conf *stnrv1.StunnerConfig, node string) (*stnrv1.StunnerConfig, error) {
+	patcher := func(conf *stnrv1.StunnerConfig, node string) *stnrv1.StunnerConfig {
 		if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
 			// rewrite the realm to the node name
 			for _, a := range n.Status.Addresses {
 				if a.Type == corev1.NodeExternalIP {
 					conf.Auth.Realm = a.Address
-					return conf, nil
+					return conf
 				}
 			}
 		}
-		return conf, nil
+		return conf
 	}
 	srv := newCDSServer(testCDSAddr, patcher, zlogger)
 	assert.NotNil(t, srv, "server")
@@ -167,8 +167,9 @@ func TestConfigDiscovery(t *testing.T) {
 	// we should have a single config in the store
 	cStore := srv.GetConfigStore()
 	assert.Equal(t, 1, len(cStore.Snapshot()))
-	c1s := cStore.Get("ns/gw1")
-	assert.True(t, c1s.DeepEqual(c1Ok), "config ok")
+	c1s, ok := cStore.Get("ns", "gw1")
+	assert.True(t, ok, "config ok")
+	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
 
 	// license status client should return a nil license status
 	lc, err := cdsclient.NewLicenseStatusClient(addr1, logger.NewLogger("license-status"))
@@ -217,12 +218,14 @@ func TestConfigDiscovery(t *testing.T) {
 	// we should have 2 configs in the store
 	cStore = srv.GetConfigStore()
 	assert.Equal(t, 2, len(cStore.Snapshot()))
-	c1s = cStore.Get("ns/gw1")
+	c1s, ok = cStore.Get("ns", "gw1")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c1s)
-	assert.True(t, c1s.DeepEqual(c1Ok), "config ok")
-	c2s := cStore.Get("ns/gw2")
+	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
+	c2s, ok := cStore.Get("ns", "gw2")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c2s)
-	assert.True(t, c2s.DeepEqual(c2Ok), "config ok")
+	assert.True(t, c2s.Config.DeepEqual(c2Ok), "config ok")
 
 	log.Info("updating the 2nd config", "id2", c2Ok.Admin.Name)
 	c2Ok = zeroConfig("ns", "gw2", "realm2-new")
@@ -315,15 +318,18 @@ func TestConfigDiscovery(t *testing.T) {
 	// we should have 3 configs in the store
 	cStore = srv.GetConfigStore()
 	assert.Equal(t, 3, len(cStore.Snapshot()))
-	c1s = cStore.Get("ns/gw1")
+	c1s, ok = cStore.Get("ns", "gw1")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c1s)
-	assert.True(t, c1s.DeepEqual(c1Ok), "config ok")
-	c2s = cStore.Get("ns/gw2")
+	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
+	c2s, ok = cStore.Get("ns", "gw2")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c2s)
-	assert.True(t, c2s.DeepEqual(c2Ok), "config ok")
-	c3s := cStore.Get("ns/gw3")
+	assert.True(t, c2s.Config.DeepEqual(c2Ok), "config ok")
+	c3s, ok := cStore.Get("ns", "gw3")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c3s)
-	assert.True(t, c3s.DeepEqual(c3Ok), "config ok")
+	assert.True(t, c3s.Config.DeepEqual(c3Ok), "config ok")
 
 	log.Info("removing the config for the 2nd client", "id", "ns/gw2")
 	e = event.NewEventUpdate(0)
@@ -357,12 +363,14 @@ func TestConfigDiscovery(t *testing.T) {
 	// we should have 2 configs in the store
 	cStore = srv.GetConfigStore()
 	assert.Equal(t, 2, len(cStore.Snapshot()))
-	c1s = cStore.Get("ns/gw1")
+	c1s, ok = cStore.Get("ns", "gw1")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c1s)
-	assert.True(t, c1s.DeepEqual(c1Ok), "config ok")
-	c3s = cStore.Get("ns/gw3")
+	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
+	c3s, ok = cStore.Get("ns", "gw3")
+	assert.True(t, ok, "config ok")
 	assert.NotNil(t, c3s)
-	assert.True(t, c3s.DeepEqual(c3Ok), "config ok")
+	assert.True(t, c3s.Config.DeepEqual(c3Ok), "config ok")
 
 	log.Info("closing the 3rd watcher", "id", "nw/gw3")
 	cancel2()
