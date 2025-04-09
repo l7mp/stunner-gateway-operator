@@ -25,7 +25,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -48,7 +48,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 				gc.Spec.ParametersRef.Namespace = &ns2
 				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -69,7 +69,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 				gc.Spec.ParametersRef.Kind = "test"
 				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				_, err := r.getGatewayClass()
 				assert.Error(t, err, "gw-conf found")
 			},
@@ -86,7 +86,7 @@ func TestRenderGatewayConfigUtil(t *testing.T) {
 				gc.Spec.ParametersRef.Name = "test"
 				c.cls = []gwapiv1.GatewayClass{*gc}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}

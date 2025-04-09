@@ -169,6 +169,31 @@ const (
 	// DisableSessionAffiffinityAnnotationValue is the value that can be used to remove
 	// session-affinity settings from the LB service.
 	DisableSessionAffiffinityAnnotationValue = "true"
+
+	// EnableRelayAddressDiscoveryAnnotationKey is a Gateway annotation to allow STUNner to
+	// discover the public address of the node it is scheduled to run on. By default the relay
+	// address in STUNner's TURN listeners is initialized to the value of the $STUNNER_ADDR
+	// environment variable, which defaults to the pod IP address. However, pod address is
+	// (usually) private even when STUNner is deployed to the host-network namespace, which
+	// prevents STUNner from implementing a public TURN server as public TURN servers must
+	// return a public IP as the TURN relay address. This feature allows STUNner to set the
+	// relay address of STUNner's TURN listeners to the status.ExternalIP (if any) of the node
+	// it is running on by .  Default is to disable relay address discovery. Note that as of
+	// STUNner v1.1 this feature is available only in the premium tiers.
+	EnableRelayAddressDiscoveryAnnotationKey = "stunner.l7mp.io/enable-relay-address-discovery"
+
+	// EnableRelayAddressDiscoveryAnnotationValue is the value that can be used to enable relay
+	// address discovery.
+	EnableRelayAddressDiscoveryAnnotationValue = "true"
+
+	// DefaultSTUNnerAddressEnvVarName is the environment variable used for configuring
+	// stunnerd default listener address.
+	DefaultSTUNnerAddressEnvVarName string = "$" + stnrconfv1.DefaultEnvVarAddr
+
+	// NodeAddressPlaceholder is used internally by the operator to let the renderer to signal
+	// to the CDS server's config patcher to replace the listener address with the node
+	// external IP.
+	NodeAddressPlaceholder = "__node_address_placeholder" // guaranteed to not parse as a valid IP
 )
 
 var (

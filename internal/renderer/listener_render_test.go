@@ -30,7 +30,7 @@ func TestRenderListenerRender(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -70,7 +70,7 @@ func TestRenderListenerRender(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -101,7 +101,7 @@ func TestRenderListenerRender(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -143,7 +143,7 @@ func TestRenderListenerRender(t *testing.T) {
 				// conf.Spec.MaxPort = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*conf}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -189,7 +189,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw.Spec.Listeners[0].Protocol = gwapiv1.ProtocolType("dummy")
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -251,7 +251,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -332,7 +332,7 @@ func TestRenderListenerRender(t *testing.T) {
 				s.Type = corev1.SecretTypeOpaque
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -385,7 +385,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -440,7 +440,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -495,7 +495,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -554,7 +554,7 @@ func TestRenderListenerRender(t *testing.T) {
 				s.Type = corev1.SecretType("")
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -613,7 +613,7 @@ func TestRenderListenerRender(t *testing.T) {
 				s.Type = corev1.SecretTypeOpaque
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -672,7 +672,7 @@ func TestRenderListenerRender(t *testing.T) {
 				s.Data = map[string][]byte{"tls.crt": []byte("testcert")}
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -731,7 +731,7 @@ func TestRenderListenerRender(t *testing.T) {
 				s.Data = map[string][]byte{"tls.key": []byte("testkey")}
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -793,7 +793,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}
 				c.scrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -857,7 +857,7 @@ func TestRenderListenerRender(t *testing.T) {
 				}
 				c.scrts = []corev1.Secret{*s, testutils.TestSecret}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}

@@ -46,7 +46,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -86,7 +86,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				s1.Status.LoadBalancer.Ingress[0].Hostname = "dummy-hostname"
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc}
@@ -130,7 +130,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					}}
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -170,7 +170,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -203,7 +203,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -239,7 +239,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				s1.Status = corev1.ServiceStatus{}
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -289,7 +289,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -332,7 +332,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -391,7 +391,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					}}
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -433,7 +433,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -480,7 +480,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				c.gws = []gwapiv1.Gateway{*w}
 
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -544,7 +544,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -606,7 +606,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -634,7 +634,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.Listeners[1].Protocol = gwapiv1.ProtocolType("UDP")
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -695,7 +695,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.Listeners[0].Protocol = gwapiv1.ProtocolType("dummy-2")
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -756,7 +756,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -823,7 +823,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
 				c.gws = []gwapiv1.Gateway{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -886,7 +886,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					opdefault.MixedProtocolAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -957,7 +957,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1019,7 +1019,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["dummy"] = "dummyval"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1088,7 +1088,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1156,7 +1156,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					opdefault.DisableHealthCheckExposeAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1193,7 +1193,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1259,7 +1259,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1322,7 +1322,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "UDP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1392,7 +1392,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1458,7 +1458,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1512,7 +1512,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1545,7 +1545,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1591,7 +1591,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				w.Spec.LoadBalancerServiceAnnotations["service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol"] = "HTTP"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1638,7 +1638,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1690,7 +1690,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1737,7 +1737,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				gw.SetAnnotations(ann)
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1782,7 +1782,7 @@ func TestRenderServiceUtil(t *testing.T) {
 					opdefault.DisableSessionAffiffinityAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1824,7 +1824,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1865,7 +1865,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1913,7 +1913,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -1963,7 +1963,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2010,7 +2010,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2040,7 +2040,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				// default parsing
 				a := `{"force-np1":1,"force-np2":2,"force-np3":1000}`
 				nps, err := getServicePortsFromAnn(a)
@@ -2119,7 +2119,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2178,7 +2178,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2234,7 +2234,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2305,7 +2305,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -2379,7 +2379,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}

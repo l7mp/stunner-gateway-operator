@@ -29,7 +29,7 @@ func TestRenderNodeUtil(t *testing.T) {
 			svcs:  []corev1.Service{testutils.TestSvc},
 			nodes: []corev1.Node{testutils.TestNode},
 			prep:  func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				addr := getFirstNodeAddr()
 				assert.NotEmpty(t, addr, "public node-addr found")
 				assert.Equal(t, "1.2.3.4", addr, "public addr ok")
@@ -50,7 +50,7 @@ func TestRenderNodeUtil(t *testing.T) {
 				n2.SetName("node-2")
 				c.nodes = []corev1.Node{*n1, *n2}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				addr := getFirstNodeAddr()
 				assert.NotEmpty(t, addr, "public node-addr found")
 				assert.Equal(t, "1.2.3.4", addr, "public addr ok")
@@ -65,7 +65,7 @@ func TestRenderNodeUtil(t *testing.T) {
 				n1.Status.Addresses = []corev1.NodeAddress{}
 				c.nodes = []corev1.Node{*n1}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				addr := getFirstNodeAddr()
 				assert.Empty(t, addr, "public node-addr empty")
 			},

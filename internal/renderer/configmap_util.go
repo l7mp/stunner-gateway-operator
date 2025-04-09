@@ -16,7 +16,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-func (r *DefaultRenderer) renderConfig(c *RenderContext, name, namespace string, conf *stnrconfv1.StunnerConfig) (*corev1.ConfigMap, error) {
+func (r *renderer) renderConfig(c *RenderContext, name, namespace string, conf *stnrconfv1.StunnerConfig) (*corev1.ConfigMap, error) {
 	s := ""
 
 	if conf != nil {

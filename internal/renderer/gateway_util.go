@@ -26,7 +26,7 @@ const maxGwayStatusConds = 8
 
 type portMap map[int]bool
 
-func (r *DefaultRenderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
+func (r *renderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
 	// r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	ret := []*gwapiv1.Gateway{}

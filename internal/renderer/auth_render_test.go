@@ -24,7 +24,7 @@ func TestRenderAuthRender(t *testing.T) {
 			gws:  []gwapiv1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -56,7 +56,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = &s
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -83,7 +83,7 @@ func TestRenderAuthRender(t *testing.T) {
 				*w.Spec.AuthType = "dummy"
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -107,7 +107,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Username = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -131,7 +131,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Password = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -157,7 +157,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.Password = &p
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -184,7 +184,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -210,7 +210,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = &s
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -240,7 +240,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = &s
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -276,7 +276,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -318,7 +318,7 @@ func TestRenderAuthRender(t *testing.T) {
 				s.Data["secret"] = []byte("ext-secret")
 				c.ascrts = []corev1.Secret{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -353,7 +353,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -384,7 +384,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -414,7 +414,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -442,7 +442,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = nil
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -476,7 +476,7 @@ func TestRenderAuthRender(t *testing.T) {
 				w.Spec.SharedSecret = &sharedSecret
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}
@@ -516,7 +516,7 @@ func TestRenderAuthRender(t *testing.T) {
 				c.ascrts = []corev1.Secret{*s}
 
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
 				c := &RenderContext{gc: gc, log: log}

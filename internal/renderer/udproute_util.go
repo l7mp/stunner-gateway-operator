@@ -20,7 +20,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *DefaultRenderer) allUDPRoutes() []*stnrgwv1.UDPRoute {
+func (r *renderer) allUDPRoutes() []*stnrgwv1.UDPRoute {
 	rs := store.UDPRoutes.GetAll()
 
 	for _, uv1a2 := range store.UDPRoutesV1A2.GetAll() {
@@ -35,7 +35,7 @@ func (r *DefaultRenderer) allUDPRoutes() []*stnrgwv1.UDPRoute {
 	return rs
 }
 
-func (r *DefaultRenderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listener) []*stnrgwv1.UDPRoute {
+func (r *renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listener) []*stnrgwv1.UDPRoute {
 	r.log.V(4).Info("getUDPRoutes4Listener", "gateway", store.GetObjectKey(gw), "listener", l.Name)
 
 	ret := make([]*stnrgwv1.UDPRoute, 0)
@@ -163,7 +163,7 @@ func initRouteStatus(ro *stnrgwv1.UDPRoute) {
 }
 
 // isParentController returns true if at least one of the parents of the route is controlled by us
-func (r *DefaultRenderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
+func (r *renderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
 	gcs := r.getGatewayClasses()
 
 	for i := range ro.Spec.ParentRefs {
@@ -196,7 +196,7 @@ func (r *DefaultRenderer) isRouteControlled(ro *stnrgwv1.UDPRoute) bool {
 
 // isParentOutContext returns true if (1) the parent exists and (2) it is NOT included in the
 // gateway context being processed (in which case we do not generate a status for the parent)
-func (r *DefaultRenderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference) bool {
+func (r *renderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference) bool {
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
 	if p.Namespace != nil {
@@ -214,7 +214,7 @@ func (r *DefaultRenderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgw
 
 // className == "" means "do not consider classness of parent", this is useful for generating a
 // route status that is consistent across rendering contexts
-func (r *DefaultRenderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, className string) bool {
+func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, className string) bool {
 	// r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 	// 	"parent", store.DumpParentRef(p))
 
@@ -259,7 +259,7 @@ func (r *DefaultRenderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapi
 	return false
 }
 
-func (r *DefaultRenderer) getParentGateway(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference) *gwapiv1.Gateway {
+func (r *renderer) getParentGateway(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference) *gwapiv1.Gateway {
 	// find the corresponding gateway
 	ns := ro.GetNamespace()
 	if p.Namespace != nil {
@@ -271,7 +271,7 @@ func (r *DefaultRenderer) getParentGateway(ro *stnrgwv1.UDPRoute, p *gwapiv1.Par
 }
 
 // invalidateMaskedRoutes invalidates a masked GWAPIV1A2 UDPROute
-func (r *DefaultRenderer) invalidateMaskedRoutes(c *RenderContext) {
+func (r *renderer) invalidateMaskedRoutes(c *RenderContext) {
 	for _, ro := range store.UDPRoutesV1A2.GetAll() {
 		if !isRouteMasked(ro) || !r.isRouteControlled(ro) {
 			continue

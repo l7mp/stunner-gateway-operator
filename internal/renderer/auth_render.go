@@ -18,7 +18,7 @@ func newAuthRenderer() configRenderer {
 	return &authRenderer{}
 }
 
-func (r *authRenderer) render(c *RenderContext) (stnrconfv1.Config, error) {
+func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrconfv1.Config, error) {
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)

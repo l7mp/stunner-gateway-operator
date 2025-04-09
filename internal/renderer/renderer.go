@@ -6,9 +6,11 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
 
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
@@ -26,7 +28,7 @@ type Renderer interface {
 // configRenderer is a generic interface for the rendering components that can generate components
 // of the dataplane config.
 type configRenderer interface {
-	render(c *RenderContext) (stnrconfv1.Config, error)
+	render(c *RenderContext, args ...any) (stnrconfv1.Config, error)
 }
 
 // resourceGenerator is a generic interface for the generator components that can create K8s
@@ -41,26 +43,27 @@ type RendererConfig struct {
 	Logger         logr.Logger
 }
 
-type DefaultRenderer struct {
-	ctx                         context.Context
-	scheme                      *runtime.Scheme
-	licmgr                      licensemgr.Manager
-	adminRenderer, authRenderer configRenderer
-	dataplaneGenerator          resourceGenerator
-	gen                         int
-	renderCh                    chan event.Event
-	operatorCh                  event.EventChannel
+type renderer struct {
+	ctx                                           context.Context
+	scheme                                        *runtime.Scheme
+	licmgr                                        licensemgr.Manager
+	adminRenderer, authRenderer, listenerRenderer configRenderer
+	dataplaneGenerator                            resourceGenerator
+	gen                                           int
+	renderCh                                      chan event.Event
+	operatorCh                                    event.EventChannel
 	*config.ProgressTracker
 	log logr.Logger
 }
 
 // NewDefaultRenderer creates a new default Renderer.
 func NewDefaultRenderer(cfg RendererConfig) Renderer {
-	r := &DefaultRenderer{
+	r := &renderer{
 		scheme:             cfg.Scheme,
 		licmgr:             cfg.LicenseManager,
 		adminRenderer:      newAdminRenderer(),
 		authRenderer:       newAuthRenderer(),
+		listenerRenderer:   newListenerRenderer(cfg.Logger.WithName("listener-renderer")),
 		dataplaneGenerator: newDataplaneGenerator(cfg.Scheme),
 		renderCh:           make(chan event.Event, 10),
 		gen:                0,
@@ -71,7 +74,7 @@ func NewDefaultRenderer(cfg RendererConfig) Renderer {
 	return r
 }
 
-func (r *DefaultRenderer) Start(ctx context.Context) error {
+func (r *renderer) Start(ctx context.Context) error {
 	r.ctx = ctx
 
 	go func() {
@@ -116,18 +119,18 @@ func (r *DefaultRenderer) Start(ctx context.Context) error {
 }
 
 // GetRenderChannel returns the channel onn which the renderer listenens to rendering requests.
-func (r *DefaultRenderer) GetRenderChannel() chan event.Event {
+func (r *renderer) GetRenderChannel() chan event.Event {
 	return r.renderCh
 }
 
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens.
-func (r *DefaultRenderer) SetOperatorChannel(ch event.EventChannel) {
+func (r *renderer) SetOperatorChannel(ch event.EventChannel) {
 	r.operatorCh = ch
 	ch.Get()
 }
 
 // renderAdmin is a wrapper for adminRenderer.render()
-func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
+func (r *renderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
 	conf, err := r.adminRenderer.render(c)
 	if err != nil {
 		return nil, err
@@ -136,7 +139,7 @@ func (r *DefaultRenderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig
 }
 
 // renderAuth is a wrapper for authRenderer.render()
-func (r *DefaultRenderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+func (r *renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
 	conf, err := r.authRenderer.render(c)
 	if err != nil {
 		return nil, err
@@ -144,8 +147,17 @@ func (r *DefaultRenderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, 
 	return conf.(*stnrconfv1.AuthConfig), nil
 }
 
+// renderListener is a wrapper for listenerRenderer.render()
+func (r *renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
+	conf, err := r.listenerRenderer.render(&RenderContext{}, gw, gwConf, l, rs, ap, targetPorts)
+	if err != nil {
+		return nil, err
+	}
+	return conf.(*stnrconfv1.ListenerConfig), nil
+}
+
 // generateDataplane is a wrapper for dataplaneGenerator.generate()
-func (r *DefaultRenderer) generateDataplane(c *RenderContext) (client.Object, error) {
+func (r *renderer) generateDataplane(c *RenderContext) (client.Object, error) {
 	obj, err := r.dataplaneGenerator.generate(c)
 	if err != nil {
 		return nil, err

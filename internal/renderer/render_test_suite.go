@@ -57,7 +57,7 @@ type renderTestConfig struct {
 	ssvcs  []stnrgwv1.StaticService
 	dps    []stnrgwv1.Dataplane
 	prep   func(c *renderTestConfig)
-	tester func(t *testing.T, r *DefaultRenderer)
+	tester func(t *testing.T, r *renderer)
 }
 
 // start with default config and then reconcile with the given config
@@ -79,7 +79,7 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			r := NewDefaultRenderer(RendererConfig{
 				Scheme: scheme,
 				Logger: log.WithName("renderer"),
-			}).(*DefaultRenderer)
+			}).(*renderer)
 
 			log.V(1).Info("preparing local storage")
 

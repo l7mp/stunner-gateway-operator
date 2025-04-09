@@ -13,7 +13,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *DefaultRenderer) getGatewayClasses() []*gwapiv1.GatewayClass {
+func (r *renderer) getGatewayClasses() []*gwapiv1.GatewayClass {
 	ret := []*gwapiv1.GatewayClass{}
 
 	for _, gc := range store.GatewayClasses.GetAll() {
@@ -30,7 +30,7 @@ func (r *DefaultRenderer) getGatewayClasses() []*gwapiv1.GatewayClass {
 	return ret
 }
 
-func (r *DefaultRenderer) validateGatewayClass(gc *gwapiv1.GatewayClass) error {
+func (r *renderer) validateGatewayClass(gc *gwapiv1.GatewayClass) error {
 	// play it safe
 	if string(gc.Spec.ControllerName) != config.ControllerName {
 		return fmt.Errorf("Invalid Gateway: unknown controller controller-name %q, "+
@@ -94,7 +94,7 @@ func setGatewayClassStatusAccepted(gc *gwapiv1.GatewayClass, err error) {
 }
 
 // helper for testing
-func (r *DefaultRenderer) getGatewayClass() (*gwapiv1.GatewayClass, error) {
+func (r *renderer) getGatewayClass() (*gwapiv1.GatewayClass, error) {
 	gcs := store.GatewayClasses.GetAll()
 	if len(gcs) == 0 {
 		return nil, fmt.Errorf("No gateway-class found")

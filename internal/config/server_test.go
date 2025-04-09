@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/pkg/config/client"
+	cdsserver "github.com/l7mp/stunner/pkg/config/server"
 	"github.com/l7mp/stunner/pkg/logger"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -30,8 +32,8 @@ import (
 // var testerLogLevel = zapcore.DebugLevel
 var testerLogLevel = zapcore.ErrorLevel
 
-// const stunnerLogLevel = "all:TRACE"
-const stunnerLogLevel = "all:ERROR"
+// const stunnerTestLoglevel = "all:TRACE"
+const stunnerTestLoglevel = "all:ERROR"
 
 // Steps:
 // - starting CDS server
@@ -81,8 +83,13 @@ func TestConfigDiscovery(t *testing.T) {
 		}
 		return conf
 	}
-	srv := newCDSServer(testCDSAddr, patcher, zlogger)
-	assert.NotNil(t, srv, "server")
+	cdslog := zlogger.WithName("cds-server")
+	srv := &Server{
+		Server:          cdsserver.New(testCDSAddr, patcher, cdslog),
+		configCh:        make(chan event.Event, 10),
+		ProgressTracker: NewProgressTracker(),
+		log:             cdslog,
+	}
 
 	log.Info("starting CDS server")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -91,7 +98,7 @@ func TestConfigDiscovery(t *testing.T) {
 	ch := srv.GetConfigUpdateChannel()
 
 	time.Sleep(50 * time.Millisecond)
-	logger := logger.NewLoggerFactory(stunnerLogLevel)
+	logger := logger.NewLoggerFactory(stunnerTestLoglevel)
 
 	id1 := "ns/gw1"
 	addr1 := "http://" + testCDSAddr
@@ -461,6 +468,163 @@ func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
 			opdefault.DefaultStunnerdConfigfileName: s,
 		},
 	}
+}
+
+// test the default node address patcher
+func TestConfigPatcher(t *testing.T) {
+	zc := zap.NewProductionConfig()
+	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
+	z, err := zc.Build()
+	assert.NoError(t, err, "logger created")
+	zlogger := zapr.NewLogger(z)
+	log := zlogger.WithName("tester")
+
+	n1 := testutils.TestNode.DeepCopy()
+	n1.SetName("testnode1")
+	store.Nodes.Upsert(n1)
+	n2 := testutils.TestNode.DeepCopy()
+	n2.SetName("testnode2")
+	n2.Status.Addresses = []corev1.NodeAddress{{
+		Type:    corev1.NodeInternalIP,
+		Address: "1.2.3.5",
+	}, {
+		Type:    corev1.NodeExternalDNS,
+		Address: "google.com",
+	}}
+	store.Nodes.Upsert(n2)
+
+	config := &stnrv1.StunnerConfig{
+		ApiVersion: stnrv1.ApiVersion,
+		Admin: stnrv1.AdminConfig{
+			Name:     "ns/gw1",
+			LogLevel: stunnerTestLoglevel,
+		},
+		Auth: stnrv1.AuthConfig{
+			Credentials: map[string]string{
+				"username": "user",
+				"password": "pass",
+			},
+		},
+		Listeners: []stnrv1.ListenerConfig{{
+			Name: "default-listener",
+			Addr: opdefault.DefaultSTUNnerAddressEnvVarName,
+		}},
+	}
+
+	testCDSAddr := getRandCDSAddr()
+	log.Info("create server", "address", testCDSAddr)
+	srv := NewCDSServer(testCDSAddr, zlogger.WithName("cds-server"))
+	assert.NotNil(t, srv, "CDS server")
+
+	log.Info("starting CDS server")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	assert.NoError(t, srv.Start(ctx), "cds server start")
+
+	logger := logger.NewLoggerFactory(stunnerTestLoglevel)
+
+	// first client uses testnode1
+	id1 := "ns/gw1"
+	addr1 := "http://" + testCDSAddr
+	log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
+	cdsc1, err := cdsclient.New(addr1, id1, "testnode1", logger)
+	assert.NoError(t, err, "cds client setup")
+
+	log.Info("load default config -> no patch")
+	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+	}, time.Second, 10*time.Millisecond)
+
+	log.Info("load config that requires node name patching -> patched with testnode1 external IP")
+	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && c.Listeners[0].Addr == "1.2.3.4" // testnode 1 external ip
+	}, time.Second, 10*time.Millisecond)
+
+	// second client uses testnode2 -> external DNS!
+	log.Info("creating CDS client instance 2", "address", addr1, "id", id1)
+	cdsc1, err = cdsclient.New(addr1, id1, "testnode2", logger)
+	assert.NoError(t, err, "cds client setup")
+
+	log.Info("load default config -> no patch")
+	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+	}, time.Second, 10*time.Millisecond)
+
+	log.Info("load config that requires node name patching -> patched with testnode2 external DNS")
+	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && net.ParseIP(c.Listeners[0].Addr) != nil // testnode2 addr should parse as ip
+	}, time.Second, 10*time.Millisecond)
+
+	// third client uses unknown node -> no patching!
+	log.Info("creating CDS client instance 3", "address", addr1, "id", id1)
+	cdsc1, err = cdsclient.New(addr1, id1, "dummy-node", logger)
+	assert.NoError(t, err, "cds client setup")
+
+	log.Info("load default config -> no patch")
+	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+	}, time.Second, 10*time.Millisecond)
+
+	log.Info("load config that requires node name patching -> should not be patched as node does not exist")
+	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
+		Name:      "gw1",
+		Namespace: "ns",
+		Config:    config,
+	}}), "config server update")
+
+	assert.Eventually(t, func() bool {
+		c, err := cdsc1.Load()
+		assert.NoError(t, err, "loading default client config")
+		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+	}, time.Second, 10*time.Millisecond)
+
+	store.Nodes.Flush()
 }
 
 // wait for some configurable time for a watch element

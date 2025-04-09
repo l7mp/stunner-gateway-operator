@@ -14,7 +14,7 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
-func (r *DefaultRenderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
+func (r *renderer) renderCluster(ro *stnrgwv1.UDPRoute) (*stnrconfv1.ClusterConfig, error) {
 	// r.log.V(4).Info("renderCluster", "route", store.GetObjectKey(ro))
 
 	// track down the backendref

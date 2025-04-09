@@ -39,7 +39,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gc, err := r.getGatewayClass()
@@ -85,7 +85,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				// switch EDS off
@@ -196,7 +196,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				config.EnableEndpointDiscovery = true
@@ -309,7 +309,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				config.EnableEndpointDiscovery = true
@@ -422,7 +422,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}})
 				c.svcs = []corev1.Service{*s}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				config.EnableEndpointDiscovery = true
@@ -524,7 +524,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gc, err := r.getGatewayClass()
@@ -665,7 +665,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				dummySvc.SetName("dummy-service")
 				c.svcs = []corev1.Service{*s, *dummySvc}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gcs := r.getGatewayClasses()
@@ -921,7 +921,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}}
 				c.esls = []discoveryv1.EndpointSlice{testutils.TestEndpointSlice, *dummyEp}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				config.EnableEndpointDiscovery = true
@@ -1140,7 +1140,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}}
 				c.rs = []stnrgwv1.UDPRoute{*udp}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gc, err := r.getGatewayClass()
@@ -1408,7 +1408,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				}
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
-			tester: func(t *testing.T, r *DefaultRenderer) {
+			tester: func(t *testing.T, r *renderer) {
 				config.DataplaneMode = config.DataplaneModeLegacy
 
 				gcs := r.getGatewayClasses()

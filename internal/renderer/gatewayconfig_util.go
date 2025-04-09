@@ -9,7 +9,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (r *DefaultRenderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayConfig, error) {
+func (r *renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayConfig, error) {
 	// r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
 
 	// ref already checked

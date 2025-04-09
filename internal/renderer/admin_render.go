@@ -18,7 +18,7 @@ func newAdminRenderer() configRenderer {
 	return &adminRenderer{}
 }
 
-func (r *adminRenderer) render(c *RenderContext) (stnrconfv1.Config, error) {
+func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrconfv1.Config, error) {
 	c.log.V(8).Info("renderAdmin (**default**)", "gateway-config", store.GetObjectKey(c.gwConf))
 
 	loglevel := stnrconfv1.DefaultLogLevel
