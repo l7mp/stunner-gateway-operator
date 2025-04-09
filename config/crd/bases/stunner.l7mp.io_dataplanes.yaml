@@ -1409,14 +1409,14 @@ spec:
                   here on conflict. The only way to set pod labels is here: whatever you set manually on
                   the dataplane pod will be reset by the opetator.
                 type: object
-              offload_engine:
+              offloadEngine:
                 default: None
                 description: |-
                   OffloadEngine defines the dataplane offload mode, either "None", "XDP", "TC", or
                   "Auto". Set to "Auto" to let STUNner find the optimal offload mode. Default is "None".
                 pattern: ^None|XDP|TC|Auto$
                 type: string
-              offload_interfaces:
+              offloadInterfaces:
                 description: |-
                   OffloadInterfaces explicitly specifies the interfaces on which to enable the offload
                   engine. Empty list means to enable offload on all interfaces (this is the default).

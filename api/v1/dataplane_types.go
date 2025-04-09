@@ -192,13 +192,13 @@ type DataplaneSpec struct {
 	// +optional
 	// +kubebuilder:default=None
 	// +kubebuilder:validation:Pattern=`^None|XDP|TC|Auto$`
-	OffloadEngine string `json:"offload_engine,omitempty"`
+	OffloadEngine string `json:"offloadEngine,omitempty"`
 
 	// OffloadInterfaces explicitly specifies the interfaces on which to enable the offload
 	// engine. Empty list means to enable offload on all interfaces (this is the default).
 	//
 	// +optional
-	OffloadInterfaces []string `json:"offload_interfaces,omitempty"`
+	OffloadInterfaces []string `json:"offloadInterfaces,omitempty"`
 }
 
 // +kubebuilder:object:root=true
