@@ -192,6 +192,8 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw := gws[0]
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
 					testutils.TestNsName, "gateway-1"), "gw name found")
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				initGatewayStatus(gw, nil)
 				conflicted := false
@@ -202,8 +204,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 						port: 1234,
 					}
 
-					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*stnrgwv1.UDPRoute{}, addr, nil)
+					_, err := r.renderListener(c, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 
 					if err != nil {
 						setListenerStatus(gw, &l, err, conflicted, 0)
@@ -312,6 +313,8 @@ func TestRenderGatewayUtil(t *testing.T) {
 				gw := gws[0]
 				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
 					testutils.TestNsName, "gateway-1"), "gw name found")
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				initGatewayStatus(gw, nil)
 				conflicted := false
@@ -322,8 +325,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 						port: 1234,
 					}
 
-					_, err := r.renderListener(gw, c.gwConf, &l,
-						[]*stnrgwv1.UDPRoute{}, addr, nil)
+					_, err := r.renderListener(c, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 
 					if err != nil {
 						setListenerStatus(gw, &l, err, conflicted, 0)

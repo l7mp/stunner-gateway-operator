@@ -30,15 +30,20 @@ func newListenerRenderer(log logr.Logger) configRenderer {
 }
 
 func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrconfv1.Config, error) {
-	if len(args) != 6 {
-		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with args %q", args)
+	if c.gws.Len() != 1 {
+		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with %d gws", c.gws.Len())
 	}
-	gw := args[0].(*gwapiv1.Gateway)
-	gwConf := args[1].(*stnrgwv1.GatewayConfig)
-	l := args[2].(*gwapiv1.Listener)
-	rs := args[3].([]*stnrgwv1.UDPRoute)
-	ap := args[4].(gwAddrPort)
-	targetPorts := args[5].(map[string]int)
+	gw := c.gws.GetFirst()
+	gwConf := c.gwConf
+
+	// rest of the arguments are of type any
+	if len(args) != 4 {
+		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with args %v", args)
+	}
+	l := args[0].(*gwapiv1.Listener)
+	rs := args[1].([]*stnrgwv1.UDPRoute)
+	ap := args[2].(gwAddrPort)
+	targetPorts := args[3].(map[string]int)
 
 	r.log.V(6).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())

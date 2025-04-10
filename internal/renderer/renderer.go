@@ -148,8 +148,8 @@ func (r *renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) 
 }
 
 // renderListener is a wrapper for listenerRenderer.render()
-func (r *renderer) renderListener(gw *gwapiv1.Gateway, gwConf *stnrgwv1.GatewayConfig, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
-	conf, err := r.listenerRenderer.render(&RenderContext{}, gw, gwConf, l, rs, ap, targetPorts)
+func (r *renderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []*stnrgwv1.UDPRoute, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
+	conf, err := r.listenerRenderer.render(c, l, rs, ap, targetPorts)
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
@@ -40,6 +41,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -52,7 +55,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -80,6 +83,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[1]
@@ -89,7 +94,7 @@ func TestRenderListenerRender(t *testing.T) {
 					addr: "1.2.3.4",
 					port: 1234,
 				}
-				_, err = r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
+				_, err = r.renderListener(c, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 				assert.Error(t, err, "render fails")
 			},
 		},
@@ -111,6 +116,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[1]
@@ -120,7 +127,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
+				lc, err := r.renderListener(c, &l, []*stnrgwv1.UDPRoute{}, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
@@ -153,6 +160,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -165,7 +174,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -199,6 +208,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -211,7 +222,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 4321,
 				}
 
-				_, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				_, err = r.renderListener(c, &l, rs, addr, nil)
 				assert.Error(t, err, "wrong-proto")
 			},
 		},
@@ -261,6 +272,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -271,7 +284,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
@@ -281,7 +294,7 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "", lc.Key, "key")
 
 				l = ls[1]
-				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err = r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -291,7 +304,7 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 
 				l = ls[2]
-				lc, err = r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err = r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-dtls", lc.Name, "name")
 				assert.Equal(t, "TURN-DTLS", lc.Protocol, "proto")
@@ -342,6 +355,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -352,7 +367,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -395,6 +410,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -405,7 +422,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -450,6 +467,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -460,7 +479,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -505,6 +524,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -515,7 +536,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -564,6 +585,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -574,7 +597,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -623,6 +646,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -633,7 +658,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -682,6 +707,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -692,7 +719,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -741,6 +768,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -751,7 +780,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -803,6 +832,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -813,7 +844,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
@@ -867,6 +898,8 @@ func TestRenderListenerRender(t *testing.T) {
 				gws := r.getGateways4Class(c)
 				assert.Len(t, gws, 1, "gw found")
 				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
 
 				ls := gw.Spec.Listeners
 				l := ls[0]
@@ -877,7 +910,7 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(gw, c.gwConf, &l, rs, addr, nil)
+				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
 				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")

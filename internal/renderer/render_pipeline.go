@@ -253,6 +253,12 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
 
+		// create a private shallow copy of the render context for the listener renderer
+		// this is not safe for modifying the render context
+		gwCtx := *c
+		gwCtx.gws = store.NewGatewayStore()
+		gwCtx.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
 		initGatewayStatus(gw, nil)
 
 		log.V(3).Info("Obtaining public address", "gateway", store.GetObjectKey(gw))
@@ -293,7 +299,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 
 			// the Gateway may remap the listener's target port from an annotation:
 			// this is indicated in targetPorts
-			lc, err := r.renderListener(gw, c.gwConf, &l, rs, pubGwAddrs[j], targetPorts)
+			lc, err := r.renderListener(&gwCtx, &l, rs, pubGwAddrs[j], targetPorts)
 			if err != nil {
 				// all listener rendering errors are critical: prevent the
 				// rendering of the listener config
