@@ -436,40 +436,6 @@ func TestConfigDiscovery(t *testing.T) {
 	assert.Equal(t, 0, len(cStore.Snapshot()))
 }
 
-func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
-	id := fmt.Sprintf("%s/%s", namespace, name)
-	c := cdsclient.ZeroConfig(id)
-	c.Auth.Realm = realm
-	_ = c.Validate()
-	return c
-}
-
-//nolint:unused
-func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
-	nsName := store.GetNameFromKey(c.Admin.Name)
-
-	sc, _ := json.Marshal(c)
-	s := string(sc)
-
-	immutable := true
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nsName.Name,
-			Namespace: nsName.Namespace,
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayKey: "dummy",
-			},
-		},
-		Immutable: &immutable,
-		Data: map[string]string{
-			opdefault.DefaultStunnerdConfigfileName: s,
-		},
-	}
-}
-
 // test the default node address patcher
 func TestConfigPatcher(t *testing.T) {
 	zc := zap.NewProductionConfig()
@@ -643,4 +609,38 @@ func watchConfig(ch chan *stnrv1.StunnerConfig, d time.Duration) *stnrv1.Stunner
 func getRandCDSAddr() string {
 	rndPort := rand.Intn(10000) + 50000
 	return fmt.Sprintf(":%d", rndPort)
+}
+
+func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
+	id := fmt.Sprintf("%s/%s", namespace, name)
+	c := cdsclient.ZeroConfig(id)
+	c.Auth.Realm = realm
+	_ = c.Validate()
+	return c
+}
+
+//nolint:unused
+func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
+	nsName := store.GetNameFromKey(c.Admin.Name)
+
+	sc, _ := json.Marshal(c)
+	s := string(sc)
+
+	immutable := true
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsName.Name,
+			Namespace: nsName.Namespace,
+			Labels: map[string]string{
+				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
+			},
+			Annotations: map[string]string{
+				opdefault.RelatedGatewayKey: "dummy",
+			},
+		},
+		Immutable: &immutable,
+		Data: map[string]string{
+			opdefault.DefaultStunnerdConfigfileName: s,
+		},
+	}
 }

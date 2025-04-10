@@ -53,12 +53,16 @@ func (s *NodeStore) GetObject(nsName types.NamespacedName) *corev1.Node {
 }
 
 // GetExternalAddress returns the first external IP or DNS address of a node
-func GetExternalAddress(n *corev1.Node) string {
+func GetExternalAddress(n *corev1.Node) (corev1.NodeAddressType, string, bool) {
 	// find an external IP
+	ok := false
 	addr := ""
+	aType := corev1.NodeAddressType("")
 	for _, a := range n.Status.Addresses {
 		if a.Type == corev1.NodeExternalIP {
 			addr = a.Address
+			aType = a.Type
+			ok = true
 			break
 		}
 	}
@@ -68,10 +72,12 @@ func GetExternalAddress(n *corev1.Node) string {
 		for _, a := range n.Status.Addresses {
 			if a.Type == corev1.NodeExternalDNS {
 				addr = a.Address
+				aType = a.Type
+				ok = true
 				break
 			}
 		}
 	}
 
-	return addr
+	return aType, addr, ok
 }

@@ -11,7 +11,7 @@ import (
 // (NodePorts might not work anyway, e.g., on private vpcs)
 func getFirstNodeAddr() string {
 	for _, n := range store.Nodes.GetAll() {
-		if a := store.GetExternalAddress(n); a != "" {
+		if _, a, ok := store.GetExternalAddress(n); ok && a != "" {
 			return a
 		}
 	}
