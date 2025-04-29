@@ -337,10 +337,10 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			p := ro.Spec.ParentRefs[i]
 
 			parentOutContext := r.isParentOutContext(c.gws, ro, &p)
-			parentAccept := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+			parentExists, parentAccept := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
-			// at least one parent accepts the route: render it!
-			renderRoute = renderRoute || (!parentOutContext && parentAccept)
+			// at least one existing parent accepts the route: render it!
+			renderRoute = renderRoute || (!parentOutContext && parentExists && parentAccept)
 		}
 
 		rc, err := r.renderCluster(ro)
@@ -367,8 +367,8 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			p := ro.Spec.ParentRefs[i]
 
 			// set className="" -> do not consider class of the gw for setting the status
-			parentAccept := r.isParentAcceptingRoute(ro, &p, "")
-			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept, err)
+			parentExists, parentAccept := r.isParentAcceptingRoute(ro, &p, "")
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccept, err)
 		}
 
 		// schedule for update: note that we may process the same UDPRoute several times,
@@ -556,12 +556,12 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 				continue
 			}
 
-			accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+			parentExists, parendAccepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// render a stale cluster so that we know the ResolvedRefs status
 			_, err := r.renderCluster(ro)
 
-			setRouteConditionStatus(ro, &p, config.ControllerName, accepted, err)
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parendAccepted, err)
 		}
 
 		if isRouteV1A2(ro) {

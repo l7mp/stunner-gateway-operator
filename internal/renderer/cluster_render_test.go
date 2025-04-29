@@ -39,7 +39,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				_, err := r.renderCluster(ro)
@@ -68,7 +69,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				_, err := r.renderCluster(ro)
@@ -96,7 +98,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				_, err := r.renderCluster(ro)
@@ -124,7 +127,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				_, err := r.renderCluster(ro)
@@ -195,7 +199,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.False(t, exists, "route exists")
 				assert.False(t, accepted, "route accepted")
 			},
 		},
@@ -214,7 +219,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -255,7 +261,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -295,7 +302,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -338,7 +346,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -380,7 +389,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -469,7 +479,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -509,7 +520,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -556,7 +568,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -601,7 +614,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -646,7 +660,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				config.EnableEndpointDiscovery = true
@@ -692,7 +707,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -733,7 +749,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -777,7 +794,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off
@@ -831,7 +849,8 @@ func TestRenderClusterRender(t *testing.T) {
 				ro := rs[0]
 				p := ro.Spec.ParentRefs[0]
 
-				accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, "gatewayclass-ok")
+				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
 				// switch EDS off

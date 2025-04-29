@@ -212,9 +212,14 @@ func (r *renderer) isParentOutContext(gws *store.GatewayStore, ro *stnrgwv1.UDPR
 	return ret
 }
 
-// className == "" means "do not consider classness of parent", this is useful for generating a
-// route status that is consistent across rendering contexts
-func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, className string) bool {
+// isParentAcceptingRoute decides whether a parent accepts a route:
+//
+// - returns (exists, accepted)=(bool,bool) indicating whether the parent exists and if it is,
+// whether it accepts the route
+//
+// - arg className == "" means "do not consider classness of parent", this is useful for generating
+// a route status that is consistent across rendering contexts
+func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, className string) (bool, bool) {
 	// r.log.V(4).Info("isParentAcceptingRoute", "route", store.GetObjectKey(ro),
 	// 	"parent", store.DumpParentRef(p))
 
@@ -222,7 +227,7 @@ func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 	if gw == nil {
 		r.log.V(4).Info("No gateway found for parent", "route",
 			store.GetObjectKey(ro), "parent", store.DumpParentRef(p))
-		return false
+		return false, false
 	}
 
 	// does the parent belong to the class we are processing: we don't want to generate routes
@@ -232,7 +237,7 @@ func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 			"gateway-class: rejecting", "route", store.GetObjectKey(ro), "parent",
 			store.DumpParentRef(p), "linked-gateway-class", gw.Spec.GatewayClassName,
 			"current-gateway-class", className)
-		return false
+		return false, false
 	}
 
 	// is there a listener that accepts us?
@@ -245,7 +250,7 @@ func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
 				"gateway", gw.GetName(), "listener", l.Name)
 
-			return true
+			return true, true
 		} else {
 			r.log.V(4).Info("Gateway and/or listener does not accept route",
 				"route", store.GetObjectKey(ro), "parent", store.DumpParentRef(p),
@@ -256,7 +261,7 @@ func (r *renderer) isParentAcceptingRoute(ro *stnrgwv1.UDPRoute, p *gwapiv1.Pare
 	r.log.V(4).Info("Checked route parent ready", "route", store.GetObjectKey(ro),
 		"parent", fmt.Sprintf("%#v", *p), "result", "rejected")
 
-	return false
+	return true, false
 }
 
 func (r *renderer) getParentGateway(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference) *gwapiv1.Gateway {
@@ -280,16 +285,16 @@ func (r *renderer) invalidateMaskedRoutes(c *RenderContext) {
 		initRouteStatus(ro)
 		for i := range ro.Spec.ParentRefs {
 			p := ro.Spec.ParentRefs[i]
-			parentAccept := r.isParentAcceptingRoute(ro, &p, "")
+			parentExists, parentAccept := r.isParentAcceptingRoute(ro, &p, "")
 			// automatically handles masked routes
-			setRouteConditionStatus(ro, &p, config.ControllerName, parentAccept, nil)
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccept, nil)
 		}
 
 		c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
 	}
 }
 
-func setRouteConditionStatus(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, controllerName string, accepted bool, backendErr error) {
+func setRouteConditionStatus(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, controllerName string, exists, accepted bool, backendErr error) {
 	// ns := gwapiv1.Namespace(ro.GetNamespace())
 	// gr := gwapiv1.Group(gwapiv1.GroupVersion.Group)
 	// kind := gwapiv1.Kind("Gateway")
@@ -322,14 +327,24 @@ func setRouteConditionStatus(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, 
 
 	if isRouteMasked(ro) {
 		setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonPending,
-			metav1.ConditionFalse, "GW API UDPRoute masked by a STUNnerV1 UDPRoute")
+			metav1.ConditionFalse, "GwAPI.v1 UDPRoute masked by a STUNnerV1 UDPRoute")
 	} else {
-		if accepted {
-			setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonAccepted,
-				metav1.ConditionTrue, "parent accepts the route")
+		namespace := ro.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		id := fmt.Sprintf("%s/%s", namespace, string(p.Name))
+		if exists {
+			if accepted {
+				setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonAccepted,
+					metav1.ConditionTrue, fmt.Sprintf("parent %s accepted the route", id))
+			} else {
+				setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonNotAllowedByListeners,
+					metav1.ConditionFalse, fmt.Sprintf("parent %s rejects the route", id))
+			}
 		} else {
-			setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonNotAllowedByListeners,
-				metav1.ConditionFalse, "parent rejects the route")
+			setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonNoMatchingParent,
+				metav1.ConditionFalse, fmt.Sprintf("parent %s does not exist", id))
 		}
 	}
 

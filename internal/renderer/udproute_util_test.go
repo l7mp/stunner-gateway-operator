@@ -732,8 +732,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, true, nil)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.True(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -755,6 +757,147 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "Accepted", d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gwapiv1.RouteConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
+			},
+		},
+		{
+			name: "missing parent in route - errs",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				udp1 := testutils.TestUDPRoute.DeepCopy()
+				udp1.SetName("udproute-no-parent")
+				dummySectionName := gwapiv1.SectionName("dummy")
+				udp1.Spec.CommonRouteSpec.ParentRefs = []gwapiv1.ParentReference{{
+					Name:        "gateway-1",
+					SectionName: &testutils.TestSectionName,
+				}, {
+					Name:        "gateway-1",
+					SectionName: &dummySectionName,
+				}, {
+					Name: "dummy",
+				}}
+				c.rs = []stnrgwv1.UDPRoute{*udp1}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+
+				ls := gw.Spec.Listeners
+				l := ls[0]
+
+				rs := r.getUDPRoutes4Listener(gw, &l)
+				assert.Len(t, rs, 1, "route found")
+				ro := rs[0]
+
+				initRouteStatus(ro)
+				for i := range ro.Spec.ParentRefs {
+					p := ro.Spec.ParentRefs[i]
+					parentExists, parentAccept := r.isParentAcceptingRoute(ro, &p, "")
+					setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccept, nil)
+				}
+
+				assert.Len(t, ro.Status.Parents, 3, "parent status len")
+
+				p := ro.Spec.ParentRefs[0]
+				parentStatus := ro.Status.Parents[0]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName,
+					"status parent ref section-name")
+
+				assert.Equal(t, gwapiv1.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d := meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gwapiv1.RouteConditionAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.RouteReasonAccepted), d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gwapiv1.RouteConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
+
+				p = ro.Spec.ParentRefs[1]
+				parentStatus = ro.Status.Parents[1]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName,
+					"status parent ref section-name")
+
+				assert.Equal(t, gwapiv1.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gwapiv1.RouteConditionAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.RouteReasonNotAllowedByListeners), d.Reason, "reason")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionResolvedRefs))
+				assert.NotNil(t, d, "resolved-refs found")
+				assert.Equal(t, string(gwapiv1.RouteConditionResolvedRefs), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
+
+				p = ro.Spec.ParentRefs[2]
+				parentStatus = ro.Status.Parents[2]
+
+				assert.Equal(t, p.Group, parentStatus.ParentRef.Group, "status parent ref group")
+				assert.Equal(t, p.Kind, parentStatus.ParentRef.Kind, "status parent ref kind")
+				assert.Equal(t, p.Namespace, parentStatus.ParentRef.Namespace, "status parent ref namespace")
+				assert.Equal(t, p.Name, parentStatus.ParentRef.Name, "status parent ref name")
+				assert.Equal(t, p.SectionName, parentStatus.ParentRef.SectionName,
+					"status parent ref section-name")
+
+				assert.Equal(t, gwapiv1.GatewayController("stunner.l7mp.io/gateway-operator"),
+					parentStatus.ControllerName, "status parent ref")
+
+				d = meta.FindStatusCondition(parentStatus.Conditions,
+					string(gwapiv1.RouteConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, string(gwapiv1.RouteConditionAccepted), d.Type,
+					"type")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
+				assert.Equal(t, string(gwapiv1.RouteReasonNoMatchingParent), d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
 					string(gwapiv1.RouteConditionResolvedRefs))
@@ -791,8 +934,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				assert.False(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, false, nil)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.False(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -862,9 +1007,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, accepted, "accepted")
-				setRouteConditionStatus(ro, &p, config.ControllerName, accepted, nil)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.True(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -918,9 +1064,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.False(t, accepted, "accepted")
-				setRouteConditionStatus(ro, &p, config.ControllerName, accepted, nil)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.False(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -977,8 +1124,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, true, err)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.True(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, err)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
@@ -1054,8 +1203,10 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 
 				initRouteStatus(ro)
 				p := ro.Spec.ParentRefs[0]
-				assert.True(t, r.isParentAcceptingRoute(ro, &p, gc.GetName()))
-				setRouteConditionStatus(ro, &p, config.ControllerName, true, err)
+				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+				assert.True(t, exists)
+				assert.True(t, accepted)
+				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, err)
 
 				assert.Len(t, ro.Status.Parents, 1, "parent status len")
 				parentStatus := ro.Status.Parents[0]
