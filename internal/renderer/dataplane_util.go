@@ -228,13 +228,11 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			c.SecurityContext = dataplane.Spec.ContainerSecurityContext.DeepCopy()
 		}
 
-		if dataplane.Spec.EnableMetricsEnpoint {
-			c.Ports = []corev1.ContainerPort{{
-				Name:          opdefault.DefaultMetricsPortName,
-				ContainerPort: int32(stnrconfv1.DefaultMetricsPort),
-				Protocol:      corev1.ProtocolTCP,
-			}}
-		}
+		c.Ports = []corev1.ContainerPort{{
+			Name:          opdefault.DefaultMetricsPortName,
+			ContainerPort: int32(stnrconfv1.DefaultMetricsPort),
+			Protocol:      corev1.ProtocolTCP,
+		}}
 
 		found = true
 	}

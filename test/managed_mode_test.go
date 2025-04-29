@@ -1172,7 +1172,8 @@ func testManagedMode() {
 			// Expect(container.VolumeMounts).To(HaveLen(1))
 
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
-			Expect(container.Ports).To(HaveLen(0))
+			// we always declare the metrics port, even if the metrics server is diabled
+			Expect(container.Ports).To(HaveLen(1))
 
 			// remainder
 			Expect(podSpec.TerminationGracePeriodSeconds).NotTo(BeNil())
