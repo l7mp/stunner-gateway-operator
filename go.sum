@@ -133,6 +133,8 @@ github.com/l7mp/stunner v1.0.1-0.20250409115017-984e960590b3 h1:z2b2lI74suAZNkip
 github.com/l7mp/stunner v1.0.1-0.20250409115017-984e960590b3/go.mod h1:CtEp8Sfjs4bqOcmIYI7KFv5HRgfkxT2lGEr35FA/UAM=
 github.com/l7mp/stunner v1.0.1-0.20250409143431-25bf02565fb4 h1:m/OtJ5atcUT971rMsQy4noitmjuz9FbtoSiEYhWSmcg=
 github.com/l7mp/stunner v1.0.1-0.20250409143431-25bf02565fb4/go.mod h1:CtEp8Sfjs4bqOcmIYI7KFv5HRgfkxT2lGEr35FA/UAM=
+github.com/l7mp/stunner v1.0.1-0.20250501095913-1baab6ab497c h1:NmFydPehbKL9S7XYiSYgF5Dn0Kc8IbaZaayKkSSoKlA=
+github.com/l7mp/stunner v1.0.1-0.20250501095913-1baab6ab497c/go.mod h1:CtEp8Sfjs4bqOcmIYI7KFv5HRgfkxT2lGEr35FA/UAM=
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhnIaL+V+BEER86oLrvS+kWobKpbJuye0=
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=

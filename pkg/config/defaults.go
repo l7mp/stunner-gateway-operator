@@ -193,7 +193,7 @@ const (
 	// NodeAddressPlaceholder is used internally by the operator to let the renderer to signal
 	// to the CDS server's config patcher to replace the listener address with the node
 	// external IP.
-	NodeAddressPlaceholder = "__node_address_placeholder" // guaranteed to not parse as a valid IP
+	NodeAddressPlaceholder = stnrconfv1.DefaultNodeAddressPlaceholder
 )
 
 var (

@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
-	github.com/l7mp/stunner v1.0.1-0.20250409143431-25bf02565fb4
+	github.com/l7mp/stunner v1.0.1-0.20250501095913-1baab6ab497c
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/stretchr/testify v1.10.0
