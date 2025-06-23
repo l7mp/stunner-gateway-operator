@@ -57,17 +57,17 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  push_chart:
-    name: Push helm charts to the web
-    needs: push_to_registry
-    if: github.repository == 'l7mp/stunner-gateway-operator'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Triggering release workflow in the stunner-helm repo
-        uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          github_token: ${{ secrets.WEB_PAT_TOKEN }}
-          owner: l7mp
-          repo: stunner-helm
-          client_payload: '{"tag": "dev", "type": "stunner-gateway-operator"}'
-          workflow_file_name: publish.yaml
+  # push_chart:
+  #   name: Push helm charts to the web
+  #   needs: push_to_registry
+  #   if: github.repository == 'l7mp/stunner-gateway-operator'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Triggering release workflow in the stunner-helm repo
+  #       uses: convictional/trigger-workflow-and-wait@v1.6.5
+  #       with:
+  #         github_token: ${{ secrets.WEB_PAT_TOKEN }}
+  #         owner: l7mp
+  #         repo: stunner-helm
+  #         client_payload: '{"tag": "dev", "type": "stunner-gateway-operator"}'
+  #         workflow_file_name: publish.yaml
