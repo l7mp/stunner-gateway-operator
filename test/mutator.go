@@ -36,7 +36,7 @@ import (
 
 type GatewayClassMutator func(current *gwapiv1.GatewayClass)
 
-func createOrUpdateGatewayClass(template *gwapiv1.GatewayClass, f GatewayClassMutator) {
+func createOrUpdateGatewayClass(ctx context.Context, k8sClient client.Client, template *gwapiv1.GatewayClass, f GatewayClassMutator) {
 	current := &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -55,7 +55,7 @@ func createOrUpdateGatewayClass(template *gwapiv1.GatewayClass, f GatewayClassMu
 
 type GatewayConfigMutator func(current *stnrgwv1.GatewayConfig)
 
-func createOrUpdateGatewayConfig(template *stnrgwv1.GatewayConfig, f GatewayConfigMutator) {
+func createOrUpdateGatewayConfig(ctx context.Context, k8sClient client.Client, template *stnrgwv1.GatewayConfig, f GatewayConfigMutator) {
 	current := &stnrgwv1.GatewayConfig{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -74,7 +74,7 @@ func createOrUpdateGatewayConfig(template *stnrgwv1.GatewayConfig, f GatewayConf
 
 type GatewayMutator func(current *gwapiv1.Gateway)
 
-func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
+func createOrUpdateGateway(ctx context.Context, k8sClient client.Client, template *gwapiv1.Gateway, f GatewayMutator) {
 	current := &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -82,7 +82,6 @@ func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
 
 	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
 		current.SetLabels(template.GetLabels())
-		// current.SetAnnotations(template.GetAnnotations())
 		template.Spec.DeepCopyInto(&current.Spec)
 		if f != nil {
 			f(current)
@@ -94,7 +93,7 @@ func createOrUpdateGateway(template *gwapiv1.Gateway, f GatewayMutator) {
 
 type ServiceMutator func(current *corev1.Service)
 
-func createOrUpdateService(template *corev1.Service, f ServiceMutator) {
+func createOrUpdateService(ctx context.Context, k8sClient client.Client, template *corev1.Service, f ServiceMutator) {
 	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -113,7 +112,7 @@ func createOrUpdateService(template *corev1.Service, f ServiceMutator) {
 
 type StaticServiceMutator func(current *stnrgwv1.StaticService)
 
-func createOrUpdateStaticService(template *stnrgwv1.StaticService, f StaticServiceMutator) {
+func createOrUpdateStaticService(ctx context.Context, k8sClient client.Client, template *stnrgwv1.StaticService, f StaticServiceMutator) {
 	current := &stnrgwv1.StaticService{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -132,7 +131,7 @@ func createOrUpdateStaticService(template *stnrgwv1.StaticService, f StaticServi
 
 type EndpointsMutator func(current *corev1.Endpoints)
 
-func createOrUpdateEndpoints(template *corev1.Endpoints, f EndpointsMutator) {
+func createOrUpdateEndpoints(ctx context.Context, k8sClient client.Client, template *corev1.Endpoints, f EndpointsMutator) {
 	current := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -154,7 +153,7 @@ func createOrUpdateEndpoints(template *corev1.Endpoints, f EndpointsMutator) {
 
 type EndpointSliceMutator func(current *discoveryv1.EndpointSlice)
 
-func createOrUpdateEndpointSlice(template *discoveryv1.EndpointSlice, f EndpointSliceMutator) {
+func createOrUpdateEndpointSlice(ctx context.Context, k8sClient client.Client, template *discoveryv1.EndpointSlice, f EndpointSliceMutator) {
 	current := &discoveryv1.EndpointSlice{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -182,7 +181,7 @@ func createOrUpdateEndpointSlice(template *discoveryv1.EndpointSlice, f Endpoint
 
 type SecretMutator func(current *corev1.Secret)
 
-func createOrUpdateSecret(template *corev1.Secret, f SecretMutator) {
+func createOrUpdateSecret(ctx context.Context, k8sClient client.Client, template *corev1.Secret, f SecretMutator) {
 	current := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -205,7 +204,7 @@ func createOrUpdateSecret(template *corev1.Secret, f SecretMutator) {
 
 type UDPRouteMutator func(current *stnrgwv1.UDPRoute)
 
-func createOrUpdateUDPRoute(template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
+func createOrUpdateUDPRoute(ctx context.Context, k8sClient client.Client, template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
 	current := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
@@ -224,7 +223,7 @@ func createOrUpdateUDPRoute(template *stnrgwv1.UDPRoute, f UDPRouteMutator) {
 
 type NodeMutator func(current *corev1.Node)
 
-func statusUpdateNode(name string, f NodeMutator) {
+func statusUpdateNode(ctx context.Context, k8sClient client.Client, name string, f NodeMutator) {
 	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name: name,
 	}}
@@ -241,7 +240,7 @@ func statusUpdateNode(name string, f NodeMutator) {
 }
 
 // also updates status
-func createOrUpdateNode(template *corev1.Node, f NodeMutator) {
+func createOrUpdateNode(ctx context.Context, k8sClient client.Client, template *corev1.Node, f NodeMutator) {
 	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),

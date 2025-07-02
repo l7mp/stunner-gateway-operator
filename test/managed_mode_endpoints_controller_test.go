@@ -79,9 +79,9 @@ func testManagedModeEndpointController() {
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS on
-			createOrUpdateGatewayClass(testGwClass, nil)
-			createOrUpdateGatewayConfig(testGwConfig, nil)
-			createOrUpdateGateway(testGw, nil)
+			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
+			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
 
 			ctrl.Log.Info("loading default Dataplane")
 			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
@@ -260,11 +260,11 @@ func testManagedModeEndpointController() {
 
 		It("should survive the event of adding a route", func() {
 			ctrl.Log.Info("loading UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, nil)
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
 
 			ctrl.Log.Info("loading backend Service")
-			createOrUpdateService(testSvc, nil)
-			createOrUpdateEndpoints(testEndpoint, nil)
+			createOrUpdateService(ctx, k8sClient, testSvc, nil)
+			createOrUpdateEndpoints(ctx, k8sClient, testEndpoint, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {

@@ -91,10 +91,10 @@ func testManagedMode() {
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS on
-			createOrUpdateGatewayClass(testGwClass, nil)
-			createOrUpdateGatewayConfig(testGwConfig, nil)
-			createOrUpdateGateway(testGw, nil)
-			createOrUpdateEndpointSlice(testEndpointSlice, nil)
+			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
+			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
+			createOrUpdateEndpointSlice(ctx, k8sClient, testEndpointSlice, nil)
 
 			ctrl.Log.Info("loading default Dataplane")
 			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
@@ -285,10 +285,10 @@ func testManagedMode() {
 
 		It("should survive the event of adding a route", func() {
 			ctrl.Log.Info("loading UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, nil)
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
 
 			ctrl.Log.Info("loading backend Service")
-			createOrUpdateService(testSvc, nil)
+			createOrUpdateService(ctx, k8sClient, testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
@@ -379,10 +379,10 @@ func testManagedMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(testGw, nil)
+			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			createOrUpdateNode(testNode, nil)
+			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
@@ -404,7 +404,7 @@ func testManagedMode() {
 
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				addr := gwapiv1.IPAddressType
 				current.Spec.Addresses = []gwapiv1.GatewayAddress{{
 					Type:  &addr,
@@ -434,10 +434,10 @@ func testManagedMode() {
 
 		It("should install a NodePort public IP/port", func() {
 			ctrl.Log.Info("re-loading gateway")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {})
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {})
 
 			ctrl.Log.Info("loading a Kubernetes Node")
-			createOrUpdateNode(testNode, nil)
+			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
 				// conf should have valid listener confs
@@ -457,7 +457,7 @@ func testManagedMode() {
 
 		It("should update the public IP/port when node External IP changes", func() {
 			ctrl.Log.Info("re-loading Node with new External IP")
-			statusUpdateNode("testnode-ok", func(current *corev1.Node) {
+			statusUpdateNode(ctx, k8sClient, "testnode-ok", func(current *corev1.Node) {
 				current.Status.Addresses[1].Address = "4.3.2.1"
 			})
 
@@ -480,7 +480,7 @@ func testManagedMode() {
 
 		It("should remove the public IP/port when the node's External IP disappears", func() {
 			ctrl.Log.Info("re-loading Node with no External IP")
-			statusUpdateNode("testnode-ok", func(current *corev1.Node) {
+			statusUpdateNode(ctx, k8sClient, "testnode-ok", func(current *corev1.Node) {
 				current.Status.Addresses[1].Type = corev1.NodeInternalIP
 			})
 
@@ -532,7 +532,7 @@ func testManagedMode() {
 
 		It("should remove the public IP/port when the exposed LoadBalancer service type changes to ClusterIP", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ServiceTypeAnnotationKey] = "ClusterIP"
 				current.Spec.LoadBalancerServiceAnnotations[opdefault.ExternalTrafficPolicyAnnotationKey] =
@@ -585,7 +585,7 @@ func testManagedMode() {
 
 			// disable session-affinity
 			ctrl.Log.Info("re-loading gateway with annotation: stunner.l7mp.io/disable-session-affinity=true")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.DisableSessionAffiffinityAnnotationKey: // newline
 					opdefault.DisableSessionAffiffinityAnnotationValue,
@@ -605,7 +605,7 @@ func testManagedMode() {
 
 		It("should restore the public IP/port when the exposed LoadBalancer service type changes to NodePort", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = map[string]string{
 					opdefault.ServiceTypeAnnotationKey:           "dummy",
 					opdefault.ExternalTrafficPolicyAnnotationKey: opdefault.ExternalTrafficPolicyAnnotationValue,
@@ -613,7 +613,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("re-loading gateway with annotation: service-type: NodePort")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 				})
@@ -650,7 +650,7 @@ func testManagedMode() {
 
 		It("should add annotations from Gateway", func() {
 			ctrl.Log.Info("re-loading gateway-config with annotation: service-type: ClusterIP")
-			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = map[string]string{
 					opdefault.ServiceTypeAnnotationKey:           "dummy",
 					opdefault.ExternalTrafficPolicyAnnotationKey: "dummy",
@@ -658,7 +658,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey:           "NodePort",
 					opdefault.ExternalTrafficPolicyAnnotationKey: opdefault.ExternalTrafficPolicyAnnotationValue,
@@ -772,7 +772,7 @@ func testManagedMode() {
 		})
 
 		It("should not change NodePort when Gateway annotations are modified", func() {
-			createOrUpdateGatewayConfig(testGwConfig, func(current *stnrgwv1.GatewayConfig) {
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, func(current *stnrgwv1.GatewayConfig) {
 				current.Spec.LoadBalancerServiceAnnotations = map[string]string{}
 			})
 
@@ -792,7 +792,7 @@ func testManagedMode() {
 			// 	svc.Spec.Ports[1].NodePort, svc.Spec.Ports[2].NodePort
 
 			ctrl.Log.Info("re-loading gateway with further annotations")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					"someAnnotation":                   "new-dummy-1",
@@ -854,7 +854,7 @@ func testManagedMode() {
 			lookupKey := store.GetNamespacedName(testGw)
 
 			// learn nodeport
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.Spec.Listeners = []gwapiv1.Listener{{
 					Name:     gwapiv1.SectionName("dummy"),
 					Port:     gwapiv1.PortNumber(1),
@@ -885,7 +885,7 @@ func testManagedMode() {
 			// set nodeport
 			ann := fmt.Sprintf("{\"gateway-1-listener-udp\": %d}", nodeport)
 			ctrl.Log.Info("re-loading gateway with the nodeport annotation")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.ServiceTypeAnnotationKey: "NodePort",
 					opdefault.NodePortAnnotationKey:    ann,
@@ -915,7 +915,7 @@ func testManagedMode() {
 			targetPort := 12345
 			ann := fmt.Sprintf("{\"gateway-1-listener-udp\": %d, \"random-listener\": 321}", targetPort)
 			ctrl.Log.Info("re-loading gateway with the nodeport annotation")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
 					opdefault.TargetPortAnnotationKey: ann,
 				})
@@ -986,10 +986,10 @@ func testManagedMode() {
 
 		It("should install TLS cert/keys", func() {
 			ctrl.Log.Info("loading TLS Secret")
-			createOrUpdateSecret(testSecret, nil)
+			createOrUpdateSecret(ctx, k8sClient, testSecret, nil)
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{})
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
@@ -1059,7 +1059,7 @@ func testManagedMode() {
 
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
-			createOrUpdateSecret(testSecret, func(current *corev1.Secret) {
+			createOrUpdateSecret(ctx, k8sClient, testSecret, func(current *corev1.Secret) {
 				current.Data["tls.crt"] = []byte("newcert")
 			})
 
@@ -1382,10 +1382,10 @@ func testManagedMode() {
 
 		It("should survive converting the route to a StaticService backend", func() {
 			ctrl.Log.Info("adding static service")
-			createOrUpdateStaticService(testStaticSvc, nil)
+			createOrUpdateStaticService(ctx, k8sClient, testStaticSvc, nil)
 
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1410,7 +1410,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("updating Route")
-			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 				kind := gwapiv1.Kind("StaticService")
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
@@ -1614,7 +1614,7 @@ func testManagedMode() {
 
 		It("should survive converting the route to v1a2 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1819,7 +1819,7 @@ func testManagedMode() {
 
 		It("should survive masking the v1a2 route with a stunner.v1 route", func() {
 			ctrl.Log.Info("reseting gateway")
-			createOrUpdateGateway(testGw, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
 				tls := gwapiv1.GatewayTLSConfig{
@@ -1844,7 +1844,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("loading UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, nil)
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
 
 			// wait until v1a2 route gets invalidated
 			Eventually(func() bool {
@@ -2128,7 +2128,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{
@@ -2664,7 +2664,7 @@ func testManagedMode() {
 			Expect(k8sClient.Get(ctx, store.GetNamespacedName(gw2), gw2)).Should(Succeed())
 
 			// apply annotation
-			createOrUpdateGateway(gw2, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, gw2, func(current *gwapiv1.Gateway) {
 				ann := current.GetAnnotations()
 				if len(ann) == 0 {
 					ann = make(map[string]string)
@@ -2711,7 +2711,7 @@ func testManagedMode() {
 			Expect(v).NotTo(Equal(opdefault.ManagedDataplaneDisabledAnnotationKey))
 
 			// remove annotation
-			createOrUpdateGateway(gw2, func(current *gwapiv1.Gateway) {
+			createOrUpdateGateway(ctx, k8sClient, gw2, func(current *gwapiv1.Gateway) {
 				ann := current.GetAnnotations()
 				if len(ann) == 0 {
 					ann = make(map[string]string)
@@ -2932,7 +2932,7 @@ func testManagedMode() {
 
 			// UDPRoute: both gateways are parents
 			ctrl.Log.Info("updating UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, func(current *stnrgwv1.UDPRoute) {
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, func(current *stnrgwv1.UDPRoute) {
 				testutils.TestUDPRoute.Spec.DeepCopyInto(&current.Spec)
 				current.Spec.CommonRouteSpec = gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{{

@@ -81,10 +81,10 @@ func testFinalizer() {
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS on
-			createOrUpdateGatewayClass(testGwClass, nil)
-			createOrUpdateGatewayConfig(testGwConfig, nil)
-			createOrUpdateGateway(testGw, nil)
-			createOrUpdateEndpointSlice(testEndpointSlice, nil)
+			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
+			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
+			createOrUpdateEndpointSlice(ctx, k8sClient, testEndpointSlice, nil)
 
 			ctrl.Log.Info("loading default Dataplane")
 			current := &stnrgwv1.Dataplane{ObjectMeta: metav1.ObjectMeta{
@@ -211,10 +211,10 @@ func testFinalizer() {
 
 		It("should survive the event of adding a route", func() {
 			ctrl.Log.Info("loading UDPRoute")
-			createOrUpdateUDPRoute(testUDPRoute, nil)
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
 
 			ctrl.Log.Info("loading backend Service")
-			createOrUpdateService(testSvc, nil)
+			createOrUpdateService(ctx, k8sClient, testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {

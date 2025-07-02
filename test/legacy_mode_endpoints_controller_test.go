@@ -55,12 +55,12 @@ func testLegacyModeEndpointController() {
 			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
-			createOrUpdateGatewayClass(testGwClass, nil)
-			createOrUpdateGatewayConfig(testGwConfig, nil)
-			createOrUpdateGateway(testGw, nil)
-			createOrUpdateUDPRoute(testUDPRoute, nil)
-			createOrUpdateService(testSvc, nil)
-			createOrUpdateEndpoints(testEndpoint, nil)
+			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
+			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
+			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
+			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
+			createOrUpdateService(ctx, k8sClient, testSvc, nil)
+			createOrUpdateEndpoints(ctx, k8sClient, testEndpoint, nil)
 
 			lookupKey := types.NamespacedName{
 				Name:      opdefault.DefaultConfigMapName,
