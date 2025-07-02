@@ -306,11 +306,11 @@ func getHealthCheckParameters(c *RenderContext) (*corev1.Probe, *corev1.Probe) {
 
 	livenessProbeAction := config.LivenessProbeAction.DeepCopy()
 	livenessProbe := config.LivenessProbe.DeepCopy()
-	livenessProbe.ProbeHandler.HTTPGet = livenessProbeAction
+	livenessProbe.HTTPGet = livenessProbeAction
 
 	readinessProbeAction := config.ReadinessProbeAction.DeepCopy()
 	readinessProbe := config.ReadinessProbe.DeepCopy()
-	readinessProbe.ProbeHandler.HTTPGet = readinessProbeAction
+	readinessProbe.HTTPGet = readinessProbeAction
 
 	return livenessProbe, readinessProbe
 }

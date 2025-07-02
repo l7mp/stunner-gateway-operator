@@ -6,7 +6,6 @@ import (
 	// "fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -125,12 +124,12 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 
 	// watch Service objects referenced by one of our UDPRoutes
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{},
-			&handler.TypedEnqueueRequestForObject[*corev1.Service]{},
+		source.Kind(mgr.GetCache(), &v1.Service{},
+			&handler.TypedEnqueueRequestForObject[*v1.Service]{},
 			// trigger when either a gateway-loadbalancer service (svc annotated as a
 			// related-service for a gateway) or a backend-service changes
 			predicate.Or(
-				predicate.NewTypedPredicateFuncs[*corev1.Service](r.validateBackendServiceForReconcile),
+				predicate.NewTypedPredicateFuncs[*v1.Service](r.validateBackendServiceForReconcile),
 				loadBalancerPredicate)),
 	); err != nil {
 		return nil, err
@@ -160,9 +159,9 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		// if EndpointSlices are still not available, fall back to wathing Endpoints
 		if !config.EndpointSliceAvailable {
 			if err := c.Watch(
-				source.Kind(mgr.GetCache(), &corev1.Endpoints{},
-					&handler.TypedEnqueueRequestForObject[*corev1.Endpoints]{},
-					predicate.NewTypedPredicateFuncs[*corev1.Endpoints](r.validateBackendEndpointsForReconcile)),
+				source.Kind(mgr.GetCache(), &v1.Endpoints{},
+					&handler.TypedEnqueueRequestForObject[*v1.Endpoints]{},
+					predicate.NewTypedPredicateFuncs[*v1.Endpoints](r.validateBackendEndpointsForReconcile)),
 			); err != nil {
 				return nil, err
 			}
@@ -204,7 +203,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
-	svcs := &corev1.ServiceList{}
+	svcs := &v1.ServiceList{}
 	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	if err == nil {
 		for _, svc := range svcs.Items {
@@ -265,7 +264,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 
 		nsName := udproute.GetNamespace()
 		r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
-		namespace := corev1.Namespace{}
+		namespace := v1.Namespace{}
 		if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
 			r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
 				store.GetObjectKey(&udproute), "namespace-name", nsName)
@@ -325,7 +324,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 
 		nsName := udproute.GetNamespace()
 		r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
-		namespace := corev1.Namespace{}
+		namespace := v1.Namespace{}
 		if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
 			r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
 				store.GetObjectKey(udproute), "namespace-name", nsName)
@@ -363,7 +362,7 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	return reconcile.Result{}, nil
 }
 
-func (r *udpRouteReconciler) validateBackendServiceForReconcile(svc *corev1.Service) bool {
+func (r *udpRouteReconciler) validateBackendServiceForReconcile(svc *v1.Service) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(svc))
 }
 
@@ -371,7 +370,7 @@ func (r *udpRouteReconciler) validateStaticServiceForReconcile(svc *stnrgwv1.Sta
 	return r.validateBackendForReconcile(store.GetObjectKey(svc))
 }
 
-func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *corev1.Endpoints) bool {
+func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoints) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(e))
 }
 
@@ -417,7 +416,7 @@ func (r *udpRouteReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.
 
 	// r.log.Info("validateEndpointSliceForReconcile:", "label", "ok")
 
-	svc := &corev1.Service{}
+	svc := &v1.Service{}
 	if err := r.Get(context.Background(), types.NamespacedName{
 		Namespace: esl.GetNamespace(),
 		Name:      svcName,
@@ -435,7 +434,7 @@ func (r *udpRouteReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.
 }
 
 // getServiceForBackend finds the Service associated with a backendRef
-func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) *corev1.Service {
+func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute *stnrgwv1.UDPRoute, ref *stnrgwv1.BackendRef) *v1.Service {
 
 	// if no explicit Service namespace is provided, use the UDPRoute namespace to lookup the
 	// Service
@@ -444,7 +443,7 @@ func (r *udpRouteReconciler) getServiceForBackend(ctx context.Context, udproute 
 		namespace = string(*ref.Namespace)
 	}
 
-	svc := corev1.Service{}
+	svc := v1.Service{}
 	if err := r.Get(ctx,
 		types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
 		&svc,
@@ -511,7 +510,7 @@ func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udprout
 		namespace = string(*ref.Namespace)
 	}
 
-	ep := corev1.Endpoints{}
+	ep := v1.Endpoints{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, &ep); err != nil {
 		// not fatal
 		if !apierrors.IsNotFound(err) {

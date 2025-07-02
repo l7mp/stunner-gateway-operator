@@ -17,7 +17,6 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/pkg/config"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 type Server struct {
@@ -93,11 +92,11 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 		}
 	}
 
-	if err := c.Server.UpdateConfig(configs); err != nil {
+	if err := c.UpdateConfig(configs); err != nil {
 		return err
 	}
 
-	c.Server.UpdateLicenseStatus(e.LicenseStatus)
+	c.UpdateLicenseStatus(e.LicenseStatus)
 
 	return nil
 }
@@ -132,7 +131,7 @@ func getNodeAddressPatcher(log logr.Logger) cdsserver.ConfigNodePatcher {
 					conf.Listeners[i].Addr = nodeAddr
 					patched = true
 				} else {
-					conf.Listeners[i].Addr = opdefault.DefaultSTUNnerAddressEnvVarName // $STUNNER_ADDR
+					conf.Listeners[i].Addr = config.DefaultSTUNnerAddressEnvVarName // $STUNNER_ADDR
 				}
 			}
 		}

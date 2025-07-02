@@ -94,6 +94,8 @@ func setGatewayClassStatusAccepted(gc *gwapiv1.GatewayClass, err error) {
 }
 
 // helper for testing
+//
+//nolint:unused
 func (r *renderer) getGatewayClass() (*gwapiv1.GatewayClass, error) {
 	gcs := store.GatewayClasses.GetAll()
 	if len(gcs) == 0 {

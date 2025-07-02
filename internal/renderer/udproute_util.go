@@ -46,8 +46,8 @@ func (r *renderer) getUDPRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 			store.GetObjectKey(gw), "listener", l.Name, "route",
 			store.GetObjectKey(ro))
 
-		for j := range ro.Spec.CommonRouteSpec.ParentRefs {
-			p := ro.Spec.CommonRouteSpec.ParentRefs[j]
+		for j := range ro.Spec.ParentRefs {
+			p := ro.Spec.ParentRefs[j]
 
 			found, reason := resolveParentRef(ro, &p, gw, l)
 			if !found {
