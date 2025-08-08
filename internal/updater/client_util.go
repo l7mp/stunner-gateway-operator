@@ -131,7 +131,7 @@ func (u *Updater) upsertService(svc *corev1.Service, gen int) (ctrlutil.Operatio
 		Namespace: svc.GetNamespace(),
 	}}
 
-	op, err := ctrlutil.CreateOrUpdate(u.ctx, client, current, func() error {
+	op, err := ctrlutil.CreateOrPatch(u.ctx, client, current, func() error {
 		if err := setMetadata(current, svc); err != nil {
 			return nil
 		}
