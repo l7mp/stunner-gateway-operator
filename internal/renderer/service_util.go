@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -580,31 +581,27 @@ func (r *renderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error
 	return serviceProto, nil
 }
 
-// TODO: understand and refactor
-// merge serviceports wth existing svc
-// - p2 overrides ps1 on conflict
-// - service-ports not existing in ps2 are deleted from result
-func mergeServicePorts(ps1, ps2 []corev1.ServicePort) []corev1.ServicePort {
-	// init
-	ret := make([]corev1.ServicePort, len(ps2))
-	for i := range ps2 {
-		ps2[i].DeepCopyInto(&ret[i])
-	}
+// mergeServicePorts merges serviceports created by stunner into the existing svc
+// - stunner sp overrides the existing sp on conflict
+// - service-ports not existing in stunner sp are deleted from the result
+func mergeServicePorts(existingSp, stnrSp []corev1.ServicePort) []corev1.ServicePort {
+	ret := []corev1.ServicePort{}
 
-	// if a service-port exists in ps1, then merge
-	for i := range ret {
-		for j := range ps1 {
-			if ret[i].Name == ps1[j].Name {
-				tmp := ret[i].DeepCopy()
-				// copy ps1
-				ps1[j].DeepCopyInto(&ret[i])
-				// then update
-				ret[i].Protocol = tmp.Protocol
-				ret[i].Port = tmp.Port
-				ret[i].TargetPort = tmp.TargetPort
-				break
-			}
+	for i := range stnrSp {
+		spIdx := slices.IndexFunc(existingSp,
+			func(sp corev1.ServicePort) bool { return sp.Name == stnrSp[i].Name })
+		// if new service-port: overwrite
+		if spIdx == -1 {
+			ret = append(ret, stnrSp[i])
+			continue
 		}
+		// existing service-port: merge
+		sp := existingSp[spIdx].DeepCopy()
+		sp.Protocol = stnrSp[i].Protocol
+		sp.Port = stnrSp[i].Port
+		// do not touch ndoeport and targetport: if requested in an annotation then we will
+		// update these later, otherwise leave them as chosen by K8s
+		ret = append(ret, *sp)
 	}
 
 	return ret

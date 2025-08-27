@@ -2344,6 +2344,73 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - service nodeport/targetport retained",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				// make sure UDP and TCP are both handled
+				gw := testutils.TestGw.DeepCopy()
+				mixedProtoAnnotation := map[string]string{
+					opdefault.MixedProtocolAnnotationKey: "true",
+				}
+				gw.ObjectMeta.SetAnnotations(mixedProtoAnnotation)
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetName("gateway-1")
+				s1.SetNamespace("testnamespace")
+				s1.Spec.Ports = []corev1.ServicePort{
+					{
+						Name:       "gateway-1-listener-udp",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       1,
+						NodePort:   30001,
+						TargetPort: intstr.FromInt(1),
+					},
+					{
+						Name:       "dummy",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       123,
+						NodePort:   31234,
+						TargetPort: intstr.FromString("dummy"),
+					},
+				}
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
+				assert.Equal(t, corev1.ServiceTypeLoadBalancer, s.Spec.Type, "lb type")
+				ports := s.Spec.Ports
+				assert.Len(t, ports, 2, "service-port len")
+				assert.Equal(t, "gateway-1-listener-udp", ports[0].Name, "port 1 name")
+				assert.Equal(t, int32(30001), ports[0].NodePort, "port 1 np")        // default
+				assert.Equal(t, intstr.FromInt(1), ports[0].TargetPort, "port 1 tp") // default
+				assert.Equal(t, "gateway-1-listener-tcp", ports[1].Name, "port 1 name")
+				assert.Equal(t, int32(0), ports[1].NodePort, "port 2 np")
+				assert.Equal(t, intstr.IntOrString{}, ports[1].TargetPort, "port 2 tp")
+			},
+		},
+		{
 			name: "lb service - STUNner-specific annotation removed unless GW also sets it",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
