@@ -159,6 +159,7 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		// if EndpointSlices are still not available, fall back to wathing Endpoints
 		if !config.EndpointSliceAvailable {
 			if err := c.Watch(
+				//nolint:staticcheck
 				source.Kind(mgr.GetCache(), &v1.Endpoints{},
 					&handler.TypedEnqueueRequestForObject[*v1.Endpoints]{},
 					predicate.NewTypedPredicateFuncs[*v1.Endpoints](r.validateBackendEndpointsForReconcile)),
@@ -370,6 +371,7 @@ func (r *udpRouteReconciler) validateStaticServiceForReconcile(svc *stnrgwv1.Sta
 	return r.validateBackendForReconcile(store.GetObjectKey(svc))
 }
 
+//nolint:staticcheck
 func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoints) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(e))
 }
@@ -510,7 +512,7 @@ func (r *udpRouteReconciler) getEndpointsForBackend(ctx context.Context, udprout
 		namespace = string(*ref.Namespace)
 	}
 
-	ep := v1.Endpoints{}
+	ep := v1.Endpoints{} //nolint:staticcheck
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, &ep); err != nil {
 		// not fatal
 		if !apierrors.IsNotFound(err) {

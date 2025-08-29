@@ -406,7 +406,7 @@ func testManagedMode() {
 			ctrl.Log.Info("re-loading gateway with specific address")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				addr := gwapiv1.IPAddressType
-				current.Spec.Addresses = []gwapiv1.GatewayAddress{{
+				current.Spec.Addresses = []gwapiv1.GatewaySpecAddress{{
 					Type:  &addr,
 					Value: "1.2.3.5",
 				}}

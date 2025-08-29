@@ -1812,7 +1812,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				at := gwapiv1.IPAddressType
-				gw.Spec.Addresses = []gwapiv1.GatewayAddress{
+				gw.Spec.Addresses = []gwapiv1.GatewaySpecAddress{
 					{
 						Type:  &at,
 						Value: "1.1.1.1",
