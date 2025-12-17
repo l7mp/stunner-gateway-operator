@@ -127,7 +127,7 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 		}
 		r.log.Info("Watching dataplane Deployment objects")
 
-		// watch Deployment objects referenced by one of our Gateways
+		// watch DaemonSet objects referenced by one of our Gateways
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &appv1.DaemonSet{},
 				&handler.TypedEnqueueRequestForObject[*appv1.DaemonSet]{},

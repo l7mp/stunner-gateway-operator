@@ -155,10 +155,11 @@ func main() {
 	setupLog.Info("config discovery server", "local-addr", cdsAddr,
 		"remote-addr", config.ConfigDiscoveryAddress)
 
-	if d, err := time.ParseDuration(throttleTimeout); err != nil {
-		setupLog.Info("setting rate-limiting (throttle timeout)", "timeout", throttleTimeout)
+	if d, err := time.ParseDuration(throttleTimeout); err == nil {
 		config.ThrottleTimeout = d
 	}
+
+	setupLog.V(1).Info("setting rate-limiting (throttle timeout)", "timeout", config.ThrottleTimeout.String())
 
 	setupLog.Info("setting up Kubernetes controller manager")
 
