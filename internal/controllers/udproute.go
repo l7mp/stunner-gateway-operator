@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+
 	// "errors"
 	// "fmt"
 
@@ -364,24 +366,26 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 }
 
 func (r *udpRouteReconciler) validateBackendServiceForReconcile(svc *v1.Service) bool {
-	return r.validateBackendForReconcile(store.GetObjectKey(svc))
+	return r.validateBackendForReconcile(store.GetObjectKey(svc), serviceUDPRouteIndex, serviceUDPRouteIndexV1A2)
 }
 
-func (r *udpRouteReconciler) validateStaticServiceForReconcile(svc *stnrgwv1.StaticService) bool {
-	return r.validateBackendForReconcile(store.GetObjectKey(svc))
+func (r *udpRouteReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.StaticService) bool {
+	return r.validateBackendForReconcile(store.GetObjectKey(staticSvc),
+		staticServiceUDPRouteIndex, staticServiceUDPRouteIndexV1A2)
 }
 
 //nolint:staticcheck
 func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoints) bool {
-	return r.validateBackendForReconcile(store.GetObjectKey(e))
+	return r.validateBackendForReconcile(store.GetObjectKey(e), serviceUDPRouteIndex, serviceUDPRouteIndexV1A2)
 }
 
-// validateBackendForReconcile checks whether the Service belongs to a valid UDPRoute.
-func (r *udpRouteReconciler) validateBackendForReconcile(key string) bool {
+// validateBackendForReconcile checks whether the Service or StaticService belongs to a valid
+// UDPRoute. Uses the indexers in the argument.
+func (r *udpRouteReconciler) validateBackendForReconcile(key, index, indexV1A2 string) bool {
 	// find the routes referring to this service
 	routeList := &stnrgwv1.UDPRouteList{}
 	if err := r.List(context.Background(), routeList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, key),
+		FieldSelector: fields.OneTermEqualSelector(index, key),
 	}); err != nil {
 		r.log.Error(err, "Unable to find associated UDPRoute", "service", key)
 		return false
@@ -390,19 +394,22 @@ func (r *udpRouteReconciler) validateBackendForReconcile(key string) bool {
 	// find V1A2 routes referring to this service
 	routeListV1A2 := &gwapiv1a2.UDPRouteList{}
 	if err := r.List(context.Background(), routeListV1A2, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndexV1A2, key),
+		FieldSelector: fields.OneTermEqualSelector(indexV1A2, key),
 	}); err != nil {
 		r.log.Error(err, "Unable to find associated UDPRouteV1A2", "service", key)
 		return false
 	}
 
-	if len(routeList.Items) == 0 && len(routeListV1A2.Items) == 0 {
-		r.log.Info("Validating backend", "udproute", "not found")
-		return false
+	routeNum := len(routeList.Items) + len(routeListV1A2.Items)
+	resStr := "not found"
+	if routeNum > 0 {
+		resStr = fmt.Sprintf("found %d routes", routeNum)
 	}
 
-	r.log.Info("Validate backend", "udproute", "found")
-	return true
+	r.log.Info("Validating backend", "key", key, "index", fmt.Sprintf("%s/%s", index, indexV1A2),
+		"udproute", resStr)
+
+	return routeNum != 0
 }
 
 // validateEndpointSliceForReconcile checks whether an EndpointSlice belongs to a Service that

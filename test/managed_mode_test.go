@@ -1380,7 +1380,7 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("should survive converting the route to a StaticService backend", func() {
+		It("should survive adding a StaticService backend", func() {
 			ctrl.Log.Info("adding static service")
 			createOrUpdateStaticService(ctx, k8sClient, testStaticSvc, nil)
 
@@ -1612,6 +1612,68 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
+		It("should handle a StaticService endpoint being changed", func() {
+			ctrl.Log.Info("updating static service")
+			updatedStaticSvc := testStaticSvc.DeepCopy()
+			updatedStaticSvc.Spec = stnrgwv1.StaticServiceSpec{
+				Prefixes: []string{"10.11.12.13", "10.11.12.14", "10.11.12.16"},
+			}
+			createOrUpdateStaticService(ctx, k8sClient, updatedStaticSvc, nil)
+
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.16") {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should render a correct STUNner config", func() {
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			// not sure about the order
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
+			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Key).NotTo(Equal(""))
+			Expect(l.Cert).NotTo(Equal(""))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			Expect(conf.Clusters).To(HaveLen(1))
+
+			c := conf.Clusters[0]
+
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Type).Should(Equal("STATIC"))
+			Expect(c.Endpoints).To(HaveLen(8))
+			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
+			Expect(c.Endpoints).Should(ContainElement("10.11.12.14"))
+			Expect(c.Endpoints).Should(ContainElement("10.11.12.16"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+		})
+
 		It("should survive converting the route to v1a2 route", func() {
 			ctrl.Log.Info("reseting gateway")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
@@ -1736,7 +1798,7 @@ func testManagedMode() {
 				Equal(string(gwapiv1.GatewayConditionProgrammed)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			// stragely recreating the gateway lets api-server to find the public ip
+			// strangely recreating the gateway lets api-server to find the public ip
 			// for the gw so Ready status becomes true (should investigate this)
 			Expect(gw.Status.Listeners).To(HaveLen(2))
 
