@@ -150,8 +150,35 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				// pass through to the updater
 				o.updaterCh <- e
 
-				// notify the config discovery server
-				o.configCh <- e
+				// Notify the config discovery server using latest-wins, non-blocking
+				// semantics to prevent this event loop from ever blocking on the CDS
+				// channel. The CDS server calls UpdateConfig() which pushes configs to
+				// every connected stunnerd gRPC client. With many (or slow) clients
+				// this call can take longer than ThrottleTimeout, causing configCh
+				// (buffer=10) to fill up and deadlock the entire event loop.
+				//
+				// Drain any stale pending updates first so the server always ends up
+				// processing the most recent config. Missing an intermediate push is
+				// harmless: the CDS server is a best-effort push cache and the next
+				// render cycle will re-emit the latest config.
+				draining := true
+				for draining {
+					select {
+					case <-o.configCh:
+						o.log.V(3).Info("Drained stale config-discovery update")
+					default:
+						draining = false
+					}
+				}
+				select {
+				case o.configCh <- e:
+				default:
+					// Channel filled transiently between the drain and this send
+					// (the CDS server is mid-read). The pending item in the channel
+					// is newer than nothing; skip this one.
+					o.log.V(2).Info("Config discovery channel transiently full, skipping push",
+						"event", e.String())
+				}
 
 			case event.EventTypeReconcile:
 				// rate-limit rendering requests before passing on to the renderer
