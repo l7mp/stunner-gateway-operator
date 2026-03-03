@@ -2,11 +2,12 @@ package operator
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -44,23 +45,8 @@ func newTestOperator(opCh chan event.Event, updaterCh, configCh, renderCh chan e
 	}
 }
 
-// TestEventLoopDoesNotBlockOnSlowCDSConsumer is a regression test for the deadlock where a
-// slow or absent CDS (config-discovery) consumer caused the operator event loop to hang
-// permanently, stopping all udproute/gateway/dataplane reconciliation.
-//
-// Root cause: the event loop did a blocking send `o.configCh <- e`. The CDS server calls
-// UpdateConfig() which fans out configs over gRPC to every connected stunnerd pod. With many
-// (or slow) pods this takes longer than ThrottleTimeout, so configCh (buffer=10) fills up
-// and the blocking send deadlocks the single event-loop goroutine. All subsequent reconcile
-// events then pile up unprocessed; only "node-controller Reconciling" log lines appear.
-//
-// Fix: replace the blocking send with a drain-then-non-blocking-send pattern.
-//
-// To observe the regression intentionally, revert the configCh dispatch in eventLoop to:
-//
-//	o.configCh <- e
-//
-// The test will then fail at event 11 (configCh buffer=10) with a deadlock message.
+// TestEventLoopDoesNotBlockOnSlowCDSConsumer asserts that the event loop continues
+// delivering updates to the updater even when the CDS consumer is permanently absent.
 func TestEventLoopDoesNotBlockOnSlowCDSConsumer(t *testing.T) {
 	origThrottle := config.ThrottleTimeout
 	config.ThrottleTimeout = 10 * time.Millisecond
@@ -105,37 +91,20 @@ func TestEventLoopDoesNotBlockOnSlowCDSConsumer(t *testing.T) {
 	for i := 0; i < numUpdates; i++ {
 		select {
 		case <-updaterCh:
-			// event i reached the updater — loop is alive and processing
+			// event reached the updater — loop is alive
 		case <-deadline:
-			t.Fatalf("deadlock: only %d/%d updates reached updaterCh within 3s "+
-				"(configCh cap=%d, old blocking send deadlocks at event %d). "+
-				"The CDS channel blocking bug has regressed.",
-				i, numUpdates, cap(configCh), cap(configCh)+1)
+			require.Failf(t, "deadlock",
+				"only %d/%d updates reached updaterCh within 3s (configCh cap=%d)",
+				i, numUpdates, cap(configCh))
 		}
 	}
 
-	// configCh should hold at most its buffer capacity — the non-blocking drain+send pattern
-	// means typically only the latest snapshot is queued at any given moment.
-	if got := len(configCh); got > cap(configCh) {
-		t.Errorf("configCh has %d items, expected ≤ cap (%d)", got, cap(configCh))
-	}
-
-	// updaterCh should be drained by now.
-	if got := len(updaterCh); got != 0 {
-		t.Errorf("updaterCh has %d unexpected leftover items", got)
-	}
-
-	t.Logf("OK: all %d updates processed with a permanently-blocked configCh consumer "+
-		"(configCh has %d item(s) queued — the latest snapshot)",
-		numUpdates, len(configCh))
+	assert.LessOrEqual(t, len(configCh), cap(configCh), "configCh should not exceed its capacity")
+	assert.Empty(t, updaterCh, "updaterCh should be fully drained")
 }
 
-// TestEventLoopStillProcessesReconcileWhileCDSBlocked verifies that EventTypeReconcile events
-// continue to be processed — and the throttler fires — even when configCh is saturated.
-//
-// This is the observable symptom of the original bug: only "node-controller Reconciling"
-// log lines appeared because the controllers could still enqueue EventTypeReconcile events
-// into the 200-slot operatorCh buffer, but the deadlocked loop consumed none of them.
+// TestEventLoopStillProcessesReconcileWhileCDSBlocked asserts that reconcile events are
+// processed and the throttler fires even when configCh is saturated.
 func TestEventLoopStillProcessesReconcileWhileCDSBlocked(t *testing.T) {
 	origThrottle := config.ThrottleTimeout
 	config.ThrottleTimeout = 10 * time.Millisecond
@@ -180,8 +149,8 @@ func TestEventLoopStillProcessesReconcileWhileCDSBlocked(t *testing.T) {
 	case <-renderCh:
 		// throttle timer fired; loop is alive and responsive
 	case <-time.After(3 * time.Second):
-		t.Fatal("deadlock: EventTypeReconcile not processed within 3s with a " +
-			fmt.Sprintf("saturated configCh (cap=%d). ", cap(configCh)) +
-			"The event loop is blocked by a blocking configCh send.")
+		require.Failf(t, "deadlock",
+			"EventTypeReconcile not processed within 3s with saturated configCh (cap=%d)",
+			cap(configCh))
 	}
 }

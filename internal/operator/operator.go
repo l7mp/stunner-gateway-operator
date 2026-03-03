@@ -147,37 +147,11 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 		case e := <-o.operatorCh.Channel():
 			switch e.GetType() {
 			case event.EventTypeUpdate:
-				// pass through to the updater
-				o.updaterCh <- e
-
-				// Notify the config discovery server using latest-wins, non-blocking
-				// semantics to prevent this event loop from ever blocking on the CDS
-				// channel. The CDS server calls UpdateConfig() which pushes configs to
-				// every connected stunnerd gRPC client. With many (or slow) clients
-				// this call can take longer than ThrottleTimeout, causing configCh
-				// (buffer=10) to fill up and deadlock the entire event loop.
-				//
-				// Drain any stale pending updates first so the server always ends up
-				// processing the most recent config. Missing an intermediate push is
-				// harmless: the CDS server is a best-effort push cache and the next
-				// render cycle will re-emit the latest config.
-				draining := true
-				for draining {
-					select {
-					case <-o.configCh:
-						o.log.V(3).Info("Drained stale config-discovery update")
-					default:
-						draining = false
-					}
+				if n := sendCoalesced(o.updaterCh, e); n > 0 {
+					o.log.V(3).Info("Coalesced stale updater events", "count", n)
 				}
-				select {
-				case o.configCh <- e:
-				default:
-					// Channel filled transiently between the drain and this send
-					// (the CDS server is mid-read). The pending item in the channel
-					// is newer than nothing; skip this one.
-					o.log.V(2).Info("Config discovery channel transiently full, skipping push",
-						"event", e.String())
+				if n := sendCoalesced(o.configCh, e); n > 0 {
+					o.log.V(3).Info("Coalesced stale config-discovery events", "count", n)
 				}
 
 			case event.EventTypeReconcile:
@@ -256,6 +230,28 @@ func (o *Operator) Terminate() {
 
 	// release our channel
 	o.operatorCh.Put()
+}
+
+// sendCoalesced delivers e to ch with coalescing semantics: it loops until the
+// send succeeds, draining stale pending events to make room whenever the channel
+// is full. Returns the number of stale events dropped.
+func sendCoalesced(ch chan event.Event, e event.Event) int {
+	dropped := 0
+	for {
+		select {
+		case ch <- e:
+			return dropped
+		default:
+			select {
+			case <-ch:
+				dropped++
+			default:
+				// A concurrent reader emptied the channel between the failed
+				// send above and this drain attempt; the outer loop will retry
+				// the send on the next iteration.
+			}
+		}
+	}
 }
 
 // Finalize invalidates the status on all the managed resources. Note that Finalize must be called
