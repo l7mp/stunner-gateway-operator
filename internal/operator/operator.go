@@ -147,11 +147,12 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 		case e := <-o.operatorCh.Channel():
 			switch e.GetType() {
 			case event.EventTypeUpdate:
-				// pass through to the updater
-				o.updaterCh <- e
-
-				// notify the config discovery server
-				o.configCh <- e
+				if n := sendCoalesced(o.updaterCh, e); n > 0 {
+					o.log.V(3).Info("Coalesced stale updater events", "count", n)
+				}
+				if n := sendCoalesced(o.configCh, e); n > 0 {
+					o.log.V(3).Info("Coalesced stale config-discovery events", "count", n)
+				}
 
 			case event.EventTypeReconcile:
 				// rate-limit rendering requests before passing on to the renderer
@@ -229,6 +230,28 @@ func (o *Operator) Terminate() {
 
 	// release our channel
 	o.operatorCh.Put()
+}
+
+// sendCoalesced delivers e to ch with coalescing semantics: it loops until the
+// send succeeds, draining stale pending events to make room whenever the channel
+// is full. Returns the number of stale events dropped.
+func sendCoalesced(ch chan event.Event, e event.Event) int {
+	dropped := 0
+	for {
+		select {
+		case ch <- e:
+			return dropped
+		default:
+			select {
+			case <-ch:
+				dropped++
+			default:
+				// A concurrent reader emptied the channel between the failed
+				// send above and this drain attempt; the outer loop will retry
+				// the send on the next iteration.
+			}
+		}
+	}
 }
 
 // Finalize invalidates the status on all the managed resources. Note that Finalize must be called
