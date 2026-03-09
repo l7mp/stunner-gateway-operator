@@ -62,10 +62,9 @@ jobs:
         run: echo tag=$(echo ${GITHUB_REF:11}) >> $GITHUB_OUTPUT
 
       - name: Triggering release workflow in the stunner-helm repo
-        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        uses: benc-uk/workflow-dispatch@v1
         with:
-          github_token: ${{ secrets.WEB_PAT_TOKEN }}
-          owner: l7mp
-          repo: stunner-helm
-          client_payload: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner-gateway-operator"}'
-          workflow_file_name: publish.yaml
+          token: ${{ secrets.WEB_PAT_TOKEN }}
+          repo: l7mp/stunner-helm
+          workflow: publish.yaml
+          inputs: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner-gateway-operator"}'
