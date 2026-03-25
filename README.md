@@ -16,6 +16,17 @@ The STUNner Kubernetes Gateway Operator is an open-source implementation of the 
 
 Full documentation for the stable version can be found [here](https://docs.l7mp.io/en/stable). The documentation of the development version is maintained [here](https://github.com/l7mp/stunner/blob/main/docs/README.md).
 
+## Configuration: Flags and Environment Variables
+
+The operator supports both command-line flags and environment variables.
+
+- `--controller-name` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME`.
+- `--dataplane-mode` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE`.
+- `--config-discovery-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_ADDRESS`.
+- `CUSTOMER_KEY` is read from the environment for licensing.
+
+Command-line flags take precedence over environment variables. 
+
 ## Caveats
 
 * STUNner implements its own UDPRoute resource instead of using the official UDPRoute provided by the Gateway API. The reason is that STUNner's UDPRoutes omit the port defined in backend references, in contrast to standard UDPRoutes that make the port mandatory. The rationale is that WebRTC media servers typically spawn zillions of UDP/SRTP listeners on essentially any UDP port, so enforcing a single backend port would block all client access. Instead, STUNner's UDPRoutes do not limit port access on backend services at all by default, and provide an optional pair or port/end-port fields per backend reference to define a target port range in which peer connections to the backend are to be accepted.

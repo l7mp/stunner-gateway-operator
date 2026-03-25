@@ -55,9 +55,10 @@ import (
 )
 
 const (
-	envVarMode        = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
-	envVarAddress     = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
-	envVarCustomerKey = "CUSTOMER_KEY"
+	envVarMode           = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
+	envVarAddress        = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
+	envVarControllerName = "STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME"
+	envVarCustomerKey    = "CUSTOMER_KEY"
 )
 
 var (
@@ -79,7 +80,12 @@ func main() {
 	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr string
 	var enableLeaderElection, enableEDS, disableEndpontSliceController, enableFinalizer bool
 
-	flag.StringVar(&controllerName, "controller-name", opdefault.DefaultControllerName,
+	defaultControllerName := opdefault.DefaultControllerName
+	if name, ok := os.LookupEnv(envVarControllerName); ok {
+		defaultControllerName = name
+	}
+
+	flag.StringVar(&controllerName, "controller-name", defaultControllerName,
 		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
 	flag.StringVar(&throttleTimeout, "throttle-timeout", opdefault.DefaultThrottleTimeout.String(),
 		"Time interval to wait between subsequent config renders.")
@@ -118,6 +124,7 @@ func main() {
 	config.EndpointSliceAvailable = !disableEndpontSliceController // controller may override this
 	config.EnableFinalizer = enableFinalizer
 	setupLog.Info("operator flags",
+		"controller-name", controllerName,
 		"endpoint discovery", config.EnableEndpointDiscovery,
 		"endpointslice-controller", config.EndpointSliceAvailable,
 		"finalizer", config.EnableFinalizer)
