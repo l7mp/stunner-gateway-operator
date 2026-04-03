@@ -42,9 +42,10 @@ const (
 
 type udpRouteReconciler struct {
 	client.Client
-	eventCh     event.EventChannel
-	terminating bool
-	log         logr.Logger
+	eventCh        event.EventChannel
+	terminating    bool
+	skipGwapiv1a2  bool
+	log            logr.Logger
 }
 
 func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
@@ -66,13 +67,12 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 	r.log.Info("Created UDPRoute controller")
 
 	// watch UDPRoute objects
-	stnrUDPRouteAvailable := false
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &stnrgwv1.UDPRoute{},
 			&handler.TypedEnqueueRequestForObject[*stnrgwv1.UDPRoute]{},
 			predicate.TypedGenerationChangedPredicate[*stnrgwv1.UDPRoute]{}),
 	); err == nil {
-		stnrUDPRouteAvailable = true
+		r.skipGwapiv1a2 = true
 		r.log.Info("Watching UDPRoute objects")
 
 		// index UDPRoute objects as per the referenced Services
@@ -86,10 +86,12 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 			staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
 			return nil, err
 		}
+	} else {
+		r.log.V(1).Info("STUNner UDPRoute CRD not available, falling back to v1alpha2")
 	}
 
 	// watch UDPRouteV1A2 objects (fallback when STUNner UDPRoute CRD is not available)
-	if !stnrUDPRouteAvailable {
+	if !r.skipGwapiv1a2 {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
 				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
@@ -219,125 +221,129 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	}
 
 	// find all UDPRoutes
-	routes := &stnrgwv1.UDPRouteList{}
-	if err := r.List(ctx, routes); err != nil {
-		r.log.Info("No UDPRoutes found")
-		return reconcile.Result{}, err
-	}
+	if r.skipGwapiv1a2 {
+		routes := &stnrgwv1.UDPRouteList{}
+		if err := r.List(ctx, routes); err != nil {
+			r.log.Info("No UDPRoutes found")
+			return reconcile.Result{}, err
+		}
 
-	for _, udproute := range routes.Items {
-		udproute := udproute
-		r.log.V(1).Info("Processing UDPRoute", "name", store.GetObjectKey(&udproute))
+		for _, udproute := range routes.Items {
+			udproute := udproute
+			r.log.V(1).Info("Processing UDPRoute", "name", store.GetObjectKey(&udproute))
 
-		routeList = append(routeList, &udproute)
+			routeList = append(routeList, &udproute)
 
-		for _, rule := range udproute.Spec.Rules {
-			for _, ref := range rule.BackendRefs {
-				ref := ref
+			for _, rule := range udproute.Spec.Rules {
+				for _, ref := range rule.BackendRefs {
+					ref := ref
 
-				// is this a static service?
-				if store.IsReferenceStaticService(&ref) {
-					if svc := r.getStaticServiceForBackend(ctx, &udproute, &ref); svc != nil {
-						ssvcList = append(ssvcList, svc)
-					}
-					continue
-				}
-
-				if store.IsReferenceService(&ref) {
-					if svc := r.getServiceForBackend(ctx, &udproute, &ref); svc != nil {
-						r.log.V(2).Info("Found service for UDPRoute backend ref",
-							"udproute", store.GetObjectKey(&udproute),
-							"ref", store.DumpBackendRef(&ref),
-							"svc", store.GetObjectKey(svc))
-						svcList = append(svcList, svc)
+					// is this a static service?
+					if store.IsReferenceStaticService(&ref) {
+						if svc := r.getStaticServiceForBackend(ctx, &udproute, &ref); svc != nil {
+							ssvcList = append(ssvcList, svc)
+						}
+						continue
 					}
 
-					if config.EnableEndpointDiscovery {
-						if config.EndpointSliceAvailable {
-							es := r.getEndpointSlicesForBackend(ctx, &udproute, &ref)
-							endpointList = append(endpointList, es...)
-						} else {
-							if e := r.getEndpointsForBackend(ctx, &udproute, &ref); e != nil {
-								endpointList = append(endpointList, e)
+					if store.IsReferenceService(&ref) {
+						if svc := r.getServiceForBackend(ctx, &udproute, &ref); svc != nil {
+							r.log.V(2).Info("Found service for UDPRoute backend ref",
+								"udproute", store.GetObjectKey(&udproute),
+								"ref", store.DumpBackendRef(&ref),
+								"svc", store.GetObjectKey(svc))
+							svcList = append(svcList, svc)
+						}
+
+						if config.EnableEndpointDiscovery {
+							if config.EndpointSliceAvailable {
+								es := r.getEndpointSlicesForBackend(ctx, &udproute, &ref)
+								endpointList = append(endpointList, es...)
+							} else {
+								if e := r.getEndpointsForBackend(ctx, &udproute, &ref); e != nil {
+									endpointList = append(endpointList, e)
+								}
 							}
 						}
-					}
 
-					continue
+						continue
+					}
 				}
 			}
-		}
 
-		nsName := udproute.GetNamespace()
-		r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
-		namespace := v1.Namespace{}
-		if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
-			r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
-				store.GetObjectKey(&udproute), "namespace-name", nsName)
-			continue
-		}
+			nsName := udproute.GetNamespace()
+			r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
+			namespace := v1.Namespace{}
+			if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
+				r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
+					store.GetObjectKey(&udproute), "namespace-name", nsName)
+				continue
+			}
 
-		namespaceList = append(namespaceList, &namespace)
+			namespaceList = append(namespaceList, &namespace)
+		}
 	}
 
 	// find all gwapi.v1alpha2 UDPRoutes and convert to our own UDPRoute format
-	routesV1A2 := &gwapiv1a2.UDPRouteList{}
-	if err := r.List(ctx, routesV1A2); err != nil {
-		r.log.V(2).Info("No UDPRouteV1A2 resources found")
-		return reconcile.Result{}, err
-	}
+	if !r.skipGwapiv1a2 {
+		routesV1A2 := &gwapiv1a2.UDPRouteList{}
+		if err := r.List(ctx, routesV1A2); err != nil {
+			r.log.V(2).Info("No UDPRouteV1A2 resources found")
+			return reconcile.Result{}, err
+		}
 
-	for _, udprouteV1A2 := range routesV1A2.Items {
-		udproute := stnrgwv1.ConvertV1A2UDPRouteToV1(&udprouteV1A2)
-		r.log.V(1).Info("Processing UDPRouteV1A2", "name", store.GetObjectKey(udproute))
+		for _, udprouteV1A2 := range routesV1A2.Items {
+			udproute := stnrgwv1.ConvertV1A2UDPRouteToV1(&udprouteV1A2)
+			r.log.V(1).Info("Processing UDPRouteV1A2", "name", store.GetObjectKey(udproute))
 
-		routeListV1A2 = append(routeListV1A2, udproute)
+			routeListV1A2 = append(routeListV1A2, udproute)
 
-		for _, rule := range udproute.Spec.Rules {
-			for _, ref := range rule.BackendRefs {
-				ref := ref
+			for _, rule := range udproute.Spec.Rules {
+				for _, ref := range rule.BackendRefs {
+					ref := ref
 
-				// is this a static service?
-				if store.IsReferenceStaticService(&ref) {
-					if svc := r.getStaticServiceForBackend(ctx, udproute, &ref); svc != nil {
-						ssvcList = append(ssvcList, svc)
-					}
-					continue
-				}
-
-				if store.IsReferenceService(&ref) {
-					if svc := r.getServiceForBackend(ctx, udproute, &ref); svc != nil {
-						svcList = append(svcList, svc)
+					// is this a static service?
+					if store.IsReferenceStaticService(&ref) {
+						if svc := r.getStaticServiceForBackend(ctx, udproute, &ref); svc != nil {
+							ssvcList = append(ssvcList, svc)
+						}
+						continue
 					}
 
-					if config.EnableEndpointDiscovery {
-						if config.EndpointSliceAvailable {
-							es := r.getEndpointSlicesForBackend(ctx, udproute, &ref)
-							if len(es) > 0 {
-								endpointList = append(endpointList, es...)
-							}
-						} else {
-							if e := r.getEndpointsForBackend(ctx, udproute, &ref); e != nil {
-								endpointList = append(endpointList, e)
+					if store.IsReferenceService(&ref) {
+						if svc := r.getServiceForBackend(ctx, udproute, &ref); svc != nil {
+							svcList = append(svcList, svc)
+						}
+
+						if config.EnableEndpointDiscovery {
+							if config.EndpointSliceAvailable {
+								es := r.getEndpointSlicesForBackend(ctx, udproute, &ref)
+								if len(es) > 0 {
+									endpointList = append(endpointList, es...)
+								}
+							} else {
+								if e := r.getEndpointsForBackend(ctx, udproute, &ref); e != nil {
+									endpointList = append(endpointList, e)
+								}
 							}
 						}
-					}
 
-					continue
+						continue
+					}
 				}
 			}
-		}
 
-		nsName := udproute.GetNamespace()
-		r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
-		namespace := v1.Namespace{}
-		if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
-			r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
-				store.GetObjectKey(udproute), "namespace-name", nsName)
-			continue
-		}
+			nsName := udproute.GetNamespace()
+			r.log.V(2).Info("Looking for the namespace of UDPRoute", "name", nsName)
+			namespace := v1.Namespace{}
+			if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
+				r.log.Error(err, "Error getting namespace for UDPRoute", "udproute",
+					store.GetObjectKey(udproute), "namespace-name", nsName)
+				continue
+			}
 
-		namespaceList = append(namespaceList, &namespace)
+			namespaceList = append(namespaceList, &namespace)
+		}
 	}
 
 	store.UDPRoutes.Reset(routeList)
@@ -385,25 +391,30 @@ func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoint
 // validateBackendForReconcile checks whether the Service or StaticService belongs to a valid
 // UDPRoute. Uses the indexers in the argument.
 func (r *udpRouteReconciler) validateBackendForReconcile(key, index, indexV1A2 string) bool {
-	// find the routes referring to this service
-	routeList := &stnrgwv1.UDPRouteList{}
-	if err := r.List(context.Background(), routeList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(index, key),
-	}); err != nil {
-		r.log.Error(err, "Unable to find associated UDPRoute", "service", key)
-		return false
+	routeNum := 0
+
+	if r.skipGwapiv1a2 {
+		// find the routes referring to this service
+		routeList := &stnrgwv1.UDPRouteList{}
+		if err := r.List(context.Background(), routeList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(index, key),
+		}); err != nil {
+			r.log.Error(err, "Unable to find associated UDPRoute", "service", key)
+			return false
+		}
+		routeNum = len(routeList.Items)
+	} else {
+		// find V1A2 routes referring to this service
+		routeListV1A2 := &gwapiv1a2.UDPRouteList{}
+		if err := r.List(context.Background(), routeListV1A2, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(indexV1A2, key),
+		}); err != nil {
+			r.log.Error(err, "Unable to find associated UDPRouteV1A2", "service", key)
+			return false
+		}
+		routeNum = len(routeListV1A2.Items)
 	}
 
-	// find V1A2 routes referring to this service
-	routeListV1A2 := &gwapiv1a2.UDPRouteList{}
-	if err := r.List(context.Background(), routeListV1A2, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(indexV1A2, key),
-	}); err != nil {
-		r.log.Error(err, "Unable to find associated UDPRouteV1A2", "service", key)
-		return false
-	}
-
-	routeNum := len(routeList.Items) + len(routeListV1A2.Items)
 	resStr := "not found"
 	if routeNum > 0 {
 		resStr = fmt.Sprintf("found %d routes", routeNum)
