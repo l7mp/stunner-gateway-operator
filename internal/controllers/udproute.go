@@ -66,47 +66,50 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 	r.log.Info("Created UDPRoute controller")
 
 	// watch UDPRoute objects
+	stnrUDPRouteAvailable := false
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &stnrgwv1.UDPRoute{},
 			&handler.TypedEnqueueRequestForObject[*stnrgwv1.UDPRoute]{},
 			predicate.TypedGenerationChangedPredicate[*stnrgwv1.UDPRoute]{}),
-	); err != nil {
-		return nil, err
-	}
-	r.log.Info("Watching UDPRoute objects")
+	); err == nil {
+		stnrUDPRouteAvailable = true
+		r.log.Info("Watching UDPRoute objects")
 
-	// index UDPRoute objects as per the referenced Services
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
-		serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
-		return nil, err
-	}
+		// index UDPRoute objects as per the referenced Services
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
+			serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
+			return nil, err
+		}
 
-	// index UDPRoute objects as per the referenced StaticServices
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
-		staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
-		return nil, err
-	}
-
-	// watch UDPRouteV1A2 objects
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-			&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
-			predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-	); err != nil {
-		return nil, err
-	}
-	r.log.Info("Watching UDPRoute objects")
-
-	// index UDPRouteV1A2 objects as per the referenced Services
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
-		serviceUDPRouteIndexV1A2, serviceUDPRouteIndexFunc); err != nil {
-		return nil, err
+		// index UDPRoute objects as per the referenced StaticServices
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
+			staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
+			return nil, err
+		}
 	}
 
-	// index UDPRouteV1A2 objects as per the referenced StaticServices
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
-		staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
-		return nil, err
+	// watch UDPRouteV1A2 objects (fallback when STUNner UDPRoute CRD is not available)
+	if !stnrUDPRouteAvailable {
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
+				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
+		); err != nil {
+			return nil, err
+		}
+		r.log.Info("Watching UDPRouteV1A2 objects")
+
+		// index UDPRouteV1A2 objects as per the referenced Services
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
+			serviceUDPRouteIndexV1A2, serviceUDPRouteIndexFunc); err != nil {
+			return nil, err
+		}
+
+		// index UDPRouteV1A2 objects as per the referenced StaticServices
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
+			staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
+			return nil, err
+		}
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
