@@ -42,10 +42,10 @@ const (
 
 type udpRouteReconciler struct {
 	client.Client
-	eventCh        event.EventChannel
-	terminating    bool
-	skipGwapiv1a2  bool
-	log            logr.Logger
+	eventCh       event.EventChannel
+	terminating   bool
+	skipGwapiv1a2 bool
+	log           logr.Logger
 }
 
 func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
