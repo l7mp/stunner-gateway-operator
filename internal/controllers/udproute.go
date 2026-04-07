@@ -72,7 +72,6 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 			&handler.TypedEnqueueRequestForObject[*stnrgwv1.UDPRoute]{},
 			predicate.TypedGenerationChangedPredicate[*stnrgwv1.UDPRoute]{}),
 	); err == nil {
-		r.skipGwapiv1a2 = true
 		r.log.Info("Watching UDPRoute objects")
 
 		// index UDPRoute objects as per the referenced Services
@@ -90,15 +89,12 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		r.log.V(1).Info("STUNner UDPRoute CRD not available, falling back to v1alpha2")
 	}
 
-	// watch UDPRouteV1A2 objects (fallback when STUNner UDPRoute CRD is not available)
-	if !r.skipGwapiv1a2 {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
-				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-		); err != nil {
-			return nil, err
-		}
+	// watch UDPRouteV1A2 objects (disabled only when the CRD is not available)
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+			&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
+			predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
+	); err == nil {
 		r.log.Info("Watching UDPRouteV1A2 objects")
 
 		// index UDPRouteV1A2 objects as per the referenced Services
@@ -112,6 +108,9 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 			staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
 			return nil, err
 		}
+	} else {
+		r.skipGwapiv1a2 = true
+		r.log.V(1).Info("Gateway API v1alpha2 UDPRoute CRD not available, skipping")
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
@@ -221,13 +220,10 @@ func (r *udpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 	}
 
 	// find all UDPRoutes
-	if r.skipGwapiv1a2 {
-		routes := &stnrgwv1.UDPRouteList{}
-		if err := r.List(ctx, routes); err != nil {
-			r.log.Info("No UDPRoutes found")
-			return reconcile.Result{}, err
-		}
-
+	routes := &stnrgwv1.UDPRouteList{}
+	if err := r.List(ctx, routes); err != nil {
+		r.log.Info("No UDPRoutes found")
+	} else {
 		for _, udproute := range routes.Items {
 			udproute := udproute
 			r.log.V(1).Info("Processing UDPRoute", "name", store.GetObjectKey(&udproute))
@@ -393,26 +389,26 @@ func (r *udpRouteReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoint
 func (r *udpRouteReconciler) validateBackendForReconcile(key, index, indexV1A2 string) bool {
 	routeNum := 0
 
-	if r.skipGwapiv1a2 {
-		// find the routes referring to this service
-		routeList := &stnrgwv1.UDPRouteList{}
-		if err := r.List(context.Background(), routeList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(index, key),
-		}); err != nil {
-			r.log.Error(err, "Unable to find associated UDPRoute", "service", key)
-			return false
-		}
-		routeNum = len(routeList.Items)
+	// find the routes referring to this service
+	routeList := &stnrgwv1.UDPRouteList{}
+	if err := r.List(context.Background(), routeList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(index, key),
+	}); err != nil {
+		r.log.Error(err, "Unable to find associated UDPRoute", "service", key)
 	} else {
+		routeNum += len(routeList.Items)
+	}
+
+	if !r.skipGwapiv1a2 {
 		// find V1A2 routes referring to this service
 		routeListV1A2 := &gwapiv1a2.UDPRouteList{}
 		if err := r.List(context.Background(), routeListV1A2, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(indexV1A2, key),
 		}); err != nil {
 			r.log.Error(err, "Unable to find associated UDPRouteV1A2", "service", key)
-			return false
+		} else {
+			routeNum += len(routeListV1A2.Items)
 		}
-		routeNum = len(routeListV1A2.Items)
 	}
 
 	resStr := "not found"
