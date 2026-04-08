@@ -71,22 +71,21 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		source.Kind(mgr.GetCache(), &stnrgwv1.UDPRoute{},
 			&handler.TypedEnqueueRequestForObject[*stnrgwv1.UDPRoute]{},
 			predicate.TypedGenerationChangedPredicate[*stnrgwv1.UDPRoute]{}),
-	); err == nil {
-		r.log.Info("Watching UDPRoute objects")
+	); err != nil {
+		return nil, err
+	}
+	r.log.Info("Watching UDPRoute objects")
 
-		// index UDPRoute objects as per the referenced Services
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
-			serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
-			return nil, err
-		}
+	// index UDPRoute objects as per the referenced Services
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
+		serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
+		return nil, err
+	}
 
-		// index UDPRoute objects as per the referenced StaticServices
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
-			staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
-			return nil, err
-		}
-	} else {
-		r.log.V(1).Info("STUNner UDPRoute CRD not available, falling back to v1alpha2")
+	// index UDPRoute objects as per the referenced StaticServices
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.UDPRoute{},
+		staticServiceUDPRouteIndex, staticServiceUDPRouteIndexFunc); err != nil {
+		return nil, err
 	}
 
 	// watch UDPRouteV1A2 objects (disabled only when the CRD is not available)
