@@ -880,7 +880,7 @@ func testLegacyMode() {
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -1050,7 +1050,7 @@ func testLegacyMode() {
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -1265,7 +1265,7 @@ func testLegacyMode() {
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -1594,7 +1594,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -2264,7 +2264,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -2562,7 +2562,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -2844,7 +2844,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -3300,7 +3300,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -3552,7 +3552,7 @@ func testLegacyMode() {
 
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,

@@ -238,7 +238,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -326,7 +326,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -386,7 +386,7 @@ func TestRenderListenerRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Name: gwapiv1.ObjectName("testsecret-ok"),
@@ -442,7 +442,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -499,7 +499,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModePassthrough
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -556,7 +556,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -617,7 +617,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -678,7 +678,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -739,7 +739,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -800,7 +800,7 @@ func TestRenderListenerRender(t *testing.T) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
 				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Namespace: &ns,
@@ -863,7 +863,7 @@ func TestRenderListenerRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				gw := testutils.TestGw.DeepCopy()
 				mode := gwapiv1.TLSModeTerminate
-				tls := gwapiv1.GatewayTLSConfig{
+				tls := gwapiv1.ListenerTLSConfig{
 					Mode: &mode,
 					CertificateRefs: []gwapiv1.SecretObjectReference{{
 						Name: gwapiv1.ObjectName("dummy-secret"),

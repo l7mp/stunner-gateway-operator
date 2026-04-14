@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: udproutes.stunner.l7mp.io
 spec:
   group: stunner.l7mp.io
@@ -271,6 +271,7 @@ spec:
                   type: object
                 maxItems: 32
                 type: array
+                x-kubernetes-list-type: atomic
               rules:
                 description: Rules are a list of UDP matchers and actions.
                 items:
@@ -288,8 +289,6 @@ spec:
                             description: EndPort specifies the upper threshold of
                               the port-range. Only considered of port is also specified.
                             format: int32
-                            maximum: 65535
-                            minimum: 1
                             type: integer
                           group:
                             default: ""
@@ -328,8 +327,6 @@ spec:
                               access to the given port. If both are specified, allows access in the port-range [port,
                               endPort] inclusive.
                             format: int32
-                            maximum: 65535
-                            minimum: 1
                             type: integer
                         required:
                         - name
@@ -341,6 +338,26 @@ spec:
                 maxItems: 16
                 minItems: 1
                 type: array
+              useDefaultGateways:
+                description: |-
+                  UseDefaultGateways indicates the default Gateway scope to use for this
+                  Route. If unset (the default) or set to None, the Route will not be
+                  attached to any default Gateway; if set, it will be attached to any
+                  default Gateway supporting the named scope, subject to the usual rules
+                  about which Routes a Gateway is allowed to claim.
+
+                  Think carefully before using this functionality! The set of default
+                  Gateways supporting the requested scope can change over time without
+                  any notice to the Route author, and in many situations it will not be
+                  appropriate to request a default Gateway for a given Route -- for
+                  example, a Route with specific security requirements should almost
+                  certainly not use a default Gateway.
+
+                  <gateway:experimental>
+                enum:
+                - All
+                - None
+                type: string
             required:
             - rules
             type: object
@@ -363,6 +380,29 @@ spec:
 
                   A maximum of 32 Gateways will be represented in this list. An empty list
                   means the route has not been attached to any Gateway.
+
+                  <gateway:util:excludeFromCRD>
+                  Notes for implementors:
+
+                  While parents is not a listType `map`, this is due to the fact that the
+                  list key is not scalar, and Kubernetes is unable to represent this.
+
+                  Parent status MUST be considered to be namespaced by the combination of
+                  the parentRef and controllerName fields, and implementations should keep
+                  the following rules in mind when updating this status:
+
+                  * Implementations MUST update only entries that have a matching value of
+                    `controllerName` for that implementation.
+                  * Implementations MUST NOT update entries with non-matching `controllerName`
+                    fields.
+                  * Implementations MUST treat each `parentRef`` in the Route separately and
+                    update its status based on the relationship with that parent.
+                  * Implementations MUST perform a read-modify-write cycle on this field
+                    before modifying it. That is, when modifying this field, implementations
+                    must be confident they have fetched the most recent version of this field,
+                    and ensure that changes they make are on that recent version.
+
+                  </gateway:util:excludeFromCRD>
                 items:
                   description: |-
                     RouteParentStatus describes the status of a route with respect to an
@@ -388,7 +428,37 @@ spec:
 
                         * The Route refers to a nonexistent parent.
                         * The Route is of a type that the controller does not support.
-                        * The Route is in a namespace the controller does not have access to.
+                        * The Route is in a namespace to which the controller does not have access.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -607,11 +677,13 @@ spec:
                       - name
                       type: object
                   required:
+                  - conditions
                   - controllerName
                   - parentRef
                   type: object
                 maxItems: 32
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - parents
             type: object
