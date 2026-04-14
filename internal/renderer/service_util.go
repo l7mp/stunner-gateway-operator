@@ -378,7 +378,7 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		(svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer) {
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 	} else {
-		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyType("")
+		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy("")
 	}
 
 	// NodePort
