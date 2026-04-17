@@ -120,6 +120,20 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out #-ginkgo.v -ginkgo.trace
 
+BENCH ?= BenchmarkBootstrap
+BENCHTIME ?= 25x
+COUNT ?= 1
+BENCHFLAGS ?= -benchmem
+CPUPROFILE ?= bench.cpu.pprof
+
+.PHONY: bench
+bench: envtest ## Run integration benchmark(s).
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./test -run=^$$ -bench='$(BENCH)' -benchtime=$(BENCHTIME) -count=$(COUNT) $(BENCHFLAGS)
+
+.PHONY: bench-cpu
+bench-cpu: envtest ## Run benchmark and write CPU profile.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./test -run=^$$ -bench='$(BENCH)' -benchtime=$(BENCHTIME) -count=$(COUNT) $(BENCHFLAGS) -cpuprofile $(CPUPROFILE)
+
 ##@ Build
 
 .PHONY: build
