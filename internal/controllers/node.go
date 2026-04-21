@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"context"
-	"reflect"
+
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 
 	// "errors"
 
@@ -98,7 +99,7 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	}
 
 	// only reconcile if addresses have changed
-	if reflect.DeepEqual(storedNode.Status.Addresses, node.Status.Addresses) {
+	if apiequality.Semantic.DeepEqual(storedNode.Status.Addresses, node.Status.Addresses) {
 		// ignore event
 		return reconcile.Result{}, nil
 	}
