@@ -124,8 +124,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
@@ -235,8 +235,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -348,8 +348,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -461,8 +461,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -557,8 +557,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 				assert.True(t, found, "configmap data: stunnerd.conf found")
@@ -580,8 +580,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := gws[0].(*gwapiv1.Gateway)
-				assert.True(t, found, "gateway found")
+				gw, ok := gws[0].(*gwapiv1.Gateway)
+				assert.True(t, ok, "gateway cast")
+				assert.NotNil(t, gw, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
@@ -710,8 +711,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -793,8 +794,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok = o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm = asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -971,8 +972,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -1057,8 +1058,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok = as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok = o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm = asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err = store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarschal")
@@ -1178,8 +1179,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")
@@ -1237,8 +1238,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := gws[0].(*gwapiv1.Gateway)
-				assert.True(t, found, "gateway found")
+				gw, ok := gws[0].(*gwapiv1.Gateway)
+				assert.True(t, ok, "gateway cast")
+				assert.NotNil(t, gw, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
 					store.GetObjectKey(gw), "gw name found")
 
@@ -1264,8 +1266,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				ros := c.update.UpsertQueue.UDPRoutes.Objects()
 				assert.Len(t, ros, 1, "routenum")
-				ro, found := ros[0].(*stnrgwv1.UDPRoute)
-				assert.True(t, found, "route found")
+				ro, ok := ros[0].(*stnrgwv1.UDPRoute)
+				assert.True(t, ok, "udproute cast")
+				assert.NotNil(t, ro, "route found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "udproute-ok"),
 					store.GetObjectKey(ro), "route name found")
 
@@ -1446,8 +1449,8 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				_, ok := as[opdefault.RelatedGatewayKey]
 				assert.True(t, ok, "annotations: related gw")
 
-				cm, ok := o.(*corev1.ConfigMap)
-				assert.True(t, ok, "configmap cast")
+				cm := asConfigMap(o)
+				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
 				assert.NoError(t, err, "configmap stunner-config unmarshal")

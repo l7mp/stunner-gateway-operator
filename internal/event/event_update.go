@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -11,14 +12,14 @@ import (
 // render event
 type ConfigConf = []*stnrv1.StunnerConfig
 type UpdateConf struct {
-	GatewayClasses *store.GatewayClassStore
-	Gateways       *store.GatewayStore
-	UDPRoutes      *store.UDPRouteStore
-	UDPRoutesV1A2  *store.UDPRouteStore
-	Services       *store.ServiceStore
-	ConfigMaps     *store.ConfigMapStore
-	Deployments    *store.DeploymentStore
-	DaemonSets     *store.DaemonSetStore
+	GatewayClasses store.Store
+	Gateways       store.Store
+	UDPRoutes      store.Store
+	UDPRoutesV1A2  store.Store
+	Services       store.Store
+	ConfigMaps     store.Store
+	Deployments    store.Store
+	DaemonSets     store.Store
 }
 
 type EventUpdate struct {
@@ -36,24 +37,24 @@ func NewEventUpdate(generation int) *EventUpdate {
 	return &EventUpdate{
 		Type: EventTypeUpdate,
 		UpsertQueue: UpdateConf{
-			GatewayClasses: store.NewGatewayClassStore(),
-			Gateways:       store.NewGatewayStore(),
-			UDPRoutes:      store.NewUDPRouteStore(),
-			UDPRoutesV1A2:  store.NewUDPRouteStore(),
-			Services:       store.NewServiceStore(),
-			ConfigMaps:     store.NewConfigMapStore(),
-			Deployments:    store.NewDeploymentStore(),
-			DaemonSets:     store.NewDaemonSetStore(),
+			GatewayClasses: store.NewStore(),
+			Gateways:       store.NewStore(),
+			UDPRoutes:      store.NewStore(),
+			UDPRoutesV1A2:  store.NewStore(),
+			Services:       store.NewStore(),
+			ConfigMaps:     store.NewStore(),
+			Deployments:    store.NewStore(),
+			DaemonSets:     store.NewStore(),
 		},
 		DeleteQueue: UpdateConf{
-			GatewayClasses: store.NewGatewayClassStore(),
-			Gateways:       store.NewGatewayStore(),
-			UDPRoutes:      store.NewUDPRouteStore(),
-			UDPRoutesV1A2:  store.NewUDPRouteStore(),
-			Services:       store.NewServiceStore(),
-			ConfigMaps:     store.NewConfigMapStore(),
-			Deployments:    store.NewDeploymentStore(),
-			DaemonSets:     store.NewDaemonSetStore(),
+			GatewayClasses: store.NewStore(),
+			Gateways:       store.NewStore(),
+			UDPRoutes:      store.NewStore(),
+			UDPRoutesV1A2:  store.NewStore(),
+			Services:       store.NewStore(),
+			ConfigMaps:     store.NewStore(),
+			Deployments:    store.NewStore(),
+			DaemonSets:     store.NewStore(),
 		},
 		ConfigQueue:   []*stnrv1.StunnerConfig{},
 		LicenseStatus: stnrv1.NewEmptyLicenseStatus(),
@@ -89,24 +90,24 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 	u := NewEventUpdate(e.Generation)
 
 	q := e.UpsertQueue
-	u.UpsertQueue.GatewayClasses = q.GatewayClasses.DeepCopy()
-	u.UpsertQueue.Gateways = q.Gateways.DeepCopy()
-	u.UpsertQueue.UDPRoutes = q.UDPRoutes.DeepCopy()
-	u.UpsertQueue.UDPRoutesV1A2 = q.UDPRoutesV1A2.DeepCopy()
-	u.UpsertQueue.Services = q.Services.DeepCopy()
-	u.UpsertQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
-	u.UpsertQueue.Deployments = q.Deployments.DeepCopy()
-	u.UpsertQueue.DaemonSets = q.DaemonSets.DeepCopy()
+	u.UpsertQueue.GatewayClasses = deepCopyStore(q.GatewayClasses)
+	u.UpsertQueue.Gateways = deepCopyStore(q.Gateways)
+	u.UpsertQueue.UDPRoutes = deepCopyStore(q.UDPRoutes)
+	u.UpsertQueue.UDPRoutesV1A2 = deepCopyStore(q.UDPRoutesV1A2)
+	u.UpsertQueue.Services = deepCopyStore(q.Services)
+	u.UpsertQueue.ConfigMaps = deepCopyStore(q.ConfigMaps)
+	u.UpsertQueue.Deployments = deepCopyStore(q.Deployments)
+	u.UpsertQueue.DaemonSets = deepCopyStore(q.DaemonSets)
 
 	q = e.DeleteQueue
-	u.DeleteQueue.GatewayClasses = q.GatewayClasses.DeepCopy()
-	u.DeleteQueue.Gateways = q.Gateways.DeepCopy()
-	u.DeleteQueue.UDPRoutes = q.UDPRoutes.DeepCopy()
-	u.DeleteQueue.UDPRoutesV1A2 = q.UDPRoutesV1A2.DeepCopy()
-	u.DeleteQueue.Services = q.Services.DeepCopy()
-	u.DeleteQueue.ConfigMaps = q.ConfigMaps.DeepCopy()
-	u.DeleteQueue.Deployments = q.Deployments.DeepCopy()
-	u.DeleteQueue.DaemonSets = q.DaemonSets.DeepCopy()
+	u.DeleteQueue.GatewayClasses = deepCopyStore(q.GatewayClasses)
+	u.DeleteQueue.Gateways = deepCopyStore(q.Gateways)
+	u.DeleteQueue.UDPRoutes = deepCopyStore(q.UDPRoutes)
+	u.DeleteQueue.UDPRoutesV1A2 = deepCopyStore(q.UDPRoutesV1A2)
+	u.DeleteQueue.Services = deepCopyStore(q.Services)
+	u.DeleteQueue.ConfigMaps = deepCopyStore(q.ConfigMaps)
+	u.DeleteQueue.Deployments = deepCopyStore(q.Deployments)
+	u.DeleteQueue.DaemonSets = deepCopyStore(q.DaemonSets)
 
 	u.LicenseStatus = e.LicenseStatus
 
@@ -124,4 +125,17 @@ func (e *EventUpdate) GetRequestAck() bool {
 // RequestAck asks the updater to send an acknowledgement.
 func (e *EventUpdate) SetRequestAck(b bool) {
 	e.RequestAck = b
+}
+
+func deepCopyStore(s store.Store) store.Store {
+	ret := store.NewStore()
+	for _, o := range s.Objects() {
+		copy, ok := o.DeepCopyObject().(client.Object)
+		if !ok {
+			panic(fmt.Sprintf("cannot deepcopy object %T", o))
+		}
+		ret.Upsert(copy)
+	}
+
+	return ret
 }

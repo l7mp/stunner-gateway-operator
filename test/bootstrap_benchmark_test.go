@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -199,6 +200,7 @@ type benchmarkSystem struct {
 	client  client.Client
 	mgr     ctrl.Manager
 	op      *operator.Operator
+	upd     *updater.Updater
 }
 
 func BenchmarkBootstrap(b *testing.B) {
@@ -250,10 +252,12 @@ func runBootstrapBenchmark(b *testing.B) {
 
 	total := time.Since(startAll)
 	b.StopTimer()
+	stabilizeWithTimeout(b, sys.op, 10*time.Second)
 
 	for i, d := range iterDurations {
 		fmt.Printf("BenchmarkBootstrap iteration=%02d duration=%s\n", i+1, d.Round(time.Millisecond))
 	}
+	dumpUpdaterCounters(sys.upd)
 
 	if b.N > 0 {
 		b.ReportMetric(float64(totalCombo.Milliseconds())/float64(b.N), "ms/combo")
@@ -381,13 +385,59 @@ func setupBenchmarkSystem(b *testing.B) *benchmarkSystem {
 		client:  client,
 		mgr:     mgr,
 		op:      op,
+		upd:     u,
+	}
+}
+
+func dumpUpdaterCounters(upd *updater.Updater) {
+	stats := upd.SnapshotCounters()
+	if len(stats) == 0 {
+		fmt.Printf("BenchmarkBootstrap updater-counters: empty\n")
+		return
+	}
+
+	keys := make([]string, 0, len(stats))
+	for k := range stats {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	fmt.Printf("BenchmarkBootstrap updater-counters:\n")
+	for _, k := range keys {
+		fmt.Printf("  %s=%d\n", k, stats[k])
+	}
+}
+
+func stabilizeWithTimeout(b *testing.B, op *operator.Operator, timeout time.Duration) {
+	b.Helper()
+
+	step := 50 * time.Millisecond
+	deadline := time.Now().Add(timeout)
+	stableReads := 0
+
+	for {
+		if op.ProgressReport() == 0 {
+			stableReads++
+			if stableReads >= 3 {
+				return
+			}
+		} else {
+			stableReads = 0
+		}
+
+		if time.Now().After(deadline) {
+			b.Logf("stabilization timeout reached, continuing with potentially incomplete counters")
+			return
+		}
+
+		time.Sleep(step)
 	}
 }
 
 func teardownBenchmarkSystem(b *testing.B, sys *benchmarkSystem) {
 	b.Helper()
 
-	sys.op.Stabilize()
+	stabilizeWithTimeout(b, sys.op, 10*time.Second)
 	sys.cancel()
 	sys.mgrStop()
 

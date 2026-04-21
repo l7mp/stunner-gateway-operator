@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -124,8 +123,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// deployment
 				dps := c.update.UpsertQueue.Deployments.Objects()
 				assert.Len(t, dps, 1, "deployment num")
-				deploy, ok := dps[0].(*appv1.Deployment)
-				assert.True(t, ok, "deployment cast")
+				deploy := asDeployment(dps[0])
+				assert.NotNil(t, deploy, "deployment cast")
 
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
@@ -216,8 +215,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// should delete lingering daemonsets
 				dss := c.update.DeleteQueue.DaemonSets.Objects()
 				assert.Len(t, dps, 1, "deamonset num")
-				ds, ok := dss[0].(*appv1.DaemonSet)
-				assert.True(t, ok, "daemonset cast")
+				ds := asDaemonSet(dss[0])
+				assert.NotNil(t, ds, "daemonset cast")
 				assert.Equal(t, gw.GetName(), ds.GetName(), "deleted daemonset name")
 				assert.Equal(t, gw.GetNamespace(), ds.GetNamespace(), "deleted daemonset namespace")
 				assert.Equal(t, deploy.GetName(), ds.GetName(), "deleted daemonset name")
@@ -977,8 +976,8 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// deployment
 				dps := c.update.UpsertQueue.Deployments.Objects()
 				assert.Len(t, dps, 1, "deployment num")
-				deploy, ok := dps[0].(*appv1.Deployment)
-				assert.True(t, ok, "deployment cast")
+				deploy := asDeployment(dps[0])
+				assert.NotNil(t, deploy, "deployment cast")
 
 				assert.Equal(t, gw.GetName(), deploy.GetName(), "deployment name")
 				assert.Equal(t, gw.GetNamespace(), deploy.GetNamespace(), "deployment namespace")
@@ -1424,30 +1423,31 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				objs = c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
-				gw, found := objs[0].(*gwapiv1.Gateway)
-				assert.True(t, found, "gateway found")
+				gwStatus, ok := objs[0].(*gwapiv1.Gateway)
+				assert.True(t, ok, "gateway cast")
+				assert.NotNil(t, gwStatus, "gateway found")
 				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
-					store.GetObjectKey(gw), "gw name found")
+					store.GetObjectKey(gwStatus), "gw name found")
 
-				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
+				assert.Len(t, gwStatus.Status.Conditions, 2, "conditions num")
 
 				assert.Equal(t, string(gwapiv1.GatewayConditionAccepted),
-					gw.Status.Conditions[0].Type, "conditions accepted")
-				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
+					gwStatus.Status.Conditions[0].Type, "conditions accepted")
+				assert.Equal(t, int64(0), gwStatus.Status.Conditions[0].ObservedGeneration,
 					"conditions gen")
-				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[0].Status,
+				assert.Equal(t, metav1.ConditionFalse, gwStatus.Status.Conditions[0].Status,
 					"status")
 				assert.Equal(t, string(gwapiv1.GatewayReasonPending),
-					gw.Status.Conditions[0].Reason, "reason")
+					gwStatus.Status.Conditions[0].Reason, "reason")
 
 				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),
-					gw.Status.Conditions[1].Type, "programmed")
-				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
+					gwStatus.Status.Conditions[1].Type, "programmed")
+				assert.Equal(t, int64(0), gwStatus.Status.Conditions[1].ObservedGeneration,
 					"conditions gen")
-				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
+				assert.Equal(t, metav1.ConditionFalse, gwStatus.Status.Conditions[1].Status,
 					"status")
 				assert.Equal(t, string(gwapiv1.GatewayReasonInvalid),
-					gw.Status.Conditions[1].Reason, "reason")
+					gwStatus.Status.Conditions[1].Reason, "reason")
 			},
 		},
 		{

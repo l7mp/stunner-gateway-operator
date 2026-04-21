@@ -106,6 +106,7 @@ func (r *renderer) renderGatewayClass(e *event.EventRender) {
 		}
 
 		setGatewayClassStatusAccepted(gc, nil)
+		c.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
 
 		// send the update back to the operator
 		r.operatorCh.Channel() <- c.update.DeepCopy()
@@ -179,6 +180,7 @@ func (r *renderer) renderManagedGateways(e *event.EventRender) {
 		}
 
 		setGatewayClassStatusAccepted(gc, nil)
+		gcCtx.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
 
 		pipelineCtx.Merge(gcCtx)
 	}
@@ -277,7 +279,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 				store.GetObjectKey(s), "gateway", store.GetObjectKey(gw),
 				"service", store.DumpObject(s))
 
-			c.update.UpsertQueue.Services.Upsert(s)
+			c.update.UpsertQueue.Services.Upsert(s.DeepCopy())
 			targetPorts = ports
 		}
 
@@ -318,7 +320,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		c.update.UpsertQueue.Gateways.Upsert(gw)
+		c.update.UpsertQueue.Gateways.Upsert(gw.DeepCopy())
 	}
 
 	log.V(1).Info("Processing UDPRoutes")
@@ -375,16 +377,13 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		// in the context of different Gateways: Upsert makes sure the last render will be
 		// updated
 		if isRouteV1A2(ro) {
-			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(statusTargetV1A2UDPRoute(ro))
 		} else {
-			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro.DeepCopy())
 		}
 	}
 	r.invalidateMaskedRoutes(c)
 	r.log.Info("Update queue ready", "queue", c.update.String())
-
-	// schedule for update
-	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
 
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		// config name is the name of the gateway
@@ -402,16 +401,16 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			}
 			if isManagedDataplaneDisabled(gw) {
 				if dep, ok := dp.(*appv1.Deployment); ok {
-					c.update.DeleteQueue.Deployments.Upsert(dep)
+					c.update.DeleteQueue.Deployments.Upsert(dep.DeepCopy())
 				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
-					c.update.DeleteQueue.DaemonSets.Upsert(ds)
+					c.update.DeleteQueue.DaemonSets.Upsert(ds.DeepCopy())
 				}
 				log.V(1).Info("Removing STUNner dataplane resource for Gateway",
 					"gateway", store.DumpObject(gw),
 					"disable-dataplane-annotation", true)
 			} else {
 				if dep, ok := dp.(*appv1.Deployment); ok {
-					c.update.UpsertQueue.Deployments.Upsert(dep)
+					c.update.UpsertQueue.Deployments.Upsert(dep.DeepCopy())
 					// delete lingering DeamonSets
 					ds := &appv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
 						Namespace: dep.GetNamespace(),
@@ -419,7 +418,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 					}}
 					c.update.DeleteQueue.DaemonSets.Upsert(ds)
 				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
-					c.update.UpsertQueue.DaemonSets.Upsert(ds)
+					c.update.UpsertQueue.DaemonSets.Upsert(ds.DeepCopy())
 					// delete lingering Deployments
 					dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 						Namespace: ds.GetNamespace(),
@@ -436,7 +435,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		if err != nil {
 			return err
 		}
-		c.update.UpsertQueue.ConfigMaps.Upsert(cm)
+		c.update.UpsertQueue.ConfigMaps.Upsert(cm.DeepCopy())
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
@@ -462,7 +461,7 @@ func (r *renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 				log.Error(err, "Error invalidating ConfigMap", "target",
 					fmt.Sprintf("%s/%s", targetNamespace, targetName))
 			} else {
-				c.update.UpsertQueue.ConfigMaps.Upsert(cm)
+				c.update.UpsertQueue.ConfigMaps.Upsert(cm.DeepCopy())
 			}
 		} else {
 			// this is the killer case: we have most probably lost our gatewayconfig
@@ -475,7 +474,7 @@ func (r *renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 	}
 
 	setGatewayClassStatusAccepted(gc, reason)
-	c.update.UpsertQueue.GatewayClasses.Upsert(gc)
+	c.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
 
 	log.V(1).Info("Invalidating all gateway objects in gateway-class",
 		"gateway-class", gc.GetName(), "reason", reason.Error())
@@ -505,7 +504,7 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		gw = pruneGatewayStatusConds(gw)
 
 		// schedule for update
-		c.update.UpsertQueue.Gateways.Upsert(gw)
+		c.update.UpsertQueue.Gateways.Upsert(gw.DeepCopy())
 
 		// delete dataplane configmaps, services and deployments for invalidated gateways
 		// we do not update the client via CDS: the deployment is going away anyway
@@ -565,9 +564,9 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		}
 
 		if isRouteV1A2(ro) {
-			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+			c.update.UpsertQueue.UDPRoutesV1A2.Upsert(statusTargetV1A2UDPRoute(ro))
 		} else {
-			c.update.UpsertQueue.UDPRoutes.Upsert(ro)
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro.DeepCopy())
 		}
 	}
 }

@@ -3,12 +3,12 @@ package updater
 // updater uploads client updates
 import (
 	"context"
+	"sync"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -24,6 +24,8 @@ type Updater struct {
 	manager   manager.Manager
 	updaterCh chan event.Event
 	opCh      event.EventChannel
+	statsMu   sync.Mutex
+	stats     map[string]int64
 	*config.ProgressTracker
 	log logr.Logger
 }
@@ -32,9 +34,34 @@ func NewUpdater(cfg UpdaterConfig) *Updater {
 	return &Updater{
 		manager:         cfg.Manager,
 		updaterCh:       make(chan event.Event, 10),
+		stats:           map[string]int64{},
 		ProgressTracker: config.NewProgressTracker(),
 		log:             cfg.Logger.WithName("updater"),
 	}
+}
+
+func (u *Updater) incCounter(key string) {
+	u.statsMu.Lock()
+	u.stats[key]++
+	u.statsMu.Unlock()
+}
+
+func (u *Updater) SnapshotCounters() map[string]int64 {
+	u.statsMu.Lock()
+	defer u.statsMu.Unlock()
+
+	out := make(map[string]int64, len(u.stats))
+	for k, v := range u.stats {
+		out[k] = v
+	}
+
+	return out
+}
+
+func (u *Updater) ResetCounters() {
+	u.statsMu.Lock()
+	u.stats = map[string]int64{}
+	u.statsMu.Unlock()
 }
 
 func (u *Updater) Start(ctx context.Context) error {
@@ -88,64 +115,59 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 
 	// run the upsert queue
 	q := e.UpsertQueue
-	for _, gc := range q.GatewayClasses.GetAll() {
-		if err := u.updateGatewayClass(gc, gen); err != nil {
-			u.log.Error(err, "Cannot update GatewayClass", "gateway-class",
-				store.DumpObject(gc))
-			continue
+
+	for _, o := range q.GatewayClasses.Objects() {
+		if err := u.updateStatusObject(o, gen); err != nil {
+			u.log.Error(err, "Cannot update GatewayClass status", "gateway-class", store.DumpObject(o))
 		}
 	}
 
-	for _, gw := range q.Gateways.GetAll() {
-		if err := u.updateGateway(gw, gen); err != nil {
-			u.log.Error(err, "Cannot update Gateway", "gateway", store.DumpObject(gw))
-			continue
+	for _, o := range q.Gateways.Objects() {
+		if err := u.updateStatusObject(o, gen); err != nil {
+			u.log.Error(err, "Cannot update Gateway status", "gateway", store.DumpObject(o))
 		}
 	}
 
-	for _, ro := range q.UDPRoutes.GetAll() {
-		if err := u.updateUDPRoute(ro, gen); err != nil {
-			u.log.Error(err, "Cannot update UDP route", "route", store.DumpObject(ro))
-			continue
+	for _, o := range q.UDPRoutes.Objects() {
+		if err := u.updateStatusObject(o, gen); err != nil {
+			u.log.Error(err, "Cannot update UDPRoute status", "route", store.DumpObject(o))
 		}
 	}
 
-	for _, ro := range q.UDPRoutesV1A2.GetAll() {
-		if err := u.updateUDPRouteV1A2(ro, gen); err != nil {
-			u.log.Error(err, "Cannot update UDPRouteV1A2", "route",
-				store.DumpObject(stnrgwv1.ConvertV1UDPRouteToV1A2(ro)))
-			continue
+	for _, o := range q.UDPRoutesV1A2.Objects() {
+		if err := u.updateStatusObject(o, gen); err != nil {
+			u.log.Error(err, "Cannot update UDPRouteV1A2 status", "route", store.DumpObject(o))
 		}
 	}
 
-	for _, svc := range q.Services.GetAll() {
-		if op, err := u.upsertService(svc, gen); err != nil {
+	for _, o := range q.Services.Objects() {
+		if op, err := u.upsertResourceObject(o, gen); err != nil {
 			u.log.Error(err, "Cannot update Service", "operation", op,
-				"service", store.DumpObject(svc))
+				"service", store.DumpObject(o))
 			continue
 		}
 	}
 
-	for _, cm := range q.ConfigMaps.GetAll() {
-		if op, err := u.upsertConfigMap(cm, gen); err != nil {
+	for _, o := range q.ConfigMaps.Objects() {
+		if op, err := u.upsertResourceObject(o, gen); err != nil {
 			u.log.Error(err, "Cannot upsert ConfigMap", "operation", op,
-				"config-map", store.DumpObject(cm))
+				"config-map", store.DumpObject(o))
 			continue
 		}
 	}
 
-	for _, dp := range q.Deployments.GetAll() {
-		if op, err := u.upsertDeployment(dp, gen); err != nil {
+	for _, o := range q.Deployments.Objects() {
+		if op, err := u.upsertResourceObject(o, gen); err != nil {
 			u.log.Error(err, "Cannot upsert Deployment", "operation", op,
-				"deployment", store.DumpObject(dp))
+				"deployment", store.DumpObject(o))
 			continue
 		}
 	}
 
-	for _, ds := range q.DaemonSets.GetAll() {
-		if op, err := u.upsertDaemonSet(ds, gen); err != nil {
+	for _, o := range q.DaemonSets.Objects() {
+		if op, err := u.upsertResourceObject(o, gen); err != nil {
 			u.log.Error(err, "Cannot upsert DaemonSet", "operation", op,
-				"daemonSet", store.DumpObject(ds))
+				"daemonSet", store.DumpObject(o))
 			continue
 		}
 	}
@@ -171,6 +193,14 @@ func (u *Updater) ProcessUpdate(e *event.EventUpdate) error {
 	for _, ro := range q.UDPRoutes.Objects() {
 		if err := u.deleteObject(ro, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("Cannot delete UDPRoute", "route",
+				store.DumpObject(ro), "error", err)
+			continue
+		}
+	}
+
+	for _, ro := range q.UDPRoutesV1A2.Objects() {
+		if err := u.deleteObject(ro, gen); err != nil && !apierrors.IsNotFound(err) {
+			u.log.V(1).Info("Cannot delete UDPRouteV1A2", "route",
 				store.DumpObject(ro), "error", err)
 			continue
 		}

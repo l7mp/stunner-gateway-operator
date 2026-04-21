@@ -14,6 +14,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -290,8 +291,22 @@ func (r *renderer) invalidateMaskedRoutes(c *RenderContext) {
 			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccept, nil)
 		}
 
-		c.update.UpsertQueue.UDPRoutesV1A2.Upsert(ro)
+		c.update.UpsertQueue.UDPRoutesV1A2.Upsert(statusTargetV1A2UDPRoute(ro))
 	}
+}
+
+// statusTargetV1A2UDPRoute builds a v1alpha2 bearer object for status updates.
+//
+// Rendering uses STUNner v1 routes as the canonical in-memory representation,
+// including routes converted from gwapi v1alpha2. The updater, however, must
+// call Status().Update on the concrete API object type that exists in the
+// cluster. This adapter converts canonical route status to that bearer type.
+func statusTargetV1A2UDPRoute(ro *stnrgwv1.UDPRoute) *gwapiv1a2.UDPRoute {
+	ret := &gwapiv1a2.UDPRoute{}
+	ret.SetName(ro.GetName())
+	ret.SetNamespace(ro.GetNamespace())
+	ro.Status.DeepCopyInto(&ret.Status)
+	return ret
 }
 
 func setRouteConditionStatus(ro *stnrgwv1.UDPRoute, p *gwapiv1.ParentReference, controllerName string, exists, accepted bool, backendErr error) {

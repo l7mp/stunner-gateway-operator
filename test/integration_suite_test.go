@@ -199,9 +199,13 @@ func initOperator(mgrCtx, opCtx context.Context) {
 		Logger:  ctrl.Log,
 	})
 
-	cdsServerAddr = fmt.Sprintf(":%d", rand.Intn(1<<15)+1<<15)
-	setupLog.Info("setting up CDS server", "address", cdsServerAddr)
-	c := config.NewCDSServer(cdsServerAddr, ctrl.Log)
+	cdsPort := rand.Intn(1<<15) + 1<<15
+	cdsBindAddr := fmt.Sprintf(":%d", cdsPort)
+	cdsServerAddr = fmt.Sprintf("127.0.0.1:%d", cdsPort)
+	config.ConfigDiscoveryAddress = fmt.Sprintf("127.0.0.1:%d", cdsPort)
+	setupLog.Info("setting up CDS server", "bind-address", cdsBindAddr,
+		"client-address", cdsServerAddr)
+	c := config.NewCDSServer(cdsBindAddr, ctrl.Log)
 
 	// make rendering fast!
 	config.ThrottleTimeout = 10 * time.Millisecond

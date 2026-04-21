@@ -3535,15 +3535,15 @@ func testManagedMode() {
 
 			_, err := ctrlutil.CreateOrUpdate(ctx, k8sClient, deploy, func() error {
 				labels := deploy.GetLabels()
-				labels["valid-deploy-label"] = "valid-deploy-label-value" // will be ertained on the deployment
+				labels["valid-deploy-label"] = "valid-deploy-label-value" // will be retained on the deployment
 				deploy.SetLabels(labels)
 
 				as := deploy.GetAnnotations()
-				as["valid-deploy-ann"] = "valid-deploy-ann-value" // will be retained on the deployment/pod
+				as["valid-deploy-ann"] = "valid-deploy-ann-value" // will be retained on the deployment
 				deploy.SetAnnotations(as)
 
 				as = deploy.Spec.Template.GetAnnotations()
-				as["valid-deploy-pod-ann"] = "valid-deploy-pod-ann-value" // will be retained on the deployment/pod
+				as["valid-deploy-pod-ann"] = "valid-deploy-pod-ann-value" // will be overwritten on the pod template
 				deploy.Spec.Template.SetAnnotations(as)
 
 				return nil
@@ -3691,9 +3691,9 @@ func testManagedMode() {
 			// deployment selector matches pod template
 			Expect(selector.Matches(labels.Set(labs))).Should(BeTrue())
 
-			// pod-level annotations:
+			// pod-level annotations: template metadata is operator-owned and overwritten.
 			as = deploy.Spec.Template.GetAnnotations()
-			Expect(as).To(HaveLen(2))
+			Expect(as).To(HaveLen(1))
 
 			// mandatory
 			v, ok = as[opdefault.RelatedGatewayKey]
@@ -3704,10 +3704,9 @@ func testManagedMode() {
 			_, ok = as["valid-gw-ann"]
 			Expect(ok).Should(BeFalse(), "gw ann")
 
-			// annotation from the deployment
-			v, ok = as["valid-deploy-pod-ann"]
-			Expect(ok).Should(BeTrue(), "deploy pod ann")
-			Expect(v).Should(Equal("valid-deploy-pod-ann-value"), "deploy pod ann value")
+			// annotation from the deployment should be dropped
+			_, ok = as["valid-deploy-pod-ann"]
+			Expect(ok).Should(BeFalse(), "deploy pod ann")
 		})
 
 		It("should update only Gateway 2 when Dataplane 2 changes", func() {
