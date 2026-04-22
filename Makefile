@@ -122,6 +122,10 @@ lint: ## Run golangci-lint against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... #-ginkgo.v -ginkgo.trace
+
+.PHONY: test-cover
+test-cover: manifests generate fmt vet envtest ## Run tests and write coverage profile.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out #-ginkgo.v -ginkgo.trace
 
 BENCH ?= BenchmarkBootstrap
