@@ -23,9 +23,32 @@ The operator supports both command-line flags and environment variables.
 - `--controller-name` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME`.
 - `--dataplane-mode` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE`.
 - `--config-discovery-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_ADDRESS`.
+- `--pprof-bind-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS`.
 - `CUSTOMER_KEY` is read from the environment for licensing.
 
 Command-line flags take precedence over environment variables. 
+
+### Debug profiling (pprof)
+
+Pprof is disabled by default (`--pprof-bind-address=0`). For debugging, prefer binding to `127.0.0.1:6060` and use `kubectl port-forward` to access `/debug/pprof/` endpoints.
+
+Example:
+
+1. Enable pprof in the operator args by adding `--pprof-bind-address=127.0.0.1:6060` to the operator's startup command.
+2. Create a port-forward to the operator pod:
+   ```console
+   kubectl -n <namespace> port-forward deploy/controller-manager 6060:6060
+   ```
+3. Inspect goroutine stacks:
+   ```console
+   curl -s "http://127.0.0.1:6060/debug/pprof/goroutine?debug=2"
+   ```
+4. Open interactive pprof UI:
+   ```console
+   go tool pprof -http=:0 "http://127.0.0.1:6060/debug/pprof/profile?seconds=30"
+   ```
+
+Do not expose pprof publicly, profiles may contain sensitive runtime details.
 
 ## Caveats
 

@@ -58,6 +58,7 @@ const (
 	envVarMode           = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
 	envVarAddress        = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
 	envVarControllerName = "STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME"
+	envVarPprofAddr      = "STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS"
 	envVarCustomerKey    = "CUSTOMER_KEY"
 )
 
@@ -77,7 +78,7 @@ func init() {
 }
 
 func main() {
-	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr string
+	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr, pprofAddr string
 	var enableLeaderElection, enableEDS, disableEndpontSliceController, enableFinalizer bool
 
 	defaultControllerName := opdefault.DefaultControllerName
@@ -96,6 +97,7 @@ func main() {
 	flag.StringVar(&cdsAddr, "config-discovery-address", stnrv1.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&pprofAddr, "pprof-bind-address", "0", "The address the pprof endpoint binds to. Set to \"0\" to disable.")
 	flag.BoolVar(&disableEndpontSliceController, "disable-endpontslice-controller", false,
 		"Disable the EndpointSlice controller and fall back to the legacy Endpoints controller.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -139,6 +141,8 @@ func main() {
 
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
+	pprofAddr = resolvePprofBindAddress(pprofAddr)
+	setupLog.Info("pprof server", "address", pprofAddr)
 
 	customerKey, keyStatus := "", "MISSING"
 	if key, ok := os.LookupEnv(envVarCustomerKey); ok && key != "" {
@@ -176,6 +180,7 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
+		PprofBindAddress:       pprofAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "92062b70.l7mp.io",
 	})
@@ -268,4 +273,14 @@ func main() {
 		// no way to gracefully terminate: give up and exit with an error
 		os.Exit(1)
 	}
+}
+
+func resolvePprofBindAddress(pprofAddr string) string {
+	if pprofAddr == "0" {
+		if envPprofAddr, ok := os.LookupEnv(envVarPprofAddr); ok {
+			return envPprofAddr
+		}
+	}
+
+	return pprofAddr
 }
