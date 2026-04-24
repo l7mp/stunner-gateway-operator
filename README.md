@@ -37,15 +37,15 @@ Example:
 1. Enable pprof in the operator args by adding `--pprof-bind-address=127.0.0.1:6060` to the operator's startup command.
 2. Create a port-forward to the operator pod:
    ```console
-   kubectl -n <namespace> port-forward deploy/controller-manager 6060:6060
+   kubectl -n stunner-system port-forward $(kubectl get pod -A -l control-plane=stunner-gateway-operator-controller-manager -o jsonpath='{.items[0].metadata.name}') 6060:6060
    ```
 3. Inspect goroutine stacks:
    ```console
    curl -s "http://127.0.0.1:6060/debug/pprof/goroutine?debug=2"
    ```
-4. Open interactive pprof UI:
+4. Or open interactive `pprof` UI:
    ```console
-   go tool pprof -http=:0 "http://127.0.0.1:6060/debug/pprof/profile?seconds=30"
+   go tool pprof -http=:8081 "http://127.0.0.1:6060/debug/pprof/profile?seconds=30"
    ```
 
 Do not expose pprof publicly, profiles may contain sensitive runtime details.
