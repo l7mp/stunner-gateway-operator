@@ -11,9 +11,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -88,12 +90,22 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		return nil, err
 	}
 
-	// watch UDPRouteV1A2 objects (disabled only when the CRD is not available)
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-			&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
-			predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-	); err == nil {
+	// watch UDPRouteV1A2 objects only if the CRD is registered on the cluster.
+	// controller-runtime's c.Watch is lazy and IndexField surfaces the discovery
+	// failure synchronously, so probe the RESTMapper up front to decide.
+	_, err = mgr.GetRESTMapper().RESTMapping(
+		schema.GroupKind{Group: gwapiv1a2.GroupVersion.Group, Kind: "UDPRoute"},
+		gwapiv1a2.GroupVersion.Version,
+	)
+	switch {
+	case err == nil:
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
+				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
+		); err != nil {
+			return nil, err
+		}
 		r.log.Info("Watching UDPRouteV1A2 objects")
 
 		// index UDPRouteV1A2 objects as per the referenced Services
@@ -107,9 +119,11 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 			staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
 			return nil, err
 		}
-	} else {
+	case meta.IsNoMatchError(err):
 		r.skipGwapiv1a2 = true
 		r.log.V(1).Info("Gateway API v1alpha2 UDPRoute CRD not available, skipping")
+	default:
+		return nil, fmt.Errorf("checking v1alpha2 UDPRoute CRD: %w", err)
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
