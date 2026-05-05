@@ -163,7 +163,7 @@ func objectKind(o client.Object) string {
 	if t == nil {
 		return "Unknown"
 	}
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Ptr { //nolint:govet
 		t = t.Elem()
 	}
 
