@@ -70,7 +70,7 @@ func (u *Updater) upsertResourceObject(desired client.Object, gen int) (ctrlutil
 		u.incCounter(prefix + ".none")
 	}
 
-	u.log.V(1).Info(fmt.Sprintf("%s upserted", kind), "resource", resource,
+	u.log.V(1).Info("Upsert object", "kind", kind, "resource", resource,
 		"generation", gen, "result", store.DumpObject(current))
 
 	return op, nil
@@ -116,7 +116,7 @@ func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
 		}
 
 		u.incCounter(prefix + ".updated")
-		u.log.V(1).Info(fmt.Sprintf("%s status updated", kind), "resource", resource,
+		u.log.V(1).Info("Update status", "kind", kind, "resource", resource,
 			"generation", gen, "result", store.DumpObject(current))
 		return nil
 	})
@@ -129,7 +129,7 @@ func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
 }
 
 func (u *Updater) deleteObject(o client.Object, gen int) error {
-	u.log.V(2).Info("Delete object", "resource", store.GetObjectKey(o), "generation", gen)
+	u.log.V(2).Info("Delete object", "kind", objectKind(o), "resource", store.GetObjectKey(o), "generation", gen)
 	return u.manager.GetClient().Delete(u.ctx, o)
 }
 
