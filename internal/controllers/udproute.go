@@ -15,7 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -88,13 +90,21 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 		return nil, err
 	}
 
-	// watch UDPRouteV1A2 objects (disabled only when the CRD is not available)
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-			&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
-			predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-	); err == nil {
-		r.log.Info("Watching UDPRouteV1A2 objects")
+	// watch UDPRouteV1A2 objects only when the CRD is loaded
+	udpRouteV1A2Loaded, err := r.isUDPRouteV1A2Loaded(mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	if udpRouteV1A2Loaded {
+		// watch UDPRouteV1A2 objects
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
+				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
+		); err != nil {
+			return nil, err
+		}
 
 		// index UDPRouteV1A2 objects as per the referenced Services
 		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
@@ -107,6 +117,7 @@ func NewUDPRouteController(mgr manager.Manager, ch event.EventChannel, log logr.
 			staticServiceUDPRouteIndexV1A2, staticServiceUDPRouteIndexFunc); err != nil {
 			return nil, err
 		}
+		r.log.Info("Watching UDPRouteV1A2 objects")
 	} else {
 		r.skipGwapiv1a2 = true
 		r.log.V(1).Info("Gateway API v1alpha2 UDPRoute CRD not available, skipping")
@@ -575,6 +586,38 @@ func (r *udpRouteReconciler) getStaticServiceForBackend(ctx context.Context, udp
 	}
 
 	return &svc
+}
+
+func (r *udpRouteReconciler) isUDPRouteV1A2Loaded(mgr manager.Manager) (bool, error) {
+	// Build a discovery client
+	d, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return false, fmt.Errorf("failed to obtain a discovery client: %w", err)
+	}
+
+	// Get the Groupversion
+	gvk, err := apiutil.GVKForObject(&gwapiv1a2.UDPRoute{}, mgr.GetScheme())
+	if err != nil {
+		return false, fmt.Errorf("failed to get GVK for UDPRouteV1A2: %w", err)
+	}
+	gvStr := gvk.GroupVersion().String()
+
+	resList, err := d.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get server resources for %s: %w", gvStr, err)
+	}
+
+	resourceName := "udproutes"
+	for _, r := range resList.APIResources {
+		if r.Name == resourceName {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func serviceUDPRouteIndexFunc(o client.Object) []string {
