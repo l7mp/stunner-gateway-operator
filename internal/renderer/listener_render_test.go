@@ -431,7 +431,7 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 		},
 		{
-			name:  "TLS/DTLS listener - no secret errs",
+			name:  "TLS/DTLS listener - no secret ref invalid",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
@@ -479,12 +479,9 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(c, &l, rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
-				assert.Equal(t, "", lc.Cert, "cert")
-				assert.Equal(t, "", lc.Key, "key")
+				_, err = r.renderListener(c, &l, rs, addr, nil)
+				assert.Error(t, err, "renderListener")
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef), "invalid cert ref")
 			},
 		},
 		{
@@ -667,7 +664,7 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 		},
 		{
-			name:  "TLS/DTLS listener - missing cert",
+			name:  "TLS/DTLS listener - missing cert ref invalid",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
@@ -719,16 +716,13 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(c, &l, rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
-				assert.Equal(t, "", lc.Cert, "cert")
-				assert.Equal(t, "", lc.Key, "key")
+				_, err = r.renderListener(c, &l, rs, addr, nil)
+				assert.Error(t, err, "renderListener")
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef), "invalid cert ref")
 			},
 		},
 		{
-			name:  "TLS/DTLS listener - missing cert",
+			name:  "TLS/DTLS listener - missing key ref invalid",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
@@ -780,12 +774,9 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(c, &l, rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
-				assert.Equal(t, "", lc.Cert, "cert")
-				assert.Equal(t, "", lc.Key, "key")
+				_, err = r.renderListener(c, &l, rs, addr, nil)
+				assert.Error(t, err, "renderListener")
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef), "invalid cert ref")
 			},
 		},
 		{

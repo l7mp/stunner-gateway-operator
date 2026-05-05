@@ -73,7 +73,12 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrconfv1.Con
 		lc.PublicPort = ap.port
 	}
 
-	if cert, key, ok := r.getTLS(gw, l); ok {
+	cert, key, ok, err := r.getTLS(gw, l)
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
 		lc.Cert = cert
 		lc.Key = key
 	}
@@ -94,21 +99,21 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrconfv1.Con
 	return &lc, nil
 }
 
-func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool) {
+func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool, error) {
 	proto, err := getProtocol(l.Protocol)
 	if err != nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
 		(proto != stnrconfv1.ListenerProtocolTURNTLS && proto != stnrconfv1.ListenerProtocolTURNDTLS) {
-		return "", "", false
+		return "", "", false, nil
 	}
 
 	if len(l.TLS.CertificateRefs) == 0 {
 		r.log.Info("No certificate reference found in Gateway listener", "gateway", store.GetObjectKey(gw),
 			"listener", l.Name)
-		return "", "", false
+		return "", "", false, nil
 	}
 
 	if len(l.TLS.CertificateRefs) > 1 {
@@ -163,10 +168,10 @@ func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (str
 		}
 
 		return base64.StdEncoding.EncodeToString(cert),
-			base64.StdEncoding.EncodeToString(key), true
+			base64.StdEncoding.EncodeToString(key), true, nil
 	}
 
-	return "", "", false
+	return "", "", false, NewNonCriticalError(InvalidCertificateRef)
 }
 
 // normalize protocol aliases

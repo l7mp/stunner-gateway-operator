@@ -275,6 +275,65 @@ func TestRenderGatewayUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "listener status invalid cert-ref",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.ListenerTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("missing-secret"),
+					}},
+				}
+
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Port:     gwapiv1.PortNumber(3),
+					Protocol: gwapiv1.ProtocolType("TURN-DTLS"),
+					TLS:      &tls,
+				}}
+
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+
+				initGatewayStatus(gw, nil)
+				l := gw.Spec.Listeners[0]
+				setListenerStatus(gw, &l, NewNonCriticalError(InvalidCertificateRef), false, 0)
+
+				assert.Len(t, gw.Status.Listeners, 1, "conditions num")
+
+				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
+				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason, "reason")
+
+				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionResolvedRefs))
+				assert.NotNil(t, d, "resolvedrefs found")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, string(gwapiv1.ListenerReasonInvalidCertificateRef),
+					d.Reason, "reason")
+			},
+		},
+		{
 			name: "invalid listener status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},

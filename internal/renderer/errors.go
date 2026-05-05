@@ -27,6 +27,7 @@ const (
 	InconsitentClusterType
 	InvalidProtocol
 	PortUnavailable
+	InvalidCertificateRef
 	InvalidPortRange
 	PublicAddressNotFound
 	PublicListenerAddressNotFound
@@ -103,6 +104,8 @@ func (e *NonCriticalError) Error() string {
 		return "inconsitent cluster type for backends"
 	case PortUnavailable:
 		return "port unavailable"
+	case InvalidCertificateRef:
+		return "invalid certificate reference"
 	case InvalidProtocol:
 		return "invalid protocol"
 	case InvalidPortRange:

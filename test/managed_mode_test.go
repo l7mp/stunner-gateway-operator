@@ -984,9 +984,13 @@ func testManagedMode() {
 			Expect(l.Port).Should(Equal(targetPort))
 		})
 
-		It("should install TLS cert/keys", func() {
-			ctrl.Log.Info("loading TLS Secret")
-			createOrUpdateSecret(ctx, k8sClient, testSecret, nil)
+		It("should report missing TLS secret refs", func() {
+			ctrl.Log.Info("ensuring TLS Secret is absent")
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, testSecret))).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(testSecret), &corev1.Secret{})
+				return apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 
 			ctrl.Log.Info("re-loading gateway with TLS cert/key the 2nd listener")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
@@ -1016,6 +1020,81 @@ func testManagedMode() {
 					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
 				}}
 			})
+
+			gw := &gwapiv1.Gateway{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(testGw), gw)
+				if err != nil {
+					return false
+				}
+
+				for i := range gw.Status.Listeners {
+					if gw.Status.Listeners[i].Name != gwapiv1.SectionName("gateway-1-listener-dtls") {
+						continue
+					}
+
+					s := meta.FindStatusCondition(gw.Status.Listeners[i].Conditions,
+						string(gwapiv1.ListenerConditionResolvedRefs))
+					return s != nil && s.Status == metav1.ConditionFalse &&
+						s.Reason == string(gwapiv1.ListenerReasonInvalidCertificateRef)
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			ctrl.Log.Info("trying to load STUNner config")
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+
+				hasUDP, hasTCP := false, false
+				for i := range c.Listeners {
+					switch c.Listeners[i].Name {
+					case "testnamespace/gateway-1/gateway-1-listener-udp":
+						hasUDP = true
+					case "testnamespace/gateway-1/gateway-1-listener-tcp":
+						hasTCP = true
+					case "testnamespace/gateway-1/gateway-1-listener-dtls":
+						return false
+					}
+				}
+
+				if hasUDP && hasTCP {
+					conf = c
+					return true
+				}
+
+				return false
+			}), timeout, interval).Should(BeTrue())
+
+			Expect(conf.Listeners).To(HaveLen(2))
+
+			l := conf.Listeners[0]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-udp" {
+				l = conf.Listeners[1]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
+			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Port).Should(Equal(1))
+			Expect(l.Routes).To(HaveLen(1))
+			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+
+			l = conf.Listeners[1]
+			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
+				l = conf.Listeners[0]
+			}
+
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Port).Should(Equal(2))
+			Expect(l.Routes).Should(BeEmpty())
+		})
+
+		It("should install TLS cert/keys", func() {
+			ctrl.Log.Info("loading TLS Secret")
+			createOrUpdateSecret(ctx, k8sClient, testSecret, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {

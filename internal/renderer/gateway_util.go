@@ -203,7 +203,7 @@ func setListenerStatus(gw *gwapiv1.Gateway, l *gwapiv1.Listener, err error, conf
 
 	setListenerStatusAccepted(gw, s, err)
 	setListenerStatusConflicted(gw, s, conflicted)
-	setListenerStatusResolvedRefs(gw, s)
+	setListenerStatusResolvedRefs(gw, s, err)
 	// listener ready status deprecated
 	// setListenerStatusReady(gw, s, ready)
 	s.AttachedRoutes = int32(routes)
@@ -228,6 +228,15 @@ func setListenerStatusAccepted(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, r
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gwapiv1.ListenerReasonUnsupportedProtocol),
 			Message:            "unsupported protocol",
+		})
+	case IsNonCriticalError(reason, InvalidCertificateRef):
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gwapiv1.ListenerConditionAccepted),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gwapiv1.ListenerReasonAccepted),
+			Message:            "listener accepted",
 		})
 	case reason != nil:
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
@@ -272,7 +281,19 @@ func setListenerStatusConflicted(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus,
 	}
 }
 
-func setListenerStatusResolvedRefs(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus) {
+func setListenerStatusResolvedRefs(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, reason error) {
+	if IsNonCriticalError(reason, InvalidCertificateRef) {
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gwapiv1.ListenerConditionResolvedRefs),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gwapiv1.ListenerReasonInvalidCertificateRef),
+			Message:            "at least one certificate reference failed to be successfully resolved",
+		})
+		return
+	}
+
 	meta.SetStatusCondition(&s.Conditions, metav1.Condition{
 		Type:               string(gwapiv1.ListenerConditionResolvedRefs),
 		Status:             metav1.ConditionTrue,
