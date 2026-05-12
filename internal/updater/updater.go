@@ -3,7 +3,9 @@ package updater
 // updater uploads client updates
 import (
 	"context"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
@@ -44,6 +47,10 @@ func (u *Updater) incCounter(key string) {
 	u.statsMu.Lock()
 	u.stats[key]++
 	u.statsMu.Unlock()
+	// key format is "scope.Kind.operation"; update the Prometheus counter in parallel.
+	if parts := strings.SplitN(key, ".", 3); len(parts) == 3 {
+		metrics.ResourceOperationsTotal.WithLabelValues(parts[0], parts[1], parts[2]).Inc()
+	}
 }
 
 func (u *Updater) SnapshotCounters() map[string]int64 {
@@ -83,10 +90,16 @@ func (u *Updater) Start(ctx context.Context) error {
 				update := e.(*event.EventUpdate)
 
 				u.ProgressUpdate(1)
+				start := time.Now()
 				err := u.ProcessUpdate(update)
+				metrics.UpdateDuration.Observe(time.Since(start).Seconds())
 				if err != nil {
+					metrics.UpdateTotal.WithLabelValues("error").Inc()
+					metrics.UpdateErrors.Inc()
 					u.log.Error(err, "Could not process update event", "event",
 						e.String())
+				} else {
+					metrics.UpdateTotal.WithLabelValues("success").Inc()
 				}
 
 				if update.GetRequestAck() {

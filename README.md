@@ -50,6 +50,33 @@ Example:
 
 Do not expose pprof publicly, profiles may contain sensitive runtime details.
 
+### Metrics
+
+Prometheus metrics are served at `--metrics-bind-address` (default `:8080/metrics`).
+
+**Controller-runtime built-ins** (most useful for day-to-day monitoring):
+
+| Metric                                                  | Type      | Description                                                                                       |
+|---------------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------|
+| `controller_runtime_reconcile_total{controller,result}` | Counter   | Reconciliations per controller, split by result (`success`, `error`, `requeue`, `requeue_after`). |
+| `controller_runtime_reconcile_time_seconds{controller}` | Histogram | Per-reconciliation latency.                                                                       |
+| `controller_runtime_reconcile_errors_total{controller}` | Counter   | Reconciliation errors per controller.                                                             |
+| `controller_runtime_active_workers{controller}`         | Gauge     | Workers currently processing a reconcile request.                                                 |
+
+**Operator-specific metrics** (prefix `stunner_gateway_operator_`):
+
+| Metric                                            | Type      | Description                                                                                                                                                                |
+|---------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `render_total`                                    | Counter   | Render cycles completed by the renderer thread.                                                                                                                            |
+| `render_time_seconds`                             | Histogram | Duration of a full render cycle.                                                                                                                                           |
+| `update_total{result}`                            | Counter   | Update cycles completed by the updater thread (`success` / `error`).                                                                                                       |
+| `update_errors_total`                             | Counter   | Update cycles that returned an error.                                                                                                                                      |
+| `update_time_seconds`                             | Histogram | Duration of a full update cycle.                                                                                                                                           |
+| `resource_operations_total{scope,kind,operation}` | Counter   | Individual Kubernetes API calls made by the updater, labelled by scope (`spec`/`status`), resource kind, and operation (`created`, `updated`, `error`, `suppressed`, ...). |
+| `reconcile_events_total{result}`                  | Counter   | Reconcile events received by the operator event loop (`passed` when a render is scheduled, `throttled` when rate-limited).                                                 |
+| `generation`                                      | Gauge     | Current config generation number.                                                                                                                                          |
+| `generation_last_acked`                           | Gauge     | Generation number of the last update acknowledged by the updater.                                                                                                          |
+
 ## Caveats
 
 * STUNner implements its own UDPRoute resource instead of using the official UDPRoute provided by the Gateway API. The reason is that STUNner's UDPRoutes omit the port defined in backend references, in contrast to standard UDPRoutes that make the port mandatory. The rationale is that WebRTC media servers typically spawn zillions of UDP/SRTP listeners on essentially any UDP port, so enforcing a single backend port would block all client access. Instead, STUNner's UDPRoutes do not limit port access on backend services at all by default, and provide an optional pair or port/end-port fields per backend reference to define a target port range in which peer connections to the backend are to be accepted.

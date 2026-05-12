@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,6 +15,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
+	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
 )
 
 var NewRenderer = NewDefaultRenderer
@@ -95,14 +97,20 @@ func (r *renderer) Start(ctx context.Context) error {
 					ev := e.(*event.EventRender)
 
 					r.ProgressUpdate(1)
+					start := time.Now()
 					r.Render(ev)
+					metrics.RenderDuration.Observe(time.Since(start).Seconds())
+					metrics.RenderTotal.Inc()
 					r.ProgressUpdate(-1)
 				case event.EventTypeFinalize:
 					// invaliditate all statuses and configs
 					ev := e.(*event.EventFinalize)
 
 					r.ProgressUpdate(1)
+					start := time.Now()
 					r.Finalize(ev)
+					metrics.RenderDuration.Observe(time.Since(start).Seconds())
+					metrics.RenderTotal.Inc()
 					r.ProgressUpdate(-1)
 				default:
 					r.log.Info("Renderer thread received unknown event", "event", e.String())

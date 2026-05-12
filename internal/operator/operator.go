@@ -17,6 +17,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -158,12 +159,14 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				// rate-limit rendering requests before passing on to the renderer
 				// render request in progress: do nothing
 				if throttling {
+					metrics.ReconcileEventsTotal.WithLabelValues("throttled").Inc()
 					o.log.V(3).Info("Rendering request throttled", "event",
 						e.String())
 					continue
 				}
 
 				// request a new rendering round
+				metrics.ReconcileEventsTotal.WithLabelValues("passed").Inc()
 				throttling = true
 				throttler.Reset(config.ThrottleTimeout)
 				o.tracker.ProgressUpdate(1)
@@ -173,7 +176,9 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 
 			case event.EventTypeAck:
 				// administer
-				o.setLastAckedGeneration(e.(*event.EventAck).Generation)
+				gen := e.(*event.EventAck).Generation
+				o.setLastAckedGeneration(gen)
+				metrics.GenerationLastAcked.Set(float64(gen))
 
 			default:
 				o.log.Info("Internal error: operator received a request it should "+
@@ -195,6 +200,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 			o.log.Info("Starting new reconcile generation", "generation", o.gen,
 				"last-acked-generation", o.GetLastAckedGeneration())
 			o.gen += 1
+			metrics.Generation.Set(float64(o.gen))
 			o.renderCh <- event.NewEventRender(o.gen)
 
 		case <-ctx.Done():
