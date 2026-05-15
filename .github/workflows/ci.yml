@@ -67,4 +67,4 @@ jobs:
           token: ${{ secrets.WEB_PAT_TOKEN }}
           repo: l7mp/stunner-helm
           workflow: publish.yaml
-          inputs: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner-gateway-operator"}'
+          inputs: '{"tag": "${{ steps.vars.outputs.tag }}", "type": "stunner"}'

@@ -69,5 +69,5 @@ jobs:
   #         github_token: ${{ secrets.WEB_PAT_TOKEN }}
   #         owner: l7mp
   #         repo: stunner-helm
-  #         client_payload: '{"tag": "dev", "type": "stunner-gateway-operator"}'
+  #         client_payload: '{"tag": "dev", "type": "stunner"}'
   #         workflow_file_name: publish.yaml
