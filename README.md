@@ -50,6 +50,17 @@ Example:
 
 Do not expose pprof publicly, profiles may contain sensitive runtime details.
 
+### Gateway label propagation filter
+
+The operator propagates labels from a Gateway resource onto the Deployment it provisions for that Gateway. Certain labels are filtered though, in order to avoid collisions with ecosystem tools that use labels as ownership claims. Most notably, `kubectl apply --prune --applyset` will sweep the operator's Deployments (see [#70](https://github.com/l7mp/stunner-gateway-operator/issues/70)), unless the corresponding labels (`applyset.kubernetes.io/part-of`, `applyset.k8s.io/part-of`) are filtered from propagating into the Deployment. The default is to filter the below well-known keys:
+
+- `applyset.kubernetes.io/part-of`, `applyset.k8s.io/part-of`
+- `app.kubernetes.io/managed-by`
+- `argocd.argoproj.io/instance`
+- `kustomize.toolkit.fluxcd.io/name`, `kustomize.toolkit.fluxcd.io/namespace`
+
+Override the list via `STUNNER_GATEWAY_OPERATOR_LABEL_FILTER` (comma-separated). The env-var, when set, *replaces* the default. Set it to the empty string to disable filtering.
+
 ### Metrics
 
 Prometheus metrics are served at `--metrics-bind-address` (default `:8080/metrics`).

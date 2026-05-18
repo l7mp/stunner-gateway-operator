@@ -57,4 +57,10 @@ var (
 	// LoadBalancer Services) on exit and invalidate Gateway API resource statuses. Use with
 	// caution: enabling this will caluse client connections to break on operator restart.
 	EnableFinalizer = opdefault.DefaultEnableFinalizer
+
+	// LabelFilter is the list of label keys that are stripped from a Gateway's label set
+	// before propagation to the Deployment that the operator creates for that Gateway.
+	// Override via the STUNNER_GATEWAY_OPERATOR_LABEL_FILTER env-var (comma-separated). If
+	// the env-var is set, it replaces the default rather than extending it.
+	LabelFilter = append([]string(nil), opdefault.DefaultLabelFilter...)
 )

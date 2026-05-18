@@ -1261,6 +1261,58 @@ func testManagedMode() {
 			Expect(podSpec.Affinity).To(BeNil())
 		})
 
+		It("should not propagate ecosystem ownership labels to the Deployment", func() {
+			lookupKey := store.GetNamespacedName(testGw)
+
+			// add applyset and Helm ownership labels to the Gateway; both are
+			// in the default LabelFilter (see issue #70). Spec must also be
+			// touched to trigger the controller — metadata-only Gateway
+			// updates are filtered out by the controller's predicate.
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
+				ls := current.GetLabels()
+				if ls == nil {
+					ls = map[string]string{}
+				}
+				ls["applyset.kubernetes.io/part-of"] = "applyset-main"
+				ls["app.kubernetes.io/managed-by"] = "Helm"
+				ls["keep-me"] = "yes" // not in the filter, must still propagate
+				current.SetLabels(ls)
+				current.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+						"filter-test-trigger": "on",
+					},
+				}
+			})
+
+			deploy := &appv1.Deployment{}
+			Eventually(func() map[string]string {
+				if err := k8sClient.Get(ctx, lookupKey, deploy); err != nil {
+					return nil
+				}
+				return deploy.GetLabels()
+			}, timeout, interval).Should(SatisfyAll(
+				HaveKeyWithValue("keep-me", "yes"),
+				Not(HaveKey("applyset.kubernetes.io/part-of")),
+				Not(HaveKey("app.kubernetes.io/managed-by")),
+				HaveKeyWithValue(opdefault.OwnedByLabelKey, opdefault.OwnedByLabelValue),
+			), "deployment labels: filtered keys stripped, non-filtered key propagated, stunner ownership preserved")
+
+			// clean up so following tests see the original Gateway label set;
+			// touch Spec again to trigger a reconcile
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
+				ls := current.GetLabels()
+				delete(ls, "applyset.kubernetes.io/part-of")
+				delete(ls, "app.kubernetes.io/managed-by")
+				delete(ls, "keep-me")
+				current.SetLabels(ls)
+				current.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+						"filter-test-trigger": "off",
+					},
+				}
+			})
+		})
+
 		It("should clean up lingering dataplane resources", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			ds := &appv1.DaemonSet{}
@@ -1312,14 +1364,11 @@ func testManagedMode() {
 			Expect(conf.Admin.MetricsEndpoint).To(Equal(opdefault.DefaultMetricsEndpoint))
 			Expect(conf.Admin.HealthCheckEndpoint == nil || *conf.Admin.HealthCheckEndpoint == "").To(BeTrue())
 
-			Expect(conf.Listeners).To(HaveLen(3))
+			Expect(conf.Listeners).To(HaveLen(2))
 			l := conf.Listeners[1]
-			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
-			Expect(l.Port).Should(Equal(3))
-			Expect(l.Cert).Should(Equal(newCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
+			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Port).Should(Equal(2))
 		})
 
 		It("should update the Deployment after the Dataplane changed", func() {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -285,4 +286,27 @@ func MergeMetadata(a, b map[string]string) map[string]string {
 	}
 
 	return ret
+}
+
+// FilterLabels returns a copy of in with any key in filter removed. Each removed key is logged
+// at V(1) so operators can confirm the filter is firing. The input map is not mutated. If either
+// in or filter is empty, the input is returned unchanged.
+func FilterLabels(in map[string]string, filter []string, log logr.Logger) map[string]string {
+	if len(in) == 0 || len(filter) == 0 {
+		return in
+	}
+	drop := make(map[string]struct{}, len(filter))
+	for _, k := range filter {
+		drop[k] = struct{}{}
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		if _, hit := drop[k]; hit {
+			log.V(1).Info("filtering label from propagation", "key", k, "value", v)
+			continue
+		}
+		out[k] = v
+	}
+
+	return out
 }

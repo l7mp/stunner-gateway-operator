@@ -59,6 +59,7 @@ const (
 	envVarAddress        = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
 	envVarControllerName = "STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME"
 	envVarPprofAddr      = "STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS"
+	envVarLabelFilter    = "STUNNER_GATEWAY_OPERATOR_LABEL_FILTER"
 	envVarCustomerKey    = "CUSTOMER_KEY"
 )
 
@@ -165,6 +166,17 @@ func main() {
 
 	setupLog.Info("config discovery server", "local-addr", cdsAddr,
 		"remote-addr", config.ConfigDiscoveryAddress)
+
+	// label filter: when set, env-var replaces the default; set-empty disables filtering
+	if raw, ok := os.LookupEnv(envVarLabelFilter); ok {
+		config.LabelFilter = config.LabelFilter[:0]
+		for _, k := range strings.Split(raw, ",") {
+			if k = strings.TrimSpace(k); k != "" {
+				config.LabelFilter = append(config.LabelFilter, k)
+			}
+		}
+	}
+	setupLog.Info("gateway label propagation filter", "filter", config.LabelFilter)
 
 	if d, err := time.ParseDuration(throttleTimeout); err == nil {
 		config.ThrottleTimeout = d

@@ -2,6 +2,7 @@ package store
 
 import (
 	// "fmt"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"testing"
 
@@ -193,4 +194,54 @@ func TestStore(t *testing.T) {
 	assert.Nil(t, o, "get fails")
 	o = s.Get(GetNameFromKey("default/s3"))
 	assert.Nil(t, o, "get fails")
+}
+
+func TestFilterLabels(t *testing.T) {
+	log := logr.Discard()
+
+	t.Run("empty input", func(t *testing.T) {
+		out := FilterLabels(nil, []string{"applyset.kubernetes.io/part-of"}, log)
+		assert.Empty(t, out)
+	})
+
+	t.Run("empty filter", func(t *testing.T) {
+		in := map[string]string{"a": "1", "b": "2"}
+		out := FilterLabels(in, nil, log)
+		assert.Equal(t, in, out)
+	})
+
+	t.Run("filter hits", func(t *testing.T) {
+		in := map[string]string{
+			"applyset.kubernetes.io/part-of": "applyset-main",
+			"app.kubernetes.io/managed-by":   "Helm",
+			"keep-me":                        "yes",
+		}
+		out := FilterLabels(in, []string{
+			"applyset.kubernetes.io/part-of",
+			"app.kubernetes.io/managed-by",
+		}, log)
+		assert.Len(t, out, 1)
+		assert.Equal(t, "yes", out["keep-me"])
+		_, ok := out["applyset.kubernetes.io/part-of"]
+		assert.False(t, ok, "applyset key stripped")
+		_, ok = out["app.kubernetes.io/managed-by"]
+		assert.False(t, ok, "managed-by key stripped")
+	})
+
+	t.Run("filter misses", func(t *testing.T) {
+		in := map[string]string{"a": "1", "b": "2"}
+		out := FilterLabels(in, []string{"not-present"}, log)
+		assert.Equal(t, in, out)
+	})
+
+	t.Run("input not mutated", func(t *testing.T) {
+		in := map[string]string{
+			"applyset.kubernetes.io/part-of": "x",
+			"keep-me":                        "yes",
+		}
+		_ = FilterLabels(in, []string{"applyset.kubernetes.io/part-of"}, log)
+		_, ok := in["applyset.kubernetes.io/part-of"]
+		assert.True(t, ok, "input map preserved")
+		assert.Len(t, in, 2)
+	})
 }

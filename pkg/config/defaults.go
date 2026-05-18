@@ -202,4 +202,16 @@ var (
 
 	// DefaultMetricsEndpoint is the default URI at which metrics scaping requests are served.
 	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrconfv1.DefaultMetricsPort)
+
+	// DefaultLabelFilter is the list of label keys that are NOT propagated from a Gateway to
+	// the Deployment that the operator creates for it; see
+	// https://github.com/l7mp/stunner-gateway-operator/issues/70.
+	DefaultLabelFilter = []string{
+		"applyset.kubernetes.io/part-of",
+		"applyset.k8s.io/part-of",
+		"app.kubernetes.io/managed-by",
+		"argocd.argoproj.io/instance",
+		"kustomize.toolkit.fluxcd.io/name",
+		"kustomize.toolkit.fluxcd.io/namespace",
+	}
 )

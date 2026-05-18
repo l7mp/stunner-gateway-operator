@@ -28,7 +28,7 @@ var _ resourceGenerator = &dataplaneGenerator{}
 // label/annotation in the below orders the higher prio on conflict.
 //
 // Deployment-level labels:
-//   - copy of labels from the related Gateway
+//   - copy of labels from the related Gateway, minus the keys in config.LabelFilter
 //   - stunner.l7mp.io/owned-by=stunner
 //   - stunner.l7mp.io/related-gateway-name=<gateway-name>
 //   - stunner.l7mp.io/related-gateway-namespace=<gateway-namespace>
@@ -92,7 +92,9 @@ func (r *dataplaneGenerator) generate(c *RenderContext) (client.Object, error) {
 	}
 
 	// copy deployment-level annotations and labels: overwrite whatever is set on the Gateway on conflict
-	labs := store.MergeMetadata(gw.GetLabels(), deployment.GetLabels())
+	gwLabels := store.FilterLabels(gw.GetLabels(), config.LabelFilter,
+		c.log.WithValues("gateway", store.GetObjectKey(gw)))
+	labs := store.MergeMetadata(gwLabels, deployment.GetLabels())
 	deployment.SetLabels(labs)
 
 	annotations := store.MergeMetadata(gw.GetAnnotations(), deployment.GetAnnotations())
