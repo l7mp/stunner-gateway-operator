@@ -142,10 +142,20 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 	throttler.Stop()
 	throttling := false
 
+	// Independent heartbeat ticker — the throttler above is Stop()ed during
+	// idle periods, so it cannot double as a liveness signal.
+	heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
+	defer heartbeat.Stop()
+	metrics.RecordOperatorHeartbeat()
+
 	for {
 		select {
 
+		case <-heartbeat.C:
+			metrics.RecordOperatorHeartbeat()
+
 		case e := <-o.operatorCh.Channel():
+			metrics.RecordOperatorHeartbeat()
 			switch e.GetType() {
 			case event.EventTypeUpdate:
 				if n := sendCoalesced(o.updaterCh, e); n > 0 {
@@ -187,6 +197,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 			}
 
 		case <-throttler.C:
+			metrics.RecordOperatorHeartbeat()
 			throttling = false
 			throttler.Stop()
 

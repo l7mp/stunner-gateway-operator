@@ -87,9 +87,17 @@ func (r *renderer) Start(ctx context.Context) error {
 			}
 		}()
 
+		heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
+		defer heartbeat.Stop()
+		metrics.RecordRendererHeartbeat()
+
 		for {
 			select {
+			case <-heartbeat.C:
+				metrics.RecordRendererHeartbeat()
+
 			case e := <-r.renderCh:
+				metrics.RecordRendererHeartbeat()
 				switch e.GetType() {
 				case event.EventTypeRender:
 					// prepare a new update event Render will populate config

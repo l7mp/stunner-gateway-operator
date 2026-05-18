@@ -1,11 +1,26 @@
 package metrics
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
+
+// LoopHeartbeatInterval is how often each worker goroutine bumps its heartbeat
+// gauge during idle periods. Picked low enough to give plenty of margin under
+// LoopStalenessThreshold while remaining negligible overhead.
+const LoopHeartbeatInterval = 5 * time.Second
+
+// LoopStalenessThreshold is the maximum acceptable age of a worker goroutine's
+// last heartbeat before the /healthz check considers the loop hung. The
+// heartbeat is bumped on every select wakeup, including at the start of the
+// work branch — so during a single long-running iteration (e.g. a slow
+// ProcessUpdate) the gauge does not refresh until that iteration completes.
+// Existing duration histograms cap at 60s, so this threshold is set well above
+// that to avoid restarting pods that are slow rather than wedged.
+const LoopStalenessThreshold = 2 * time.Minute
 
 // reconcileTimeBuckets matches the bucket boundaries used by controller-runtime for
 // controller_runtime_reconcile_time_seconds, so that all operator histograms are
@@ -83,7 +98,80 @@ var (
 		Name: "stunner_gateway_operator_generation_last_acked",
 		Help: "Generation number of the last update acknowledged by the updater thread.",
 	})
+
+	// OperatorLoopLastActive is the unix timestamp of the most recent operator
+	// main-loop select iteration. A stale value proves the loop is wedged.
+	OperatorLoopLastActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "stunner_gateway_operator_operator_loop_last_active_timestamp_seconds",
+		Help: "Unix timestamp of the last operator main-loop select iteration; stale values indicate the loop is hung.",
+	})
+
+	// RendererLoopLastActive is the unix timestamp of the most recent renderer
+	// goroutine select iteration.
+	RendererLoopLastActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "stunner_gateway_operator_renderer_loop_last_active_timestamp_seconds",
+		Help: "Unix timestamp of the last renderer goroutine select iteration; stale values indicate the loop is hung.",
+	})
+
+	// UpdaterLoopLastActive is the unix timestamp of the most recent updater
+	// goroutine select iteration.
+	UpdaterLoopLastActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "stunner_gateway_operator_updater_loop_last_active_timestamp_seconds",
+		Help: "Unix timestamp of the last updater goroutine select iteration; stale values indicate the loop is hung.",
+	})
 )
+
+// In-process mirrors of the heartbeat gauges. Stored as atomic unix-seconds so
+// the /healthz check can read them without going through the prometheus client's
+// dto.Metric write path. Zero means "never recorded yet" — treat as healthy
+// until first heartbeat fires.
+var (
+	operatorLoopLastActive atomic.Int64
+	rendererLoopLastActive atomic.Int64
+	updaterLoopLastActive  atomic.Int64
+)
+
+// RecordOperatorHeartbeat marks the operator main loop as alive at the current
+// time. Call this from every branch of the operator select loop.
+func RecordOperatorHeartbeat() {
+	now := time.Now().Unix()
+	operatorLoopLastActive.Store(now)
+	OperatorLoopLastActive.Set(float64(now))
+}
+
+// RecordRendererHeartbeat marks the renderer goroutine as alive at the current time.
+func RecordRendererHeartbeat() {
+	now := time.Now().Unix()
+	rendererLoopLastActive.Store(now)
+	RendererLoopLastActive.Set(float64(now))
+}
+
+// RecordUpdaterHeartbeat marks the updater goroutine as alive at the current time.
+func RecordUpdaterHeartbeat() {
+	now := time.Now().Unix()
+	updaterLoopLastActive.Store(now)
+	UpdaterLoopLastActive.Set(float64(now))
+}
+
+// OperatorLoopAge returns the time since the operator main loop last ran a
+// select iteration. Returns 0 if no heartbeat has been recorded yet.
+func OperatorLoopAge() time.Duration { return loopAge(&operatorLoopLastActive) }
+
+// RendererLoopAge returns the time since the renderer goroutine last ran a
+// select iteration. Returns 0 if no heartbeat has been recorded yet.
+func RendererLoopAge() time.Duration { return loopAge(&rendererLoopLastActive) }
+
+// UpdaterLoopAge returns the time since the updater goroutine last ran a
+// select iteration. Returns 0 if no heartbeat has been recorded yet.
+func UpdaterLoopAge() time.Duration { return loopAge(&updaterLoopLastActive) }
+
+func loopAge(a *atomic.Int64) time.Duration {
+	ts := a.Load()
+	if ts == 0 {
+		return 0
+	}
+	return time.Since(time.Unix(ts, 0))
+}
 
 func init() {
 	ctrlmetrics.Registry.MustRegister(
@@ -96,5 +184,8 @@ func init() {
 		ReconcileEventsTotal,
 		Generation,
 		GenerationLastAcked,
+		OperatorLoopLastActive,
+		RendererLoopLastActive,
+		UpdaterLoopLastActive,
 	)
 }

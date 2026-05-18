@@ -78,9 +78,17 @@ func (u *Updater) Start(ctx context.Context) error {
 		defer close(u.updaterCh)
 		defer u.opCh.Put()
 
+		heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
+		defer heartbeat.Stop()
+		metrics.RecordUpdaterHeartbeat()
+
 		for {
 			select {
+			case <-heartbeat.C:
+				metrics.RecordUpdaterHeartbeat()
+
 			case e := <-u.updaterCh:
+				metrics.RecordUpdaterHeartbeat()
 				if e.GetType() != event.EventTypeUpdate {
 					u.log.Info("Updater thread received unknown event",
 						"event", e.String())
