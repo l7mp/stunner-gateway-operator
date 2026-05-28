@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -18,16 +21,12 @@ import (
 func TestServiceNoopSuppress(t *testing.T) {
 	current := testService()
 	svcLens := lens.NewServiceLens(current.DeepCopy())
-	if !svcLens.EqualResource(current) {
-		t.Fatalf("expected service no-op to be suppressed")
-	}
+	assert.True(t, svcLens.EqualResource(current), "expected service no-op to be suppressed")
 
 	desired := current.DeepCopy()
 	desired.Spec.Ports[0].Port = 3479
 	svcLens = lens.NewServiceLens(desired)
-	if svcLens.EqualResource(current) {
-		t.Fatalf("expected changed service not to be suppressed")
-	}
+	assert.False(t, svcLens.EqualResource(current), "expected changed service not to be suppressed")
 }
 
 func TestServiceMutate(t *testing.T) {
@@ -42,22 +41,19 @@ func TestServiceMutate(t *testing.T) {
 	desired.Spec.Ports[0].Port = 3479
 
 	v := lens.NewServiceLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("unexpected mutate error: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "unexpected mutate error")
 
-	if current.Spec.Type != corev1.ServiceTypeNodePort || current.Spec.Ports[0].Port != 3479 {
-		t.Fatalf("service spec not copied")
-	}
-	if current.Labels["new"] != "label" || current.Labels["preserve"] != "yes" {
-		t.Fatalf("service labels were not merged as expected")
-	}
-	if current.Annotations["new"] != "annotation" || current.Annotations["legacy"] != "keep" {
-		t.Fatalf("service annotations were not merged as expected")
-	}
-	if len(current.OwnerReferences) != 1 || current.OwnerReferences[0].Name != desired.OwnerReferences[0].Name {
-		t.Fatalf("service ownerRef not set")
-	}
+	assert.Equal(t, corev1.ServiceTypeNodePort, current.Spec.Type, "service type should be copied")
+	assert.Equal(t, int32(3479), current.Spec.Ports[0].Port, "service port should be copied")
+	assert.Equal(t, "label", current.Labels["new"], "service labels should include new labels")
+	assert.Equal(t, "yes", current.Labels["preserve"], "service labels should preserve existing labels")
+	assert.Equal(t, "annotation", current.Annotations["new"],
+		"service annotations should include new annotations")
+	assert.Equal(t, "keep", current.Annotations["legacy"],
+		"service annotations should preserve existing annotations")
+	require.Len(t, current.OwnerReferences, 1, "service ownerRef should be set")
+	assert.Equal(t, desired.OwnerReferences[0].Name, current.OwnerReferences[0].Name,
+		"service ownerRef should be set")
 }
 
 func TestDeploymentMutate(t *testing.T) {
@@ -74,31 +70,28 @@ func TestDeploymentMutate(t *testing.T) {
 	desired.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{MaxSkew: 1, TopologyKey: "zone", WhenUnsatisfiable: corev1.ScheduleAnyway}}
 
 	v := lens.NewDeploymentLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("unexpected mutate error: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "unexpected mutate error")
 
-	if !apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.Containers, desired.Spec.Template.Spec.Containers) {
-		t.Fatalf("containers not copied")
-	}
-	if !apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.ImagePullSecrets, desired.Spec.Template.Spec.ImagePullSecrets) {
-		t.Fatalf("image pull secrets not copied")
-	}
-	if !apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.Tolerations, desired.Spec.Template.Spec.Tolerations) {
-		t.Fatalf("tolerations not copied")
-	}
-	if !apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.TopologySpreadConstraints, desired.Spec.Template.Spec.TopologySpreadConstraints) {
-		t.Fatalf("topology spread constraints not copied")
-	}
-	if current.Spec.Template.Spec.TerminationGracePeriodSeconds == nil || *current.Spec.Template.Spec.TerminationGracePeriodSeconds != 12 {
-		t.Fatalf("termination grace period not copied")
-	}
-	if !current.Spec.Template.Spec.HostNetwork {
-		t.Fatalf("hostNetwork not copied")
-	}
-	if current.Spec.Replicas == nil || *current.Spec.Replicas != 3 {
-		t.Fatalf("replicas not enforced")
-	}
+	assert.True(t,
+		apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.Containers, desired.Spec.Template.Spec.Containers),
+		"containers not copied")
+	assert.True(t,
+		apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.ImagePullSecrets, desired.Spec.Template.Spec.ImagePullSecrets),
+		"image pull secrets not copied")
+	assert.True(t,
+		apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.Tolerations, desired.Spec.Template.Spec.Tolerations),
+		"tolerations not copied")
+	assert.True(t,
+		apiequality.Semantic.DeepEqual(current.Spec.Template.Spec.TopologySpreadConstraints,
+			desired.Spec.Template.Spec.TopologySpreadConstraints),
+		"topology spread constraints not copied")
+	require.NotNil(t, current.Spec.Template.Spec.TerminationGracePeriodSeconds,
+		"termination grace period should be copied")
+	assert.Equal(t, int64(12), *current.Spec.Template.Spec.TerminationGracePeriodSeconds,
+		"termination grace period not copied")
+	assert.True(t, current.Spec.Template.Spec.HostNetwork, "hostNetwork not copied")
+	require.NotNil(t, current.Spec.Replicas, "replicas should be enforced")
+	assert.Equal(t, int32(3), *current.Spec.Replicas, "replicas not enforced")
 }
 
 func TestDeploymentReplicaPreserve(t *testing.T) {
@@ -111,28 +104,22 @@ func TestDeploymentReplicaPreserve(t *testing.T) {
 	desired.Spec.Replicas = &one
 
 	v := lens.NewDeploymentLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("unexpected mutate error: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "unexpected mutate error")
 
-	if current.Spec.Replicas == nil || *current.Spec.Replicas != 5 {
-		t.Fatalf("single replica should not overwrite existing replica count")
-	}
+	require.NotNil(t, current.Spec.Replicas, "replicas should be preserved")
+	assert.Equal(t, int32(5), *current.Spec.Replicas,
+		"single replica should not overwrite existing replica count")
 }
 
 func TestDeploymentNoopSuppress(t *testing.T) {
 	current := testDeployment()
 	v := lens.NewDeploymentLens(current.DeepCopy())
-	if !v.EqualResource(current) {
-		t.Fatalf("expected deployment no-op to be suppressed")
-	}
+	assert.True(t, v.EqualResource(current), "expected deployment no-op to be suppressed")
 
 	desired := current.DeepCopy()
 	desired.Spec.Template.Spec.Containers[0].Image = "stunnerd:v3"
 	v = lens.NewDeploymentLens(desired)
-	if v.EqualResource(current) {
-		t.Fatalf("expected changed deployment not to be suppressed")
-	}
+	assert.False(t, v.EqualResource(current), "expected changed deployment not to be suppressed")
 }
 
 func TestGatewayClassStatusEqual(t *testing.T) {
@@ -150,14 +137,12 @@ func TestGatewayClassStatusEqual(t *testing.T) {
 	desired := current.DeepCopy()
 	desired.Conditions[0].LastTransitionTime = later
 
-	if !lens.GatewayClassStatusEqual(current, desired) {
-		t.Fatalf("expected equal statuses to ignore LastTransitionTime differences")
-	}
+	assert.True(t, lens.GatewayClassStatusEqual(current, desired),
+		"expected equal statuses to ignore LastTransitionTime differences")
 
 	desired.Conditions[0].Reason = "Different"
-	if lens.GatewayClassStatusEqual(current, desired) {
-		t.Fatalf("expected semantic difference to be detected")
-	}
+	assert.False(t, lens.GatewayClassStatusEqual(current, desired),
+		"expected semantic difference to be detected")
 }
 
 func TestGatewayStatusEqual(t *testing.T) {
@@ -188,14 +173,12 @@ func TestGatewayStatusEqual(t *testing.T) {
 	desired.Conditions[0].LastTransitionTime = later
 	desired.Listeners[0].Conditions[0].LastTransitionTime = later
 
-	if !lens.GatewayStatusEqual(current, desired) {
-		t.Fatalf("expected equal gateway status to ignore timestamp differences")
-	}
+	assert.True(t, lens.GatewayStatusEqual(current, desired),
+		"expected equal gateway status to ignore timestamp differences")
 
 	desired.Listeners[0].Conditions[0].Reason = "Different"
-	if lens.GatewayStatusEqual(current, desired) {
-		t.Fatalf("expected listener semantic difference to be detected")
-	}
+	assert.False(t, lens.GatewayStatusEqual(current, desired),
+		"expected listener semantic difference to be detected")
 }
 
 func TestGatewayStatusAddressDiff(t *testing.T) {
@@ -209,9 +192,7 @@ func TestGatewayStatusAddressDiff(t *testing.T) {
 	desired := current.DeepCopy()
 	desired.Addresses[0].Value = "203.0.113.11"
 
-	if lens.GatewayStatusEqual(current, desired) {
-		t.Fatalf("expected address change to be detected")
-	}
+	assert.False(t, lens.GatewayStatusEqual(current, desired), "expected address change to be detected")
 }
 
 func TestUDPRouteStatusEqual(t *testing.T) {
@@ -237,14 +218,12 @@ func TestUDPRouteStatusEqual(t *testing.T) {
 	desired := *current.DeepCopy()
 	desired.Parents[0].Conditions[0].LastTransitionTime = later
 
-	if !lens.UDPRouteStatusEqual(current, desired) {
-		t.Fatalf("expected equal UDPRoute status to ignore timestamp differences")
-	}
+	assert.True(t, lens.UDPRouteStatusEqual(current, desired),
+		"expected equal UDPRoute status to ignore timestamp differences")
 
 	desired.Parents[0].Conditions[0].Message = "changed"
-	if lens.UDPRouteStatusEqual(current, desired) {
-		t.Fatalf("expected parent condition semantic difference to be detected")
-	}
+	assert.False(t, lens.UDPRouteStatusEqual(current, desired),
+		"expected parent condition semantic difference to be detected")
 }
 
 func TestUDPRouteStatusParentDiff(t *testing.T) {
@@ -260,9 +239,8 @@ func TestUDPRouteStatusParentDiff(t *testing.T) {
 	desired := *current.DeepCopy()
 	desired.Parents[0].ParentRef.Name = gwapiv1.ObjectName("gw-other")
 
-	if lens.UDPRouteStatusEqual(current, desired) {
-		t.Fatalf("expected parent ref change to be detected")
-	}
+	assert.False(t, lens.UDPRouteStatusEqual(current, desired),
+		"expected parent ref change to be detected")
 }
 
 func testService() *corev1.Service {

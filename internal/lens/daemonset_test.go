@@ -3,6 +3,8 @@ package lens
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,9 +16,7 @@ func TestDaemonSetEqualDetectsRealDiff(t *testing.T) {
 	candidate.Spec.Template.Spec.Containers[0].Image = "stunner:v2"
 
 	v := NewDaemonSetLens(candidate)
-	if v.EqualResource(current) {
-		t.Fatalf("expected daemonset image change to be detected")
-	}
+	assert.False(t, v.EqualResource(current), "expected daemonset image change to be detected")
 }
 
 func TestDaemonSetApplyPreservesExternalMetadata(t *testing.T) {
@@ -38,25 +38,27 @@ func TestDaemonSetApplyPreservesExternalMetadata(t *testing.T) {
 	desired.Spec.Template.Annotations["owned-template-ann"] = "set"
 
 	v := NewDaemonSetLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("apply failed: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
 
-	if current.Labels["external-label"] != "keep" || current.Labels["owned-label"] != "set" {
-		t.Fatalf("daemonset labels should retain external and add owned labels")
-	}
+	assert.Equal(t, "keep", current.Labels["external-label"],
+		"daemonset labels should retain external labels")
+	assert.Equal(t, "set", current.Labels["owned-label"],
+		"daemonset labels should add owned labels")
 
-	if current.Annotations["external-ann"] != "keep" || current.Annotations["owned-ann"] != "set" {
-		t.Fatalf("daemonset annotations should retain external and add owned annotations")
-	}
+	assert.Equal(t, "keep", current.Annotations["external-ann"],
+		"daemonset annotations should retain external annotations")
+	assert.Equal(t, "set", current.Annotations["owned-ann"],
+		"daemonset annotations should add owned annotations")
 
-	if _, ok := current.Spec.Template.Labels["external-template-label"]; ok || current.Spec.Template.Labels["owned-template-label"] != "set" {
-		t.Fatalf("pod template labels should be rewritten to owned labels")
-	}
+	assert.NotContains(t, current.Spec.Template.Labels, "external-template-label",
+		"pod template labels should drop external labels")
+	assert.Equal(t, "set", current.Spec.Template.Labels["owned-template-label"],
+		"pod template labels should include owned labels")
 
-	if _, ok := current.Spec.Template.Annotations["external-template-ann"]; ok || current.Spec.Template.Annotations["owned-template-ann"] != "set" {
-		t.Fatalf("pod template annotations should be rewritten to owned annotations")
-	}
+	assert.NotContains(t, current.Spec.Template.Annotations, "external-template-ann",
+		"pod template annotations should drop external annotations")
+	assert.Equal(t, "set", current.Spec.Template.Annotations["owned-template-ann"],
+		"pod template annotations should include owned annotations")
 }
 
 func testDaemonSet() *appv1.DaemonSet {

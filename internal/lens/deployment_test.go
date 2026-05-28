@@ -3,6 +3,9 @@ package lens
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,9 +22,8 @@ func TestDeploymentEqualIgnoresDefaultedFields(t *testing.T) {
 	current.Spec.Template.Spec.Containers[0].TerminationMessagePolicy = corev1.TerminationMessageReadFile
 
 	v := NewDeploymentLens(candidate)
-	if !v.EqualResource(current) {
-		t.Fatalf("expected deployment lenses to match after dropping defaulted fields")
-	}
+	assert.True(t, v.EqualResource(current),
+		"expected deployment lenses to match after dropping defaulted fields")
 }
 
 func TestDeploymentEqualDetectsRealDiff(t *testing.T) {
@@ -30,9 +32,7 @@ func TestDeploymentEqualDetectsRealDiff(t *testing.T) {
 	candidate.Spec.Template.Spec.Containers[0].Image = "stunner:v2"
 
 	v := NewDeploymentLens(candidate)
-	if v.EqualResource(current) {
-		t.Fatalf("expected deployment image change to be detected")
-	}
+	assert.False(t, v.EqualResource(current), "expected deployment image change to be detected")
 }
 
 func TestDeploymentEqualAfterDefaulting(t *testing.T) {
@@ -41,9 +41,8 @@ func TestDeploymentEqualAfterDefaulting(t *testing.T) {
 	k8sscheme.Scheme.Default(current)
 
 	v := NewDeploymentLens(desired)
-	if !v.EqualResource(current) {
-		t.Fatalf("expected deployment no-op to be suppressed after scheme defaulting")
-	}
+	assert.True(t, v.EqualResource(current),
+		"expected deployment no-op to be suppressed after scheme defaulting")
 }
 
 func TestDeploymentApply(t *testing.T) {
@@ -55,13 +54,9 @@ func TestDeploymentApply(t *testing.T) {
 	desired.Spec.Template.Spec.Containers[0].Image = "stunner:v2"
 
 	v := NewDeploymentLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("apply failed: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
 
-	if !v.EqualResource(current) {
-		t.Fatalf("expected applied deployment to match desired owned lens")
-	}
+	assert.True(t, v.EqualResource(current), "expected applied deployment to match desired owned lens")
 }
 
 func TestDeploymentApplyPreservesExternalMetadata(t *testing.T) {
@@ -83,29 +78,30 @@ func TestDeploymentApplyPreservesExternalMetadata(t *testing.T) {
 	desired.Spec.Template.Annotations["owned-template-ann"] = "set"
 
 	v := NewDeploymentLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("apply failed: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
 
-	if current.Labels["external-label"] != "keep" || current.Labels["owned-label"] != "set" {
-		t.Fatalf("deployment labels should retain external and add owned labels")
-	}
+	assert.Equal(t, "keep", current.Labels["external-label"],
+		"deployment labels should retain external labels")
+	assert.Equal(t, "set", current.Labels["owned-label"],
+		"deployment labels should add owned labels")
 
-	if current.Annotations["external-ann"] != "keep" || current.Annotations["owned-ann"] != "set" {
-		t.Fatalf("deployment annotations should retain external and add owned annotations")
-	}
+	assert.Equal(t, "keep", current.Annotations["external-ann"],
+		"deployment annotations should retain external annotations")
+	assert.Equal(t, "set", current.Annotations["owned-ann"],
+		"deployment annotations should add owned annotations")
 
-	if _, ok := current.Spec.Template.Labels["external-template-label"]; ok || current.Spec.Template.Labels["owned-template-label"] != "set" {
-		t.Fatalf("pod template labels should be rewritten to owned labels")
-	}
+	assert.NotContains(t, current.Spec.Template.Labels, "external-template-label",
+		"pod template labels should be rewritten to owned labels")
+	assert.Equal(t, "set", current.Spec.Template.Labels["owned-template-label"],
+		"pod template labels should include owned labels")
 
-	if _, ok := current.Spec.Template.Annotations["external-template-ann"]; ok || current.Spec.Template.Annotations["owned-template-ann"] != "set" {
-		t.Fatalf("pod template annotations should be rewritten to owned annotations")
-	}
+	assert.NotContains(t, current.Spec.Template.Annotations, "external-template-ann",
+		"pod template annotations should be rewritten to owned annotations")
+	assert.Equal(t, "set", current.Spec.Template.Annotations["owned-template-ann"],
+		"pod template annotations should include owned annotations")
 
-	if len(current.OwnerReferences) != 2 {
-		t.Fatalf("deployment ownerrefs should keep external and owned refs")
-	}
+	assert.Len(t, current.OwnerReferences, 2,
+		"deployment ownerrefs should keep external and owned refs")
 }
 
 func testDeployment() *appv1.Deployment {

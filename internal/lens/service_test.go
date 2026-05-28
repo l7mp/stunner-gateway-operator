@@ -3,6 +3,8 @@ package lens
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -31,9 +33,8 @@ func TestServiceEqualNormalizesDefaults(t *testing.T) {
 	candidate.Spec.Ports[0].TargetPort = intstr.IntOrString{}
 
 	v := NewServiceLens(candidate)
-	if !v.EqualResource(current) {
-		t.Fatalf("expected service lenses to match after default normalization")
-	}
+	assert.True(t, v.EqualResource(current),
+		"expected service lenses to match after default normalization")
 }
 
 func TestServiceEqualDetectsRealDiff(t *testing.T) {
@@ -50,9 +51,7 @@ func TestServiceEqualDetectsRealDiff(t *testing.T) {
 	candidate.Spec.Ports[0].Port = 3479
 
 	v := NewServiceLens(candidate)
-	if v.EqualResource(current) {
-		t.Fatalf("expected service lens difference to be detected")
-	}
+	assert.False(t, v.EqualResource(current), "expected service lens difference to be detected")
 }
 
 func TestServiceApply(t *testing.T) {
@@ -81,13 +80,9 @@ func TestServiceApply(t *testing.T) {
 	}
 
 	v := NewServiceLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("apply failed: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
 
-	if !v.EqualResource(current) {
-		t.Fatalf("expected applied service to match desired owned lens")
-	}
+	assert.True(t, v.EqualResource(current), "expected applied service to match desired owned lens")
 }
 
 func TestServiceApplyPreservesExternalMetadata(t *testing.T) {
@@ -124,21 +119,20 @@ func TestServiceApplyPreservesExternalMetadata(t *testing.T) {
 	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
 
 	v := NewServiceLens(desired)
-	if err := v.ApplyToResource(current); err != nil {
-		t.Fatalf("apply failed: %v", err)
-	}
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
 
-	if current.Labels["external-label"] != "keep" || current.Labels["owned-label"] != "set" {
-		t.Fatalf("service labels should retain external and add owned labels")
-	}
+	assert.Equal(t, "keep", current.Labels["external-label"],
+		"service labels should retain external labels")
+	assert.Equal(t, "set", current.Labels["owned-label"],
+		"service labels should add owned labels")
 
-	if current.Annotations["external-ann"] != "keep" || current.Annotations["owned-ann"] != "set" {
-		t.Fatalf("service annotations should retain external and add owned annotations")
-	}
+	assert.Equal(t, "keep", current.Annotations["external-ann"],
+		"service annotations should retain external annotations")
+	assert.Equal(t, "set", current.Annotations["owned-ann"],
+		"service annotations should add owned annotations")
 
-	if len(current.OwnerReferences) != 2 {
-		t.Fatalf("service ownerrefs should keep external and add owned ownerref")
-	}
+	assert.Len(t, current.OwnerReferences, 2,
+		"service ownerrefs should keep external and add owned ownerref")
 }
 
 func ptrBool(v bool) *bool {
