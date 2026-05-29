@@ -2,6 +2,7 @@ package lens
 
 import (
 	"fmt"
+	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,9 +107,17 @@ func addOwnerRef(dst, src client.Object) error {
 	return nil
 }
 
-func projectTemplateMeta(current, owned *corev1.PodTemplateSpec) metav1.ObjectMeta {
+// projectTemplateMeta projects pod-template labels and annotations strictly
+// (full clone, not intersection with owned). Per Dataplane API contract, the
+// operator is authoritative for pod-template metadata — anything set on the
+// pod template by an external actor is intentionally reset on the next
+// reconcile. Using a strict clone here lets EqualResource notice stale
+// operator-set keys (e.g. a previously-set Dataplane.Spec.Labels entry that
+// has since been removed) without relying on a sibling field's drift to
+// trigger Apply as a side effect.
+func projectTemplateMeta(current *corev1.PodTemplateSpec) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Labels:      projectOwnedMap(current.GetLabels(), owned.GetLabels()),
-		Annotations: projectOwnedMap(current.GetAnnotations(), owned.GetAnnotations()),
+		Labels:      maps.Clone(current.GetLabels()),
+		Annotations: maps.Clone(current.GetAnnotations()),
 	}
 }

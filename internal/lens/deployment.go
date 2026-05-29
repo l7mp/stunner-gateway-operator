@@ -158,7 +158,7 @@ func projectDeployment(d, owned *appv1.Deployment) *appv1.Deployment {
 	ret := &appv1.Deployment{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Selector = copyLabelSelector(src.Spec.Selector)
 	ret.Spec.Replicas = normalizeReplicas(src.Spec.Replicas, owned.Spec.Replicas)
-	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template, &owned.Spec.Template)
+	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template)
 	ret.Spec.Template.Spec = projectPodSpec(&src.Spec.Template.Spec, &owned.Spec.Template.Spec)
 	return ret
 }
@@ -385,4 +385,3 @@ func projectEnvVarSource(s *corev1.EnvVarSource) *corev1.EnvVarSource {
 
 	return v
 }
-

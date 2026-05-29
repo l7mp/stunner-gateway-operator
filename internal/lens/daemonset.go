@@ -82,7 +82,7 @@ func projectDaemonSet(d, owned *appv1.DaemonSet) *appv1.DaemonSet {
 
 	ret := &appv1.DaemonSet{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Selector = copyLabelSelector(src.Spec.Selector)
-	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template, &owned.Spec.Template)
+	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template)
 	ret.Spec.Template.Spec = projectPodSpec(&src.Spec.Template.Spec, &owned.Spec.Template.Spec)
 	return ret
 }

@@ -59,6 +59,25 @@ func TestDeploymentApply(t *testing.T) {
 	assert.True(t, v.EqualResource(current), "expected applied deployment to match desired owned lens")
 }
 
+func TestDeploymentEqualDetectsStalePodTemplateMetadata(t *testing.T) {
+	// Pod-template labels and annotations are operator-authoritative per the
+	// Dataplane API contract: a key present on current but absent from desired
+	// (e.g. a Dataplane.Spec.Labels entry that was removed) must surface as a
+	// real diff so the updater calls Apply and cleans it up — without relying
+	// on a sibling field's drift to trigger Apply as a side effect.
+	desired := testDeployment()
+
+	currentExtraLabel := desired.DeepCopy()
+	currentExtraLabel.Spec.Template.Labels["stale-template-label"] = "leftover"
+	assert.False(t, NewDeploymentLens(desired).EqualResource(currentExtraLabel),
+		"stale pod-template label on current should be detected as a diff")
+
+	currentExtraAnnotation := desired.DeepCopy()
+	currentExtraAnnotation.Spec.Template.Annotations["stale-template-ann"] = "leftover"
+	assert.False(t, NewDeploymentLens(desired).EqualResource(currentExtraAnnotation),
+		"stale pod-template annotation on current should be detected as a diff")
+}
+
 func TestDeploymentApplyPreservesExternalMetadata(t *testing.T) {
 	current := testDeployment()
 	current.Labels["external-label"] = "keep"
