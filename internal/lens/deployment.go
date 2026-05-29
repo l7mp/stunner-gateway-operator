@@ -142,41 +142,13 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 		currentspec.Containers[i] = applyContainerSpec(currentContainer, desiredContainer)
 	}
 
-	if dpspec.TerminationGracePeriodSeconds != nil {
-		grace := *dpspec.TerminationGracePeriodSeconds
-		currentspec.TerminationGracePeriodSeconds = &grace
-	}
-
 	currentspec.HostNetwork = dpspec.HostNetwork
-
-	if dpspec.Affinity != nil {
-		currentspec.Affinity = dpspec.Affinity.DeepCopy()
-	}
-
-	if dpspec.Tolerations != nil {
-		currentspec.Tolerations = make([]corev1.Toleration, len(dpspec.Tolerations))
-		for i := range dpspec.Tolerations {
-			dpspec.Tolerations[i].DeepCopyInto(&currentspec.Tolerations[i])
-		}
-	}
-
-	if dpspec.SecurityContext != nil {
-		currentspec.SecurityContext = dpspec.SecurityContext.DeepCopy()
-	}
-
-	if dpspec.ImagePullSecrets != nil {
-		currentspec.ImagePullSecrets = make([]corev1.LocalObjectReference, len(dpspec.ImagePullSecrets))
-		for i := range dpspec.ImagePullSecrets {
-			dpspec.ImagePullSecrets[i].DeepCopyInto(&currentspec.ImagePullSecrets[i])
-		}
-	}
-
-	if dpspec.TopologySpreadConstraints != nil {
-		currentspec.TopologySpreadConstraints = make([]corev1.TopologySpreadConstraint, len(dpspec.TopologySpreadConstraints))
-		for i := range dpspec.TopologySpreadConstraints {
-			dpspec.TopologySpreadConstraints[i].DeepCopyInto(&currentspec.TopologySpreadConstraints[i])
-		}
-	}
+	applyOwnedScalar(&currentspec.TerminationGracePeriodSeconds, dpspec.TerminationGracePeriodSeconds)
+	applyOwnedPtr(&currentspec.Affinity, dpspec.Affinity)
+	applyOwnedPtr(&currentspec.SecurityContext, dpspec.SecurityContext)
+	applyOwnedSlice(&currentspec.Tolerations, dpspec.Tolerations)
+	applyOwnedSlice(&currentspec.ImagePullSecrets, dpspec.ImagePullSecrets)
+	applyOwnedSlice(&currentspec.TopologySpreadConstraints, dpspec.TopologySpreadConstraints)
 }
 
 func projectDeployment(d, owned *appv1.Deployment) *appv1.Deployment {
@@ -214,32 +186,19 @@ func copyLabelSelector(ls *metav1.LabelSelector) *metav1.LabelSelector {
 
 func projectPodSpec(s, owned *corev1.PodSpec) corev1.PodSpec {
 	ret := corev1.PodSpec{
-		HostNetwork: s.HostNetwork,
-		Containers:  make([]corev1.Container, 0, len(s.Containers)),
+		HostNetwork:                   s.HostNetwork,
+		TerminationGracePeriodSeconds: projectOwnedScalar(s.TerminationGracePeriodSeconds, owned.TerminationGracePeriodSeconds),
+		Affinity:                      projectOwnedPtr(s.Affinity, owned.Affinity),
+		Tolerations:                   projectOwnedSlice(s.Tolerations, owned.Tolerations),
+		ImagePullSecrets:              projectOwnedSlice(s.ImagePullSecrets, owned.ImagePullSecrets),
+		TopologySpreadConstraints:     projectOwnedSlice(s.TopologySpreadConstraints, owned.TopologySpreadConstraints),
+		Containers:                    make([]corev1.Container, 0, len(s.Containers)),
 	}
 
-	if owned.TerminationGracePeriodSeconds != nil {
-		ret.TerminationGracePeriodSeconds = copyInt64Ptr(s.TerminationGracePeriodSeconds)
-	}
-
-	if owned.Affinity != nil {
-		ret.Affinity = s.Affinity.DeepCopy()
-	}
-
-	if owned.Tolerations != nil {
-		ret.Tolerations = deepCopyTolerations(s.Tolerations)
-	}
-
+	// SecurityContext has an "empty struct → nil" normalization that does
+	// not fit the generic owned-projection helpers.
 	if owned.SecurityContext != nil {
 		ret.SecurityContext = normalizePodSecurityContext(s.SecurityContext)
-	}
-
-	if owned.ImagePullSecrets != nil {
-		ret.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), s.ImagePullSecrets...)
-	}
-
-	if owned.TopologySpreadConstraints != nil {
-		ret.TopologySpreadConstraints = deepCopyTopologySpread(s.TopologySpreadConstraints)
 	}
 
 	for i := range s.Containers {
@@ -359,8 +318,8 @@ func applyContainerSpec(current, desired *corev1.Container) corev1.Container {
 		Image:           desired.Image,
 		Command:         append([]string(nil), desired.Command...),
 		Args:            append([]string(nil), desired.Args...),
-		Ports:           copyContainerPorts(desired.Ports),
-		Env:             copyEnvVars(desired.Env),
+		Ports:           cloneSlice(desired.Ports),
+		Env:             cloneSlice(desired.Env),
 		Resources:       *desired.Resources.DeepCopy(),
 		LivenessProbe:   desired.LivenessProbe.DeepCopy(),
 		ReadinessProbe:  desired.ReadinessProbe.DeepCopy(),
@@ -386,32 +345,6 @@ func findContainerByName(containers []corev1.Container, name string) *corev1.Con
 	}
 
 	return nil
-}
-
-func copyContainerPorts(ports []corev1.ContainerPort) []corev1.ContainerPort {
-	if len(ports) == 0 {
-		return nil
-	}
-
-	ret := make([]corev1.ContainerPort, len(ports))
-	for i := range ports {
-		ports[i].DeepCopyInto(&ret[i])
-	}
-
-	return ret
-}
-
-func copyEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
-	if len(env) == 0 {
-		return nil
-	}
-
-	ret := make([]corev1.EnvVar, len(env))
-	for i := range env {
-		env[i].DeepCopyInto(&ret[i])
-	}
-
-	return ret
 }
 
 func projectEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
@@ -453,37 +386,3 @@ func projectEnvVarSource(s *corev1.EnvVarSource) *corev1.EnvVarSource {
 	return v
 }
 
-func copyInt64Ptr(v *int64) *int64 {
-	if v == nil {
-		return nil
-	}
-
-	x := *v
-	return &x
-}
-
-func deepCopyTolerations(v []corev1.Toleration) []corev1.Toleration {
-	if len(v) == 0 {
-		return nil
-	}
-
-	ret := make([]corev1.Toleration, len(v))
-	for i := range v {
-		v[i].DeepCopyInto(&ret[i])
-	}
-
-	return ret
-}
-
-func deepCopyTopologySpread(v []corev1.TopologySpreadConstraint) []corev1.TopologySpreadConstraint {
-	if len(v) == 0 {
-		return nil
-	}
-
-	ret := make([]corev1.TopologySpreadConstraint, len(v))
-	for i := range v {
-		v[i].DeepCopyInto(&ret[i])
-	}
-
-	return ret
-}
