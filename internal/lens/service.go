@@ -43,7 +43,7 @@ func (l *ServiceLens) ApplyToResource(target client.Object) error {
 	}
 
 	projected := projectService(&l.Service, &l.Service)
-	projected.Spec.DeepCopyInto(&svc.Spec)
+	applyServiceSpec(svc, projected, &l.Service)
 
 	return nil
 }
@@ -94,8 +94,15 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 //
 // * Service.Spec.Ports[].NodePort
 // - renderer: set from nodeport annotations when present.
-// - updater: projection ignores load-balancer-controller-assigned NodePorts unless the operator
-//   nodeport annotation is present, to avoid update churn on externally managed values.
+// - updater: copied only when desired explicitly owns NodePorts; otherwise preserved from current.
+//
+// * Service.Spec.LoadBalancerIP
+// - renderer: set from the first Gateway requested IP address when present.
+// - updater: copied only when desired explicitly sets it; otherwise preserved from current.
+//
+// * Service.Spec.LoadBalancerClass
+// - renderer: currently does not set.
+// - updater: preserved from current (externally managed/immutable).
 
 func projectService(s, owned *corev1.Service) *corev1.Service {
 	src := s.DeepCopy()
@@ -106,6 +113,7 @@ func projectService(s, owned *corev1.Service) *corev1.Service {
 	ret.Spec.Selector = maps.Clone(src.Spec.Selector)
 	ret.Spec.SessionAffinity = src.Spec.SessionAffinity
 	ret.Spec.ExternalTrafficPolicy = normalizeExternalTrafficPolicy(src.Spec.Type, src.Spec.ExternalTrafficPolicy)
+	ret.Spec.LoadBalancerIP = normalizeLoadBalancerIP(src, owned)
 	ret.Spec.Ports = make([]corev1.ServicePort, 0, len(src.Spec.Ports))
 	for i := range src.Spec.Ports {
 		p := src.Spec.Ports[i]
@@ -119,6 +127,34 @@ func projectService(s, owned *corev1.Service) *corev1.Service {
 	}
 
 	return ret
+}
+
+func applyServiceSpec(current, desired, owned *corev1.Service) {
+	current.Spec.Type = desired.Spec.Type
+	current.Spec.Selector = maps.Clone(desired.Spec.Selector)
+	current.Spec.SessionAffinity = desired.Spec.SessionAffinity
+	current.Spec.ExternalTrafficPolicy = desired.Spec.ExternalTrafficPolicy
+
+	nextPorts := make([]corev1.ServicePort, len(desired.Spec.Ports))
+	for i := range desired.Spec.Ports {
+		desired.Spec.Ports[i].DeepCopyInto(&nextPorts[i])
+		if !ownsNodePort(owned) {
+			nextPorts[i].NodePort = getNodePortByName(current.Spec.Ports, nextPorts[i].Name)
+		}
+	}
+	current.Spec.Ports = nextPorts
+
+	if owned.Spec.LoadBalancerIP != "" {
+		current.Spec.LoadBalancerIP = desired.Spec.LoadBalancerIP
+	}
+}
+
+func normalizeLoadBalancerIP(svc, owned *corev1.Service) string {
+	if owned.Spec.LoadBalancerIP == "" {
+		return ""
+	}
+
+	return svc.Spec.LoadBalancerIP
 }
 
 func normalizeTargetPort(p corev1.ServicePort) intstr.IntOrString {
@@ -140,11 +176,24 @@ func normalizeExternalTrafficPolicy(svcType corev1.ServiceType,
 }
 
 func normalizeNodePort(svc *corev1.Service, p corev1.ServicePort) int32 {
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		if _, ok := svc.GetAnnotations()[opdefault.NodePortAnnotationKey]; !ok {
-			return 0
-		}
+	if !ownsNodePort(svc) {
+		return 0
 	}
 
 	return p.NodePort
+}
+
+func ownsNodePort(svc *corev1.Service) bool {
+	_, ok := svc.GetAnnotations()[opdefault.NodePortAnnotationKey]
+	return ok
+}
+
+func getNodePortByName(ports []corev1.ServicePort, name string) int32 {
+	for i := range ports {
+		if ports[i].Name == name {
+			return ports[i].NodePort
+		}
+	}
+
+	return 0
 }

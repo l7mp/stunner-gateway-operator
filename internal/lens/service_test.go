@@ -8,6 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func TestServiceEqualNormalizesDefaults(t *testing.T) {
@@ -133,6 +135,213 @@ func TestServiceApplyPreservesExternalMetadata(t *testing.T) {
 
 	assert.Len(t, current.OwnerReferences, 2,
 		"service ownerrefs should keep external and add owned ownerref")
+}
+
+func TestServiceApplyPreservesExternallyManagedSpecFields(t *testing.T) {
+	lbClass := "service.k8s.aws/nlb"
+	ipFamilyPolicy := corev1.IPFamilyPolicySingleStack
+
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+	}, Spec: corev1.ServiceSpec{
+		Type:     corev1.ServiceTypeLoadBalancer,
+		Selector: map[string]string{"app": "old"},
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+		}},
+		LoadBalancerClass: &lbClass,
+		ClusterIP:         "10.0.0.10",
+		ClusterIPs:        []string{"10.0.0.10"},
+		IPFamilies:        []corev1.IPFamily{corev1.IPv4Protocol},
+		IPFamilyPolicy:    &ipFamilyPolicy,
+	}}
+
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Gateway",
+		Name:       "gw",
+	}}
+	desired.Spec.Selector = map[string]string{"app": "stunner"}
+	desired.Spec.Ports[0].Port = 3479
+	desired.Spec.LoadBalancerClass = nil
+	desired.Spec.ClusterIP = ""
+	desired.Spec.ClusterIPs = nil
+	desired.Spec.IPFamilies = nil
+	desired.Spec.IPFamilyPolicy = nil
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, map[string]string{"app": "stunner"}, current.Spec.Selector,
+		"owned selector should be copied")
+	assert.Equal(t, int32(3479), current.Spec.Ports[0].Port,
+		"owned service port should be copied")
+	require.NotNil(t, current.Spec.LoadBalancerClass,
+		"externally managed loadBalancerClass should be preserved")
+	assert.Equal(t, "service.k8s.aws/nlb", *current.Spec.LoadBalancerClass,
+		"externally managed loadBalancerClass should be preserved")
+	assert.Equal(t, "10.0.0.10", current.Spec.ClusterIP,
+		"clusterIP should be preserved")
+	assert.Equal(t, []string{"10.0.0.10"}, current.Spec.ClusterIPs,
+		"clusterIPs should be preserved")
+	assert.Equal(t, []corev1.IPFamily{corev1.IPv4Protocol}, current.Spec.IPFamilies,
+		"ipFamilies should be preserved")
+	require.NotNil(t, current.Spec.IPFamilyPolicy,
+		"ipFamilyPolicy should be preserved")
+	assert.Equal(t, corev1.IPFamilyPolicySingleStack, *current.Spec.IPFamilyPolicy,
+		"ipFamilyPolicy should be preserved")
+}
+
+func TestServiceApplyCopiesLoadBalancerIPWhenOwned(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}, Spec: corev1.ServiceSpec{
+		Type:           corev1.ServiceTypeLoadBalancer,
+		LoadBalancerIP: "203.0.113.10",
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Gateway",
+		Name:       "gw",
+	}}
+	desired.Spec.LoadBalancerIP = "198.51.100.20"
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, "198.51.100.20", current.Spec.LoadBalancerIP,
+		"loadBalancerIP should be copied when explicitly owned")
+}
+
+func TestServiceEqualIgnoresLoadBalancerIPWhenNotOwned(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}, Spec: corev1.ServiceSpec{
+		Type:           corev1.ServiceTypeLoadBalancer,
+		LoadBalancerIP: "203.0.113.10",
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.Spec.LoadBalancerIP = ""
+
+	v := NewServiceLens(desired)
+	assert.True(t, v.EqualResource(current),
+		"loadBalancerIP should be ignored when desired does not own it")
+}
+
+func TestServiceEqualDetectsOwnedLoadBalancerIPDiff(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}, Spec: corev1.ServiceSpec{
+		Type:           corev1.ServiceTypeLoadBalancer,
+		LoadBalancerIP: "203.0.113.10",
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.Spec.LoadBalancerIP = "198.51.100.20"
+
+	v := NewServiceLens(desired)
+	assert.False(t, v.EqualResource(current),
+		"loadBalancerIP should be compared when desired owns it")
+}
+
+func TestServiceApplyPreservesNodePortWhenNotOwned(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}, Spec: corev1.ServiceSpec{
+		Type: corev1.ServiceTypeLoadBalancer,
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+			NodePort: 32000,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Gateway",
+		Name:       "gw",
+	}}
+	desired.Spec.Ports[0].NodePort = 0
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, int32(32000), current.Spec.Ports[0].NodePort,
+		"nodeport should be preserved when renderer does not own it")
+}
+
+func TestServiceApplyCopiesNodePortWhenOwned(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Annotations: map[string]string{
+			opdefault.NodePortAnnotationKey: `{"udp":32010}`,
+		},
+	}, Spec: corev1.ServiceSpec{
+		Type: corev1.ServiceTypeLoadBalancer,
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+			NodePort: 32000,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Gateway",
+		Name:       "gw",
+	}}
+	desired.Spec.Ports[0].NodePort = 32010
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, int32(32010), current.Spec.Ports[0].NodePort,
+		"nodeport should be copied when renderer owns it")
+}
+
+func TestServiceApplyPreservesNodePortForNodePortServiceWhenNotOwned(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}, Spec: corev1.ServiceSpec{
+		Type: corev1.ServiceTypeNodePort,
+		Ports: []corev1.ServicePort{{
+			Name:     "udp",
+			Port:     3478,
+			Protocol: corev1.ProtocolUDP,
+			NodePort: 32000,
+		}},
+	}}
+
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Gateway",
+		Name:       "gw",
+	}}
+	desired.Spec.Ports[0].NodePort = 0
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, int32(32000), current.Spec.Ports[0].NodePort,
+		"nodeport should be preserved when no nodeport annotation owns it")
 }
 
 func ptrBool(v bool) *bool {

@@ -33,6 +33,8 @@ func TestServiceMutate(t *testing.T) {
 	current := testService()
 	current.Labels["preserve"] = "yes"
 	current.Annotations["legacy"] = "keep"
+	lbClass := "service.k8s.aws/nlb"
+	current.Spec.LoadBalancerClass = &lbClass
 
 	desired := testService()
 	desired.Labels["new"] = "label"
@@ -54,6 +56,10 @@ func TestServiceMutate(t *testing.T) {
 	require.Len(t, current.OwnerReferences, 1, "service ownerRef should be set")
 	assert.Equal(t, desired.OwnerReferences[0].Name, current.OwnerReferences[0].Name,
 		"service ownerRef should be set")
+	require.NotNil(t, current.Spec.LoadBalancerClass,
+		"externally managed loadBalancerClass should be preserved")
+	assert.Equal(t, "service.k8s.aws/nlb", *current.Spec.LoadBalancerClass,
+		"externally managed loadBalancerClass should be preserved")
 }
 
 func TestDeploymentMutate(t *testing.T) {

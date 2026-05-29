@@ -80,7 +80,8 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * * Deployment.Spec.Template.Spec.Containers
 // * - renderer: initializes a stunner container and mutates image/command/args/env/resources/
 // *   container-security-context/ports/liveness/readiness/imagePullPolicy from Dataplane policy.
-// * - updater: deep-copies desired containers.
+// * - updater: copies owned per-container fields; preserves container security context when
+// *   the desired container does not request one.
 // *
 // * * Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds
 // * - renderer: default base from config.TerminationGrace, overridden when
@@ -104,12 +105,12 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * - updater: deep-copies when non-nil.
 // *
 // * * Deployment.Spec.Template.Spec.ImagePullSecrets
-// * - renderer: set from Dataplane.Spec.ImagePullSecrets when non-empty.
-// * - updater: deep-copies when non-empty.
+// * - renderer: set from Dataplane.Spec.ImagePullSecrets when non-nil.
+// * - updater: deep-copies when non-nil (including explicit empty to clear).
 // *
 // * * Deployment.Spec.Template.Spec.TopologySpreadConstraints
-// * - renderer: set from Dataplane.Spec.TopologySpreadConstraints when non-empty.
-// * - updater: deep-copies when non-empty.
+// * - renderer: set from Dataplane.Spec.TopologySpreadConstraints when non-nil.
+// * - updater: deep-copies when non-nil (including explicit empty to clear).
 func applyDeployment(current, desired *appv1.Deployment) error {
 	if err := setMetadata(current, desired); err != nil {
 		return err
@@ -133,9 +134,12 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 	dpspec := &desired.Spec
 	currentspec := &current.Spec
 
+	currentContainers := currentspec.Containers
 	currentspec.Containers = make([]corev1.Container, len(dpspec.Containers))
 	for i := range dpspec.Containers {
-		dpspec.Containers[i].DeepCopyInto(&currentspec.Containers[i])
+		desiredContainer := &dpspec.Containers[i]
+		currentContainer := findContainerByName(currentContainers, desiredContainer.Name)
+		currentspec.Containers[i] = applyContainerSpec(currentContainer, desiredContainer)
 	}
 
 	if dpspec.TerminationGracePeriodSeconds != nil {
@@ -160,14 +164,14 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 		currentspec.SecurityContext = dpspec.SecurityContext.DeepCopy()
 	}
 
-	if len(dpspec.ImagePullSecrets) != 0 {
+	if dpspec.ImagePullSecrets != nil {
 		currentspec.ImagePullSecrets = make([]corev1.LocalObjectReference, len(dpspec.ImagePullSecrets))
 		for i := range dpspec.ImagePullSecrets {
 			dpspec.ImagePullSecrets[i].DeepCopyInto(&currentspec.ImagePullSecrets[i])
 		}
 	}
 
-	if len(dpspec.TopologySpreadConstraints) != 0 {
+	if dpspec.TopologySpreadConstraints != nil {
 		currentspec.TopologySpreadConstraints = make([]corev1.TopologySpreadConstraint, len(dpspec.TopologySpreadConstraints))
 		for i := range dpspec.TopologySpreadConstraints {
 			dpspec.TopologySpreadConstraints[i].DeepCopyInto(&currentspec.TopologySpreadConstraints[i])
@@ -181,18 +185,18 @@ func projectDeployment(d, owned *appv1.Deployment) *appv1.Deployment {
 
 	ret := &appv1.Deployment{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Selector = copyLabelSelector(src.Spec.Selector)
-	ret.Spec.Replicas = normalizeReplicas(src.Spec.Replicas)
+	ret.Spec.Replicas = normalizeReplicas(src.Spec.Replicas, owned.Spec.Replicas)
 	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template, &owned.Spec.Template)
-	ret.Spec.Template.Spec = projectPodSpec(&src.Spec.Template.Spec)
+	ret.Spec.Template.Spec = projectPodSpec(&src.Spec.Template.Spec, &owned.Spec.Template.Spec)
 	return ret
 }
 
-func normalizeReplicas(v *int32) *int32 {
-	if v == nil {
+func normalizeReplicas(v, owned *int32) *int32 {
+	if owned == nil || *owned == 1 {
 		return nil
 	}
 
-	if *v == 1 {
+	if v == nil {
 		return nil
 	}
 
@@ -208,45 +212,44 @@ func copyLabelSelector(ls *metav1.LabelSelector) *metav1.LabelSelector {
 	return ls.DeepCopy()
 }
 
-func projectPodSpec(s *corev1.PodSpec) corev1.PodSpec {
+func projectPodSpec(s, owned *corev1.PodSpec) corev1.PodSpec {
 	ret := corev1.PodSpec{
-		TerminationGracePeriodSeconds: normalizeTerminationGracePeriodSeconds(s.TerminationGracePeriodSeconds),
-		HostNetwork:                   s.HostNetwork,
-		Affinity:                      s.Affinity.DeepCopy(),
-		Tolerations:                   deepCopyTolerations(s.Tolerations),
-		SecurityContext:               normalizePodSecurityContext(s.SecurityContext),
-		ImagePullSecrets:              append([]corev1.LocalObjectReference(nil), s.ImagePullSecrets...),
-		TopologySpreadConstraints:     deepCopyTopologySpread(s.TopologySpreadConstraints),
-		Containers:                    make([]corev1.Container, 0, len(s.Containers)),
+		HostNetwork: s.HostNetwork,
+		Containers:  make([]corev1.Container, 0, len(s.Containers)),
+	}
+
+	if owned.TerminationGracePeriodSeconds != nil {
+		ret.TerminationGracePeriodSeconds = copyInt64Ptr(s.TerminationGracePeriodSeconds)
+	}
+
+	if owned.Affinity != nil {
+		ret.Affinity = s.Affinity.DeepCopy()
+	}
+
+	if owned.Tolerations != nil {
+		ret.Tolerations = deepCopyTolerations(s.Tolerations)
+	}
+
+	if owned.SecurityContext != nil {
+		ret.SecurityContext = normalizePodSecurityContext(s.SecurityContext)
+	}
+
+	if owned.ImagePullSecrets != nil {
+		ret.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), s.ImagePullSecrets...)
+	}
+
+	if owned.TopologySpreadConstraints != nil {
+		ret.TopologySpreadConstraints = deepCopyTopologySpread(s.TopologySpreadConstraints)
 	}
 
 	for i := range s.Containers {
 		c := s.Containers[i]
-		pc := corev1.Container{
-			Name:            c.Name,
-			Image:           c.Image,
-			Command:         append([]string(nil), c.Command...),
-			Args:            append([]string(nil), c.Args...),
-			Ports:           projectContainerPorts(c.Ports),
-			Env:             projectEnvVars(c.Env),
-			SecurityContext: c.SecurityContext.DeepCopy(),
-			Resources:       *c.Resources.DeepCopy(),
-			LivenessProbe:   normalizeProbe(c.LivenessProbe),
-			ReadinessProbe:  normalizeProbe(c.ReadinessProbe),
-			ImagePullPolicy: normalizeImagePullPolicy(c.Image, c.ImagePullPolicy),
-		}
+		ownedContainer := findContainerByName(owned.Containers, c.Name)
+		pc := projectContainerSpec(c, ownedContainer)
 		ret.Containers = append(ret.Containers, pc)
 	}
 
 	return ret
-}
-
-func normalizeTerminationGracePeriodSeconds(v *int64) *int64 {
-	if v == nil {
-		return nil
-	}
-
-	return copyInt64Ptr(v)
 }
 
 func normalizePodSecurityContext(v *corev1.PodSecurityContext) *corev1.PodSecurityContext {
@@ -320,6 +323,92 @@ func projectContainerPorts(ports []corev1.ContainerPort) []corev1.ContainerPort 
 			ContainerPort: ports[i].ContainerPort,
 			Protocol:      ports[i].Protocol,
 		}
+	}
+
+	return ret
+}
+
+func projectContainerSpec(c corev1.Container, owned *corev1.Container) corev1.Container {
+	ret := corev1.Container{
+		Name:            c.Name,
+		Image:           c.Image,
+		Command:         append([]string(nil), c.Command...),
+		Args:            append([]string(nil), c.Args...),
+		Ports:           projectContainerPorts(c.Ports),
+		Env:             projectEnvVars(c.Env),
+		Resources:       *c.Resources.DeepCopy(),
+		LivenessProbe:   normalizeProbe(c.LivenessProbe),
+		ReadinessProbe:  normalizeProbe(c.ReadinessProbe),
+		ImagePullPolicy: normalizeImagePullPolicy(c.Image, c.ImagePullPolicy),
+	}
+
+	// The renderer keeps desired.SecurityContext (== owned.SecurityContext)
+	// non-nil whenever it owns the container's security context, so omitting
+	// projection here is safe and prevents externally-set values from
+	// triggering false diffs.
+	if owned != nil && owned.SecurityContext != nil {
+		ret.SecurityContext = c.SecurityContext.DeepCopy()
+	}
+
+	return ret
+}
+
+func applyContainerSpec(current, desired *corev1.Container) corev1.Container {
+	ret := corev1.Container{
+		Name:            desired.Name,
+		Image:           desired.Image,
+		Command:         append([]string(nil), desired.Command...),
+		Args:            append([]string(nil), desired.Args...),
+		Ports:           copyContainerPorts(desired.Ports),
+		Env:             copyEnvVars(desired.Env),
+		Resources:       *desired.Resources.DeepCopy(),
+		LivenessProbe:   desired.LivenessProbe.DeepCopy(),
+		ReadinessProbe:  desired.ReadinessProbe.DeepCopy(),
+		ImagePullPolicy: desired.ImagePullPolicy,
+	}
+
+	if desired.SecurityContext != nil {
+		ret.SecurityContext = desired.SecurityContext.DeepCopy()
+	}
+
+	if desired.SecurityContext == nil && current != nil {
+		ret.SecurityContext = current.SecurityContext.DeepCopy()
+	}
+
+	return ret
+}
+
+func findContainerByName(containers []corev1.Container, name string) *corev1.Container {
+	for i := range containers {
+		if containers[i].Name == name {
+			return &containers[i]
+		}
+	}
+
+	return nil
+}
+
+func copyContainerPorts(ports []corev1.ContainerPort) []corev1.ContainerPort {
+	if len(ports) == 0 {
+		return nil
+	}
+
+	ret := make([]corev1.ContainerPort, len(ports))
+	for i := range ports {
+		ports[i].DeepCopyInto(&ret[i])
+	}
+
+	return ret
+}
+
+func copyEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
+	if len(env) == 0 {
+		return nil
+	}
+
+	ret := make([]corev1.EnvVar, len(env))
+	for i := range env {
+		env[i].DeepCopyInto(&ret[i])
 	}
 
 	return ret
