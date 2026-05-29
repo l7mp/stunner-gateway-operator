@@ -61,80 +61,34 @@ func TestDaemonSetApplyPreservesExternalMetadata(t *testing.T) {
 		"pod template annotations should include owned annotations")
 }
 
-func TestDaemonSetEqualIgnoresUnownedOptionalFields(t *testing.T) {
-	current := testDaemonSet()
-	current.Spec.Template.Spec.TerminationGracePeriodSeconds = ptrInt64(30)
-	current.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}}
-	current.Spec.Template.Spec.Tolerations = []corev1.Toleration{{Key: "dedicated", Value: "edge"}}
-	current.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	current.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{Privileged: ptrBool(true)}
-	current.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
-	current.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
-		MaxSkew:           1,
-		TopologyKey:       "zone",
-		WhenUnsatisfiable: corev1.ScheduleAnyway,
-	}}
+func TestDaemonSetUnownedOptionalFields(t *testing.T) {
+	for _, tc := range unownedPodSpecCases() {
+		t.Run(tc.name+"/Equal", func(t *testing.T) {
+			current := daemonSetWithNoOwnedOptionals()
+			tc.mutate(&current.Spec.Template.Spec)
+			desired := daemonSetWithNoOwnedOptionals()
 
-	desired := testDaemonSet()
-	desired.Spec.Template.Spec.TerminationGracePeriodSeconds = nil
-	desired.Spec.Template.Spec.Affinity = nil
-	desired.Spec.Template.Spec.Tolerations = nil
-	desired.Spec.Template.Spec.SecurityContext = nil
-	desired.Spec.Template.Spec.Containers[0].SecurityContext = nil
-	desired.Spec.Template.Spec.ImagePullSecrets = nil
-	desired.Spec.Template.Spec.TopologySpreadConstraints = nil
+			v := NewDaemonSetLens(desired)
+			assert.True(t, v.EqualResource(current),
+				"unowned %s should be ignored in daemonset equality", tc.name)
+		})
 
-	v := NewDaemonSetLens(desired)
-	assert.True(t, v.EqualResource(current),
-		"unowned optional fields should be ignored in daemonset equality")
+		t.Run(tc.name+"/Apply", func(t *testing.T) {
+			current := daemonSetWithNoOwnedOptionals()
+			tc.mutate(&current.Spec.Template.Spec)
+			desired := daemonSetWithNoOwnedOptionals()
+
+			v := NewDaemonSetLens(desired)
+			require.NoError(t, v.ApplyToResource(current), "apply failed")
+			tc.check(t, &current.Spec.Template.Spec)
+		})
+	}
 }
 
-func TestDaemonSetApplyPreservesUnownedOptionalFields(t *testing.T) {
-	current := testDaemonSet()
-	current.Spec.Template.Spec.TerminationGracePeriodSeconds = ptrInt64(30)
-	current.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}}
-	current.Spec.Template.Spec.Tolerations = []corev1.Toleration{{Key: "dedicated", Value: "edge"}}
-	current.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	current.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{Privileged: ptrBool(true)}
-	current.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
-	current.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
-		MaxSkew:           1,
-		TopologyKey:       "zone",
-		WhenUnsatisfiable: corev1.ScheduleAnyway,
-	}}
-
-	desired := testDaemonSet()
-	desired.Spec.Template.Spec.TerminationGracePeriodSeconds = nil
-	desired.Spec.Template.Spec.Affinity = nil
-	desired.Spec.Template.Spec.Tolerations = nil
-	desired.Spec.Template.Spec.SecurityContext = nil
-	desired.Spec.Template.Spec.Containers[0].SecurityContext = nil
-	desired.Spec.Template.Spec.ImagePullSecrets = nil
-	desired.Spec.Template.Spec.TopologySpreadConstraints = nil
-
-	v := NewDaemonSetLens(desired)
-	require.NoError(t, v.ApplyToResource(current), "apply failed")
-
-	require.NotNil(t, current.Spec.Template.Spec.TerminationGracePeriodSeconds,
-		"termination grace should be preserved")
-	assert.Equal(t, int64(30), *current.Spec.Template.Spec.TerminationGracePeriodSeconds,
-		"termination grace should be preserved when not owned")
-	assert.NotNil(t, current.Spec.Template.Spec.Affinity,
-		"affinity should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.Tolerations, 1,
-		"tolerations should be preserved when not owned")
-	assert.NotNil(t, current.Spec.Template.Spec.SecurityContext,
-		"security context should be preserved when not owned")
-	require.NotNil(t, current.Spec.Template.Spec.Containers[0].SecurityContext,
-		"container security context should be preserved when not owned")
-	require.NotNil(t, current.Spec.Template.Spec.Containers[0].SecurityContext.Privileged,
-		"container privileged setting should be preserved when not owned")
-	assert.True(t, *current.Spec.Template.Spec.Containers[0].SecurityContext.Privileged,
-		"container security context should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.ImagePullSecrets, 1,
-		"image pull secrets should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.TopologySpreadConstraints, 1,
-		"topology spread constraints should be preserved when not owned")
+func daemonSetWithNoOwnedOptionals() *appv1.DaemonSet {
+	d := testDaemonSet()
+	clearOwnedPodSpecOptionals(&d.Spec.Template.Spec)
+	return d
 }
 
 func testDaemonSet() *appv1.DaemonSet {

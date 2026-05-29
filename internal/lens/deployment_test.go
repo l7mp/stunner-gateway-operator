@@ -104,89 +104,151 @@ func TestDeploymentApplyPreservesExternalMetadata(t *testing.T) {
 		"deployment ownerrefs should keep external and owned refs")
 }
 
-func TestDeploymentEqualIgnoresUnownedOptionalFields(t *testing.T) {
-	current := testDeployment()
-	currentReplicas := int32(5)
-	current.Spec.Replicas = &currentReplicas
-	current.Spec.Template.Spec.TerminationGracePeriodSeconds = ptrInt64(30)
-	current.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}}
-	current.Spec.Template.Spec.Tolerations = []corev1.Toleration{{Key: "dedicated", Value: "edge"}}
-	current.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	current.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{Privileged: ptrBool(true)}
-	current.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
-	current.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
-		MaxSkew:           1,
-		TopologyKey:       "zone",
-		WhenUnsatisfiable: corev1.ScheduleAnyway,
-	}}
+func TestDeploymentUnownedOptionalFields(t *testing.T) {
+	for _, tc := range unownedPodSpecCases() {
+		t.Run(tc.name+"/Equal", func(t *testing.T) {
+			current := deploymentWithNoOwnedOptionals()
+			tc.mutate(&current.Spec.Template.Spec)
+			desired := deploymentWithNoOwnedOptionals()
 
-	desired := testDeployment()
-	desired.Spec.Replicas = nil
-	desired.Spec.Template.Spec.TerminationGracePeriodSeconds = nil
-	desired.Spec.Template.Spec.Affinity = nil
-	desired.Spec.Template.Spec.Tolerations = nil
-	desired.Spec.Template.Spec.SecurityContext = nil
-	desired.Spec.Template.Spec.Containers[0].SecurityContext = nil
-	desired.Spec.Template.Spec.ImagePullSecrets = nil
-	desired.Spec.Template.Spec.TopologySpreadConstraints = nil
+			v := NewDeploymentLens(desired)
+			assert.True(t, v.EqualResource(current),
+				"unowned %s should be ignored in deployment equality", tc.name)
+		})
 
-	v := NewDeploymentLens(desired)
-	assert.True(t, v.EqualResource(current),
-		"unowned optional fields should be ignored in deployment equality")
+		t.Run(tc.name+"/Apply", func(t *testing.T) {
+			current := deploymentWithNoOwnedOptionals()
+			tc.mutate(&current.Spec.Template.Spec)
+			desired := deploymentWithNoOwnedOptionals()
+
+			v := NewDeploymentLens(desired)
+			require.NoError(t, v.ApplyToResource(current), "apply failed")
+			tc.check(t, &current.Spec.Template.Spec)
+		})
+	}
+
+	// Replicas lives on DeploymentSpec, so it is exercised here only.
+	t.Run("Replicas/Equal", func(t *testing.T) {
+		current := deploymentWithNoOwnedOptionals()
+		r := int32(5)
+		current.Spec.Replicas = &r
+		desired := deploymentWithNoOwnedOptionals()
+
+		v := NewDeploymentLens(desired)
+		assert.True(t, v.EqualResource(current),
+			"unowned Replicas should be ignored in deployment equality")
+	})
+	t.Run("Replicas/Apply", func(t *testing.T) {
+		current := deploymentWithNoOwnedOptionals()
+		r := int32(5)
+		current.Spec.Replicas = &r
+		desired := deploymentWithNoOwnedOptionals()
+
+		v := NewDeploymentLens(desired)
+		require.NoError(t, v.ApplyToResource(current), "apply failed")
+		require.NotNil(t, current.Spec.Replicas, "replicas should be preserved")
+		assert.Equal(t, int32(5), *current.Spec.Replicas,
+			"replicas should be preserved when not owned")
+	})
 }
 
-func TestDeploymentApplyPreservesUnownedOptionalFields(t *testing.T) {
-	current := testDeployment()
-	currentReplicas := int32(5)
-	current.Spec.Replicas = &currentReplicas
-	current.Spec.Template.Spec.TerminationGracePeriodSeconds = ptrInt64(30)
-	current.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}}
-	current.Spec.Template.Spec.Tolerations = []corev1.Toleration{{Key: "dedicated", Value: "edge"}}
-	current.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	current.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{Privileged: ptrBool(true)}
-	current.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
-	current.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
-		MaxSkew:           1,
-		TopologyKey:       "zone",
-		WhenUnsatisfiable: corev1.ScheduleAnyway,
-	}}
+func deploymentWithNoOwnedOptionals() *appv1.Deployment {
+	d := testDeployment()
+	d.Spec.Replicas = nil
+	clearOwnedPodSpecOptionals(&d.Spec.Template.Spec)
+	return d
+}
 
-	desired := testDeployment()
-	desired.Spec.Replicas = nil
-	desired.Spec.Template.Spec.TerminationGracePeriodSeconds = nil
-	desired.Spec.Template.Spec.Affinity = nil
-	desired.Spec.Template.Spec.Tolerations = nil
-	desired.Spec.Template.Spec.SecurityContext = nil
-	desired.Spec.Template.Spec.Containers[0].SecurityContext = nil
-	desired.Spec.Template.Spec.ImagePullSecrets = nil
-	desired.Spec.Template.Spec.TopologySpreadConstraints = nil
+type podSpecFieldCase struct {
+	name   string
+	mutate func(s *corev1.PodSpec)
+	check  func(t *testing.T, s *corev1.PodSpec)
+}
 
-	v := NewDeploymentLens(desired)
-	require.NoError(t, v.ApplyToResource(current), "apply failed")
+func unownedPodSpecCases() []podSpecFieldCase {
+	return []podSpecFieldCase{
+		{
+			name:   "TerminationGracePeriodSeconds",
+			mutate: func(s *corev1.PodSpec) { s.TerminationGracePeriodSeconds = ptrInt64(30) },
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				require.NotNil(t, s.TerminationGracePeriodSeconds,
+					"termination grace should be preserved")
+				assert.Equal(t, int64(30), *s.TerminationGracePeriodSeconds,
+					"termination grace should be preserved when not owned")
+			},
+		},
+		{
+			name:   "Affinity",
+			mutate: func(s *corev1.PodSpec) { s.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}} },
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.NotNil(t, s.Affinity, "affinity should be preserved when not owned")
+			},
+		},
+		{
+			name: "Tolerations",
+			mutate: func(s *corev1.PodSpec) {
+				s.Tolerations = []corev1.Toleration{{Key: "dedicated", Value: "edge"}}
+			},
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.Len(t, s.Tolerations, 1, "tolerations should be preserved when not owned")
+			},
+		},
+		{
+			name:   "SecurityContext",
+			mutate: func(s *corev1.PodSpec) { s.SecurityContext = &corev1.PodSecurityContext{} },
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.NotNil(t, s.SecurityContext, "security context should be preserved when not owned")
+			},
+		},
+		{
+			name: "Container.SecurityContext",
+			mutate: func(s *corev1.PodSpec) {
+				s.Containers[0].SecurityContext = &corev1.SecurityContext{Privileged: ptrBool(true)}
+			},
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				require.NotNil(t, s.Containers[0].SecurityContext,
+					"container security context should be preserved when not owned")
+				require.NotNil(t, s.Containers[0].SecurityContext.Privileged,
+					"container privileged setting should be preserved when not owned")
+				assert.True(t, *s.Containers[0].SecurityContext.Privileged,
+					"container security context should be preserved when not owned")
+			},
+		},
+		{
+			name: "ImagePullSecrets",
+			mutate: func(s *corev1.PodSpec) {
+				s.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
+			},
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.Len(t, s.ImagePullSecrets, 1,
+					"image pull secrets should be preserved when not owned")
+			},
+		},
+		{
+			name: "TopologySpreadConstraints",
+			mutate: func(s *corev1.PodSpec) {
+				s.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{{
+					MaxSkew:           1,
+					TopologyKey:       "zone",
+					WhenUnsatisfiable: corev1.ScheduleAnyway,
+				}}
+			},
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.Len(t, s.TopologySpreadConstraints, 1,
+					"topology spread constraints should be preserved when not owned")
+			},
+		},
+	}
+}
 
-	require.NotNil(t, current.Spec.Replicas, "replicas should be preserved")
-	assert.Equal(t, int32(5), *current.Spec.Replicas,
-		"replicas should be preserved when not owned")
-	require.NotNil(t, current.Spec.Template.Spec.TerminationGracePeriodSeconds,
-		"termination grace should be preserved")
-	assert.Equal(t, int64(30), *current.Spec.Template.Spec.TerminationGracePeriodSeconds,
-		"termination grace should be preserved when not owned")
-	assert.NotNil(t, current.Spec.Template.Spec.Affinity,
-		"affinity should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.Tolerations, 1,
-		"tolerations should be preserved when not owned")
-	assert.NotNil(t, current.Spec.Template.Spec.SecurityContext,
-		"security context should be preserved when not owned")
-	require.NotNil(t, current.Spec.Template.Spec.Containers[0].SecurityContext,
-		"container security context should be preserved when not owned")
-	require.NotNil(t, current.Spec.Template.Spec.Containers[0].SecurityContext.Privileged,
-		"container privileged setting should be preserved when not owned")
-	assert.True(t, *current.Spec.Template.Spec.Containers[0].SecurityContext.Privileged,
-		"container security context should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.ImagePullSecrets, 1,
-		"image pull secrets should be preserved when not owned")
-	assert.Len(t, current.Spec.Template.Spec.TopologySpreadConstraints, 1,
-		"topology spread constraints should be preserved when not owned")
+func clearOwnedPodSpecOptionals(s *corev1.PodSpec) {
+	s.TerminationGracePeriodSeconds = nil
+	s.Affinity = nil
+	s.Tolerations = nil
+	s.SecurityContext = nil
+	s.Containers[0].SecurityContext = nil
+	s.ImagePullSecrets = nil
+	s.TopologySpreadConstraints = nil
 }
 
 func TestDeploymentApplyCopiesOwnedEmptyOptionalSlices(t *testing.T) {
