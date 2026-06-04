@@ -4,7 +4,9 @@ import (
 	// "fmt"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -244,4 +246,52 @@ func TestFilterLabels(t *testing.T) {
 		assert.True(t, ok, "input map preserved")
 		assert.Len(t, in, 2)
 	})
+}
+
+// TestStoreObjectsResetNoDeadlock guards against a regression where Objects()
+// re-acquired the read lock while already holding it (it sized its result slice
+// via Len(), which RLocks again). A concurrent Reset() writer queuing for the
+// write lock would then block that re-entrant RLock forever, since Go's RWMutex
+// starves new readers once a writer is waiting — deadlocking the renderer
+// (Objects) against the reconciler (Reset). Readers and writers hammer the same
+// store concurrently; without the fix this never completes and the watchdog
+// fires.
+func TestStoreObjectsResetNoDeadlock(t *testing.T) {
+	s := NewStore()
+	s.Reset([]client.Object{&o1, &o2, &o3})
+
+	const workers = 50
+	const iters = 200
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var wg sync.WaitGroup
+		for i := 0; i < workers; i++ {
+			wg.Add(2)
+			// readers: the renderer path, Objects()
+			go func() {
+				defer wg.Done()
+				for j := 0; j < iters; j++ {
+					s.Objects()
+				}
+			}()
+			// writers: the reconciler path, Reset()
+			go func() {
+				defer wg.Done()
+				for j := 0; j < iters; j++ {
+					s.Reset([]client.Object{&o1, &o2, &o3})
+				}
+			}()
+		}
+		wg.Wait()
+	}()
+
+	select {
+	case <-done:
+		// completed without deadlocking: confirm Objects() still returns sanely
+		assert.Len(t, s.Objects(), 3, "objects after concurrent access")
+	case <-time.After(10 * time.Second):
+		t.Fatal("deadlock: concurrent Objects()/Reset() did not complete — Objects() likely re-acquires the read lock it already holds")
+	}
 }
