@@ -5,6 +5,7 @@ import (
 	//"fmt"
 	"fmt"
 	"net/url"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -136,6 +137,16 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Equal(t, testutils.TestResourceLimit, container.Resources.Limits, "container 1 - resource limits")
 				assert.Equal(t, testutils.TestResourceRequest, container.Resources.Requests, "container 1 - resource req")
 				assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy, "container 1 - pull policy")
+
+				// Without the annotation, STUNNER_ADDR should be from status.podIP
+				stunnerAddrIndex := slices.IndexFunc(container.Env, func(e corev1.EnvVar) bool {
+					return e.Name == "STUNNER_ADDR"
+				})
+				assert.GreaterOrEqual(t, stunnerAddrIndex, 0, "container 1 - has STUNNER_ADDR env var")
+				stunnerAddr := container.Env[stunnerAddrIndex]
+				assert.NotNil(t, stunnerAddr.ValueFrom, "container 1 - Env.STUNNER_ADDR.ValueFrom")
+				assert.NotNil(t, stunnerAddr.ValueFrom.FieldRef, "container 1 - Env.STUNNER_ADDR.ValueFrom.FieldRef")
+				assert.Equal(t, "status.podIP", stunnerAddr.ValueFrom.FieldRef.FieldPath, "container 1 - Env.STUNNER_ADDR.ValueFrom.FieldRef.FieldPath")
 
 				action := corev1.HTTPGetAction{
 					Path:   "/live",
@@ -472,6 +483,56 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.True(t, ok, "annotations: related gw")
 				// annotation is gw-namespace/gw-name
 				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
+			},
+		},
+		{
+			name: "listen on all pod ips",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{
+					"stunner.l7mp.io/listen-all-pod-ips": "true",
+				})
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				assert.Equal(t, "gatewayconfig-ok", c.gwConf.GetName(),
+					"gatewayconfig name")
+
+				c.update = event.NewEventUpdate(0)
+				assert.NotNil(t, c.update, "update event create")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				obj, err := r.generateDataplane(c)
+				assert.NoError(t, err, "create deployment")
+
+				deploy, ok := obj.(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
+
+				podSpec := &deploy.Spec.Template.Spec
+				assert.True(t, len(podSpec.Containers) >= 1, "containers len")
+				container := podSpec.Containers[0]
+				stunnerAddrIndex := slices.IndexFunc(container.Env, func(e corev1.EnvVar) bool {
+					return e.Name == "STUNNER_ADDR"
+				})
+				// With the annotation, STUNNER_ADDR should be from status.podIPs
+				assert.GreaterOrEqual(t, stunnerAddrIndex, 0, "container 1 - has STUNNER_ADDR env var")
+				stunnerAddr := container.Env[stunnerAddrIndex]
+				assert.NotNil(t, stunnerAddr.ValueFrom, "container 1 - Env.STUNNER_ADDR.ValueFrom")
+				assert.NotNil(t, stunnerAddr.ValueFrom.FieldRef, "container 1 - Env.STUNNER_ADDR.ValueFrom.FieldRef")
+				assert.Equal(t, "status.podIPs", stunnerAddr.ValueFrom.FieldRef.FieldPath, "container 1 - Env.STUNNER_ADDR.ValueFrom.FieldRef.FieldPath")
 			},
 		},
 	})

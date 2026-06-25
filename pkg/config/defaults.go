@@ -115,6 +115,15 @@ const (
 	// MixedProtocolAnnotationValue is the expected value in order to enable mixed protocol LBs.
 	MixedProtocolAnnotationValue = "true"
 
+	// ListenAllPodIPsAnnotationKey is the name(key) of the Gateway annotation that is used to
+	// tell the operator to set STUNNER_ADDR using status.podIPs, instead of status.podIP. This
+	// allows the stunnerd pods to listen on all pod ips, not just the first one.
+	ListenAllPodIPsAnnotationKey = "stunner.l7mp.io/listen-all-pod-ips"
+
+	// ListenAllPodIPsAnnotationValue is the expected value in order to enable listening on all
+	// pod ips.
+	ListenAllPodIPsAnnotationValue = "true"
+
 	// ExternalTrafficPolicyAnnotationKey is the name(key) of the Gateway annotation that is
 	// used to control whether ExternalTrafficPolicy=Local is enabled on a LB Service that
 	// exposes a Gateway, see https://github.com/l7mp/stunner-gateway-operator/issues/47.

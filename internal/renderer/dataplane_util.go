@@ -131,7 +131,9 @@ func (r *dataplaneGenerator) generate(c *RenderContext) (client.Object, error) {
 func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (corev1.PodSpec, error) {
 	gw := c.gws.GetFirst()
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
+	podAddrsFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIPs"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+	podAddrsEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrsFieldSelector}
 	nodeNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}
 	nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
@@ -149,6 +151,11 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
 	}
 
+	stunnerAddr := podAddrEnvVarSource
+	if value, ok := gw.GetAnnotations()[opdefault.ListenAllPodIPsAnnotationKey]; ok && value == opdefault.ListenAllPodIPsAnnotationValue {
+		stunnerAddr = podAddrsEnvVarSource
+	}
+
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{{
 			Name:    opdefault.DefaultStunnerdInstanceName,
@@ -160,7 +167,7 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR", // default transport relay address
-				ValueFrom: &podAddrEnvVarSource,
+				ValueFrom: &stunnerAddr,
 			}, {
 				Name:  stnrconfv1.DefaultEnvVarName, // gateway name for creating the stunnerd id
 				Value: gw.GetName(),
