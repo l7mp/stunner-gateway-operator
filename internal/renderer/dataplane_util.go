@@ -146,7 +146,7 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 		Host:   config.ConfigDiscoveryAddress,
 	}
 	if cdsAddr.Port() == "" {
-		cdsAddr.Host = fmt.Sprintf("%s:%s", config.ConfigDiscoveryAddress, port)
+		cdsAddr.Host = net.JoinHostPort(config.ConfigDiscoveryAddress, port)
 	}
 
 	podSpec := corev1.PodSpec{

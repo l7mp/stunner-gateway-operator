@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -152,16 +153,20 @@ func main() {
 	}
 	setupLog.Info("customer key", "status", keyStatus)
 
-	// CDS address not overrridden on the command line: use env var
+	// CDS address not overridden on the command line: use env var
 	config.ConfigDiscoveryAddress = cdsAddr
 	if podAddr, ok := os.LookupEnv(envVarAddress); ok {
 		// default port
-		as := strings.Split(cdsAddr, ":")
-		if len(as) != 2 || as[1] == "" {
+		_, port, err := net.SplitHostPort(cdsAddr)
+		if err != nil {
+			setupLog.Error(err, "invalid CDS server address", "address", cdsAddr)
+			os.Exit(1)
+		}
+		if port == "" {
 			setupLog.Info("invalid CDS server address", "address", cdsAddr)
 			os.Exit(1)
 		}
-		config.ConfigDiscoveryAddress = fmt.Sprintf("%s:%s", podAddr, as[1])
+		config.ConfigDiscoveryAddress = net.JoinHostPort(podAddr, port)
 	}
 
 	setupLog.Info("config discovery server", "local-addr", cdsAddr,
