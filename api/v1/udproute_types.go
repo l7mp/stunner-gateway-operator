@@ -18,12 +18,16 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func init() {
-	SchemeBuilder.Register(&UDPRoute{}, &UDPRouteList{})
+	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &UDPRoute{}, &UDPRouteList{})
+		return nil
+	})
 }
 
 // UDPRoute provides a way to route UDP traffic. When combined with a Gateway listener, it can be

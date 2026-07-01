@@ -18,10 +18,14 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func init() {
-	SchemeBuilder.Register(&StaticService{}, &StaticServiceList{})
+	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &StaticService{}, &StaticServiceList{})
+		return nil
+	})
 }
 
 // Hub marks StaticService.v1 as a conversion hub.

@@ -18,11 +18,15 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func init() {
-	SchemeBuilder.Register(&GatewayConfig{}, &GatewayConfigList{})
+	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &GatewayConfig{}, &GatewayConfigList{})
+		return nil
+	})
 }
 
 // Hub marks GatewayConfig.v1 as a conversion hub.
