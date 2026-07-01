@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
@@ -64,5 +65,8 @@ type StaticServiceList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&StaticService{}, &StaticServiceList{})
+	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &StaticService{}, &StaticServiceList{})
+		return nil
+	})
 }
