@@ -593,6 +593,24 @@ func TestConfigPatcher(t *testing.T) {
 	store.Nodes.Flush()
 }
 
+// getNodeAddress must handle an IPv6 ExternalIP literal (family-neutral resolution), returning it
+// unbracketed for use as a listener public address.
+func TestGetNodeAddressIPv6(t *testing.T) {
+	n := testutils.TestNode.DeepCopy()
+	n.SetName("ipv6node")
+	n.Status.Addresses = []corev1.NodeAddress{{
+		Type:    corev1.NodeExternalIP,
+		Address: "2001:db8::1",
+	}}
+	store.Nodes.Upsert(n)
+	defer store.Nodes.Flush()
+
+	aType, addr, err := getNodeAddress("ipv6node")
+	assert.NoError(t, err, "resolve IPv6 node address")
+	assert.Equal(t, corev1.NodeExternalIP, aType, "address type")
+	assert.Equal(t, "2001:db8::1", addr, "IPv6 external address")
+}
+
 // wait for some configurable time for a watch element
 func watchConfig(ch chan *stnrv1.StunnerConfig, d time.Duration) *stnrv1.StunnerConfig {
 	select {

@@ -158,16 +158,10 @@ func getNodeAddress(node string) (corev1.NodeAddressType, string, error) {
 	if !ok || addr == "" {
 		return corev1.NodeAddressType(""), "", errors.New("no ExternalIP or ExternalDNS address found in Node status")
 	}
-	// resolve: harmless if we already have an External IP, force IPv4 of possible
-	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", addr)
-	if err != nil {
-		// try both IPv4 and IPv6
-		var addrs []string
-		addrs, err = net.LookupHost(addr)
-		if err == nil && len(addrs) > 0 {
-			ips = []net.IP{net.ParseIP(addrs[0])}
-		}
-	}
+	// resolve family-neutrally: a bare IP literal (v4 or v6) resolves to itself, a DNS name to its
+	// A/AAAA records. This handles IPv6-only and dual-stack nodes; selecting a family across a
+	// dual-stack result is a separate concern (see the IP-family selection work).
+	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip", addr)
 	if err != nil {
 		return corev1.NodeAddressType(""), "", fmt.Errorf("could not resolve node address: %w", err)
 	}
