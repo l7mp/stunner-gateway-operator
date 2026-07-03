@@ -402,6 +402,79 @@ func testManagedMode() {
 			}), timeout, interval).Should(BeTrue())
 		})
 
+		It("should set an IPv6 public address from the LoadBalancer service status", func() {
+			// envTest has no load-balancer controller, so simulate one writing an IPv6 ingress
+			// address into the LoadBalancer service status. The LB status outranks the NodePort
+			// fallback, so the listener public address must become the bare IPv6 literal (it is
+			// bracketed only when rendered into a turn: URI, per RFC 7065).
+			ctrl.Log.Info("setting an IPv6 ingress IP on the LoadBalancer service status")
+			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "2001:db8::1")
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+				if c.Listeners[0].PublicAddr == "2001:db8::1" {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+
+			// clear the ingress status so the following specs see the NodePort fallback again
+			ctrl.Log.Info("clearing the LoadBalancer service status to restore the NodePort fallback")
+			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "")
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+		})
+
+		It("should set an IPv6 public address from a NodePort node address", func() {
+			// with no LoadBalancer ingress, the public address falls back to the node's external IP
+			// plus the NodePort. Set an IPv6 external IP and check the listener public address
+			// becomes the bare IPv6 literal.
+			ctrl.Log.Info("setting an IPv6 External IP on the node")
+			statusUpdateNode(ctx, k8sClient, "testnode-ok", func(current *corev1.Node) {
+				current.Status.Addresses[1].Address = "2001:db8::2"
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+				if c.Listeners[0].PublicAddr == "2001:db8::2" {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+
+			// restore the IPv4 External IP for the specs that follow
+			ctrl.Log.Info("restoring the IPv4 External IP on the node")
+			statusUpdateNode(ctx, k8sClient, "testnode-ok", func(current *corev1.Node) {
+				current.Status.Addresses[1].Address = "1.2.3.4"
+			})
+
+			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
+					return false
+				}
+				if c.Listeners[0].PublicAddr == "1.2.3.4" {
+					conf = c
+					return true
+				}
+				return false
+			}), timeout, interval).Should(BeTrue())
+		})
+
 		It("should allow Gateway to set the Gateway Address", func() {
 			ctrl.Log.Info("re-loading gateway with specific address")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
@@ -567,7 +640,7 @@ func testManagedMode() {
 					corev1.ServiceExternalTrafficPolicyLocal
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(svc.Spec.ExternalTrafficPolicy).Should(Equal(corev1.ServiceExternalTrafficPolicyType("")))
+			Expect(svc.Spec.ExternalTrafficPolicy).Should(Equal(corev1.ServiceExternalTrafficPolicy("")))
 		})
 
 		It("should handle session-affinity", func() {

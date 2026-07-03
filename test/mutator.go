@@ -239,6 +239,25 @@ func statusUpdateNode(ctx context.Context, k8sClient client.Client, name string,
 	Expect(err).Should(Succeed())
 }
 
+// setLBServiceIngressStatus simulates a load-balancer controller writing an ingress address into a
+// LoadBalancer service status (envTest ships no LB controller). A non-empty ip sets a single ingress
+// IP; an empty ip clears the ingress list, restoring the NodePort fallback. The status update is
+// retried to ride out concurrent reconciles.
+func setLBServiceIngressStatus(ctx context.Context, k8sClient client.Client, key client.ObjectKey, ip string) {
+	Eventually(func() error {
+		svc := &corev1.Service{}
+		if err := k8sClient.Get(ctx, key, svc); err != nil {
+			return err
+		}
+		if ip == "" {
+			svc.Status.LoadBalancer.Ingress = nil
+		} else {
+			svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: ip}}
+		}
+		return k8sClient.Status().Update(ctx, svc)
+	}, "10s", "250ms").Should(Succeed())
+}
+
 // also updates status
 func createOrUpdateNode(ctx context.Context, k8sClient client.Client, template *corev1.Node, f NodeMutator) {
 	current := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
