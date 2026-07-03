@@ -29,6 +29,31 @@ import (
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
+func TestCDSServerURI(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "empty host, default port", in: ":13478", want: "http://:13478"},
+		{name: "ipv4 host:port", in: "1.2.3.4:8080", want: "http://1.2.3.4:8080"},
+		{name: "ipv4 no port defaults", in: "1.2.3.4", want: "http://1.2.3.4:13478"},
+		{name: "hostname:port", in: "stunner-config-discovery.default.svc:8080",
+			want: "http://stunner-config-discovery.default.svc:8080"},
+		{name: "hostname no port defaults", in: "stunner-config-discovery",
+			want: "http://stunner-config-discovery:13478"},
+		{name: "bare ipv6 brackets and defaults port", in: "2600:1f14:1e98:4505:14dc::9",
+			want: "http://[2600:1f14:1e98:4505:14dc::9]:13478"},
+		{name: "bracketed ipv6 host:port", in: "[2600:1f14:1e98:4505:14dc::9]:13478",
+			want: "http://[2600:1f14:1e98:4505:14dc::9]:13478"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, cdsServerURI(tc.in), "cds uri")
+		})
+	}
+}
+
 func TestRenderDataplaneUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{

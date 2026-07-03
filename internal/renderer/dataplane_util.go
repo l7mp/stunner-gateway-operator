@@ -1,7 +1,6 @@
 package renderer
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 
@@ -136,18 +135,7 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 	nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
 
-	// CDS server address
-	port := "13478"
-	if addr, err := net.ResolveTCPAddr("tcp", config.ConfigDiscoveryAddress); err == nil {
-		port = fmt.Sprintf("%d", addr.Port)
-	}
-	cdsAddr := url.URL{
-		Scheme: "http",
-		Host:   config.ConfigDiscoveryAddress,
-	}
-	if cdsAddr.Port() == "" {
-		cdsAddr.Host = net.JoinHostPort(config.ConfigDiscoveryAddress, port)
-	}
+	cdsAddr := cdsServerURI(config.ConfigDiscoveryAddress)
 
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{{
@@ -172,7 +160,7 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 				ValueFrom: &nodeNameEnvVarSource,
 			}, {
 				Name:  stnrconfv1.DefaultEnvVarConfigOrigin, // CDS server address
-				Value: cdsAddr.String(),
+				Value: cdsAddr,
 			}},
 			Resources: corev1.ResourceRequirements{
 				Limits:   config.ResourceLimit,
@@ -283,6 +271,19 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 }
 
 // helpers
+// cdsServerURI builds the HTTP URI of the CDS server from a configured address,
+// defaulting the port when the address does not carry one. net.JoinHostPort
+// brackets IPv6 hosts per RFC 3986, so an IPv6 address yields a dial-able URI
+// such as "http://[2001:db8::1]:13478".
+func cdsServerURI(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		host, port = addr, "13478"
+	}
+	u := url.URL{Scheme: "http", Host: net.JoinHostPort(host, port)}
+	return u.String()
+}
+
 func getDataplane(c *RenderContext) (*stnrgwv1.Dataplane, error) {
 	// default dataplane
 	dataplaneName := opdefault.DefaultDataplaneName

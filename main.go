@@ -156,13 +156,9 @@ func main() {
 	// CDS address not overridden on the command line: use env var
 	config.ConfigDiscoveryAddress = cdsAddr
 	if podAddr, ok := os.LookupEnv(envVarAddress); ok {
-		// default port
+		// override the host with the pod address, keeping the configured port
 		_, port, err := net.SplitHostPort(cdsAddr)
-		if err != nil {
-			setupLog.Error(err, "invalid CDS server address", "address", cdsAddr)
-			os.Exit(1)
-		}
-		if port == "" {
+		if err != nil || port == "" {
 			setupLog.Info("invalid CDS server address", "address", cdsAddr)
 			os.Exit(1)
 		}
