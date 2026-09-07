@@ -126,16 +126,7 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 			return nil, err
 		}
 		r.log.Info("Watching dataplane Deployment objects")
-
-		// watch DaemonSet objects referenced by one of our Gateways
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &appv1.DaemonSet{},
-				&handler.TypedEnqueueRequestForObject[*appv1.DaemonSet]{},
-				predicate.NewTypedPredicateFuncs[*appv1.DaemonSet](r.validateDaemonSetForReconcile)),
-		); err != nil {
-			return nil, err
-		}
-		r.log.Info("Watching dataplane DaemonSet objects")
+		// ponytail: FK fork is Deployment-only; skip DaemonSet informer (needs daemonsets RBAC, unused here)
 	}
 
 	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
@@ -159,7 +150,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	gatewayList := []client.Object{}
 	secretList := []client.Object{}
 	deploymentList := []client.Object{}
-	daemonSetList := []client.Object{}
 
 	// find Gateways managed by this controller
 	gwClasses := &gwapiv1.GatewayClassList{}
@@ -254,11 +244,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 				if err := r.Get(context.Background(), resourceName, dp); err == nil {
 					deploymentList = append(deploymentList, dp)
 				}
-
-				ds := &appv1.DaemonSet{}
-				if err := r.Get(context.Background(), resourceName, ds); err == nil {
-					daemonSetList = append(daemonSetList, dp)
-				}
 			}
 		}
 	}
@@ -275,9 +260,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 	store.Deployments.Reset(deploymentList)
 	r.log.V(2).Info("reset Deployment store", "deployments", store.Deployments.String())
-
-	store.DaemonSets.Reset(daemonSetList)
-	r.log.V(2).Info("reset DaemonSet store", "daemonSets", store.DaemonSets.String())
 
 	r.eventCh.Channel() <- event.NewEventReconcile()
 
@@ -337,12 +319,8 @@ func (r *gatewayReconciler) validateDeploymentForReconcile(deployment *appv1.Dep
 	return r.validateDataplaneResourceForReconcile(deployment)
 }
 
-func (r *gatewayReconciler) validateDaemonSetForReconcile(daemonSet *appv1.DaemonSet) bool {
-	return r.validateDataplaneResourceForReconcile(daemonSet)
-}
-
 // validateDataplaneResourceForReconcile checks whether there is a Gateway with the same name as
-// the dataplane resource (Deployment or DaemonSet) and the resource is owned by us.
+// the dataplane Deployment and the resource is owned by us.
 func (r *gatewayReconciler) validateDataplaneResourceForReconcile(obj client.Object) bool {
 	// we don't watch dataplane resources in legacy mode
 	if config.DataplaneMode != config.DataplaneModeManaged {

@@ -166,6 +166,10 @@ const (
 	// apply the session affinity setting.
 	DisableSessionAffiffinityAnnotationKey = "stunner.l7mp.io/disable-session-affinity"
 
+	// LoadBalancerClassAnnotationKey is the name(key) of the Gateway annotation used to set
+	// spec.loadBalancerClass on the LB Service (immutable; only applied on Service creation).
+	LoadBalancerClassAnnotationKey = "stunner.l7mp.io/lb-class"
+
 	// DisableSessionAffiffinityAnnotationValue is the value that can be used to remove
 	// session-affinity settings from the LB service.
 	DisableSessionAffiffinityAnnotationValue = "true"

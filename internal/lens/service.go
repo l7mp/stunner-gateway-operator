@@ -101,8 +101,8 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // - updater: copied only when desired explicitly sets it; otherwise preserved from current.
 //
 // * Service.Spec.LoadBalancerClass
-// - renderer: currently does not set.
-// - updater: preserved from current (externally managed/immutable).
+// - renderer: set from stunner.l7mp.io/lb-class annotation (Gateway or GatewayConfig) on creation only.
+// - updater: applied only when current is nil (immutable field); preserved otherwise.
 
 func projectService(s, owned *corev1.Service) *corev1.Service {
 	src := s.DeepCopy()
@@ -114,6 +114,7 @@ func projectService(s, owned *corev1.Service) *corev1.Service {
 	ret.Spec.SessionAffinity = src.Spec.SessionAffinity
 	ret.Spec.ExternalTrafficPolicy = normalizeExternalTrafficPolicy(src.Spec.Type, src.Spec.ExternalTrafficPolicy)
 	ret.Spec.LoadBalancerIP = normalizeLoadBalancerIP(src, owned)
+	ret.Spec.LoadBalancerClass = src.Spec.LoadBalancerClass
 	ret.Spec.Ports = make([]corev1.ServicePort, 0, len(src.Spec.Ports))
 	for i := range src.Spec.Ports {
 		p := src.Spec.Ports[i]
@@ -146,6 +147,10 @@ func applyServiceSpec(current, desired, owned *corev1.Service) {
 
 	if owned.Spec.LoadBalancerIP != "" {
 		current.Spec.LoadBalancerIP = desired.Spec.LoadBalancerIP
+	}
+	// loadBalancerClass is immutable; only apply when current has none (i.e., on creation)
+	if current.Spec.LoadBalancerClass == nil && desired.Spec.LoadBalancerClass != nil {
+		current.Spec.LoadBalancerClass = desired.Spec.LoadBalancerClass
 	}
 }
 

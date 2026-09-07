@@ -34,6 +34,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -80,7 +81,7 @@ func init() {
 }
 
 func main() {
-	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr, pprofAddr string
+	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr, pprofAddr, namespacesRaw string
 	var enableLeaderElection, enableEDS, disableEndpontSliceController, enableFinalizer bool
 
 	defaultControllerName := opdefault.DefaultControllerName
@@ -107,6 +108,8 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&enableFinalizer, "enable-finalizer", opdefault.DefaultEnableFinalizer,
 		"Clean up allocated resources and invalidate resource statuses on operator exit.")
+	flag.StringVar(&namespacesRaw, "namespaces", "",
+		"Comma-separated namespaces to scope the controller cache (watch/list/get); empty watches all namespaces.")
 
 	opts := zap.Options{
 		Development:     true,
@@ -187,8 +190,16 @@ func main() {
 
 	setupLog.Info("setting up Kubernetes controller manager")
 
+	namespaces := parseNamespaceList(namespacesRaw)
+	if len(namespaces) > 0 {
+		setupLog.Info("namespace-scoped controller cache", "namespaces", namespaces)
+	} else {
+		setupLog.Info("cluster-wide controller cache (set --namespaces to scope)")
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
+		Cache:  managerCacheOptions(namespaces),
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
@@ -296,4 +307,40 @@ func resolvePprofBindAddress(pprofAddr string) string {
 	}
 
 	return pprofAddr
+}
+
+func parseNamespaceList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var out []string
+	for _, ns := range strings.Split(raw, ",") {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+		if _, dup := seen[ns]; dup {
+			continue
+		}
+		seen[ns] = struct{}{}
+		out = append(out, ns)
+	}
+	return out
+}
+
+func managerCacheOptions(namespaces []string) cache.Options {
+	if len(namespaces) == 0 {
+		return cache.Options{}
+	}
+
+	nsMap := make(map[string]cache.Config, len(namespaces))
+	for _, ns := range namespaces {
+		nsMap[ns] = cache.Config{}
+	}
+
+	return cache.Options{
+		DefaultNamespaces: nsMap,
+	}
 }

@@ -316,6 +316,17 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				Ports:    []corev1.ServicePort{},
 			},
 		}
+		// loadBalancerClass is immutable; only set at creation time
+		lbClass := ""
+		if v, ok := c.gwConf.Spec.LoadBalancerServiceAnnotations[opdefault.LoadBalancerClassAnnotationKey]; ok {
+			lbClass = v
+		}
+		if v, ok := gw.GetAnnotations()[opdefault.LoadBalancerClassAnnotationKey]; ok {
+			lbClass = v
+		}
+		if lbClass != "" {
+			svc.Spec.LoadBalancerClass = &lbClass
+		}
 	} else {
 		// mandatory labels and annotations must always be there
 		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
