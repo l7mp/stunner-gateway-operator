@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -37,15 +40,17 @@ func init() {
 }
 
 type OperatorConfig struct {
-	Manager        manager.Manager
-	ControllerName string
-	RenderCh       chan event.Event
-	ConfigCh       chan event.Event
-	UpdaterCh      chan event.Event
-	Logger         logr.Logger
+	WaitForInitialSnapshot bool
+	Manager                manager.Manager
+	ControllerName         string
+	RenderCh               chan event.Event
+	ConfigCh               chan event.Event
+	UpdaterCh              chan event.Event
+	Logger                 logr.Logger
 }
 
 type Operator struct {
+	waitingForSnapshot             atomic.Bool
 	ctx                            context.Context
 	mgr                            manager.Manager
 	gwConfC, dpC, gwC, rouC, nodeC controllers.Controller
@@ -65,7 +70,7 @@ func NewOperator(cfg OperatorConfig) *Operator {
 	config.ControllerName = cfg.ControllerName
 
 	opCh := make(chan event.Event, channelBufferSize)
-	return &Operator{
+	o := &Operator{
 		mgr:          cfg.Manager,
 		renderCh:     cfg.RenderCh,
 		operatorCh:   event.NewEventChannel(opCh),
@@ -77,6 +82,8 @@ func NewOperator(cfg OperatorConfig) *Operator {
 		lastAckedGen: -1,
 		logger:       cfg.Logger,
 	}
+	o.waitingForSnapshot.Store(cfg.WaitForInitialSnapshot)
+	return o
 }
 
 // Start spawns the Kubernetes controllers, enters the operator main loop and terminates when the
@@ -158,6 +165,9 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 			metrics.RecordOperatorHeartbeat()
 			switch e.GetType() {
 			case event.EventTypeUpdate:
+				if o.waitingForSnapshot.Load() {
+					continue
+				}
 				if n := sendCoalesced(o.updaterCh, e); n > 0 {
 					o.log.V(3).Info("Coalesced stale updater events", "count", n)
 				}
@@ -166,6 +176,9 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				}
 
 			case event.EventTypeReconcile:
+				if o.waitingForSnapshot.Load() {
+					continue
+				}
 				// rate-limit rendering requests before passing on to the renderer
 				// render request in progress: do nothing
 				if throttling {
@@ -315,5 +328,35 @@ func (o *Operator) Finalize() {
 		case <-timeout:
 			o.log.V(2).Info("Cound not finish the finalization sequence in 2 sec, exiting anyway")
 		}
+	}
+}
+
+// Initialize takes a complete snapshot after election and cache synchronization.
+// No render is scheduled until all controllers have populated their stores. Explicit
+// reconciliation is needed even for kinds with no objects (and thus no add events).
+func (o *Operator) Initialize(ctx context.Context) error {
+	for _, c := range []controllers.Controller{o.gwConfC, o.dpC, o.gwC, o.rouC} {
+		if _, err := c.Reconcile(ctx, reconcile.Request{}); err != nil {
+			return err
+		}
+	}
+	nodes := &apiv1.NodeList{}
+	if err := o.mgr.GetClient().List(ctx, nodes); err != nil {
+		return err
+	}
+	for _, n := range nodes.Items {
+		if _, err := o.nodeC.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: n.Name}}); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	o.waitingForSnapshot.Store(false)
+	select {
+	case o.operatorCh.Channel() <- event.NewEventReconcile():
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }

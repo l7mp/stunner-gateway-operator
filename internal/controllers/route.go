@@ -69,7 +69,8 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 		log:     log.WithName("route-controller"),
 	}
 
-	c, err := controller.New("route", mgr, controller.Options{Reconciler: r})
+	synchronized := serialize(r)
+	c, err := controller.New("route", mgr, controller.Options{Reconciler: synchronized})
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +298,7 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 	}
 	r.log.Info("Watching StaticService objects")
 
-	return r, nil
+	return synchronized, nil
 }
 
 // Reconcile handles an update to a route or a Service/Endpoints referenced by a route.

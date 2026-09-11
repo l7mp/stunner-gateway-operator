@@ -47,12 +47,14 @@ type resourceGenerator interface {
 }
 
 type RendererConfig struct {
-	Scheme         *runtime.Scheme
-	LicenseManager licensemgr.Manager
-	Logger         logr.Logger
+	PublishEmptyConfig bool
+	Scheme             *runtime.Scheme
+	LicenseManager     licensemgr.Manager
+	Logger             logr.Logger
 }
 
 type renderer struct {
+	publishEmptyConfig                            bool
 	ctx                                           context.Context
 	scheme                                        *runtime.Scheme
 	licmgr                                        licensemgr.Manager
@@ -69,6 +71,7 @@ type renderer struct {
 // NewDefaultRenderer creates a new default Renderer.
 func NewDefaultRenderer(cfg RendererConfig) Renderer {
 	r := &renderer{
+		publishEmptyConfig: cfg.PublishEmptyConfig,
 		scheme:             cfg.Scheme,
 		licmgr:             cfg.LicenseManager,
 		adminRenderer:      newAdminRenderer(),

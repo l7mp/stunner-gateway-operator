@@ -55,7 +55,8 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 		log:     log.WithName("gateway-controller"),
 	}
 
-	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
+	synchronized := serialize(r)
+	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: synchronized})
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +142,7 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
 	// with backend Services)
 
-	return r, nil
+	return synchronized, nil
 }
 
 // Reconcile handles updates to a Gateway managed by this controller or a Secret referenced by one

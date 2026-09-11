@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -25,4 +26,25 @@ import (
 type Controller interface {
 	Reconcile(context.Context, reconcile.Request) (reconcile.Result, error)
 	Terminate()
+}
+
+// serializedController also serializes the initial HA snapshot with controller-runtime
+// reconciliation. A slower initial List must not overwrite a newer reconciliation.
+type serializedController struct {
+	Controller
+	mu sync.Mutex
+}
+
+func serialize(c Controller) Controller { return &serializedController{Controller: c} }
+
+func (c *serializedController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Controller.Reconcile(ctx, req)
+}
+
+func (c *serializedController) Terminate() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Controller.Terminate()
 }

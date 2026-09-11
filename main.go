@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,10 +31,13 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -45,6 +49,7 @@ import (
 	"github.com/l7mp/stunner/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/internal/ha"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
@@ -81,6 +86,7 @@ func init() {
 
 func main() {
 	var controllerName, dataplaneMode, metricsAddr, cdsAddr, throttleTimeout, probeAddr, pprofAddr string
+	var discoveryService string
 	var enableLeaderElection, enableEDS, disableEndpontSliceController, enableFinalizer bool
 
 	defaultControllerName := opdefault.DefaultControllerName
@@ -107,6 +113,8 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&enableFinalizer, "enable-finalizer", opdefault.DefaultEnableFinalizer,
 		"Clean up allocated resources and invalidate resource statuses on operator exit.")
+
+	flag.StringVar(&discoveryService, "leader-discovery-service", "", "Publish only the initialized leader to this selectorless discovery Service (requires leader election and managed mode).")
 
 	opts := zap.Options{
 		Development:     true,
@@ -142,6 +150,10 @@ func main() {
 	}
 
 	config.DataplaneMode = config.NewDataplaneMode(dataplaneMode)
+	if discoveryService != "" && (!enableLeaderElection || config.DataplaneMode != config.DataplaneModeManaged || enableFinalizer) {
+		setupLog.Error(fmt.Errorf("leader discovery requires --leader-elect, managed dataplane mode, and finalizer disabled"), "invalid HA options")
+		os.Exit(1)
+	}
 	setupLog.Info("dataplane mode", "mode", config.DataplaneMode.String())
 	pprofAddr = resolvePprofBindAddress(pprofAddr)
 	setupLog.Info("pprof server", "address", pprofAddr)
@@ -216,9 +228,10 @@ func main() {
 
 	setupLog.Info("setting up config renderer")
 	r := renderer.NewRenderer(renderer.RendererConfig{
-		Scheme:         scheme,
-		LicenseManager: m,
-		Logger:         logger,
+		PublishEmptyConfig: discoveryService != "",
+		Scheme:             scheme,
+		LicenseManager:     m,
+		Logger:             logger,
 	})
 
 	setupLog.Info("setting up updater client")
@@ -232,12 +245,13 @@ func main() {
 
 	setupLog.Info("setting up operator")
 	op := operator.NewOperator(operator.OperatorConfig{
-		ControllerName: controllerName,
-		Manager:        mgr,
-		RenderCh:       r.GetRenderChannel(),
-		ConfigCh:       c.GetConfigUpdateChannel(),
-		UpdaterCh:      u.GetUpdaterChannel(),
-		Logger:         logger,
+		WaitForInitialSnapshot: discoveryService != "",
+		ControllerName:         controllerName,
+		Manager:                mgr,
+		RenderCh:               r.GetRenderChannel(),
+		ConfigCh:               c.GetConfigUpdateChannel(),
+		UpdaterCh:              u.GetUpdaterChannel(),
+		Logger:                 logger,
 	})
 
 	m.SetOperatorChannel(op.GetOperatorChannel())
@@ -268,7 +282,9 @@ func main() {
 	}
 
 	setupLog.Info("starting config discovery server")
-	if err := c.Start(mgrCtx); err != nil {
+	if discoveryService != "" {
+		c.StartUpdates(mgrCtx)
+	} else if err := c.Start(mgrCtx); err != nil {
 		setupLog.Error(err, "could not run config discovery server")
 		os.Exit(1)
 	}
@@ -278,6 +294,41 @@ func main() {
 	if err := op.Start(opCtx, mgrCancel); err != nil {
 		setupLog.Error(err, "problem running operator")
 		os.Exit(1)
+	}
+
+	if discoveryService != "" {
+		namespace, podName, podUID, podIP := os.Getenv("POD_NAMESPACE"), os.Getenv("POD_NAME"), os.Getenv("POD_UID"), os.Getenv("POD_IP")
+		if namespace == "" || podName == "" || podUID == "" || net.ParseIP(podIP) == nil {
+			setupLog.Error(fmt.Errorf("POD_NAMESPACE, POD_NAME, POD_UID and POD_IP are required"), "invalid HA Pod identity")
+			os.Exit(1)
+		}
+		_, portString, err := net.SplitHostPort(cdsAddr)
+		if err != nil {
+			setupLog.Error(err, "invalid discovery listener address")
+			os.Exit(1)
+		}
+		port, err := strconv.ParseInt(portString, 10, 32)
+		if err != nil || port < 1 || port > 65535 {
+			setupLog.Error(fmt.Errorf("invalid port %q", portString), "invalid discovery listener port")
+			os.Exit(1)
+		}
+		apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "cannot create endpoint publisher")
+			os.Exit(1)
+		}
+		d := &ha.Discovery{Client: apiClient, Service: types.NamespacedName{Namespace: namespace, Name: discoveryService},
+			Pod:     corev1.ObjectReference{APIVersion: "v1", Kind: "Pod", Namespace: namespace, Name: podName, UID: types.UID(podUID)},
+			Address: podIP, Port: int32(port), Elected: mgr.Elected(), Initialized: c.Initialized(), Initialize: op.Initialize,
+			Signal: opCtx, Serve: c.Server.Start, Log: logger.WithName("leader-discovery")}
+		if err := mgr.Add(d); err != nil {
+			setupLog.Error(err, "cannot register leader discovery")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("cache-synced", d.Ready); err != nil {
+			setupLog.Error(err, "cannot register standby readiness")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting the Kubernetes controller manager")

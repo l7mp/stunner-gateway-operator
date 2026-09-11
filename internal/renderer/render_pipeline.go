@@ -123,6 +123,11 @@ func (r *renderer) renderManagedGateways(e *event.EventRender) {
 	gcs := r.getGatewayClasses()
 	if len(gcs) == 0 {
 		r.log.Info("No gateway-class objects found", "event", e.String())
+		if r.publishEmptyConfig {
+			u := pipelineCtx.update.DeepCopy()
+			u.SetRequestAck(true)
+			r.operatorCh.Channel() <- u
+		}
 		return
 	}
 

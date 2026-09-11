@@ -57,7 +57,8 @@ func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log 
 		log:     log.WithName("gatewayconfig-controller"),
 	}
 
-	c, err := controller.New("gatewayconfig", mgr, controller.Options{Reconciler: r})
+	synchronized := serialize(r)
+	c, err := controller.New("gatewayconfig", mgr, controller.Options{Reconciler: synchronized})
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log 
 	}
 	r.log.Info("Watching Secret objects")
 
-	return r, nil
+	return synchronized, nil
 }
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {

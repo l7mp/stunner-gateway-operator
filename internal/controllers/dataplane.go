@@ -50,7 +50,8 @@ func NewDataplaneController(mgr manager.Manager, ch event.EventChannel, log logr
 		log:     log.WithName("dataplane-controller"),
 	}
 
-	c, err := controller.New("dataplane", mgr, controller.Options{Reconciler: r})
+	synchronized := serialize(r)
+	c, err := controller.New("dataplane", mgr, controller.Options{Reconciler: synchronized})
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func NewDataplaneController(mgr manager.Manager, ch event.EventChannel, log logr
 	}
 	r.log.Info("watching dataplane objects")
 
-	return r, nil
+	return synchronized, nil
 }
 
 func (r *dataplaneReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {

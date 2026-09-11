@@ -41,7 +41,8 @@ func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logg
 		log:     log.WithName("node-controller"),
 	}
 
-	c, err := controller.New("node", mgr, controller.Options{Reconciler: r})
+	synchronized := serialize(r)
+	c, err := controller.New("node", mgr, controller.Options{Reconciler: synchronized})
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logg
 	}
 	r.log.Info("watching node objects")
 
-	return r, nil
+	return synchronized, nil
 }
 
 func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {

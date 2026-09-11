@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ import (
 )
 
 type Server struct {
+	initialized     chan struct{}
+	initializedOnce sync.Once
 	*cdsserver.Server
 	configCh chan event.Event
 	*ProgressTracker
@@ -29,6 +32,7 @@ type Server struct {
 func NewCDSServer(addr string, logger logr.Logger) *Server {
 	log := logger.WithName("cds-server")
 	return &Server{
+		initialized:     make(chan struct{}),
 		Server:          cdsserver.New(addr, getNodeAddressPatcher(log), log),
 		configCh:        make(chan event.Event, 10),
 		ProgressTracker: NewProgressTracker(),
@@ -37,9 +41,15 @@ func NewCDSServer(addr string, logger logr.Logger) *Server {
 }
 
 func (c *Server) Start(ctx context.Context) error {
+	c.StartUpdates(ctx)
+	return c.Server.Start(ctx)
+}
+
+// StartUpdates populates the store without opening a listener. In HA mode the
+// leader starts serving only after the first complete snapshot has been applied.
+func (c *Server) StartUpdates(ctx context.Context) {
 	go func() {
 		defer close(c.configCh)
-		defer c.Close()
 
 		for {
 			select {
@@ -63,8 +73,10 @@ func (c *Server) Start(ctx context.Context) error {
 		}
 	}()
 
-	return c.Server.Start(ctx)
 }
+
+// Initialized closes after a successful configuration update.
+func (c *Server) Initialized() <-chan struct{} { return c.initialized }
 
 // GetConfigUpdateChannel returns the channel on which the config discovery server listenens to
 // update resuests.
@@ -97,6 +109,9 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 	}
 
 	c.UpdateLicenseStatus(e.LicenseStatus)
+	if c.initialized != nil {
+		c.initializedOnce.Do(func() { close(c.initialized) })
+	}
 
 	return nil
 }
