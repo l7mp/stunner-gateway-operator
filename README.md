@@ -25,7 +25,7 @@ The operator supports both command-line flags and environment variables.
 - `--config-discovery-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_ADDRESS`.
 - `--pprof-bind-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS`.
 - `CUSTOMER_KEY` is read from the environment for licensing.
-- `--leader-discovery-service` enables [leader/standby discovery](doc/leader-standby.md).
+- `--leader-discovery-service` publishes only the initialized leader to a selectorless discovery Service.
 
 Command-line flags take precedence over environment variables. 
 

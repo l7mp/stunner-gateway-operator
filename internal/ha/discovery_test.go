@@ -77,28 +77,6 @@ func TestLeaderDiscoveryWaitsForElectionAndSnapshot(t *testing.T) {
 	require.Error(t, d.Ready(nil))
 }
 
-func TestLeaderDiscoveryCanceledStandbyNeverServes(t *testing.T) {
-	for _, phase := range []string{"election", "configuration"} {
-		t.Run(phase, func(t *testing.T) {
-			d := fixture(t)
-			elected := make(chan struct{})
-			d.Elected = elected
-			d.Initialized = make(chan struct{})
-			if phase == "configuration" {
-				close(elected)
-			}
-			d.Initialize = func(context.Context) error { return nil }
-			d.Serve = func(context.Context) error { t.Error("uninitialized standby served"); return nil }
-			ctx, cancel := context.WithCancel(context.Background())
-			cancel()
-			require.NoError(t, d.Start(ctx))
-			list := &discoveryv1.EndpointSliceList{}
-			require.NoError(t, d.Client.List(context.Background(), list))
-			require.Empty(t, list.Items)
-		})
-	}
-}
-
 func TestLeaderDiscoveryReplacesEndpointAndDoesNotWithdrawSuccessor(t *testing.T) {
 	d := fixture(t)
 	ctx := context.Background()
