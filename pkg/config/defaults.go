@@ -190,6 +190,10 @@ const (
 	// stunnerd default listener address.
 	DefaultSTUNnerAddressEnvVarName string = "$" + stnrconfv1.DefaultEnvVarAddr
 
+	// DefaultSTUNnerAddrsEnvVarName is the environment variable holding the pod's IP addresses
+	// (both families in a dual-stack deployment), used as the listener relay addresses.
+	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrconfv1.DefaultEnvVarAddrs
+
 	// NodeAddressPlaceholder is used internally by the operator to let the renderer to signal
 	// to the CDS server's config patcher to replace the listener address with the node
 	// external IP.

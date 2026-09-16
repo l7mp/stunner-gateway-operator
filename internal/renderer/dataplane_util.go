@@ -131,6 +131,10 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 	gw := c.gws.GetFirst()
 	podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 	podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
+	// status.podIPs is a comma-separated list of the pod's IPs (both families on a dual-stack
+	// pod); stunnerd normalizes it into per-family relay addresses.
+	podAddrsFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIPs"}
+	podAddrsEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrsFieldSelector}
 	nodeNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}
 	nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
 	livenessProbe, readinessProbe := getHealthCheckParameters(c)
@@ -149,6 +153,9 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,
+			}, {
+				Name:      stnrconfv1.DefaultEnvVarAddrs, // pod IPs (both families) for relay addresses
+				ValueFrom: &podAddrsEnvVarSource,
 			}, {
 				Name:  stnrconfv1.DefaultEnvVarName, // gateway name for creating the stunnerd id
 				Value: gw.GetName(),

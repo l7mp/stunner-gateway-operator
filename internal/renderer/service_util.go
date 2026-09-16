@@ -21,6 +21,7 @@ import (
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -278,6 +279,10 @@ func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
 	return nil
 }
 
+// setServiceIPFamilyPolicy sets the IP-family policy on a Gateway's Service. The current default
+// lets the apiserver apply the cluster default.
+var setServiceIPFamilyPolicy = func(_ *corev1.Service, _ licensemgr.Manager) {}
+
 func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway) (*corev1.Service, map[string]int) {
 	if len(gw.Spec.Listeners) == 0 {
 		// should never happen
@@ -360,6 +365,8 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	default:
 		svc.Spec.Type = opdefault.DefaultServiceType
 	}
+
+	setServiceIPFamilyPolicy(svc, r.licmgr)
 
 	// annotations: use the svc, annotations have already been merged from the gwConf and gw
 	annotations := svc.GetAnnotations()
