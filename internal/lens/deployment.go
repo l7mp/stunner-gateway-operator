@@ -195,7 +195,7 @@ func projectPodSpec(s, owned *corev1.PodSpec) corev1.PodSpec {
 		Containers:                    make([]corev1.Container, 0, len(s.Containers)),
 	}
 
-	// SecurityContext has an "empty struct → nil" normalization that does
+	// SecurityContext has an "empty struct becomes nil" normalization that does
 	// not fit the generic owned-projection helpers.
 	if owned.SecurityContext != nil {
 		ret.SecurityContext = normalizePodSecurityContext(s.SecurityContext)

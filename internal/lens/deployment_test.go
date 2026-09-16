@@ -63,7 +63,7 @@ func TestDeploymentEqualDetectsStalePodTemplateMetadata(t *testing.T) {
 	// Pod-template labels and annotations are operator-authoritative per the
 	// Dataplane API contract: a key present on current but absent from desired
 	// (e.g. a Dataplane.Spec.Labels entry that was removed) must surface as a
-	// real diff so the updater calls Apply and cleans it up — without relying
+	// real diff so the updater calls Apply and cleans it up, without relying
 	// on a sibling field's drift to trigger Apply as a side effect.
 	desired := testDeployment()
 

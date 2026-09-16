@@ -252,7 +252,7 @@ func TestFilterLabels(t *testing.T) {
 // re-acquired the read lock while already holding it (it sized its result slice
 // via Len(), which RLocks again). A concurrent Reset() writer queuing for the
 // write lock would then block that re-entrant RLock forever, since Go's RWMutex
-// starves new readers once a writer is waiting — deadlocking the renderer
+// starves new readers once a writer is waiting, deadlocking the renderer
 // (Objects) against the reconciler (Reset). Readers and writers hammer the same
 // store concurrently; without the fix this never completes and the watchdog
 // fires.
@@ -292,6 +292,6 @@ func TestStoreObjectsResetNoDeadlock(t *testing.T) {
 		// completed without deadlocking: confirm Objects() still returns sanely
 		assert.Len(t, s.Objects(), 3, "objects after concurrent access")
 	case <-time.After(10 * time.Second):
-		t.Fatal("deadlock: concurrent Objects()/Reset() did not complete — Objects() likely re-acquires the read lock it already holds")
+		t.Fatal("deadlock: concurrent Objects()/Reset() did not complete; Objects() likely re-acquires the read lock it already holds")
 	}
 }

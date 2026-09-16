@@ -16,7 +16,7 @@ const LoopHeartbeatInterval = 5 * time.Second
 // LoopStalenessThreshold is the maximum acceptable age of a worker goroutine's
 // last heartbeat before the /healthz check considers the loop hung. The
 // heartbeat is bumped on every select wakeup, including at the start of the
-// work branch — so during a single long-running iteration (e.g. a slow
+// work branch, so during a single long-running iteration (e.g. a slow
 // ProcessUpdate) the gauge does not refresh until that iteration completes.
 // Existing duration histograms cap at 60s, so this threshold is set well above
 // that to avoid restarting pods that are slow rather than wedged.
@@ -73,7 +73,7 @@ var (
 
 	// ResourceOperationsTotal counts individual Kubernetes API operations performed by
 	// the updater, labelled by scope ("spec" or "status"), resource kind, and operation
-	// (attempt, created, updated, error, suppressed, …).
+	// (attempt, created, updated, error, suppressed, and so on).
 	ResourceOperationsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "stunner_gateway_operator_resource_operations_total",
 		Help: "Total number of Kubernetes API operations performed by the updater thread.",
@@ -123,7 +123,7 @@ var (
 
 // In-process mirrors of the heartbeat gauges. Stored as atomic unix-seconds so
 // the /healthz check can read them without going through the prometheus client's
-// dto.Metric write path. Zero means "never recorded yet" — treat as healthy
+// dto.Metric write path. Zero means "never recorded yet": treat as healthy
 // until first heartbeat fires.
 var (
 	operatorLoopLastActive atomic.Int64

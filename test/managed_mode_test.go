@@ -1339,7 +1339,7 @@ func testManagedMode() {
 
 			// add applyset and Helm ownership labels to the Gateway; both are
 			// in the default LabelFilter (see issue #70). Spec must also be
-			// touched to trigger the controller — metadata-only Gateway
+			// touched to trigger the controller: metadata-only Gateway
 			// updates are filtered out by the controller's predicate.
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				ls := current.GetLabels()

@@ -232,7 +232,7 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 
 // IsReferenceService returns true of the provided BackendRef points to a Service.
 func IsReferenceService(ref *stnrgwv1.BackendRef) bool {
-	// Group is the group of the referent. For example, “gateway.networking.k8s.io”. When
+	// Group is the group of the referent. For example, "gateway.networking.k8s.io". When
 	// unspecified or empty string, core API group is inferred.
 	if ref.Group != nil && *ref.Group != corev1.GroupName {
 		return false

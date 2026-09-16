@@ -25,7 +25,7 @@ func (c *noopController) Reconcile(_ context.Context, _ reconcile.Request) (reco
 func (c *noopController) Terminate() {}
 
 // newTestOperator builds a minimal operator wired to the provided stub channels.
-// No manager, no real controllers — only the fields used by eventLoop.
+// No manager, no real controllers, only the fields used by eventLoop.
 func newTestOperator(opCh chan event.Event, updaterCh, configCh, renderCh chan event.Event) *Operator {
 	noop := &noopController{}
 	return &Operator{
@@ -91,7 +91,7 @@ func TestEventLoopDoesNotBlockOnSlowCDSConsumer(t *testing.T) {
 	for i := 0; i < numUpdates; i++ {
 		select {
 		case <-updaterCh:
-			// event reached the updater — loop is alive
+			// event reached the updater: loop is alive
 		case <-deadline:
 			require.Failf(t, "deadlock",
 				"only %d/%d updates reached updaterCh within 3s (configCh cap=%d)",
@@ -142,7 +142,7 @@ func TestEventLoopStillProcessesReconcileWhileCDSBlocked(t *testing.T) {
 
 	// Send a reconcile event. It arms the throttle ticker which, after ThrottleTimeout
 	// (10ms), sends an EventTypeRender to renderCh. Receiving that event proves the loop
-	// is alive — it was not deadlocked by the saturated configCh.
+	// is alive: it was not deadlocked by the saturated configCh.
 	opCh <- event.NewEventReconcile()
 
 	select {

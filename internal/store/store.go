@@ -120,7 +120,7 @@ func (s *storeImpl) Objects() []client.Object {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	// Note: do not call s.Len() here — it would re-acquire the read lock and
+	// Note: do not call s.Len() here, it would re-acquire the read lock and
 	// deadlock against a pending Reset() writer (RWMutex blocks new RLocks
 	// once a writer is queued). We already hold RLock, so read len directly.
 	ret := make([]client.Object, 0, len(s.objects))

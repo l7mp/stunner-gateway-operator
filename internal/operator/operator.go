@@ -142,7 +142,7 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 	throttler.Stop()
 	throttling := false
 
-	// Independent heartbeat ticker — the throttler above is Stop()ed during
+	// Independent heartbeat ticker, since the throttler above is Stop()ed during
 	// idle periods, so it cannot double as a liveness signal.
 	heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
 	defer heartbeat.Stop()

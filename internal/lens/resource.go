@@ -109,7 +109,7 @@ func addOwnerRef(dst, src client.Object) error {
 
 // projectTemplateMeta projects pod-template labels and annotations strictly
 // (full clone, not intersection with owned). Per Dataplane API contract, the
-// operator is authoritative for pod-template metadata — anything set on the
+// operator is authoritative for pod-template metadata: anything set on the
 // pod template by an external actor is intentionally reset on the next
 // reconcile. Using a strict clone here lets EqualResource notice stale
 // operator-set keys (e.g. a previously-set Dataplane.Spec.Labels entry that
