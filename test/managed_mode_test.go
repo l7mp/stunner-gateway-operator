@@ -52,9 +52,9 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	cdsclient "github.com/l7mp/stunner/pkg/config/client"
-	"github.com/l7mp/stunner/pkg/logger"
+	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
+	"github.com/l7mp/stunner/v2/pkg/logger"
 )
 
 func testManagedMode() {

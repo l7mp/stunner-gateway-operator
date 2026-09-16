@@ -3,7 +3,7 @@
 package config
 
 import (
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )

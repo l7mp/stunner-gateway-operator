@@ -5,11 +5,11 @@ go 1.26.0
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/l7mp/stunner v1.2.2-0.20260802184915-7ff25a7ef735
+	github.com/l7mp/stunner/v2 v2.0.0-20260916170227-1efdfdb3e49d
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.42.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
@@ -94,7 +94,6 @@ require (
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.36.0 // indirect
 	k8s.io/cli-runtime v0.36.3 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
@@ -109,4 +108,9 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-// replace github.com/l7mp/stunner => ../stunner
+// l7mp/stunner carries this same replace, and a replace in a dependency is ignored, so each
+// module importing stunner needs its own. Inert here, since no operator package builds
+// pion/turn, but the graphs must not disagree. Drop everywhere once pion/turn#592 merges.
+replace github.com/pion/turn/v5 => github.com/l7mp/turn/v5 v5.0.0-20260824163405-71d033320c26
+
+// replace github.com/l7mp/stunner/v2 => ../stunner

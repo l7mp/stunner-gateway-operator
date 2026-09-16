@@ -31,10 +31,10 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner/pkg/logger"
+	"github.com/l7mp/stunner/v2/pkg/logger"
 
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	cdsclient "github.com/l7mp/stunner/pkg/config/client"
+	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"

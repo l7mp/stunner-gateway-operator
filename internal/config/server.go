@@ -11,8 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	cdsserver "github.com/l7mp/stunner/pkg/config/server"
+	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"

@@ -17,7 +17,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"

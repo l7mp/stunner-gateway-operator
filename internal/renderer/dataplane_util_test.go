@@ -24,7 +24,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )

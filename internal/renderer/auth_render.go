@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )

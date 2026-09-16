@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiutil "k8s.io/apimachinery/pkg/util/intstr"
 
-	stnrconfv1 "github.com/l7mp/stunner/pkg/apis/v1"
+	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 )
 
 var (

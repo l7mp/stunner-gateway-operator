@@ -41,8 +41,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stnrv1 "github.com/l7mp/stunner/pkg/apis/v1"
-	"github.com/l7mp/stunner/pkg/buildinfo"
+	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	"github.com/l7mp/stunner/v2/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
