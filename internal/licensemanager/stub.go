@@ -10,13 +10,12 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
-// license manager stub
 type stubMgr struct{}
 
 func NewStubManager(_ string, _ logr.Logger) Manager { return &stubMgr{} }
 
 func (*stubMgr) Start(_ context.Context) error           { return nil }
-func (*stubMgr) Validate(_ licensecfg.Feature) bool      { return true }
+func (*stubMgr) Validate(_ licensecfg.Feature) bool      { return false }
 func (*stubMgr) Status() stnrv1.LicenseStatus            { return stnrv1.NewEmptyLicenseStatus() }
 func (*stubMgr) LastError() error                        { return nil }
 func (*stubMgr) SetOperatorChannel(_ event.EventChannel) {}
