@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -108,26 +107,26 @@ func initGatewayStatus(gw *gwapiv1.Gateway, reason error) {
 
 	// reinit listener statuses
 	gw.Status.Listeners = gw.Status.Listeners[:0]
-	groupgwapiv1a2 := gwapiv1.Group(gwapiv1a2.GroupVersion.Group)
-	groupstnrv1 := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
-
-	groupgwapiv1 := gwapiv1.Group(gwapiv1.GroupVersion.Group)
+	// RouteGroupKind names a group and a kind, with no version: the official UDPRoute and
+	// TCPRoute live in one group whichever version the cluster serves them at.
+	groupGwAPI := gwapiv1.Group(gwapiv1.GroupVersion.Group)
+	groupStunner := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
 
 	for _, l := range gw.Spec.Listeners {
 		gw.Status.Listeners = append(gw.Status.Listeners,
 			gwapiv1.ListenerStatus{
 				Name: l.Name,
 				SupportedKinds: []gwapiv1.RouteGroupKind{{
-					Group: &groupgwapiv1a2,
+					Group: &groupGwAPI,
 					Kind:  gwapiv1.Kind("UDPRoute"),
 				}, {
-					Group: &groupstnrv1,
+					Group: &groupStunner,
 					Kind:  gwapiv1.Kind("UDPRoute"),
 				}, {
-					Group: &groupgwapiv1,
+					Group: &groupGwAPI,
 					Kind:  gwapiv1.Kind("TCPRoute"),
 				}, {
-					Group: &groupstnrv1,
+					Group: &groupStunner,
 					Kind:  gwapiv1.Kind("TCPRoute"),
 				}},
 				Conditions: []metav1.Condition{},
