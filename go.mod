@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/l7mp/stunner/v2 v2.0.0-20260916184441-1d195003cd78
+	github.com/l7mp/stunner/v2 v2.0.0-20260917193605-03351ef32aa1
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.43.0
 	github.com/prometheus/client_golang v1.24.1
@@ -107,10 +107,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-// l7mp/stunner carries this same replace, and a replace in a dependency is ignored, so each
-// module importing stunner needs its own. Inert here, since no operator package builds
-// pion/turn, but the graphs must not disagree. Drop everywhere once pion/turn#592 merges.
-replace github.com/pion/turn/v5 => github.com/l7mp/turn/v5 v5.0.0-20260916145932-d5b107404d26
 
 // replace github.com/l7mp/stunner/v2 => ../stunner
