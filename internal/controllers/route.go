@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -250,12 +250,12 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 
 	// watch Service objects referenced by one of our routes
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &v1.Service{},
-			&handler.TypedEnqueueRequestForObject[*v1.Service]{},
+		source.Kind(mgr.GetCache(), &corev1.Service{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Service]{},
 			// trigger when either a gateway-loadbalancer service (svc annotated as a
 			// related-service for a gateway) or a backend-service changes
 			predicate.Or(
-				predicate.NewTypedPredicateFuncs[*v1.Service](r.validateBackendServiceForReconcile),
+				predicate.NewTypedPredicateFuncs[*corev1.Service](r.validateBackendServiceForReconcile),
 				loadBalancerPredicate)),
 	); err != nil {
 		return nil, err
@@ -286,9 +286,9 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 		if !config.EndpointSliceAvailable {
 			if err := c.Watch(
 				//nolint:staticcheck
-				source.Kind(mgr.GetCache(), &v1.Endpoints{},
-					&handler.TypedEnqueueRequestForObject[*v1.Endpoints]{},
-					predicate.NewTypedPredicateFuncs[*v1.Endpoints](r.validateBackendEndpointsForReconcile)),
+				source.Kind(mgr.GetCache(), &corev1.Endpoints{},
+					&handler.TypedEnqueueRequestForObject[*corev1.Endpoints]{},
+					predicate.NewTypedPredicateFuncs[*corev1.Endpoints](r.validateBackendEndpointsForReconcile)),
 			); err != nil {
 				return nil, err
 			}
@@ -329,7 +329,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
 	// "app:stunner")
-	svcs := &v1.ServiceList{}
+	svcs := &corev1.ServiceList{}
 	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	if err == nil {
 		for _, svc := range svcs.Items {
@@ -506,7 +506,7 @@ func (r *routeReconciler) collectBackends(ctx context.Context, ro client.Object,
 
 	nsName := ro.GetNamespace()
 	r.log.V(2).Info("Looking for the namespace of route", "name", nsName)
-	namespace := v1.Namespace{}
+	namespace := corev1.Namespace{}
 	if err := r.Get(ctx, types.NamespacedName{Name: nsName}, &namespace); err != nil {
 		r.log.Error(err, "Error getting namespace for route", "route",
 			store.GetObjectKey(ro), "namespace-name", nsName)
@@ -516,7 +516,7 @@ func (r *routeReconciler) collectBackends(ctx context.Context, ro client.Object,
 	acc.namespaceList = append(acc.namespaceList, &namespace)
 }
 
-func (r *routeReconciler) validateBackendServiceForReconcile(svc *v1.Service) bool {
+func (r *routeReconciler) validateBackendServiceForReconcile(svc *corev1.Service) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(svc), serviceUDPRouteIndex,
 		serviceUDPRouteIndexGwAPI, serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI)
 }
@@ -527,7 +527,7 @@ func (r *routeReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.
 }
 
 //nolint:staticcheck
-func (r *routeReconciler) validateBackendEndpointsForReconcile(e *v1.Endpoints) bool {
+func (r *routeReconciler) validateBackendEndpointsForReconcile(e *corev1.Endpoints) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(e), serviceUDPRouteIndex,
 		serviceUDPRouteIndexGwAPI, serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI)
 }
@@ -560,7 +560,7 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 			FieldSelector: fields.OneTermEqualSelector(udpIndexGwAPI, key),
 		}); err != nil {
 			r.log.Error(err, "Unable to find associated Gateway API UDPRoute", "service", key)
-		} else if items, err := apimeta.ExtractList(udpRouteListGwAPI); err == nil {
+		} else if items, err := meta.ExtractList(udpRouteListGwAPI); err == nil {
 			routeNum += len(items)
 		}
 	}
@@ -588,7 +588,7 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 			FieldSelector: fields.OneTermEqualSelector(tcpIndexGwAPI, key),
 		}); err != nil {
 			r.log.Error(err, "Unable to find associated Gateway API TCPRoute", "service", key)
-		} else if items, err := apimeta.ExtractList(tcpRouteListGwAPI); err == nil {
+		} else if items, err := meta.ExtractList(tcpRouteListGwAPI); err == nil {
 			routeNum += len(items)
 		}
 	}
@@ -614,7 +614,7 @@ func (r *routeReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.End
 		return false
 	}
 
-	svc := &v1.Service{}
+	svc := &corev1.Service{}
 	if err := r.Get(context.Background(), types.NamespacedName{
 		Namespace: esl.GetNamespace(),
 		Name:      svcName,
@@ -632,7 +632,7 @@ func (r *routeReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.End
 }
 
 // getServiceForBackend finds the Service associated with a backendRef
-func (r *routeReconciler) getServiceForBackend(ctx context.Context, ro client.Object, ref *stnrgwv1.BackendRef) *v1.Service {
+func (r *routeReconciler) getServiceForBackend(ctx context.Context, ro client.Object, ref *stnrgwv1.BackendRef) *corev1.Service {
 	// if no explicit Service namespace is provided, use the route namespace to lookup the
 	// Service
 	namespace := ro.GetNamespace()
@@ -640,7 +640,7 @@ func (r *routeReconciler) getServiceForBackend(ctx context.Context, ro client.Ob
 		namespace = string(*ref.Namespace)
 	}
 
-	svc := v1.Service{}
+	svc := corev1.Service{}
 	if err := r.Get(ctx,
 		types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
 		&svc,
@@ -707,7 +707,7 @@ func (r *routeReconciler) getEndpointsForBackend(ctx context.Context, ro client.
 		namespace = string(*ref.Namespace)
 	}
 
-	ep := v1.Endpoints{} //nolint:staticcheck
+	ep := corev1.Endpoints{} //nolint:staticcheck
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, &ep); err != nil {
 		// not fatal
 		if !apierrors.IsNotFound(err) {
@@ -912,12 +912,12 @@ func (r *routeReconciler) Terminate() {
 // TypedLabelSelectorPredicate is the generic version of LabelSelectorPredicate that somehow seems
 // to be missing in controller-runtime to construct a TypedPredicate from a LabelSelector.  Only
 // objects matching the LabelSelector will be admitted.
-func ServiceLabelSelectorPredicate(s metav1.LabelSelector) (predicate.TypedPredicate[*v1.Service], error) {
+func ServiceLabelSelectorPredicate(s metav1.LabelSelector) (predicate.TypedPredicate[*corev1.Service], error) {
 	selector, err := metav1.LabelSelectorAsSelector(&s)
 	if err != nil {
-		return predicate.TypedFuncs[*v1.Service]{}, err
+		return predicate.TypedFuncs[*corev1.Service]{}, err
 	}
-	return predicate.NewTypedPredicateFuncs[*v1.Service](func(o *v1.Service) bool {
+	return predicate.NewTypedPredicateFuncs[*corev1.Service](func(o *corev1.Service) bool {
 		return selector.Matches(labels.Set(o.GetLabels()))
 	}), nil
 }

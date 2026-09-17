@@ -11,7 +11,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -122,7 +122,7 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.NoError(t, err, "renderAdmin")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
-				assert.Equal(t, stnrconfv1.DefaultLogLevel, admin.LogLevel, "loglevel")
+				assert.Equal(t, stnrapiv1.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, opdefault.DefaultMetricsEndpoint, admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "", *admin.HealthCheckEndpoint, "health-check default on")
 

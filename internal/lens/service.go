@@ -7,7 +7,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +106,7 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 
 func projectService(s, owned *corev1.Service) *corev1.Service {
 	src := s.DeepCopy()
-	k8sscheme.Scheme.Default(src)
+	clientgoscheme.Scheme.Default(src)
 
 	ret := &corev1.Service{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Type = src.Spec.Type

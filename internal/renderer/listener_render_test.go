@@ -180,9 +180,9 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
-				// assert.Equal(t, stnrconfv1.DefaultMinRelayPort,
+				// assert.Equal(t, stnrapiv1.DefaultMinRelayPort,
 				// 	lc.MinRelayPort, "min-port")
-				// assert.Equal(t, stnrconfv1.DefaultMaxRelayPort,
+				// assert.Equal(t, stnrapiv1.DefaultMaxRelayPort,
 				// 	lc.MaxRelayPort, "max-port")
 			},
 		},

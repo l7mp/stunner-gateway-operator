@@ -9,7 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestDeploymentEqualIgnoresDefaultedFields(t *testing.T) {
@@ -38,7 +38,7 @@ func TestDeploymentEqualDetectsRealDiff(t *testing.T) {
 func TestDeploymentEqualAfterDefaulting(t *testing.T) {
 	desired := testDeployment()
 	current := desired.DeepCopy()
-	k8sscheme.Scheme.Default(current)
+	clientgoscheme.Scheme.Default(current)
 
 	v := NewDeploymentLens(desired)
 	assert.True(t, v.EqualResource(current),

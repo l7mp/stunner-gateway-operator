@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 )
 
 // Labeling rules
@@ -37,11 +37,11 @@ const (
 	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
 	// that the Deployments and Services created by the operator will have both the AppLabelKey
 	// and the OwnedByLabelKey labels set.
-	OwnedByLabelKey = stnrconfv1.DefaultOwnedByLabelKey
+	OwnedByLabelKey = stnrapiv1.DefaultOwnedByLabelKey
 
 	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
 	// maintained by the operator.
-	OwnedByLabelValue = stnrconfv1.DefaultOwnedByLabelValue
+	OwnedByLabelValue = stnrapiv1.DefaultOwnedByLabelValue
 
 	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
 	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
@@ -49,18 +49,18 @@ const (
 	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
 	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
 	// legacy mode, which usually belong to multiple Gateways).
-	RelatedGatewayKey = stnrconfv1.DefaultRelatedGatewayKey
+	RelatedGatewayKey = stnrapiv1.DefaultRelatedGatewayKey
 
 	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
 	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
 	// Gateway. The value is the namespace of the related Gateway.
-	RelatedGatewayNamespace = stnrconfv1.DefaultRelatedGatewayNamespace
+	RelatedGatewayNamespace = stnrapiv1.DefaultRelatedGatewayNamespace
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
-	AppLabelKey = stnrconfv1.DefaultAppLabelKey
+	AppLabelKey = stnrapiv1.DefaultAppLabelKey
 
 	// AppLabelValue defines the label value used to mark the pods of the stunnerd deployment.
-	AppLabelValue = stnrconfv1.DefaultAppLabelValue
+	AppLabelValue = stnrapiv1.DefaultAppLabelValue
 
 	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
@@ -188,24 +188,24 @@ const (
 
 	// DefaultSTUNnerAddressEnvVarName is the environment variable used for configuring
 	// stunnerd default listener address.
-	DefaultSTUNnerAddressEnvVarName string = "$" + stnrconfv1.DefaultEnvVarAddr
+	DefaultSTUNnerAddressEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddr
 
 	// DefaultSTUNnerAddrsEnvVarName is the environment variable holding the pod's IP addresses
 	// (both families in a dual-stack deployment), used as the listener relay addresses.
-	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrconfv1.DefaultEnvVarAddrs
+	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddrs
 
 	// NodeAddressPlaceholder is used internally by the operator to let the renderer to signal
 	// to the CDS server's config patcher to replace the listener address with the node
 	// external IP.
-	NodeAddressPlaceholder = stnrconfv1.DefaultNodeAddressPlaceholder
+	NodeAddressPlaceholder = stnrapiv1.DefaultNodeAddressPlaceholder
 )
 
 var (
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
-	DefaultHealthCheckEndpoint = fmt.Sprintf("http://:%d", stnrconfv1.DefaultHealthCheckPort)
+	DefaultHealthCheckEndpoint = fmt.Sprintf("http://:%d", stnrapiv1.DefaultHealthCheckPort)
 
 	// DefaultMetricsEndpoint is the default URI at which metrics scaping requests are served.
-	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrconfv1.DefaultMetricsPort)
+	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrapiv1.DefaultMetricsPort)
 
 	// DefaultLabelFilter is the list of label keys that are NOT propagated from a Gateway to
 	// the Deployment that the operator creates for it; see

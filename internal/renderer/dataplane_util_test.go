@@ -24,7 +24,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -188,7 +188,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				podAddrsFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIPs"}
 				podAddrsEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrsFieldSelector}
 				assert.Contains(t, container.Env,
-					corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarAddrs, ValueFrom: &podAddrsEnvVarSource},
+					corev1.EnvVar{Name: stnrapiv1.DefaultEnvVarAddrs, ValueFrom: &podAddrsEnvVarSource},
 					"container 1 - env: addrs")
 				podAddrFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIP"}
 				podAddrEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrFieldSelector}
@@ -197,14 +197,14 @@ func TestRenderDataplaneUtil(t *testing.T) {
 					"container 1 - env: addr")
 				nodeNameFieldSelector := corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}
 				nodeNameEnvVarSource := corev1.EnvVarSource{FieldRef: &nodeNameFieldSelector}
-				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarNodeName,
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrapiv1.DefaultEnvVarNodeName,
 					ValueFrom: &nodeNameEnvVarSource}, "container 1 - env: nodename")
-				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarName,
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrapiv1.DefaultEnvVarName,
 					Value: gw.GetName()}, "container 1 - env: name")
-				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarNamespace,
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrapiv1.DefaultEnvVarNamespace,
 					Value: gw.GetNamespace()}, "container 1 - env: namespace")
 				cdsAddr := &url.URL{Scheme: "http", Host: config.ConfigDiscoveryAddress}
-				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrconfv1.DefaultEnvVarConfigOrigin,
+				assert.Contains(t, container.Env, corev1.EnvVar{Name: stnrapiv1.DefaultEnvVarConfigOrigin,
 					Value: cdsAddr.String()}, "container 1 - env: origin")
 
 				// remainder

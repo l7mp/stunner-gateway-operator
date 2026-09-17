@@ -35,7 +35,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -48,7 +48,7 @@ import (
 func testLegacyModeEndpointController() {
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED, ENDPOINT-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off

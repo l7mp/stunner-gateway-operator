@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -30,14 +30,14 @@ type Renderer interface {
 // configRenderer is a generic interface for the rendering components that can generate components
 // of the dataplane config.
 type configRenderer interface {
-	render(c *RenderContext, args ...any) (stnrconfv1.Config, error)
+	render(c *RenderContext, args ...any) (stnrapiv1.Config, error)
 }
 
 // clusterRenderer is the interface for the component that renders the dataplane cluster config of
 // a route. It is separate from configRenderer because a cluster is rendered per route rather than
 // per Gateway, so it takes the route instead of a RenderContext.
 type clusterRenderer interface {
-	renderCluster(ro store.Route) (*stnrconfv1.ClusterConfig, error)
+	renderCluster(ro store.Route) (*stnrapiv1.ClusterConfig, error)
 }
 
 // resourceGenerator is a generic interface for the generator components that can create K8s
@@ -155,34 +155,34 @@ func (r *renderer) SetOperatorChannel(ch event.EventChannel) {
 }
 
 // renderAdmin is a wrapper for adminRenderer.render()
-func (r *renderer) renderAdmin(c *RenderContext) (*stnrconfv1.AdminConfig, error) {
+func (r *renderer) renderAdmin(c *RenderContext) (*stnrapiv1.AdminConfig, error) {
 	conf, err := r.adminRenderer.render(c)
 	if err != nil {
 		return nil, err
 	}
-	return conf.(*stnrconfv1.AdminConfig), nil
+	return conf.(*stnrapiv1.AdminConfig), nil
 }
 
 // renderAuth is a wrapper for authRenderer.render()
-func (r *renderer) renderAuth(c *RenderContext) (*stnrconfv1.AuthConfig, error) {
+func (r *renderer) renderAuth(c *RenderContext) (*stnrapiv1.AuthConfig, error) {
 	conf, err := r.authRenderer.render(c)
 	if err != nil {
 		return nil, err
 	}
-	return conf.(*stnrconfv1.AuthConfig), nil
+	return conf.(*stnrapiv1.AuthConfig), nil
 }
 
 // renderListener is a wrapper for listenerRenderer.render()
-func (r *renderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrconfv1.ListenerConfig, error) {
+func (r *renderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv1.ListenerConfig, error) {
 	conf, err := r.listenerRenderer.render(c, l, rs, ap, targetPorts)
 	if err != nil {
 		return nil, err
 	}
-	return conf.(*stnrconfv1.ListenerConfig), nil
+	return conf.(*stnrapiv1.ListenerConfig), nil
 }
 
 // renderCluster is a wrapper for clusterRenderer.renderCluster()
-func (r *renderer) renderCluster(ro store.Route) (*stnrconfv1.ClusterConfig, error) {
+func (r *renderer) renderCluster(ro store.Route) (*stnrapiv1.ClusterConfig, error) {
 	return r.clusterRenderer.renderCluster(ro)
 }
 

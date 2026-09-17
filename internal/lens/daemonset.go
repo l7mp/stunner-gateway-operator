@@ -5,7 +5,7 @@ import (
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appv1 "k8s.io/api/apps/v1"
@@ -78,7 +78,7 @@ func applyDaemonSet(current, desired *appv1.DaemonSet) error {
 
 func projectDaemonSet(d, owned *appv1.DaemonSet) *appv1.DaemonSet {
 	src := d.DeepCopy()
-	k8sscheme.Scheme.Default(src)
+	clientgoscheme.Scheme.Default(src)
 
 	ret := &appv1.DaemonSet{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Selector = copyLabelSelector(src.Spec.Selector)

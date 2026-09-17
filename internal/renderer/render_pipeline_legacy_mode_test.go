@@ -18,7 +18,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -58,7 +58,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "auth rendered")
-				assert.Equal(t, stnrconfv1.AuthTypeStatic.String(),
+				assert.Equal(t, stnrapiv1.AuthTypeStatic.String(),
 					auth.Type, "auth type")
 				assert.Equal(t, "testrealm", auth.Realm, "realm")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")

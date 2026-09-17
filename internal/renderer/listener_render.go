@@ -9,7 +9,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/go-logr/logr"
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
@@ -28,7 +28,7 @@ func newListenerRenderer(log logr.Logger) configRenderer {
 	return &listenerRenderer{log: log}
 }
 
-func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrconfv1.Config, error) {
+func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Config, error) {
 	if c.gws.Len() != 1 {
 		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with %d gws", c.gws.Len())
 	}
@@ -59,7 +59,7 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrconfv1.Con
 		}
 	}
 
-	lc := stnrconfv1.ListenerConfig{
+	lc := stnrapiv1.ListenerConfig{
 		Name:     stnrListenerName(gw, l),
 		Protocol: proto.String(),
 		Addr:     opdefault.DefaultSTUNnerAddressEnvVarName, // $STUNNER_ADDR, will be filled in from the pod environment
@@ -105,7 +105,7 @@ func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (str
 	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
-		(proto != stnrconfv1.ListenerProtocolTURNTLS && proto != stnrconfv1.ListenerProtocolTURNDTLS) {
+		(proto != stnrapiv1.ListenerProtocolTURNTLS && proto != stnrapiv1.ListenerProtocolTURNDTLS) {
 		return "", "", false, nil
 	}
 
@@ -174,7 +174,7 @@ func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (str
 }
 
 // normalize protocol aliases
-func getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerProtocol, error) {
+func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv1.ListenerProtocol, error) {
 	protocol := string(proto)
 	switch protocol {
 	case "UDP":
@@ -190,7 +190,7 @@ func getProtocol(proto gwapiv1.ProtocolType) (stnrconfv1.ListenerProtocol, error
 		protocol = "TURN-DTLS" // v0.16: resolves to TURN-DTLS
 	}
 
-	ret, err := stnrconfv1.NewListenerProtocol(protocol)
+	ret, err := stnrapiv1.NewListenerProtocol(protocol)
 	if err != nil {
 		return ret, NewNonCriticalError(InvalidProtocol)
 	}

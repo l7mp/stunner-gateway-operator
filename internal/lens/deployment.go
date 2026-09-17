@@ -8,7 +8,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appv1 "k8s.io/api/apps/v1"
@@ -153,7 +153,7 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 
 func projectDeployment(d, owned *appv1.Deployment) *appv1.Deployment {
 	src := d.DeepCopy()
-	k8sscheme.Scheme.Default(src)
+	clientgoscheme.Scheme.Default(src)
 
 	ret := &appv1.Deployment{ObjectMeta: projectMetadata(src, owned)}
 	ret.Spec.Selector = copyLabelSelector(src.Spec.Selector)

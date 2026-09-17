@@ -3,7 +3,7 @@
 package config
 
 import (
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -42,7 +42,7 @@ var (
 	DataplaneMode = NewDataplaneMode(opdefault.DefaultDataplaneMode)
 
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
-	ConfigDiscoveryAddress = stnrv1.DefaultConfigDiscoveryAddress
+	ConfigDiscoveryAddress = stnrapiv1.DefaultConfigDiscoveryAddress
 
 	// EndpointSliceAvailable is a global flag indicating whether EndpointSlices are available
 	// in the current cluster. This is detected in the UDPRoute controller trying to create a

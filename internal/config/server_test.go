@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 	"github.com/l7mp/stunner/v2/pkg/logger"
@@ -70,7 +70,7 @@ func TestConfigDiscovery(t *testing.T) {
 
 	testCDSAddr := getRandCDSAddr()
 	log.Info("create server", "address", testCDSAddr)
-	patcher := func(conf *stnrv1.StunnerConfig, node string) *stnrv1.StunnerConfig {
+	patcher := func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
 		if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
 			// rewrite the realm to the node name
 			for _, a := range n.Status.Addresses {
@@ -111,9 +111,9 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc2, err := cdsclient.New(addr2, id2, "", logger)
 	assert.NoError(t, err, "cds client setup")
 
-	ch1 := make(chan *stnrv1.StunnerConfig, 10)
+	ch1 := make(chan *stnrapiv1.StunnerConfig, 10)
 	defer close(ch1)
-	ch2 := make(chan *stnrv1.StunnerConfig, 10)
+	ch2 := make(chan *stnrapiv1.StunnerConfig, 10)
 	defer close(ch2)
 	err = cdsc1.Watch(ctx, ch1, true)
 	assert.NoError(t, err, "watcher setup 1")
@@ -143,7 +143,7 @@ func TestConfigDiscovery(t *testing.T) {
 	log.Info("creating a config for the loader", "id", "ns/gw1")
 	c1Ok := zeroConfig("ns", "gw1", "realm1")
 	e := event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok}
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok}
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
@@ -182,13 +182,13 @@ func TestConfigDiscovery(t *testing.T) {
 	assert.NoError(t, err, "license client setup")
 	status, err := lc.LicenseStatus(ctx)
 	assert.NoError(t, err, "loading status 1 ok")
-	assert.Equal(t, stnrv1.NewEmptyLicenseStatus(), status, "license 1 ok")
+	assert.Equal(t, stnrapiv1.NewEmptyLicenseStatus(), status, "license 1 ok")
 
 	log.Info("creating a config for the 2nd client", "id", "ns/gw2")
 	c2Ok := zeroConfig("ns", "gw2", "realm2")
 	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok, c2Ok}
-	licenseStatus := stnrv1.LicenseStatus{
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
+	licenseStatus := stnrapiv1.LicenseStatus{
 		EnabledFeatures:  []string{"a", "b", "c"},
 		SubscriptionType: "test",
 		LastUpdated:      "never",
@@ -236,7 +236,7 @@ func TestConfigDiscovery(t *testing.T) {
 	log.Info("updating the 2nd config", "id2", c2Ok.Admin.Name)
 	c2Ok = zeroConfig("ns", "gw2", "realm2-new")
 	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok, c2Ok}
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
@@ -264,7 +264,7 @@ func TestConfigDiscovery(t *testing.T) {
 	cdsc3, err := cdsclient.New(addr2, id3, "", logger)
 	assert.NoError(t, err, "cds client setup")
 
-	ch3 := make(chan *stnrv1.StunnerConfig, 10)
+	ch3 := make(chan *stnrapiv1.StunnerConfig, 10)
 	defer close(ch3)
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	err = cdsc3.Watch(ctx2, ch3, false)
@@ -292,7 +292,7 @@ func TestConfigDiscovery(t *testing.T) {
 	log.Info("adding a config CDS for the 3rd client", "id", "ns/gw3")
 	c3Ok := zeroConfig("ns", "gw3", "realm3_new")
 	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok, c2Ok, c3Ok}
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok, c3Ok}
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
@@ -339,7 +339,7 @@ func TestConfigDiscovery(t *testing.T) {
 
 	log.Info("removing the config for the 2nd client", "id", "ns/gw2")
 	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{c1Ok, c3Ok}
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c3Ok}
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
@@ -383,7 +383,7 @@ func TestConfigDiscovery(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
-	ch3 = make(chan *stnrv1.StunnerConfig, 10)
+	ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
 	defer close(ch3)
 	ctx2, cancel2 = context.WithCancel(context.Background())
 	defer cancel2()
@@ -418,7 +418,7 @@ func TestConfigDiscovery(t *testing.T) {
 
 	log.Info("removing all configs")
 	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrv1.StunnerConfig{}
+	e.ConfigQueue = []*stnrapiv1.StunnerConfig{}
 	ch <- e
 
 	time.Sleep(50 * time.Millisecond)
@@ -458,19 +458,19 @@ func TestConfigPatcher(t *testing.T) {
 	}}
 	store.Nodes.Upsert(n2)
 
-	config := &stnrv1.StunnerConfig{
-		ApiVersion: stnrv1.ApiVersion,
-		Admin: stnrv1.AdminConfig{
+	config := &stnrapiv1.StunnerConfig{
+		ApiVersion: stnrapiv1.ApiVersion,
+		Admin: stnrapiv1.AdminConfig{
 			Name:     "ns/gw1",
 			LogLevel: stunnerTestLoglevel,
 		},
-		Auth: stnrv1.AuthConfig{
+		Auth: stnrapiv1.AuthConfig{
 			Credentials: map[string]string{
 				"username": "user",
 				"password": "pass",
 			},
 		},
-		Listeners: []stnrv1.ListenerConfig{{
+		Listeners: []stnrapiv1.ListenerConfig{{
 			Name: "default-listener",
 			Addr: opdefault.DefaultSTUNnerAddressEnvVarName,
 		}},
@@ -635,7 +635,7 @@ func TestGetNodeAddressIPv6(t *testing.T) {
 }
 
 // wait for some configurable time for a watch element
-func watchConfig(ch chan *stnrv1.StunnerConfig, d time.Duration) *stnrv1.StunnerConfig {
+func watchConfig(ch chan *stnrapiv1.StunnerConfig, d time.Duration) *stnrapiv1.StunnerConfig {
 	select {
 	case c := <-ch:
 		// fmt.Println("++++++++++++ got config ++++++++++++: ", c.String())
@@ -657,7 +657,7 @@ func getRandCDSAddr() string {
 	return fmt.Sprintf("127.0.0.1:%d", probe.Addr().(*net.TCPAddr).Port)
 }
 
-func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
+func zeroConfig(namespace, name, realm string) *stnrapiv1.StunnerConfig {
 	id := fmt.Sprintf("%s/%s", namespace, name)
 	c := cdsclient.ZeroConfig(id)
 	c.Auth.Realm = realm
@@ -666,7 +666,7 @@ func zeroConfig(namespace, name, realm string) *stnrv1.StunnerConfig {
 }
 
 //nolint:unused
-func packConfig(c *stnrv1.StunnerConfig) *corev1.ConfigMap {
+func packConfig(c *stnrapiv1.StunnerConfig) *corev1.ConfigMap {
 	nsName := store.GetNameFromKey(c.Admin.Name)
 
 	sc, _ := json.Marshal(c)

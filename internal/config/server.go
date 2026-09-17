@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -102,7 +102,7 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 }
 
 func getNodeAddressPatcher(log logr.Logger) cdsserver.ConfigNodePatcher {
-	return func(conf *stnrv1.StunnerConfig, node string) *stnrv1.StunnerConfig {
+	return func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
 		if conf == nil || len(conf.Listeners) == 0 {
 			return conf
 		}

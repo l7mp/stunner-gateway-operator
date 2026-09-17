@@ -33,7 +33,7 @@ import (
 
 	"github.com/l7mp/stunner/v2/pkg/logger"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -45,7 +45,7 @@ import (
 )
 
 // findCluster returns the named cluster from a config, or nil.
-func findCluster(c *stnrconfv1.StunnerConfig, name string) *stnrconfv1.ClusterConfig {
+func findCluster(c *stnrapiv1.StunnerConfig, name string) *stnrapiv1.ClusterConfig {
 	for i := range c.Clusters {
 		if c.Clusters[i].Name == name {
 			return &c.Clusters[i]
@@ -55,7 +55,7 @@ func findCluster(c *stnrconfv1.StunnerConfig, name string) *stnrconfv1.ClusterCo
 }
 
 // listenerHasRoute reports whether the named listener of a config attaches the named route.
-func listenerHasRoute(c *stnrconfv1.StunnerConfig, listener, route string) bool {
+func listenerHasRoute(c *stnrapiv1.StunnerConfig, listener, route string) bool {
 	for _, lc := range c.Listeners {
 		if lc.Name != listener {
 			continue
@@ -83,7 +83,7 @@ func routeAcceptedCondition(parents []gwapiv1.RouteParentStatus) *metav1.Conditi
 // render, statuses are set, and a same-name native route masks the official one.
 func testTCPRouteLegacy() {
 	Context("When creating TCPRoutes (LEGACY, EDS ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		tcpRouteGwAPI := testutils.TestTCPRouteV1.DeepCopy()
 		tcpRouteGwAPI.SetName("tcproute-gwapi")
 
@@ -137,7 +137,7 @@ func testTCPRouteLegacy() {
 		})
 
 		It("should attach the TCPRoute to the TCP listener", func() {
-			l := stnrconfv1.ListenerConfig{}
+			l := stnrapiv1.ListenerConfig{}
 			found := false
 			for _, lc := range conf.Listeners {
 				if lc.Name == "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -267,7 +267,7 @@ func testTCPRouteManaged() {
 	Context("When creating TCPRoutes (MANAGED, EDS ENABLED)", Ordered, Label("managed"), func() {
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch chan *stnrconfv1.StunnerConfig
+		var ch chan *stnrapiv1.StunnerConfig
 		var cdsClient cdsclient.Client
 
 		BeforeAll(func() {
@@ -275,7 +275,7 @@ func testTCPRouteManaged() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch = make(chan *stnrconfv1.StunnerConfig, 128)
+			ch = make(chan *stnrapiv1.StunnerConfig, 128)
 			var err error
 			log := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", log)
@@ -312,7 +312,7 @@ func testTCPRouteManaged() {
 		})
 
 		It("should render no TCP cluster without a license", func() {
-			Eventually(checkConfig(ch, func(c *stnrconfv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// the route attaches to the listener even though no cluster is
 				// rendered for it
 				return listenerHasRoute(c, "testnamespace/gateway-1/gateway-1-listener-tcp",

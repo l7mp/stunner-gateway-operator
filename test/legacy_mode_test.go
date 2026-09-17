@@ -36,7 +36,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -49,7 +49,7 @@ import (
 func testLegacyMode() {
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -1583,7 +1583,7 @@ func testLegacyMode() {
 	})
 
 	Context("When re-loading the gateway and the route resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway")
@@ -1800,7 +1800,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the DTLS listener (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-dtls")
 
 		It("should render a valid STUNner config", func() {
@@ -1986,7 +1986,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		// snudp := gwapiv1.SectionName("gateway-1-listener-udp")
 		// sntcp := gwapiv1.SectionName("gateway-1-listener-tcp")
 
@@ -2508,7 +2508,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to Selector (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
@@ -2880,7 +2880,7 @@ func testLegacyMode() {
 	})
 
 	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
@@ -3624,7 +3624,7 @@ func testLegacyMode() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 
 			Expect(conf.Listeners).To(HaveLen(4))
-			l := stnrconfv1.ListenerConfig{}
+			l := stnrapiv1.ListenerConfig{}
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-udp" {
@@ -3751,7 +3751,7 @@ func testLegacyMode() {
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3874,7 +3874,7 @@ func testLegacyMode() {
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3997,7 +3997,7 @@ func testLegacyMode() {
 
 	// WITH EDS and RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -4085,7 +4085,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrconfv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {

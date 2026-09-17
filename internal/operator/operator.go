@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -33,7 +33,7 @@ func init() {
 	_ = gwapiv1a2.AddToScheme(scheme) //nolint:staticcheck
 	_ = gwapiv1.AddToScheme(scheme)   //nolint:staticcheck
 	_ = stnrgwv1.AddToScheme(scheme)  //nolint:staticcheck
-	_ = apiv1.AddToScheme(scheme)     //nolint:staticcheck
+	_ = corev1.AddToScheme(scheme)    //nolint:staticcheck
 }
 
 type OperatorConfig struct {

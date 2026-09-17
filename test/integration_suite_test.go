@@ -52,7 +52,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -298,9 +298,9 @@ func TestAPIs(t *testing.T) {
 }
 
 // managed mode test helper
-type ConfigChecker func(conf *stnrv1.StunnerConfig) bool
+type ConfigChecker func(conf *stnrapiv1.StunnerConfig) bool
 
-func checkConfig(ch chan *stnrv1.StunnerConfig, checker ConfigChecker) bool {
+func checkConfig(ch chan *stnrapiv1.StunnerConfig, checker ConfigChecker) bool {
 	timeoutCh := time.After(timeout)
 	for {
 		select {

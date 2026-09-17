@@ -41,7 +41,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	"github.com/l7mp/stunner/v2/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -96,7 +96,7 @@ func main() {
 		fmt.Sprintf("Enable endpoint discovery, default: %t.", opdefault.DefaultEnableEndpointDiscovery))
 	flag.StringVar(&dataplaneMode, "dataplane-mode", opdefault.DefaultDataplaneMode,
 		`Managed dataplane mode: either "managed" (automatic dataplane provisioning using the config discovery service) or "legacy" (dataplane(s) provided by the user).`)
-	flag.StringVar(&cdsAddr, "config-discovery-address", stnrv1.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
+	flag.StringVar(&cdsAddr, "config-discovery-address", stnrapiv1.DefaultConfigDiscoveryAddress, `Config discovery server endpoint.`)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&pprofAddr, "pprof-bind-address", "0", "The address the pprof endpoint binds to. Set to \"0\" to disable.")

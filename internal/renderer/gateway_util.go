@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	// "github.com/go-logr/logr"
-	// apiv1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/runtime"
 	// ctlr "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"

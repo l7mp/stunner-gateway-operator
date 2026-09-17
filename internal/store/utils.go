@@ -15,7 +15,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -48,8 +48,8 @@ func compareObjects(o1, o2 client.Object) bool {
 }
 
 // unpacks a stunner config
-func UnpackConfigMap(cm *corev1.ConfigMap) (stnrconfv1.StunnerConfig, error) {
-	conf := stnrconfv1.StunnerConfig{}
+func UnpackConfigMap(cm *corev1.ConfigMap) (stnrapiv1.StunnerConfig, error) {
+	conf := stnrapiv1.StunnerConfig{}
 
 	jsonConf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
 	if !found {

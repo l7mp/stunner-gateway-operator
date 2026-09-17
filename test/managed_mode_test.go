@@ -52,7 +52,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 )
@@ -60,10 +60,10 @@ import (
 func testManagedMode() {
 	// SINGLE GATEWAY
 	Context("When creating a minimal set of API resources", Ordered, Label("managed"), func() {
-		var conf *stnrv1.StunnerConfig
+		var conf *stnrapiv1.StunnerConfig
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch chan *stnrv1.StunnerConfig
+		var ch chan *stnrapiv1.StunnerConfig
 		var cdsClient cdsclient.Client
 		var licenseClient cdsclient.LicenseStatusClient
 
@@ -72,7 +72,7 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch = make(chan *stnrv1.StunnerConfig, 128)
+			ch = make(chan *stnrapiv1.StunnerConfig, 128)
 			var err error
 			log := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", log)
@@ -131,13 +131,13 @@ func testManagedMode() {
 		It("should return a default licensing status", func() {
 			Eventually(func() bool {
 				status, err := licenseClient.LicenseStatus(ctx)
-				return err == nil && reflect.DeepEqual(status, stnrv1.NewEmptyLicenseStatus())
+				return err == nil && reflect.DeepEqual(status, stnrapiv1.NewEmptyLicenseStatus())
 			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 {
 					conf = c
@@ -291,7 +291,7 @@ func testManagedMode() {
 			createOrUpdateService(ctx, k8sClient, testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
 					conf = c
 					return true
@@ -385,7 +385,7 @@ func testManagedMode() {
 			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// fmt.Printf("--------------------\nCHECKER 0: %#v\n--------------------\n", c)
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
@@ -410,7 +410,7 @@ func testManagedMode() {
 			ctrl.Log.Info("setting an IPv6 ingress IP on the LoadBalancer service status")
 			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "2001:db8::1")
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -425,7 +425,7 @@ func testManagedMode() {
 			ctrl.Log.Info("clearing the LoadBalancer service status to restore the NodePort fallback")
 			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "")
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -446,7 +446,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "2001:db8::2"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -463,7 +463,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "1.2.3.4"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -485,7 +485,7 @@ func testManagedMode() {
 				}}
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -512,7 +512,7 @@ func testManagedMode() {
 			ctrl.Log.Info("loading a Kubernetes Node")
 			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -534,7 +534,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "4.3.2.1"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -557,7 +557,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Type = corev1.NodeInternalIP
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -586,7 +586,7 @@ func testManagedMode() {
 			})
 			Expect(err).Should(Succeed())
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -612,7 +612,7 @@ func testManagedMode() {
 					opdefault.ExternalTrafficPolicyAnnotationValue
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -692,7 +692,7 @@ func testManagedMode() {
 				})
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -1024,7 +1024,7 @@ func testManagedMode() {
 
 			// get the config: the targetport should be enforced!
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && c.Listeners[1].Name == "testnamespace/gateway-1/gateway-1-listener-udp" &&
 					c.Listeners[1].Port == targetPort {
@@ -1116,7 +1116,7 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -1170,7 +1170,7 @@ func testManagedMode() {
 			createOrUpdateSecret(ctx, k8sClient, testSecret, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -1216,7 +1216,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -1424,7 +1424,7 @@ func testManagedMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if c.Admin.MetricsEndpoint != "" &&
 					(c.Admin.HealthCheckEndpoint == nil || *c.Admin.HealthCheckEndpoint == "") {
 					conf = c
@@ -1523,7 +1523,7 @@ func testManagedMode() {
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
 			Expect(container.Ports).To(HaveLen(1))
 			Expect(container.Ports[0].Name).Should(Equal(opdefault.DefaultMetricsPortName))
-			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrv1.DefaultMetricsPort)))
+			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrapiv1.DefaultMetricsPort)))
 			Expect(container.Ports[0].Protocol).Should(Equal(corev1.ProtocolTCP))
 
 			// remainder
@@ -1633,7 +1633,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
 					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
 					conf = c
@@ -1822,7 +1822,7 @@ func testManagedMode() {
 			createOrUpdateStaticService(ctx, k8sClient, updatedStaticSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.16") {
 					conf = c
 					return true
@@ -1908,7 +1908,7 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testUDPRouteV1A2)).Should(Succeed())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
 				if len(c.Listeners) == 2 &&
 					(len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
 					len(c.Clusters) == 1 &&
@@ -2336,10 +2336,10 @@ func testManagedMode() {
 
 	// MULTI-GATEWAY
 	Context("When creating 2 Gateways", Ordered, Label("managed"), func() {
-		conf := &stnrv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch1, ch2 chan *stnrv1.StunnerConfig
+		var ch1, ch2 chan *stnrapiv1.StunnerConfig
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
@@ -2348,8 +2348,8 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch1 = make(chan *stnrv1.StunnerConfig, 128)
-			ch2 = make(chan *stnrv1.StunnerConfig, 128)
+			ch1 = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch2 = make(chan *stnrapiv1.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
@@ -2406,7 +2406,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 1", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
-			Eventually(checkConfig(ch1, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch1, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
 					conf = c
@@ -2454,7 +2454,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
-			Eventually(checkConfig(ch2, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch2, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 1 && len(c.Listeners[0].Routes) == 1 && len(c.Clusters) == 1 {
 					conf = c
@@ -3095,10 +3095,10 @@ func testManagedMode() {
 
 	// MULTI-GATEWAYCLASS
 	Context("When creating 2 GatewayClasses and Gateways", Ordered, Label("managed"), func() {
-		conf := &stnrv1.StunnerConfig{}
+		conf := &stnrapiv1.StunnerConfig{}
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch1, ch2 chan *stnrv1.StunnerConfig
+		var ch1, ch2 chan *stnrapiv1.StunnerConfig
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
@@ -3107,8 +3107,8 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch1 = make(chan *stnrv1.StunnerConfig, 128)
-			ch2 = make(chan *stnrv1.StunnerConfig, 128)
+			ch1 = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch2 = make(chan *stnrapiv1.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
@@ -3210,7 +3210,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 1", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
-			Eventually(checkConfig(ch1, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch1, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
 					conf = c
@@ -3258,7 +3258,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
-			Eventually(checkConfig(ch2, func(c *stnrv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch2, func(c *stnrapiv1.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 {
 					conf = c

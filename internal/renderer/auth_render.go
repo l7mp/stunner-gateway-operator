@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrconfv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -18,7 +18,7 @@ func newAuthRenderer() configRenderer {
 	return &authRenderer{}
 }
 
-func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrconfv1.Config, error) {
+func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrapiv1.Config, error) {
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)
@@ -27,13 +27,13 @@ func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrconfv1.Config, er
 	return r.renderInlineAuth(c)
 }
 
-func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrconfv1.Config, error) {
-	realm := stnrconfv1.DefaultRealm
+func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv1.Config, error) {
+	realm := stnrapiv1.DefaultRealm
 	if c.gwConf.Spec.Realm != nil {
 		realm = *c.gwConf.Spec.Realm
 	}
 
-	auth := stnrconfv1.AuthConfig{
+	auth := stnrapiv1.AuthConfig{
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -44,7 +44,7 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrconfv1.Config, er
 	}
 
 	switch atype {
-	case stnrconfv1.AuthTypePlainText:
+	case stnrapiv1.AuthTypePlainText:
 		if c.gwConf.Spec.Username == nil || c.gwConf.Spec.Password == nil {
 			return nil, NewCriticalError(InvalidUsernamePassword)
 		}
@@ -52,7 +52,7 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrconfv1.Config, er
 		auth.Credentials["username"] = *c.gwConf.Spec.Username
 		auth.Credentials["password"] = *c.gwConf.Spec.Password
 
-	case stnrconfv1.AuthTypeLongTerm:
+	case stnrapiv1.AuthTypeLongTerm:
 		if c.gwConf.Spec.SharedSecret == nil {
 			return nil, NewCriticalError(InvalidSharedSecret)
 		}
@@ -72,16 +72,16 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrconfv1.Config, er
 	return &auth, nil
 }
 
-func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrconfv1.Config, error) {
+func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv1.Config, error) {
 	gwConf := c.gwConf
 	// c.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 
-	realm := stnrconfv1.DefaultRealm
+	realm := stnrapiv1.DefaultRealm
 	if gwConf.Spec.Realm != nil {
 		realm = *gwConf.Spec.Realm
 	}
 
-	auth := stnrconfv1.AuthConfig{
+	auth := stnrapiv1.AuthConfig{
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -120,7 +120,7 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrconfv1.Config, 
 	}
 
 	switch atype {
-	case stnrconfv1.AuthTypePlainText:
+	case stnrapiv1.AuthTypePlainText:
 		username, usernameOk := secret.Data["username"]
 		password, passwordOk := secret.Data["password"]
 
@@ -131,7 +131,7 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrconfv1.Config, 
 		auth.Credentials["username"] = string(username)
 		auth.Credentials["password"] = string(password)
 
-	case stnrconfv1.AuthTypeLongTerm:
+	case stnrapiv1.AuthTypeLongTerm:
 		sharedSecret, sharedSecretOk := secret.Data["secret"]
 		// accept long form
 		if !sharedSecretOk {
@@ -158,8 +158,8 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrconfv1.Config, 
 	return &auth, nil
 }
 
-func getAuthType(hint *string) (stnrconfv1.AuthType, error) {
-	authType := stnrconfv1.DefaultAuthType
+func getAuthType(hint *string) (stnrapiv1.AuthType, error) {
+	authType := stnrapiv1.DefaultAuthType
 	if hint != nil {
 		authType = *hint
 	}
@@ -173,9 +173,9 @@ func getAuthType(hint *string) (stnrconfv1.AuthType, error) {
 		authType = "longterm"
 	}
 
-	atype, err := stnrconfv1.NewAuthType(authType)
+	atype, err := stnrapiv1.NewAuthType(authType)
 	if err != nil {
-		return stnrconfv1.AuthTypeNone, NewCriticalError(InvalidAuthType)
+		return stnrapiv1.AuthTypeNone, NewCriticalError(InvalidAuthType)
 	}
 
 	return atype, nil
