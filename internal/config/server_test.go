@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -50,589 +52,666 @@ const stunnerTestLoglevel = "all:ERROR"
 // - closing the connection of the 2nd watcher
 // - removing all configs
 
-func TestConfigDiscovery(t *testing.T) {
-	zc := zap.NewProductionConfig()
-	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
-	z, err := zc.Build()
-	assert.NoError(t, err, "logger created")
-	zlogger := zapr.NewLogger(z)
-	log := zlogger.WithName("tester")
+func TestConfig(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "config")
+}
 
-	// setup a fast pinger so that we get a timely error notification
-	cdsclient.PingPeriod = 200 * time.Millisecond
-	cdsclient.PongWait = 300 * time.Millisecond
-	cdsclient.WriteWait = 400 * time.Millisecond
-	cdsclient.RetryPeriod = 400 * time.Millisecond
+var _ = Describe("Config discovery", Ordered, func() {
+	var (
+		log                 logr.Logger
+		srv                 *Server
+		ch                  chan event.Event
+		ctx, ctx2           context.Context
+		cancel2             context.CancelFunc
+		loggerFactory       logger.LoggerFactory
+		addr1, addr2        string
+		cdsc1, cdsc2, cdsc3 cdsclient.Client
+		ch1, ch2, ch3       chan *stnrapiv1.StunnerConfig
+		c1Ok, c2Ok, c3Ok    *stnrapiv1.StunnerConfig
+		lc                  cdsclient.LicenseStatusClient
+		licenseStatus       stnrapiv1.LicenseStatus
+		connIds             []string
+	)
 
-	nodeStore := store.NewNodeStore()
-	n1 := testutils.TestNode.DeepCopy()
-	nodeStore.Upsert(n1)
+	BeforeAll(func() {
+		zc := zap.NewProductionConfig()
+		zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
+		z, err := zc.Build()
+		Expect(err).To(Succeed(), "loggerFactory created")
+		zlogger := zapr.NewLogger(z)
+		log = zlogger.WithName("tester")
 
-	testCDSAddr := getRandCDSAddr()
-	log.Info("create server", "address", testCDSAddr)
-	patcher := func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
-		if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
-			// rewrite the realm to the node name
-			for _, a := range n.Status.Addresses {
-				if a.Type == corev1.NodeExternalIP {
-					conf.Auth.Realm = a.Address
-					return conf
+		// setup a fast pinger so that we get a timely error notification
+		cdsclient.PingPeriod = 200 * time.Millisecond
+		cdsclient.PongWait = 300 * time.Millisecond
+		cdsclient.WriteWait = 400 * time.Millisecond
+		cdsclient.RetryPeriod = 400 * time.Millisecond
+
+		nodeStore := store.NewNodeStore()
+		n1 := testutils.TestNode.DeepCopy()
+		nodeStore.Upsert(n1)
+
+		testCDSAddr := getRandCDSAddr()
+		log.Info("create server", "address", testCDSAddr)
+		patcher := func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
+			if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
+				// rewrite the realm to the node name
+				for _, a := range n.Status.Addresses {
+					if a.Type == corev1.NodeExternalIP {
+						conf.Auth.Realm = a.Address
+						return conf
+					}
 				}
 			}
+			return conf
 		}
-		return conf
-	}
-	cdslog := zlogger.WithName("cds-server")
-	srv := &Server{
-		Server:          cdsserver.New(testCDSAddr, patcher, cdslog),
-		configCh:        make(chan event.Event, 10),
-		ProgressTracker: NewProgressTracker(),
-		log:             cdslog,
-	}
-
-	log.Info("starting CDS server")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	assert.NoError(t, srv.Start(ctx), "cds server start")
-	ch := srv.GetConfigUpdateChannel()
-
-	time.Sleep(50 * time.Millisecond)
-	logger := logger.NewLoggerFactory(stunnerTestLoglevel)
-
-	id1 := "ns/gw1"
-	addr1 := "http://" + testCDSAddr
-	log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
-	cdsc1, err := cdsclient.New(addr1, id1, "testnode-ok", logger)
-	assert.NoError(t, err, "cds client setup")
-
-	id2 := "ns/gw2"
-	addr2 := "http://" + testCDSAddr
-	log.Info("creating CDS client instance 2", "address", addr2, "id", id2)
-	cdsc2, err := cdsclient.New(addr2, id2, "", logger)
-	assert.NoError(t, err, "cds client setup")
-
-	ch1 := make(chan *stnrapiv1.StunnerConfig, 10)
-	defer close(ch1)
-	ch2 := make(chan *stnrapiv1.StunnerConfig, 10)
-	defer close(ch2)
-	err = cdsc1.Watch(ctx, ch1, true)
-	assert.NoError(t, err, "watcher setup 1")
-	err = cdsc2.Watch(ctx, ch2, true)
-	assert.NoError(t, err, "watcher setup 2")
-
-	time.Sleep(50 * time.Millisecond)
-
-	// we should now have 2 client connections
-	conns := srv.GetConnTrack()
-	assert.NotNil(t, conns)
-	snapshot := conns.Snapshot()
-	assert.Len(t, snapshot, 2)
-
-	// loading empty client config errs
-	_, err = cdsc1.Load()
-	assert.Error(t, err, "loading empty client config errs")
-	_, err = cdsc2.Load()
-	assert.Error(t, err, "loading empty client config errs")
-
-	// we shouldn't have received any config updates
-	c1 := watchConfig(ch1, 500*time.Millisecond)
-	assert.Nil(t, c1)
-	c2 := watchConfig(ch1, 500*time.Millisecond)
-	assert.Nil(t, c2)
-
-	log.Info("creating a config for the loader", "id", "ns/gw1")
-	c1Ok := zeroConfig("ns", "gw1", "realm1")
-	e := event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok}
-	ch <- e
-
-	time.Sleep(50 * time.Millisecond)
-
-	c1, err = cdsc1.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-
-	c2, err = cdsc2.Load()
-	assert.Error(t, err, "load")
-	assert.Nil(t, c2)
-
-	// we should have received a config update
-	c1 = watchConfig(ch1, 1500*time.Millisecond)
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-
-	// no config update from client 2
-	c2 = watchConfig(ch2, 150*time.Millisecond)
-	assert.Nil(t, c2)
-
-	// we should have a single config in the store
-	cStore := srv.GetConfigStore()
-	assert.Equal(t, 1, len(cStore.Snapshot()))
-	c1s, ok := cStore.Get("ns", "gw1")
-	assert.True(t, ok, "config ok")
-	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
-
-	// license status client should return a nil license status
-	lc, err := cdsclient.NewLicenseStatusClient(addr1, logger.NewLogger("license-status"))
-	assert.NoError(t, err, "license client setup")
-	status, err := lc.LicenseStatus(ctx)
-	assert.NoError(t, err, "loading status 1 ok")
-	assert.Equal(t, stnrapiv1.NewEmptyLicenseStatus(), status, "license 1 ok")
-
-	log.Info("creating a config for the 2nd client", "id", "ns/gw2")
-	c2Ok := zeroConfig("ns", "gw2", "realm2")
-	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
-	licenseStatus := stnrapiv1.LicenseStatus{
-		EnabledFeatures:  []string{"a", "b", "c"},
-		SubscriptionType: "test",
-		LastUpdated:      "never",
-		LastError:        "",
-	}
-	e.LicenseStatus = licenseStatus
-	ch <- e
-
-	time.Sleep(50 * time.Millisecond)
-
-	// license status client should return the new license status
-	status, err = lc.LicenseStatus(ctx)
-	assert.NoError(t, err, "loading status 1 ok")
-	assert.Equal(t, licenseStatus, status, "license 1 ok")
-
-	c1, err = cdsc1.Load()
-	assert.NoError(t, err, "loading client 1 config ok")
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-	c2, err = cdsc2.Load()
-	assert.NoError(t, err, "loading client 2 config ok")
-	assert.NotNil(t, c2)
-	assert.True(t, c2Ok.DeepEqual(c2), "config ok")
-
-	c1 = watchConfig(ch1, 150*time.Millisecond)
-	assert.Nil(t, c1)
-	c2 = watchConfig(ch2, 1500*time.Millisecond)
-	assert.NotNil(t, c2)
-	assert.True(t, c2Ok.DeepEqual(c2), "config ok")
-
-	// we should have 2 configs in the store
-	cStore = srv.GetConfigStore()
-	assert.Equal(t, 2, len(cStore.Snapshot()))
-	c1s, ok = cStore.Get("ns", "gw1")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c1s)
-	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
-	c2s, ok := cStore.Get("ns", "gw2")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c2s)
-	assert.True(t, c2s.Config.DeepEqual(c2Ok), "config ok")
-
-	log.Info("updating the 2nd config", "id2", c2Ok.Admin.Name)
-	c2Ok = zeroConfig("ns", "gw2", "realm2-new")
-	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
-	ch <- e
-
-	time.Sleep(50 * time.Millisecond)
-
-	c1, err = cdsc1.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-	c2, err = cdsc2.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c2)
-	assert.True(t, c2Ok.DeepEqual(c2), "config ok")
-
-	c1 = watchConfig(ch1, 150*time.Millisecond)
-	assert.Nil(t, c1)
-	c2 = watchConfig(ch2, 1500*time.Millisecond)
-	assert.NotNil(t, c2)
-	assert.True(t, c2Ok.DeepEqual(c2), "config ok")
-
-	// watcher3
-	id3 := "ns/gw3"
-	log.Info("creating CDS client instance 3", "address", addr2, "id", id3)
-	cdsc3, err := cdsclient.New(addr2, id3, "", logger)
-	assert.NoError(t, err, "cds client setup")
-
-	ch3 := make(chan *stnrapiv1.StunnerConfig, 10)
-	defer close(ch3)
-	ctx2, cancel2 := context.WithCancel(context.Background())
-	err = cdsc3.Watch(ctx2, ch3, false)
-	assert.NoError(t, err, "watcher setup")
-
-	time.Sleep(50 * time.Millisecond)
-
-	// we should now have 3 client connections: store IDs for later use
-	conns = srv.GetConnTrack()
-	assert.NotNil(t, conns)
-	snapshot = conns.Snapshot()
-	assert.Len(t, snapshot, 3)
-	connIds := []string{}
-	for _, conn := range snapshot {
-		connIds = append(connIds, conn.Id())
-	}
-
-	c1 = watchConfig(ch1, 1500*time.Millisecond)
-	assert.Nil(t, c1)
-	c2 = watchConfig(ch2, 150*time.Millisecond)
-	assert.Nil(t, c2)
-	c3 := watchConfig(ch3, 150*time.Millisecond)
-	assert.Nil(t, c3)
-
-	log.Info("adding a config CDS for the 3rd client", "id", "ns/gw3")
-	c3Ok := zeroConfig("ns", "gw3", "realm3_new")
-	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok, c3Ok}
-	ch <- e
-
-	time.Sleep(50 * time.Millisecond)
-
-	c1, err = cdsc1.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-	c2, err = cdsc2.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c2)
-	assert.True(t, c2Ok.DeepEqual(c2), "config ok")
-	c3, err = cdsc3.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c3)
-	assert.True(t, c3Ok.DeepEqual(c3), "config ok")
-
-	// watcher1 shouldn't receive an update
-	c1 = watchConfig(ch1, 1500*time.Millisecond)
-	assert.Nil(t, c1)
-	c1 = watchConfig(ch1, 1500*time.Millisecond)
-	assert.Nil(t, c1)
-	c3 = watchConfig(ch3, 150*time.Millisecond)
-	assert.NotNil(t, c3)
-	assert.True(t, c3Ok.DeepEqual(c3), "config ok")
-
-	// we should have 3 configs in the store
-	cStore = srv.GetConfigStore()
-	assert.Equal(t, 3, len(cStore.Snapshot()))
-	c1s, ok = cStore.Get("ns", "gw1")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c1s)
-	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
-	c2s, ok = cStore.Get("ns", "gw2")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c2s)
-	assert.True(t, c2s.Config.DeepEqual(c2Ok), "config ok")
-	c3s, ok := cStore.Get("ns", "gw3")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c3s)
-	assert.True(t, c3s.Config.DeepEqual(c3Ok), "config ok")
-
-	log.Info("removing the config for the 2nd client", "id", "ns/gw2")
-	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c3Ok}
-	ch <- e
-
-	time.Sleep(50 * time.Millisecond)
-
-	c1, err = cdsc1.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c1)
-	assert.Equal(t, "1.2.3.4", c1.Auth.Realm, "node name ok")
-	c1.Auth.Realm = "realm1" // reset
-	assert.True(t, c1Ok.DeepEqual(c1), "config ok")
-	c2, err = cdsc2.Load()
-	assert.Error(t, err, "load")
-	assert.Nil(t, c2)
-	c3, err = cdsc3.Load()
-	assert.NoError(t, err, "loading client config ok")
-	assert.NotNil(t, c3)
-	assert.True(t, c3Ok.DeepEqual(c3), "config ok")
-
-	// watcher2 should have received nothing (deleted configs are not updated)
-	c1 = watchConfig(ch1, 150*time.Millisecond)
-	assert.Nil(t, c1)
-	c2 = watchConfig(ch2, 150*time.Millisecond)
-	assert.Nil(t, c2)
-	c3 = watchConfig(ch3, 150*time.Millisecond)
-	assert.Nil(t, c3)
-
-	// we should have 2 configs in the store
-	cStore = srv.GetConfigStore()
-	assert.Equal(t, 2, len(cStore.Snapshot()))
-	c1s, ok = cStore.Get("ns", "gw1")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c1s)
-	assert.True(t, c1s.Config.DeepEqual(c1Ok), "config ok")
-	c3s, ok = cStore.Get("ns", "gw3")
-	assert.True(t, ok, "config ok")
-	assert.NotNil(t, c3s)
-	assert.True(t, c3s.Config.DeepEqual(c3Ok), "config ok")
-
-	log.Info("closing the 3rd watcher", "id", "nw/gw3")
-	cancel2()
-	time.Sleep(50 * time.Millisecond)
-
-	log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
-	ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
-	defer close(ch3)
-	ctx2, cancel2 = context.WithCancel(context.Background())
-	defer cancel2()
-	err = cdsc3.Watch(ctx2, ch3, false)
-	assert.NoError(t, err, "watcher setup")
-	time.Sleep(50 * time.Millisecond)
-
-	// we should have received a valid config
-	c3 = watchConfig(ch3, 1500*time.Millisecond)
-	assert.NotNil(t, c3)
-	assert.True(t, c3.DeepEqual(c3Ok), "config ok")
-
-	log.Info("closing the connection of the 3rd watcher", "id", "nw/gw3")
-	conns = srv.GetConnTrack()
-	assert.NotNil(t, conns)
-	snapshot = conns.Snapshot()
-	// kill the connection(s) we do not remember
-	for _, conn := range snapshot {
-		if conn.Id() != connIds[0] && conn.Id() != connIds[1] {
-			srv.RemoveClient(conn.Id())
+		cdslog := zlogger.WithName("cds-server")
+		srv = &Server{
+			Server:          cdsserver.New(testCDSAddr, patcher, cdslog),
+			configCh:        make(chan event.Event, 10),
+			ProgressTracker: NewProgressTracker(),
+			log:             cdslog,
 		}
-	}
 
-	// after 2 pong-waits, clients should have reconnected
-	time.Sleep(cdsclient.RetryPeriod)
-	time.Sleep(cdsclient.RetryPeriod)
+		log.Info("starting CDS server")
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(context.Background())
+		DeferCleanup(cancel)
+		go func() { Expect(srv.Start(ctx)).To(Succeed(), "cds server start") }()
+		ch = srv.GetConfigUpdateChannel()
 
-	// 3rd watcher should receive its config
-	c3 = watchConfig(ch3, 150*time.Millisecond)
-	assert.NotNil(t, c3)
-	assert.True(t, c3.DeepEqual(c3Ok), "config ok")
+		time.Sleep(50 * time.Millisecond)
+		loggerFactory = logger.NewLoggerFactory(stunnerTestLoglevel)
 
-	log.Info("removing all configs")
-	e = event.NewEventUpdate(0)
-	e.ConfigQueue = []*stnrapiv1.StunnerConfig{}
-	ch <- e
+		id1 := "ns/gw1"
+		addr1 = "http://" + testCDSAddr
+		log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
+		cdsc1, err = cdsclient.New(addr1, id1, "testnode-ok", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
 
-	time.Sleep(50 * time.Millisecond)
+		id2 := "ns/gw2"
+		addr2 = "http://" + testCDSAddr
+		log.Info("creating CDS client instance 2", "address", addr2, "id", id2)
+		cdsc2, err = cdsclient.New(addr2, id2, "", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
 
-	_, err = cdsc1.Load()
-	assert.Error(t, err, "loading client config errs")
+		ch1 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ch2 = make(chan *stnrapiv1.StunnerConfig, 10)
+		err = cdsc1.Watch(ctx, ch1, true)
+		Expect(err).To(Succeed(), "watcher setup 1")
+		err = cdsc2.Watch(ctx, ch2, true)
+		Expect(err).To(Succeed(), "watcher setup 2")
 
-	// watcher2 should have received nothing
-	c2 = watchConfig(ch2, 150*time.Millisecond)
-	assert.Nil(t, c2)
+		time.Sleep(50 * time.Millisecond)
 
-	// we should have no configs in the store
-	cStore = srv.GetConfigStore()
-	assert.Equal(t, 0, len(cStore.Snapshot()))
-}
+	})
 
-// test the default node address patcher
-func TestConfigPatcher(t *testing.T) {
-	zc := zap.NewProductionConfig()
-	zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
-	z, err := zc.Build()
-	assert.NoError(t, err, "logger created")
-	zlogger := zapr.NewLogger(z)
-	log := zlogger.WithName("tester")
+	It("should track both client connections and serve no config yet", func() {
+		// we should now have 2 client connections
+		conns := srv.GetConnTrack()
+		Expect(conns).NotTo(BeNil())
+		snapshot := conns.Snapshot()
+		Expect(snapshot).To(HaveLen(2))
 
-	n1 := testutils.TestNode.DeepCopy()
-	n1.SetName("testnode1")
-	store.Nodes.Upsert(n1)
-	n2 := testutils.TestNode.DeepCopy()
-	n2.SetName("testnode2")
-	n2.Status.Addresses = []corev1.NodeAddress{{
-		Type:    corev1.NodeInternalIP,
-		Address: "1.2.3.5",
-	}, {
-		Type:    corev1.NodeExternalDNS,
-		Address: "google.com",
-	}}
-	store.Nodes.Upsert(n2)
+		// loading empty client config errs
+		_, err := cdsc1.Load()
+		Expect(err).To(HaveOccurred(), "loading empty client config errs")
+		_, err = cdsc2.Load()
+		Expect(err).To(HaveOccurred(), "loading empty client config errs")
 
-	config := &stnrapiv1.StunnerConfig{
-		ApiVersion: stnrapiv1.ApiVersion,
-		Admin: stnrapiv1.AdminConfig{
-			Name:     "ns/gw1",
-			LogLevel: stunnerTestLoglevel,
-		},
-		Auth: stnrapiv1.AuthConfig{
-			Credentials: map[string]string{
-				"username": "user",
-				"password": "pass",
+		// we shouldn't have received any config updates
+		c1 := watchConfig(ch1, 500*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c2 := watchConfig(ch1, 500*time.Millisecond)
+		Expect(c2).To(BeNil())
+
+	})
+
+	It("should serve the first config to its own client only", func() {
+		log.Info("creating a config for the loader", "id", "ns/gw1")
+		c1Ok = zeroConfig("ns", "gw1", "realm1")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok}
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		c1, err := cdsc1.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+
+		c2, err := cdsc2.Load()
+		Expect(err).To(HaveOccurred(), "load")
+		Expect(c2).To(BeNil())
+
+		// we should have received a config update
+		c1 = watchConfig(ch1, 1500*time.Millisecond)
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+
+		// no config update from client 2
+		c2 = watchConfig(ch2, 150*time.Millisecond)
+		Expect(c2).To(BeNil())
+
+		// we should have a single config in the store
+		cStore := srv.GetConfigStore()
+		Expect(len(cStore.Snapshot())).To(Equal(1))
+		c1s, ok := cStore.Get("ns", "gw1")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c1s.Config.DeepEqual(c1Ok)).To(BeTrue(), "config ok")
+
+		// license status client should return a nil license status
+		lc, err = cdsclient.NewLicenseStatusClient(addr1, loggerFactory.NewLogger("license-status"))
+		Expect(err).To(Succeed(), "license client setup")
+		status, err := lc.LicenseStatus(ctx)
+		Expect(err).To(Succeed(), "loading status 1 ok")
+		Expect(status).To(Equal(stnrapiv1.NewEmptyLicenseStatus()), "license 1 ok")
+
+	})
+
+	It("should serve a second config, and the license status, to the second client", func() {
+		log.Info("creating a config for the 2nd client", "id", "ns/gw2")
+		c2Ok = zeroConfig("ns", "gw2", "realm2")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
+		licenseStatus = stnrapiv1.LicenseStatus{
+			EnabledFeatures:  []string{"a", "b", "c"},
+			SubscriptionType: "test",
+			LastUpdated:      "never",
+			LastError:        "",
+		}
+		e.LicenseStatus = licenseStatus
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		// license status client should return the new license status
+		status, err := lc.LicenseStatus(ctx)
+		Expect(err).To(Succeed(), "loading status 1 ok")
+		Expect(status).To(Equal(licenseStatus), "license 1 ok")
+
+		c1, err := cdsc1.Load()
+		Expect(err).To(Succeed(), "loading client 1 config ok")
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+		c2, err := cdsc2.Load()
+		Expect(err).To(Succeed(), "loading client 2 config ok")
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
+
+		c1 = watchConfig(ch1, 150*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c2 = watchConfig(ch2, 1500*time.Millisecond)
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
+
+		// we should have 2 configs in the store
+		cStore := srv.GetConfigStore()
+		Expect(len(cStore.Snapshot())).To(Equal(2))
+		c1s, ok := cStore.Get("ns", "gw1")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c1s).NotTo(BeNil())
+		Expect(c1s.Config.DeepEqual(c1Ok)).To(BeTrue(), "config ok")
+		c2s, ok := cStore.Get("ns", "gw2")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c2s).NotTo(BeNil())
+		Expect(c2s.Config.DeepEqual(c2Ok)).To(BeTrue(), "config ok")
+
+	})
+
+	It("should push an updated config to the affected client only", func() {
+		log.Info("updating the 2nd config", "id2", c2Ok.Admin.Name)
+		c2Ok = zeroConfig("ns", "gw2", "realm2-new")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		c1, err := cdsc1.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+		c2, err := cdsc2.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
+
+		c1 = watchConfig(ch1, 150*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c2 = watchConfig(ch2, 1500*time.Millisecond)
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
+
+	})
+
+	It("should accept a third watcher without disturbing the others", func() {
+		// watcher3
+		id3 := "ns/gw3"
+		log.Info("creating CDS client instance 3", "address", addr2, "id", id3)
+		var err error
+		cdsc3, err = cdsclient.New(addr2, id3, "", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
+
+		ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ctx2, cancel2 = context.WithCancel(context.Background())
+		err = cdsc3.Watch(ctx2, ch3, false)
+		Expect(err).To(Succeed(), "watcher setup")
+
+		time.Sleep(50 * time.Millisecond)
+
+		// we should now have 3 client connections: store IDs for later use
+		conns := srv.GetConnTrack()
+		Expect(conns).NotTo(BeNil())
+		snapshot := conns.Snapshot()
+		Expect(snapshot).To(HaveLen(3))
+		connIds = []string{}
+		for _, conn := range snapshot {
+			connIds = append(connIds, conn.Id())
+		}
+
+		c1 := watchConfig(ch1, 1500*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c2 := watchConfig(ch2, 150*time.Millisecond)
+		Expect(c2).To(BeNil())
+		c3 := watchConfig(ch3, 150*time.Millisecond)
+		Expect(c3).To(BeNil())
+
+	})
+
+	It("should serve the third config to the third client only", func() {
+		log.Info("adding a config CDS for the 3rd client", "id", "ns/gw3")
+		c3Ok = zeroConfig("ns", "gw3", "realm3_new")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok, c3Ok}
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		c1, err := cdsc1.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+		c2, err := cdsc2.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
+		c3, err := cdsc3.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c3).NotTo(BeNil())
+		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
+
+		// watcher1 shouldn't receive an update
+		c1 = watchConfig(ch1, 1500*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c1 = watchConfig(ch1, 1500*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c3 = watchConfig(ch3, 150*time.Millisecond)
+		Expect(c3).NotTo(BeNil())
+		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
+
+		// we should have 3 configs in the store
+		cStore := srv.GetConfigStore()
+		Expect(len(cStore.Snapshot())).To(Equal(3))
+		c1s, ok := cStore.Get("ns", "gw1")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c1s).NotTo(BeNil())
+		Expect(c1s.Config.DeepEqual(c1Ok)).To(BeTrue(), "config ok")
+		c2s, ok := cStore.Get("ns", "gw2")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c2s).NotTo(BeNil())
+		Expect(c2s.Config.DeepEqual(c2Ok)).To(BeTrue(), "config ok")
+		c3s, ok := cStore.Get("ns", "gw3")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c3s).NotTo(BeNil())
+		Expect(c3s.Config.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
+
+	})
+
+	It("should stop serving a config that was removed", func() {
+		log.Info("removing the config for the 2nd client", "id", "ns/gw2")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c3Ok}
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		c1, err := cdsc1.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auth.Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
+		c2, err := cdsc2.Load()
+		Expect(err).To(HaveOccurred(), "load")
+		Expect(c2).To(BeNil())
+		c3, err := cdsc3.Load()
+		Expect(err).To(Succeed(), "loading client config ok")
+		Expect(c3).NotTo(BeNil())
+		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
+
+		// watcher2 should have received nothing (deleted configs are not updated)
+		c1 = watchConfig(ch1, 150*time.Millisecond)
+		Expect(c1).To(BeNil())
+		c2 = watchConfig(ch2, 150*time.Millisecond)
+		Expect(c2).To(BeNil())
+		c3 = watchConfig(ch3, 150*time.Millisecond)
+		Expect(c3).To(BeNil())
+
+		// we should have 2 configs in the store
+		cStore := srv.GetConfigStore()
+		Expect(len(cStore.Snapshot())).To(Equal(2))
+		c1s, ok := cStore.Get("ns", "gw1")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c1s).NotTo(BeNil())
+		Expect(c1s.Config.DeepEqual(c1Ok)).To(BeTrue(), "config ok")
+		c3s, ok := cStore.Get("ns", "gw3")
+		Expect(ok).To(BeTrue(), "config ok")
+		Expect(c3s).NotTo(BeNil())
+		Expect(c3s.Config.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
+
+	})
+
+	AfterAll(func() {
+		if cancel2 != nil {
+			cancel2()
+		}
+	})
+
+	It("should re-serve the config when a watcher reconnects", func() {
+		log.Info("closing the 3rd watcher", "id", "nw/gw3")
+		cancel2()
+		time.Sleep(50 * time.Millisecond)
+
+		log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
+		ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ctx2, cancel2 = context.WithCancel(context.Background())
+		err := cdsc3.Watch(ctx2, ch3, false)
+		Expect(err).To(Succeed(), "watcher setup")
+		time.Sleep(50 * time.Millisecond)
+
+		// we should have received a valid config
+		c3 := watchConfig(ch3, 1500*time.Millisecond)
+		Expect(c3).NotTo(BeNil())
+		Expect(c3.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
+
+	})
+
+	It("should re-serve the config when the server drops the connection", func() {
+		log.Info("closing the connection of the 3rd watcher", "id", "nw/gw3")
+		conns := srv.GetConnTrack()
+		Expect(conns).NotTo(BeNil())
+		snapshot := conns.Snapshot()
+		// kill the connection(s) we do not remember
+		for _, conn := range snapshot {
+			if conn.Id() != connIds[0] && conn.Id() != connIds[1] {
+				srv.RemoveClient(conn.Id())
+			}
+		}
+
+		// after 2 pong-waits, clients should have reconnected
+		time.Sleep(cdsclient.RetryPeriod)
+		time.Sleep(cdsclient.RetryPeriod)
+
+		// 3rd watcher should receive its config
+		c3 := watchConfig(ch3, 150*time.Millisecond)
+		Expect(c3).NotTo(BeNil())
+		Expect(c3.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
+
+	})
+
+	It("should empty the store when every config is removed", func() {
+		log.Info("removing all configs")
+		e := event.NewEventUpdate(0)
+		e.ConfigQueue = []*stnrapiv1.StunnerConfig{}
+		ch <- e
+
+		time.Sleep(50 * time.Millisecond)
+
+		_, err := cdsc1.Load()
+		Expect(err).To(HaveOccurred(), "loading client config errs")
+
+		// watcher2 should have received nothing
+		c2 := watchConfig(ch2, 150*time.Millisecond)
+		Expect(c2).To(BeNil())
+
+		// we should have no configs in the store
+		cStore := srv.GetConfigStore()
+		Expect(len(cStore.Snapshot())).To(Equal(0))
+	})
+})
+
+var _ = Describe("Config patcher", Ordered, func() {
+	var (
+		log           logr.Logger
+		srv           *Server
+		loggerFactory logger.LoggerFactory
+		addr1, id1    string
+		config        *stnrapiv1.StunnerConfig
+	)
+
+	BeforeAll(func() {
+		zc := zap.NewProductionConfig()
+		zc.Level = zap.NewAtomicLevelAt(testerLogLevel)
+		z, err := zc.Build()
+		Expect(err).To(Succeed(), "loggerFactory created")
+		zlogger := zapr.NewLogger(z)
+		log = zlogger.WithName("tester")
+
+		n1 := testutils.TestNode.DeepCopy()
+		n1.SetName("testnode1")
+		store.Nodes.Upsert(n1)
+		n2 := testutils.TestNode.DeepCopy()
+		n2.SetName("testnode2")
+		n2.Status.Addresses = []corev1.NodeAddress{{
+			Type:    corev1.NodeInternalIP,
+			Address: "1.2.3.5",
+		}, {
+			Type:    corev1.NodeExternalDNS,
+			Address: "google.com",
+		}}
+		store.Nodes.Upsert(n2)
+
+		config = &stnrapiv1.StunnerConfig{
+			ApiVersion: stnrapiv1.ApiVersion,
+			Admin: stnrapiv1.AdminConfig{
+				Name:     "ns/gw1",
+				LogLevel: stunnerTestLoglevel,
 			},
-		},
-		Listeners: []stnrapiv1.ListenerConfig{{
-			Name: "default-listener",
-			Addr: opdefault.DefaultSTUNnerAddressEnvVarName,
-		}},
-	}
-
-	testCDSAddr := getRandCDSAddr()
-	log.Info("create server", "address", testCDSAddr)
-	srv := NewCDSServer(testCDSAddr, zlogger.WithName("cds-server"))
-	assert.NotNil(t, srv, "CDS server")
-
-	log.Info("starting CDS server")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	assert.NoError(t, srv.Start(ctx), "cds server start")
-
-	logger := logger.NewLoggerFactory(stunnerTestLoglevel)
-
-	// first client uses testnode1
-	id1 := "ns/gw1"
-	addr1 := "http://" + testCDSAddr
-	log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
-	cdsc1, err := cdsclient.New(addr1, id1, "testnode1", logger)
-	assert.NoError(t, err, "cds client setup")
-
-	log.Info("load default config -> no patch")
-	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
-
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
+			Auth: stnrapiv1.AuthConfig{
+				Credentials: map[string]string{
+					"username": "user",
+					"password": "pass",
+				},
+			},
+			Listeners: []stnrapiv1.ListenerConfig{{
+				Name: "default-listener",
+				Addr: opdefault.DefaultSTUNnerAddressEnvVarName,
+			}},
 		}
-		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
-	}, time.Second, 10*time.Millisecond)
 
-	log.Info("load config that requires node name patching -> patched with testnode1 external IP")
-	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
+		testCDSAddr := getRandCDSAddr()
+		log.Info("create server", "address", testCDSAddr)
+		srv = NewCDSServer(testCDSAddr, zlogger.WithName("cds-server"))
+		addr1, id1 = "http://"+testCDSAddr, "ns/gw1"
+		Expect(srv).NotTo(BeNil(), "CDS server")
 
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
-		}
-		return len(c.Listeners) == 1 && c.Listeners[0].Addr == "1.2.3.4" // testnode 1 external ip
-	}, time.Second, 10*time.Millisecond)
+		log.Info("starting CDS server")
+		ctx, cancel := context.WithCancel(context.Background())
+		DeferCleanup(cancel)
+		go func() { Expect(srv.Start(ctx)).To(Succeed(), "cds server start") }()
+		time.Sleep(50 * time.Millisecond)
 
-	// second client uses testnode2 -> external DNS!
-	log.Info("creating CDS client instance 2", "address", addr1, "id", id1)
-	cdsc1, err = cdsclient.New(addr1, id1, "testnode2", logger)
-	assert.NoError(t, err, "cds client setup")
+		loggerFactory = logger.NewLoggerFactory(stunnerTestLoglevel)
 
-	log.Info("load default config -> no patch")
-	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
+	})
 
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
-		}
-		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
-	}, time.Second, 10*time.Millisecond)
+	AfterAll(func() { store.Nodes.Flush() })
 
-	log.Info("load config that requires node name patching -> patched with testnode2 external DNS")
-	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
+	It("should patch the placeholder with the node's external IP", func() {
+		// first client uses testnode1
+		log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
+		cdsc1, err := cdsclient.New(addr1, id1, "testnode1", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
 
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
-		}
-		return len(c.Listeners) == 1 && net.ParseIP(c.Listeners[0].Addr) != nil // testnode2 addr should parse as ip
-	}, time.Second, 10*time.Millisecond)
+		log.Info("load default config -> no patch")
+		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
 
-	// third client uses unknown node -> no patching!
-	log.Info("creating CDS client instance 3", "address", addr1, "id", id1)
-	cdsc1, err = cdsclient.New(addr1, id1, "dummy-node", logger)
-	assert.NoError(t, err, "cds client setup")
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
-	log.Info("load default config -> no patch")
-	config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
+		log.Info("load config that requires node name patching -> patched with testnode1 external IP")
+		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
 
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
-		}
-		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
-	}, time.Second, 10*time.Millisecond)
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && c.Listeners[0].Addr == "1.2.3.4" // testnode 1 external ip
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
-	log.Info("load config that requires node name patching -> should not be patched as node does not exist")
-	config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
-	assert.NoError(t, srv.UpdateConfig([]cdsserver.Config{{
-		Name:      "gw1",
-		Namespace: "ns",
-		Config:    config,
-	}}), "config server update")
+	})
 
-	assert.Eventually(t, func() bool {
-		c, err := cdsc1.Load()
-		if err != nil {
-			// transient load failure: let Eventually retry instead of tripping on a
-			// nil config
-			return false
-		}
-		return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
-	}, time.Second, 10*time.Millisecond)
+	It("should patch the placeholder with the node's external DNS name", func() {
+		// second client uses testnode2 -> external DNS!
+		log.Info("creating CDS client instance 2", "address", addr1, "id", id1)
+		cdsc1, err := cdsclient.New(addr1, id1, "testnode2", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
 
-	store.Nodes.Flush()
-}
+		log.Info("load default config -> no patch")
+		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
 
-// getNodeAddress must handle an IPv6 ExternalIP literal (family-neutral resolution), returning it
-// unbracketed for use as a listener public address.
-func TestGetNodeAddressIPv6(t *testing.T) {
-	n := testutils.TestNode.DeepCopy()
-	n.SetName("ipv6node")
-	n.Status.Addresses = []corev1.NodeAddress{{
-		Type:    corev1.NodeExternalIP,
-		Address: "2001:db8::1",
-	}}
-	store.Nodes.Upsert(n)
-	defer store.Nodes.Flush()
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
-	aType, addr, err := getNodeAddress("ipv6node")
-	assert.NoError(t, err, "resolve IPv6 node address")
-	assert.Equal(t, corev1.NodeExternalIP, aType, "address type")
-	assert.Equal(t, "2001:db8::1", addr, "IPv6 external address")
-}
+		log.Info("load config that requires node name patching -> patched with testnode2 external DNS")
+		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
+
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && net.ParseIP(c.Listeners[0].Addr) != nil // testnode2 addr should parse as ip
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
+
+	})
+
+	It("should leave the placeholder alone for an unknown node", func() {
+		// third client uses unknown node -> no patching!
+		log.Info("creating CDS client instance 3", "address", addr1, "id", id1)
+		cdsc1, err := cdsclient.New(addr1, id1, "dummy-node", loggerFactory)
+		Expect(err).To(Succeed(), "cds client setup")
+
+		log.Info("load default config -> no patch")
+		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
+
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
+
+		log.Info("load config that requires node name patching -> should not be patched as node does not exist")
+		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		Expect(srv.UpdateConfig([]cdsserver.Config{{
+			Name:      "gw1",
+			Namespace: "ns",
+			Config:    config,
+		}})).To(Succeed(), "config server update")
+
+		Eventually(func() bool {
+			c, err := cdsc1.Load()
+			if err != nil {
+				// transient load failure: let Eventually retry instead of tripping on a
+				// nil config
+				return false
+			}
+			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+		}, time.Second, 10*time.Millisecond).Should(BeTrue())
+
+	})
+})
+
+var _ = Describe("getNodeAddress", func() {
+	Context("When the node advertises an IPv6 ExternalIP", func() {
+		It("should return it unbracketed", func() {
+			n := testutils.TestNode.DeepCopy()
+			n.SetName("ipv6node")
+			n.Status.Addresses = []corev1.NodeAddress{{
+				Type:    corev1.NodeExternalIP,
+				Address: "2001:db8::1",
+			}}
+			store.Nodes.Upsert(n)
+			DeferCleanup(store.Nodes.Flush)
+
+			aType, addr, err := getNodeAddress("ipv6node")
+			Expect(err).To(Succeed(), "resolve IPv6 node address")
+			Expect(aType).To(Equal(corev1.NodeExternalIP), "address type")
+			Expect(addr).To(Equal("2001:db8::1"), "IPv6 external address")
+		})
+	})
+})
 
 // wait for some configurable time for a watch element
 func watchConfig(ch chan *stnrapiv1.StunnerConfig, d time.Duration) *stnrapiv1.StunnerConfig {

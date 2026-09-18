@@ -1,43 +1,14 @@
 package operator
 
 import (
-	// "fmt"
-
 	"time"
 
-	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
 
-// GetManager returns the controller manager associated with this operator
-func (o *Operator) GetManager() manager.Manager {
-	return o.manager
-}
-
-// GetLogger returns the logger associated with this operator
-func (o *Operator) GetLogger() logr.Logger {
-	return o.logger
-}
-
-// GetOperatorChannel returns the channel on which the operator event dispatcher listens
-func (o *Operator) GetOperatorChannel() event.EventChannel {
+// GetOperatorChannel returns the channel on which the operator event dispatcher listens.
+func (o *Operator) GetOperatorChannel() chan event.Event {
 	return o.operatorCh
-}
-
-// // GetControllerName returns the controller-name (as per GatewayClass.Spec.ControllerName)
-// // associated with this operator
-// func (o *Operator) GetControllerName() string {
-// 	return o.controllerName
-// }
-
-// SetProgressReporters sets the operator subsystems that need to be queried to check the number of
-// operations in progrses. This can be used to implement graceful shutdown.
-func (o *Operator) SetProgressReporters(reporters ...config.ProgressReporter) {
-	o.progressReporters = make([]config.ProgressReporter, len(reporters))
-	copy(o.progressReporters, reporters)
 }
 
 // ProgressReport returns the number of ongoing operations (rendering processes, updates, etc) plus

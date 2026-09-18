@@ -36,6 +36,10 @@ var (
 	// consumption. Default is 250 msec.
 	ThrottleTimeout = opdefault.DefaultThrottleTimeout
 
+	// StartupRenderTimeout bounds the startup gate: a freshly elected operator holds its first
+	// render until every controller reported one reconcile, or until this much time passed.
+	StartupRenderTimeout = opdefault.DefaultStartupRenderTimeout
+
 	// DataplaneMode is the "managed dataplane" mode. When set to "managed", the operator takes
 	// care of providing the stunnerd pods for each Gateway. In "legacy" mode, the dataplanes
 	// must be provided by the user.

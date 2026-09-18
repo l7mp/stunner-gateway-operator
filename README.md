@@ -26,7 +26,17 @@ The operator supports both command-line flags and environment variables.
 - `--pprof-bind-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS`.
 - `CUSTOMER_KEY` is read from the environment for licensing.
 
-Command-line flags take precedence over environment variables. 
+Command-line flags take precedence over environment variables.
+
+### Leader election and restarts
+
+With `--leader-elect` the operator replicas compete for a Lease named by `--leader-election-id`
+(default `stunner-gateway-operator.l7mp.io`) in the namespace the operator runs in, or in
+`--leader-election-namespace`. Everything that renders, writes to the cluster or serves config
+discovery runs only on the leader: a standby keeps its caches warm but does not open the config
+discovery port. A leader that loses the Lease exits. A freshly elected leader holds its first
+render until every controller has listed its resources once, or until `--startup-render-timeout`
+(default 5s) passes. Note that `--enable-finalizer` cannot be combined with `--leader-elect`.
 
 ### Debug profiling (pprof)
 

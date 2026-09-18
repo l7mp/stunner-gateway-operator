@@ -167,8 +167,7 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 
 			log.V(1).Info("starting renderer thread")
 			ctx, cancel := context.WithCancel(context.Background())
-			err := r.Start(ctx)
-			assert.NoError(t, err, "renderer thread started")
+			go func() { _ = r.Start(ctx) }()
 			defer cancel()
 
 			c.tester(t, r)

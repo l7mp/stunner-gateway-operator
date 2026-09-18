@@ -29,12 +29,15 @@ const NodeListSize = 10
 
 type nodeReconciler struct {
 	client.Client
-	eventCh     event.EventChannel
-	terminating bool
-	log         logr.Logger
+	eventCh chan<- event.Event
+	// reported is set once the first reconcile has requested a render, so that the
+	// unchanged-address shortcut below never swallows the report the operator's startup gate
+	// waits for.
+	reported bool
+	log      logr.Logger
 }
 
-func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
+func NewNodeController(mgr manager.Manager, ch chan<- event.Event, log logr.Logger) (Controller, error) {
 	r := &nodeReconciler{
 		Client:  mgr.GetClient(),
 		eventCh: ch,
@@ -45,9 +48,6 @@ func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logg
 	if err != nil {
 		return nil, err
 	}
-
-	// increase the ref count on the channel
-	r.eventCh.Get()
 
 	r.log.Info("created node controller")
 
@@ -66,15 +66,9 @@ func NewNodeController(mgr manager.Manager, ch event.EventChannel, log logr.Logg
 func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("node", req.String())
 
-	if r.terminating {
-		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
-		return reconcile.Result{}, nil
-	}
-
 	log.Info("Reconciling")
 
 	// the node being reconciled
-	eventCh := r.eventCh.Channel()
 	node := &corev1.Node{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -84,7 +78,8 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		log.Info("node removed: triggering reconcile")
 		store.Nodes.Remove(req.NamespacedName)
 
-		eventCh <- event.NewEventReconcile()
+		r.reported = true
+		event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 		return reconcile.Result{}, nil
 	}
 
@@ -93,25 +88,24 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		log.Info("node added: triggering reconcile")
 		store.Nodes.Upsert(node)
 
-		eventCh <- event.NewEventReconcile()
+		r.reported = true
+		event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 		return reconcile.Result{}, nil
 
 	}
 
-	// only reconcile if addresses have changed
-	if apiequality.Semantic.DeepEqual(storedNode.Status.Addresses, node.Status.Addresses) {
+	// only reconcile if addresses have changed, except for the first report after start
+	if apiequality.Semantic.DeepEqual(storedNode.Status.Addresses, node.Status.Addresses) && r.reported {
 		// ignore event
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("node addresses changed: triggering reconcile")
+	log.Info("node addresses changed or first report: triggering reconcile")
 	store.Nodes.Upsert(node)
 
-	eventCh <- event.NewEventReconcile()
+	r.reported = true
+	event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 	return reconcile.Result{}, nil
 }
 
-func (r *nodeReconciler) Terminate() {
-	r.terminating = true
-	r.eventCh.Put()
-}
+func (r *nodeReconciler) Name() ControllerName { return NodeControllerName }

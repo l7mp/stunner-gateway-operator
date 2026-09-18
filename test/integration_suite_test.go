@@ -38,20 +38,16 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/app"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	"github.com/l7mp/stunner-gateway-operator/internal/updater"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
@@ -104,6 +100,7 @@ var (
 	cancel, opCancel context.CancelFunc
 	scheme           *runtime.Scheme = runtime.NewScheme()
 	op               *operator.Operator
+	theApp           *app.App
 	cdsServerAddr    string
 	setupLog         logr.Logger
 )
@@ -166,7 +163,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	By("removing test namespace")
-	Expect(k8sClient.Delete(ctx, testNs)).Should(Succeed())
+	// the last phase may have cancelled the shared context already
+	Expect(k8sClient.Delete(context.Background(), testNs)).Should(Succeed())
 
 	cancel()
 
@@ -175,31 +173,20 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func initOperator(mgrCtx, opCtx context.Context) {
-	setupLog.Info("setting up client manager")
-	on := true
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:     scheme,
-		Controller: ctrlcfg.Controller{SkipNameValidation: &on},
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	setupLog.Info("setting up license manager")
-	m := licensemgr.NewManager(customerTestKey, ctrl.Log)
-
-	setupLog.Info("setting up config renderer")
-	r := renderer.NewRenderer(renderer.RendererConfig{
-		Scheme:         scheme,
-		LicenseManager: m,
-		Logger:         ctrl.Log,
-	})
-	Expect(r).NotTo(BeNil())
-
-	setupLog.Info("setting up updater client")
-	u := updater.NewUpdater(updater.UpdaterConfig{
-		Manager: mgr,
-		Logger:  ctrl.Log,
-	})
+// initOperator assembles and starts a fresh operator instance on the current global mode
+// settings, the way main does through the app package. tweak may adjust the configuration
+// before assembly.
+func initOperator(ctx context.Context, tweak ...func(*app.Config)) {
+	appCfg := app.NewConfig()
+	appCfg.DataplaneMode = config.DataplaneMode.String()
+	appCfg.DisableEndpointSliceController = !config.EndpointSliceAvailable
+	// make rendering fast, and do not hold the first render for controllers with nothing to
+	// reconcile
+	appCfg.ThrottleTimeout = 10 * time.Millisecond
+	appCfg.StartupRenderTimeout = 500 * time.Millisecond
+	appCfg.MetricsAddr, appCfg.ProbeAddr, appCfg.PprofAddr = "0", "0", "0"
+	appCfg.SkipNameValidation = true
+	appCfg.CustomerKey = customerTestKey
 
 	// let the kernel pick a free port: a blind random port may collide with the ephemeral
 	// sockets of a previous test phase
@@ -207,53 +194,26 @@ func initOperator(mgrCtx, opCtx context.Context) {
 	Expect(err).NotTo(HaveOccurred())
 	cdsPort := cdsProbe.Addr().(*net.TCPAddr).Port
 	Expect(cdsProbe.Close()).To(Succeed())
-	cdsBindAddr := fmt.Sprintf(":%d", cdsPort)
-	cdsServerAddr = fmt.Sprintf("127.0.0.1:%d", cdsPort)
-	config.ConfigDiscoveryAddress = fmt.Sprintf("127.0.0.1:%d", cdsPort)
-	setupLog.Info("setting up CDS server", "bind-address", cdsBindAddr,
-		"client-address", cdsServerAddr)
-	c := config.NewCDSServer(cdsBindAddr, ctrl.Log)
+	appCfg.CDSAddress = fmt.Sprintf(":%d", cdsPort)
+	appCfg.CDSAdvertisedAddress = fmt.Sprintf("127.0.0.1:%d", cdsPort)
+	cdsServerAddr = appCfg.CDSAdvertisedAddress
 
-	// make rendering fast!
-	config.ThrottleTimeout = 10 * time.Millisecond
+	for _, t := range tweak {
+		t(&appCfg)
+	}
 
-	setupLog.Info("setting up operator")
-	op = operator.NewOperator(operator.OperatorConfig{
-		ControllerName: opdefault.DefaultControllerName,
-		Manager:        mgr,
-		RenderCh:       r.GetRenderChannel(),
-		ConfigCh:       c.GetConfigUpdateChannel(),
-		UpdaterCh:      u.GetUpdaterChannel(),
-		Logger:         ctrl.Log,
-	})
-
-	m.SetOperatorChannel(op.GetOperatorChannel())
-	r.SetOperatorChannel(op.GetOperatorChannel())
-	u.SetAckChannel(op.GetOperatorChannel())
-	op.SetProgressReporters(r, u, c)
-
-	setupLog.Info("starting renderer thread")
-	err = r.Start(mgrCtx)
+	setupLog.Info("setting up the operator", appCfg.Summary()...)
+	a, err := app.New(appCfg, cfg, scheme, ctrl.Log)
 	Expect(err).NotTo(HaveOccurred())
+	op = a.Operator
+	theApp = a
 
-	setupLog.Info("starting updater thread")
-	err = u.Start(mgrCtx)
-	Expect(err).NotTo(HaveOccurred())
-
-	setupLog.Info("starting config discovery server")
-	err = c.Start(mgrCtx)
-	Expect(err).NotTo(HaveOccurred())
-
-	setupLog.Info("starting operator thread")
-	err = op.Start(opCtx, nil)
-	Expect(err).NotTo(HaveOccurred())
-
-	setupLog.Info("starting manager")
+	setupLog.Info("starting the operator")
 	// must be explicitly cancelled!
 	go func() {
 		defer GinkgoRecover()
-		err := mgr.Start(mgrCtx)
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+		err := a.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run the operator")
 	}()
 }
 
@@ -340,6 +300,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 	// EndpointSlice controller
 	managedModeTest()
 
+	// HA: standby and restart
+	haOperatorTest()
+
 	// Auxiliary
 	auxiliaryTest()
 
@@ -354,7 +317,7 @@ func legacyModeEndpointControllerTest() {
 			config.DataplaneMode = config.DataplaneModeLegacy
 			config.EndpointSliceAvailable = false
 			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx, ctx)
+			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
@@ -376,7 +339,7 @@ func legacyModeTest() {
 			config.DataplaneMode = config.DataplaneModeLegacy
 			config.EndpointSliceAvailable = true
 			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx, ctx)
+			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
@@ -398,7 +361,7 @@ func managedModeEndpointControllerTest() {
 			config.EndpointSliceAvailable = false
 			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx, ctx)
+			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
@@ -420,7 +383,7 @@ func managedModeTest() {
 			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx, ctx)
+			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
 			InitResources()
 		})
@@ -442,9 +405,11 @@ func finalizerTest() {
 			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
+			// the operator gets its own context: stopping it runs the finalizer on the way
+			// out, while the checks keep using ctx for their API calls
 			opCtx, opC := context.WithCancel(context.Background())
 			opCancel = opC
-			initOperator(ctx, opCtx)
+			initOperator(opCtx)
 			op.SetFinalizer(true) // should be the default
 			InitResources()
 			setupLog.Info("opcancel", "cancel", fmt.Sprintf("%#v", opCancel))

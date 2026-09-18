@@ -7,140 +7,137 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
-
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
+	"github.com/l7mp/stunner-gateway-operator/internal/updater"
 )
 
-// clusterTimeout is a timeout for connections to the Kubernetes API
+type controllerConstructor = func(manager.Manager, chan<- event.Event, logr.Logger) (controllers.Controller, error)
+
 const (
 	channelBufferSize = 200
+	// finalizeTimeout bounds the finalizer's Kubernetes writes on shutdown.
+	finalizeTimeout = 10 * time.Second
 )
-
-var scheme = runtime.NewScheme()
-
-func init() {
-	_ = gwapiv1a2.AddToScheme(scheme) //nolint:staticcheck
-	_ = gwapiv1.AddToScheme(scheme)   //nolint:staticcheck
-	_ = stnrgwv1.AddToScheme(scheme)  //nolint:staticcheck
-	_ = corev1.AddToScheme(scheme)    //nolint:staticcheck
-}
 
 type OperatorConfig struct {
 	Manager        manager.Manager
 	ControllerName string
-	RenderCh       chan event.Event
-	ConfigCh       chan event.Event
-	UpdaterCh      chan event.Event
+	LicenseManager licensemgr.Manager
+	Renderer       renderer.Renderer
+	Updater        *updater.Updater
+	CDSServer      *config.Server
 	Logger         logr.Logger
 }
 
+// Operator is the event dispatcher between the controllers, the renderer, the updater and the
+// config discovery server. It registers the controllers with the manager and runs as a
+// leader-only manager runnable: Start blocks until the context ends.
 type Operator struct {
-	ctx                            context.Context
-	mgr                            manager.Manager
-	gwConfC, dpC, gwC, rouC, nodeC controllers.Controller
-	operatorCh                     event.EventChannel
-	renderCh, updaterCh, configCh  chan event.Event
-	manager                        manager.Manager
-	tracker                        *config.ProgressTracker
-	progressReporters              []config.ProgressReporter
-	finalizer                      bool
-	gen, lastAckedGen              int
-	ackLock                        sync.RWMutex
-	log, logger                    logr.Logger
+	mgr                           manager.Manager
+	controllers                   []controllers.Controller
+	operatorCh                    chan event.Event
+	renderCh, updaterCh, configCh chan event.Event
+	renderer                      renderer.Renderer
+	updater                       *updater.Updater
+	tracker                       *config.ProgressTracker
+	progressReporters             []config.ProgressReporter
+	finalizer                     bool
+	gen, lastAckedGen             int
+	ackLock                       sync.RWMutex
+	log                           logr.Logger
 }
 
-// NewOperator creates a new Operator
-func NewOperator(cfg OperatorConfig) *Operator {
+// NewOperator creates the operator, registers the controllers with the manager and wires the
+// subsystems to the operator channel.
+func NewOperator(cfg OperatorConfig) (*Operator, error) {
 	config.ControllerName = cfg.ControllerName
 
-	opCh := make(chan event.Event, channelBufferSize)
-	return &Operator{
+	o := &Operator{
 		mgr:          cfg.Manager,
-		renderCh:     cfg.RenderCh,
-		operatorCh:   event.NewEventChannel(opCh),
-		updaterCh:    cfg.UpdaterCh,
-		configCh:     cfg.ConfigCh,
+		operatorCh:   make(chan event.Event, channelBufferSize),
+		renderCh:     cfg.Renderer.GetRenderChannel(),
+		updaterCh:    cfg.Updater.GetUpdaterChannel(),
+		configCh:     cfg.CDSServer.GetConfigUpdateChannel(),
+		renderer:     cfg.Renderer,
+		updater:      cfg.Updater,
 		tracker:      config.NewProgressTracker(),
 		finalizer:    config.EnableFinalizer,
 		gen:          0,
 		lastAckedGen: -1,
-		logger:       cfg.Logger,
+		log:          cfg.Logger.WithName("operator"),
 	}
+	o.progressReporters = []config.ProgressReporter{cfg.Renderer, cfg.Updater, cfg.CDSServer}
+
+	cfg.LicenseManager.SetOperatorChannel(o.operatorCh)
+	cfg.Renderer.SetOperatorChannel(o.operatorCh)
+	cfg.Updater.SetAckChannel(o.operatorCh)
+
+	for _, ctor := range []controllerConstructor{
+		controllers.NewGatewayConfigController,
+		controllers.NewDataplaneController,
+		controllers.NewGatewayController,
+		controllers.NewRouteController,
+		controllers.NewNodeController,
+	} {
+		c, err := ctor(o.mgr, o.operatorCh, cfg.Logger)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot register controller: %w", err)
+		}
+		o.controllers = append(o.controllers, c)
+		o.log.V(3).Info("Registered controller", "name", c.Name())
+	}
+
+	return o, nil
 }
 
-// Start spawns the Kubernetes controllers, enters the operator main loop and terminates when the
-// provided context is canceled. On termination, Start calls the provided cancel function (if not
-// nil) to signal that it has finished running. Pass in the manager context as the second argument
-// to let the operator automatically cancel the manager on termination.
-func (o *Operator) Start(ctx context.Context, cancel context.CancelFunc) error {
-	log := o.logger.WithName("operator")
-	o.log = log
-	o.ctx = ctx
-
-	if o.mgr == nil {
-		return fmt.Errorf("Controller runtime manager uninitialized")
-	}
-
-	// increment the refcount on our operator channel
-	o.operatorCh.Get()
-
-	log.V(3).Info("Starting GatewayConfig controller")
-	c, err := controllers.NewGatewayConfigController(o.mgr, o.operatorCh, o.logger)
-	if err != nil {
-		return fmt.Errorf("Cannot register gatewayconfig controller: %w", err)
-	}
-	o.gwConfC = c
-
-	log.V(3).Info("Starting Dataplane controller")
-	c, err = controllers.NewDataplaneController(o.mgr, o.operatorCh, o.logger)
-	if err != nil {
-		return fmt.Errorf("Cannot register dataplane controller: %w", err)
-	}
-	o.dpC = c
-
-	log.V(3).Info("Starting Gateway controller")
-	c, err = controllers.NewGatewayController(o.mgr, o.operatorCh, o.logger)
-	if err != nil {
-		return fmt.Errorf("Cannot register gateway controller: %w", err)
-	}
-	o.gwC = c
-
-	log.V(3).Info("Starting route controller")
-	c, err = controllers.NewRouteController(o.mgr, o.operatorCh, o.logger)
-	if err != nil {
-		return fmt.Errorf("Cannot register route controller: %w", err)
-	}
-	o.rouC = c
-
-	log.V(3).Info("Starting Node controller")
-	c, err = controllers.NewNodeController(o.mgr, o.operatorCh, o.logger)
-	if err != nil {
-		return fmt.Errorf("Cannot register node controller: %w", err)
-	}
-	o.nodeC = c
-
-	go o.eventLoop(ctx, cancel)
-
+// Start runs the event loop until the context ends, then the termination sequence.
+func (o *Operator) Start(ctx context.Context) error {
+	o.eventLoop(ctx)
+	o.Terminate()
 	return nil
 }
 
-func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
-	defer o.operatorCh.Close()
-
+func (o *Operator) eventLoop(ctx context.Context) {
 	throttler := time.NewTicker(config.ThrottleTimeout)
 	throttler.Stop()
 	throttling := false
+
+	// The first render waits until every controller reported one reconcile: a controller
+	// reconciles only after its caches synced and each reconcile re-lists everything, so the
+	// store is complete. The license status must be known too, or the first render would be
+	// an unlicensed one. The gate timer is the circuit breaker for a controller that has
+	// nothing to reconcile.
+	pending := make(map[controllers.ControllerName]bool, len(o.controllers))
+	for _, c := range o.controllers {
+		pending[c.Name()] = true
+	}
+	licensePending := true
+	gate := time.NewTimer(config.StartupRenderTimeout)
+	defer gate.Stop()
+	gated := func() bool { return len(pending) > 0 || licensePending }
+
+	requestRender := func(e event.Event) {
+		// rate-limit rendering requests before passing on to the renderer
+		if throttling {
+			metrics.ReconcileEventsTotal.WithLabelValues("throttled").Inc()
+			o.log.V(3).Info("Rendering request throttled", "event", e.String())
+			return
+		}
+
+		metrics.ReconcileEventsTotal.WithLabelValues("passed").Inc()
+		throttling = true
+		throttler.Reset(config.ThrottleTimeout)
+		o.tracker.ProgressUpdate(1)
+
+		o.log.V(3).Info("Initiating new rendering request", "event", e.String())
+	}
 
 	// Independent heartbeat ticker, since the throttler above is Stop()ed during
 	// idle periods, so it cannot double as a liveness signal.
@@ -154,38 +151,49 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 		case <-heartbeat.C:
 			metrics.RecordOperatorHeartbeat()
 
-		case e := <-o.operatorCh.Channel():
+		case e := <-o.operatorCh:
 			metrics.RecordOperatorHeartbeat()
 			switch e.GetType() {
 			case event.EventTypeUpdate:
-				if n := sendCoalesced(o.updaterCh, e); n > 0 {
+				if n, _ := event.SendCoalesced(ctx, o.updaterCh, e); n > 0 {
 					o.log.V(3).Info("Coalesced stale updater events", "count", n)
 				}
-				if n := sendCoalesced(o.configCh, e); n > 0 {
+				if n, _ := event.SendCoalesced(ctx, o.configCh, e); n > 0 {
 					o.log.V(3).Info("Coalesced stale config-discovery events", "count", n)
 				}
 
 			case event.EventTypeReconcile:
-				// rate-limit rendering requests before passing on to the renderer
-				// render request in progress: do nothing
-				if throttling {
-					metrics.ReconcileEventsTotal.WithLabelValues("throttled").Inc()
-					o.log.V(3).Info("Rendering request throttled", "event",
-						e.String())
+				if len(pending) > 0 {
+					delete(pending, controllers.ControllerName(e.(*event.EventReconcile).Sender))
+					if len(pending) == 0 {
+						o.log.Info("All controllers reported, startup gate open")
+					}
+				}
+				if gated() {
+					metrics.ReconcileEventsTotal.WithLabelValues("gated").Inc()
+					o.log.V(3).Info("Rendering request held by the startup gate",
+						"event", e.String(), "pending-controllers", len(pending),
+						"license-pending", licensePending)
 					continue
 				}
+				requestRender(e)
 
-				// request a new rendering round
-				metrics.ReconcileEventsTotal.WithLabelValues("passed").Inc()
-				throttling = true
-				throttler.Reset(config.ThrottleTimeout)
-				o.tracker.ProgressUpdate(1)
-
-				o.log.V(3).Info("Initiating new rendering request", "event",
-					e.String())
+			case event.EventTypeLicense:
+				// Every rendered update carries the license status too, so this
+				// forward only matters while there is nothing to render, when no
+				// update would carry it. Dropping it costs the config discovery
+				// server a stale license report until the next render, which is
+				// cheaper than blocking the loop on a busy config server.
+				if !event.SendOrDrop(o.configCh, e) {
+					o.log.V(3).Info("Dropping license event: config-discovery channel full")
+				}
+				licensePending = false
+				if gated() {
+					continue
+				}
+				requestRender(e)
 
 			case event.EventTypeAck:
-				// administer
 				gen := e.(*event.EventAck).Generation
 				o.setLastAckedGeneration(gen)
 				metrics.GenerationLastAcked.Set(float64(gen))
@@ -195,6 +203,21 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 					"never receive", "type", e.String(),
 					"event-dump", fmt.Sprintf("%#v", e))
 			}
+
+		case <-gate.C:
+			if !gated() {
+				continue
+			}
+			names := []string{}
+			for n := range pending {
+				names = append(names, string(n))
+			}
+			o.log.Info("Startup gate timed out, rendering with what the controllers reported",
+				"timeout", config.StartupRenderTimeout.String(), "pending-controllers", names,
+				"license-pending", licensePending)
+			pending = nil
+			licensePending = false
+			requestRender(event.NewEventReconcile("startup-gate"))
 
 		case <-throttler.C:
 			metrics.RecordOperatorHeartbeat()
@@ -212,108 +235,50 @@ func (o *Operator) eventLoop(ctx context.Context, cancel context.CancelFunc) {
 				"last-acked-generation", o.GetLastAckedGeneration())
 			o.gen += 1
 			metrics.Generation.Set(float64(o.gen))
-			o.renderCh <- event.NewEventRender(o.gen)
+			event.Send(ctx, o.renderCh, event.NewEventRender(o.gen))
 
 		case <-ctx.Done():
-			o.Terminate()
-			if cancel != nil {
-				cancel()
-			}
-
 			return
 		}
 	}
 }
 
-// Terminate completes the termination sequence of the operator.
+// Terminate completes the termination sequence of the operator: it waits for the in-flight
+// renders and updates to finish and runs the finalizer if enabled.
 func (o *Operator) Terminate() {
 	o.log.Info("Commencing termination sequence", "generation", o.gen)
 
-	// stop controllers (actually only prevent them from sending further reconcile events)
-	o.gwConfC.Terminate()
-	o.dpC.Terminate()
-	o.gwC.Terminate()
-	o.rouC.Terminate()
-	o.nodeC.Terminate()
-
-	// wait for ongoing activity to finish
 	o.Stabilize()
 	o.Stabilize()
 
-	// perform the finalize sequence if requested
 	if o.finalizer {
 		o.Finalize()
 	}
-
-	// release our channel
-	o.operatorCh.Put()
 }
 
-// sendCoalesced delivers e to ch with coalescing semantics: it loops until the
-// send succeeds, draining stale pending events to make room whenever the channel
-// is full. Returns the number of stale events dropped.
-func sendCoalesced(ch chan event.Event, e event.Event) int {
-	dropped := 0
-	for {
-		select {
-		case ch <- e:
-			return dropped
-		default:
-			select {
-			case <-ch:
-				dropped++
-			default:
-				// A concurrent reader emptied the channel between the failed
-				// send above and this drain attempt; the outer loop will retry
-				// the send on the next iteration.
-			}
-		}
-	}
-}
-
-// Finalize invalidates the status on all the managed resources. Note that Finalize must be called
-// with the main even loop blocked.
+// Finalize invalidates the status on all the managed resources and removes the managed
+// dataplanes. It runs synchronously, after the event loop has stopped, with its own deadline:
+// the manager context is already cancelled by then.
 func (o *Operator) Finalize() {
-	// get the last update generation
-	lastGen := o.GetLastAckedGeneration()
-	o.log.Info("Commencing finalizer sequence", "generation", o.gen, "last-acked-generation",
-		lastGen)
-
-	// send the finalize event to the renderer
 	finalGen := o.gen + 1
-	o.renderCh <- event.NewEventFinalize(finalGen)
+	o.log.Info("Commencing finalizer sequence", "generation", finalGen,
+		"last-acked-generation", o.GetLastAckedGeneration())
 
-	o.log.V(2).Info("Finalizer request sent to renderer, waiting for response",
-		"last-acked-generation", lastGen)
-
-	// event loop is blocked: we must handle message passing ourselves
-	u := <-o.operatorCh.Channel()
-
-	o.log.V(2).Info("Renderer ready, initiating the updater", "event", u.String())
-
-	// send to the updater
-	o.updaterCh <- u
-
-	// wait for the updater to finish with lastGen+1
-	if o.GetLastAckedGeneration() == finalGen {
+	if o.renderer == nil || o.updater == nil {
 		return
 	}
 
-	timeout := time.After(2 * time.Second)
-	for {
-		select {
-		case <-o.operatorCh.Channel():
-			if o.GetLastAckedGeneration() != finalGen {
-				o.log.V(2).Info("Update ready, exiting finalizer",
-					"gen", o.gen, "last-acked-generation", lastGen)
-				return
-			}
-
-			o.log.V(2).Info("Ignoring out-of-order ack from updater",
-				"gen", o.gen, "last-acked-generation", lastGen)
-
-		case <-timeout:
-			o.log.V(2).Info("Cound not finish the finalization sequence in 2 sec, exiting anyway")
-		}
+	u := o.renderer.Finalize(finalGen)
+	if u == nil {
+		o.log.V(2).Info("Nothing to finalize")
+		return
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), finalizeTimeout)
+	defer cancel()
+	if err := o.updater.ProcessUpdate(ctx, u); err != nil {
+		o.log.Error(err, "Could not apply the finalizer update", "update", u.String())
+		return
+	}
+	o.setLastAckedGeneration(finalGen)
 }

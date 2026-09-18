@@ -19,6 +19,8 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
+// Server is the config discovery server the dataplane pods watch. Starts only at the leader so CDS
+// clients to standby operator pods are rejected.
 type Server struct {
 	*cdsserver.Server
 	configCh chan event.Event
@@ -36,34 +38,35 @@ func NewCDSServer(addr string, logger logr.Logger) *Server {
 	}
 }
 
+// Start opens the listener and serves config updates until the context ends.
 func (c *Server) Start(ctx context.Context) error {
-	go func() {
-		defer close(c.configCh)
-		defer c.Close()
+	if err := c.Server.Start(ctx); err != nil {
+		return err
+	}
+	defer c.Close()
 
-		for {
-			select {
-			case e := <-c.configCh:
-				if e.GetType() != event.EventTypeUpdate {
-					c.log.Info("Config discovery server received unknown event",
-						"event", e.String())
-					continue
-				}
-
+	for {
+		select {
+		case e := <-c.configCh:
+			switch e.GetType() {
+			case event.EventTypeUpdate:
 				c.ProgressUpdate(1)
 				if err := c.ProcessUpdate(e.(*event.EventUpdate)); err != nil {
 					c.log.Error(err, "Could not process config update event", "event",
 						e.String())
 				}
 				c.ProgressUpdate(-1)
-
-			case <-ctx.Done():
-				return
+			case event.EventTypeLicense:
+				c.UpdateLicenseStatus(e.(*event.EventLicense).Status)
+			default:
+				c.log.Info("Config discovery server received unknown event",
+					"event", e.String())
 			}
-		}
-	}()
 
-	return c.Server.Start(ctx)
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // GetConfigUpdateChannel returns the channel on which the config discovery server listenens to

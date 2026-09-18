@@ -17,20 +17,20 @@ const (
 	// that must be crater, updated or deleted. The event is sent from the renderer to the
 	// operator, which passes the event on the updater thread for processing.
 	EventTypeUpdate
-	// EventTypeFinalize is sent from the operator to the renderer to commence the finalization
-	// cycle.
-	EventTypeFinalize
-	// EventTypeFinalize is used by the updater to acknowledge that it has finished processing
-	// an update generation.
+	// EventTypeAck is used by the updater to acknowledge that it has finished processing an
+	// update generation.
 	EventTypeAck
+	// EventTypeLicense is sent by the license manager to the operator whenever the licensing
+	// status changes, and once at startup so that the operator learns the initial status.
+	EventTypeLicense
 )
 
 const (
 	eventTypeRenderStr      = "render"
 	eventTypeReconcileStr   = "reconcile"
 	eventTypeUpdateStr      = "update"
-	eventTypeFinalizeStr    = "finalize"
 	eventTypeAckResponseStr = "acknowledgement"
+	eventTypeLicenseStr     = "license"
 )
 
 // NewEventType parses an event type specification
@@ -44,6 +44,8 @@ func NewEventType(raw string) (EventType, error) {
 		return EventTypeUpdate, nil
 	case eventTypeAckResponseStr:
 		return EventTypeAck, nil
+	case eventTypeLicenseStr:
+		return EventTypeLicense, nil
 	default:
 		return EventTypeUnknown, fmt.Errorf("Unknown event type: %q", raw)
 	}
@@ -58,10 +60,10 @@ func (a EventType) String() string {
 		return eventTypeReconcileStr
 	case EventTypeUpdate:
 		return eventTypeUpdateStr
-	case EventTypeFinalize:
-		return eventTypeFinalizeStr
 	case EventTypeAck:
 		return eventTypeAckResponseStr
+	case EventTypeLicense:
+		return eventTypeLicenseStr
 	default:
 		return "<unknown>"
 	}

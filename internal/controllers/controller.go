@@ -22,7 +22,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// ControllerName identifies a controller in the reconcile events it sends to the operator.
+type ControllerName string
+
+const (
+	GatewayConfigControllerName ControllerName = "gatewayconfig"
+	DataplaneControllerName     ControllerName = "dataplane"
+	GatewayControllerName       ControllerName = "gateway"
+	RouteControllerName         ControllerName = "route"
+	NodeControllerName          ControllerName = "node"
+)
+
+// Controller is a reconciler that refreshes the stores of its kinds from the cache on every
+// reconcile and then asks the operator for a rendering round, signed with its name.
 type Controller interface {
+	Name() ControllerName
 	Reconcile(context.Context, reconcile.Request) (reconcile.Result, error)
-	Terminate()
 }

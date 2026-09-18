@@ -20,11 +20,17 @@ import (
 
 var NewRenderer = NewDefaultRenderer
 
+// Renderer turns the Gateway API state in the stores into dataplane configs and Kubernetes
+// resources. It runs as a leader-only manager runnable: Start blocks until the context ends.
 type Renderer interface {
 	config.ProgressReporter
 	Start(ctx context.Context) error
 	GetRenderChannel() chan event.Event
-	SetOperatorChannel(ch event.EventChannel)
+	SetOperatorChannel(ch chan<- event.Event)
+	// Finalize invalidates every managed resource for the given generation and returns the
+	// update that applies the invalidation. It is called synchronously by the operator on
+	// shutdown, outside the rendering loop.
+	Finalize(gen int) *event.EventUpdate
 }
 
 // configRenderer is a generic interface for the rendering components that can generate components
@@ -61,7 +67,7 @@ type renderer struct {
 	dataplaneGenerator                            resourceGenerator
 	gen                                           int
 	renderCh                                      chan event.Event
-	operatorCh                                    event.EventChannel
+	operatorCh                                    chan<- event.Event
 	*config.ProgressTracker
 	log logr.Logger
 }
@@ -85,62 +91,37 @@ func NewDefaultRenderer(cfg RendererConfig) Renderer {
 	return r
 }
 
+// Start runs the rendering loop until the context ends.
 func (r *renderer) Start(ctx context.Context) error {
 	r.ctx = ctx
 
-	go func() {
-		defer func() {
-			close(r.renderCh)
-			if r.operatorCh != nil {
-				r.operatorCh.Put()
-			}
-		}()
+	heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
+	defer heartbeat.Stop()
+	metrics.RecordRendererHeartbeat()
 
-		heartbeat := time.NewTicker(metrics.LoopHeartbeatInterval)
-		defer heartbeat.Stop()
-		metrics.RecordRendererHeartbeat()
+	for {
+		select {
+		case <-heartbeat.C:
+			metrics.RecordRendererHeartbeat()
 
-		for {
-			select {
-			case <-heartbeat.C:
-				metrics.RecordRendererHeartbeat()
-
-			case e := <-r.renderCh:
-				metrics.RecordRendererHeartbeat()
-				switch e.GetType() {
-				case event.EventTypeRender:
-					// prepare a new update event Render will populate config
-					// is returned in the update event ConfigMap store
-					ev := e.(*event.EventRender)
-
-					r.ProgressUpdate(1)
-					start := time.Now()
-					r.Render(ev)
-					metrics.RenderDuration.Observe(time.Since(start).Seconds())
-					metrics.RenderTotal.Inc()
-					r.ProgressUpdate(-1)
-				case event.EventTypeFinalize:
-					// invaliditate all statuses and configs
-					ev := e.(*event.EventFinalize)
-
-					r.ProgressUpdate(1)
-					start := time.Now()
-					r.Finalize(ev)
-					metrics.RenderDuration.Observe(time.Since(start).Seconds())
-					metrics.RenderTotal.Inc()
-					r.ProgressUpdate(-1)
-				default:
-					r.log.Info("Renderer thread received unknown event", "event", e.String())
-				}
+		case e := <-r.renderCh:
+			metrics.RecordRendererHeartbeat()
+			if e.GetType() != event.EventTypeRender {
+				r.log.Info("Renderer thread received unknown event", "event", e.String())
 				continue
-
-			case <-ctx.Done():
-				return
 			}
-		}
-	}()
 
-	return nil
+			r.ProgressUpdate(1)
+			start := time.Now()
+			r.Render(e.(*event.EventRender))
+			metrics.RenderDuration.Observe(time.Since(start).Seconds())
+			metrics.RenderTotal.Inc()
+			r.ProgressUpdate(-1)
+
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // GetRenderChannel returns the channel onn which the renderer listenens to rendering requests.
@@ -149,9 +130,8 @@ func (r *renderer) GetRenderChannel() chan event.Event {
 }
 
 // SetOperatorChannel sets the channel on which the operator event dispatcher listens.
-func (r *renderer) SetOperatorChannel(ch event.EventChannel) {
+func (r *renderer) SetOperatorChannel(ch chan<- event.Event) {
 	r.operatorCh = ch
-	ch.Get()
 }
 
 // renderAdmin is a wrapper for adminRenderer.render()

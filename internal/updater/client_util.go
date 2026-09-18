@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-func (u *Updater) upsertResourceObject(desired client.Object, gen int) (ctrlutil.OperationResult, error) {
+func (u *Updater) upsertResourceObject(ctx context.Context, desired client.Object, gen int) (ctrlutil.OperationResult, error) {
 	l, err := lens.New(desired)
 	if err != nil {
 		return ctrlutil.OperationResultNone, err
@@ -37,7 +38,7 @@ func (u *Updater) upsertResourceObject(desired client.Object, gen int) (ctrlutil
 	}
 
 	cli := u.manager.GetClient()
-	if err := cli.Get(u.ctx, client.ObjectKeyFromObject(desired), current); err == nil {
+	if err := cli.Get(ctx, client.ObjectKeyFromObject(desired), current); err == nil {
 		if l.EqualResource(current) {
 			u.incCounter(prefix + ".suppressed")
 			u.log.V(2).Info(fmt.Sprintf("%s unchanged, skipping upsert", kind),
@@ -49,7 +50,7 @@ func (u *Updater) upsertResourceObject(desired client.Object, gen int) (ctrlutil
 		return ctrlutil.OperationResultNone, fmt.Errorf("cannot get %s %q: %w", kind, resource, err)
 	}
 
-	op, err := ctrlutil.CreateOrPatch(u.ctx, cli, current, func() error {
+	op, err := ctrlutil.CreateOrPatch(ctx, cli, current, func() error {
 		return l.ApplyToResource(current)
 	})
 	if err != nil {
@@ -76,7 +77,7 @@ func (u *Updater) upsertResourceObject(desired client.Object, gen int) (ctrlutil
 	return op, nil
 }
 
-func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
+func (u *Updater) updateStatusObject(ctx context.Context, desired client.Object, gen int) error {
 	l, err := lens.New(desired)
 	if err != nil {
 		return err
@@ -96,7 +97,7 @@ func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
 	cli := u.manager.GetClient()
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		u.incCounter(prefix + ".retryPass")
-		if err := cli.Get(u.ctx, client.ObjectKeyFromObject(desired), current); err != nil {
+		if err := cli.Get(ctx, client.ObjectKeyFromObject(desired), current); err != nil {
 			return err
 		}
 
@@ -111,7 +112,7 @@ func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
 			return err
 		}
 
-		if err := cli.Status().Update(u.ctx, current); err != nil {
+		if err := cli.Status().Update(ctx, current); err != nil {
 			return err
 		}
 
@@ -128,9 +129,9 @@ func (u *Updater) updateStatusObject(desired client.Object, gen int) error {
 	return err
 }
 
-func (u *Updater) deleteObject(o client.Object, gen int) error {
+func (u *Updater) deleteObject(ctx context.Context, o client.Object, gen int) error {
 	u.log.V(2).Info("Delete object", "kind", objectKind(o), "resource", store.GetObjectKey(o), "generation", gen)
-	return u.manager.GetClient().Delete(u.ctx, o)
+	return u.manager.GetClient().Delete(ctx, o)
 }
 
 func emptyObjectFor(o client.Object) (client.Object, error) {

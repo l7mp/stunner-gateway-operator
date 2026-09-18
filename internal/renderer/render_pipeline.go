@@ -37,18 +37,20 @@ func (r *renderer) Render(e *event.EventRender) {
 // Finalize performs the finalization sequence:
 // - set all managed Kubernetes statuses to invalid
 // - remove managed dataplanes and services
-func (r *renderer) Finalize(e *event.EventFinalize) {
-	r.gen = e.Generation
+// It returns the update that applies the invalidation, or nil when there is nothing to do.
+func (r *renderer) Finalize(gen int) *event.EventUpdate {
+	r.gen = gen
 
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
 		r.log.Info("Finalization not suported for legacy dataplane mode")
 	case config.DataplaneModeManaged:
-		r.finalizeManagedGateways(e)
+		return r.finalizeManagedGateways()
 	default:
 		r.log.Info(`Finalizer: unknown dataplane mode (must be either "managed" or "legacy")`)
-		return
 	}
+
+	return nil
 }
 
 // renderGatewayClass generates and sets a STUNner daemon configuration in the "legacy" dataplane mode.
@@ -109,7 +111,7 @@ func (r *renderer) renderGatewayClass(e *event.EventRender) {
 		c.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
 
 		// send the update back to the operator
-		r.operatorCh.Channel() <- c.update.DeepCopy()
+		event.Send(r.ctx, r.operatorCh, c.update.DeepCopy())
 	}
 }
 
@@ -190,11 +192,12 @@ func (r *renderer) renderManagedGateways(e *event.EventRender) {
 	// updates must be acknowledged to the operator by the updater
 	u.SetRequestAck(true)
 
-	r.operatorCh.Channel() <- u
+	event.Send(r.ctx, r.operatorCh, u)
 }
 
-// finalizeManagedGateways invalidates all managed resources
-func (r *renderer) finalizeManagedGateways(e *event.EventFinalize) {
+// finalizeManagedGateways invalidates all managed resources and returns the update that applies
+// the invalidation.
+func (r *renderer) finalizeManagedGateways() *event.EventUpdate {
 	r.log.Info("Stating finalization", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
@@ -202,8 +205,8 @@ func (r *renderer) finalizeManagedGateways(e *event.EventFinalize) {
 	r.log.V(1).Info("Obtaining gateway-class objects")
 	gcs := r.getGatewayClasses()
 	if len(gcs) == 0 {
-		r.log.Info("No gateway-class objects found", "event", e.String())
-		return
+		r.log.Info("No gateway-class objects found", "generation", r.gen)
+		return nil
 	}
 
 	for _, gc := range gcs {
@@ -219,10 +222,7 @@ func (r *renderer) finalizeManagedGateways(e *event.EventFinalize) {
 		pipelineCtx.Merge(gcCtx)
 	}
 
-	// finalization updates must be acknowledged to the operator by the updater
-	u := pipelineCtx.update.DeepCopy()
-	u.SetRequestAck(true)
-	r.operatorCh.Channel() <- u
+	return pipelineCtx.update.DeepCopy()
 }
 
 // renderForGateways renders a configuration for a set of Gateways (c.gws)

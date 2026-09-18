@@ -47,8 +47,7 @@ const (
 
 type routeReconciler struct {
 	client.Client
-	eventCh     event.EventChannel
-	terminating bool
+	eventCh chan<- event.Event
 	// udpRouteVersion and tcpRouteVersion hold the Gateway API version at which the official
 	// route resources are watched (empty if the CRD is not installed): the graduated v1
 	// version is preferred over the deprecated v1alpha2.
@@ -61,7 +60,7 @@ type routeBackends struct {
 	svcList, ssvcList, endpointList, namespaceList []client.Object
 }
 
-func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
+func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &routeReconciler{
 		Client:  mgr.GetClient(),
@@ -73,9 +72,6 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 	if err != nil {
 		return nil, err
 	}
-
-	// increase the ref count on the channel
-	r.eventCh.Get()
 
 	r.log.Info("Created route controller")
 
@@ -315,11 +311,6 @@ func NewRouteController(mgr manager.Manager, ch event.EventChannel, log logr.Log
 func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
 
-	if r.terminating {
-		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
-		return reconcile.Result{}, nil
-	}
-
 	log.Info("Reconciling")
 	udpRouteList := []client.Object{}
 	udpRouteListGwAPI := []client.Object{}
@@ -459,7 +450,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	store.StaticServices.Reset(backends.ssvcList)
 	r.log.V(2).Info("Reset StaticService store", "static-services", store.StaticServices.String())
 
-	r.eventCh.Channel() <- event.NewEventReconcile()
+	event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 
 	return reconcile.Result{}, nil
 }
@@ -904,10 +895,7 @@ func staticServiceRouteIndexFunc(o client.Object) []string {
 	return staticServices
 }
 
-func (r *routeReconciler) Terminate() {
-	r.terminating = true
-	r.eventCh.Put()
-}
+func (r *routeReconciler) Name() ControllerName { return RouteControllerName }
 
 // TypedLabelSelectorPredicate is the generic version of LabelSelectorPredicate that somehow seems
 // to be missing in controller-runtime to construct a TypedPredicate from a LabelSelector.  Only

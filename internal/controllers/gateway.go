@@ -41,13 +41,12 @@ const (
 
 type gatewayReconciler struct {
 	client.Client
-	eventCh     event.EventChannel
-	terminating bool
-	log         logr.Logger
+	eventCh chan<- event.Event
+	log     logr.Logger
 }
 
 // NewGatewayController registers a reconciler for Gateway and the associated Secret objects.
-func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
+func NewGatewayController(mgr manager.Manager, ch chan<- event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &gatewayReconciler{
 		Client:  mgr.GetClient(),
@@ -59,9 +58,6 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 	if err != nil {
 		return nil, err
 	}
-
-	// increase the ref count on the channel
-	r.eventCh.Get()
 
 	r.log.Info("Created Gateway controller")
 
@@ -148,11 +144,6 @@ func NewGatewayController(mgr manager.Manager, ch event.EventChannel, log logr.L
 // of the Gateways managed by this controller.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
-
-	if r.terminating {
-		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
-		return reconcile.Result{}, nil
-	}
 
 	log.Info("Reconciling")
 	gatewayClassList := []client.Object{}
@@ -279,7 +270,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	store.DaemonSets.Reset(daemonSetList)
 	r.log.V(2).Info("reset DaemonSet store", "daemonSets", store.DaemonSets.String())
 
-	r.eventCh.Channel() <- event.NewEventReconcile()
+	event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 
 	return reconcile.Result{}, nil
 }
@@ -440,7 +431,4 @@ func secretGatewayIndexFunc(o client.Object) []string {
 	return secretReferences
 }
 
-func (r *gatewayReconciler) Terminate() {
-	r.terminating = true
-	r.eventCh.Put()
-}
+func (r *gatewayReconciler) Name() ControllerName { return GatewayControllerName }

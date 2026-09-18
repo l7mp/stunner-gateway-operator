@@ -99,6 +99,15 @@ const (
 	// renders.
 	DefaultThrottleTimeout = 250 * time.Millisecond
 
+	// DefaultStartupRenderTimeout bounds how long a freshly elected operator waits for every
+	// controller to report its first reconcile before it renders anyway. It only expires on a
+	// cluster where some controller has nothing to reconcile.
+	DefaultStartupRenderTimeout = 5 * time.Second
+
+	// DefaultLeaderElectionID is the name of the Lease the operator replicas compete for. It
+	// is shared with the clients that look the leader up in the Lease.
+	DefaultLeaderElectionID = stnrapiv1.DefaultLeaderElectionID
+
 	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
 	// endpoint (if enabled).
 	DefaultMetricsPortName = "metrics-port"

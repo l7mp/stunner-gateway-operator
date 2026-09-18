@@ -44,12 +44,11 @@ const secretGatewayConfigIndex = "secretGatewayConfigIndex"
 // GatewayConfigReconciler reconciles a GatewayConfig object
 type gatewayConfigReconciler struct {
 	client.Client
-	eventCh     event.EventChannel
-	terminating bool
-	log         logr.Logger
+	eventCh chan<- event.Event
+	log     logr.Logger
 }
 
-func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log logr.Logger) (Controller, error) {
+func NewGatewayConfigController(mgr manager.Manager, ch chan<- event.Event, log logr.Logger) (Controller, error) {
 	ctx := context.Background()
 	r := &gatewayConfigReconciler{
 		Client:  mgr.GetClient(),
@@ -61,9 +60,6 @@ func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log 
 	if err != nil {
 		return nil, err
 	}
-
-	// increase the ref count on the channel
-	r.eventCh.Get()
 
 	r.log.Info("Created GatewayConfig controller")
 
@@ -97,11 +93,6 @@ func NewGatewayConfigController(mgr manager.Manager, ch event.EventChannel, log 
 
 func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
-
-	if r.terminating {
-		r.log.V(2).Info("Controller terminating, suppressing reconciliation")
-		return reconcile.Result{}, nil
-	}
 
 	log.Info("Reconciling")
 	configList := []client.Object{}
@@ -163,9 +154,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	store.AuthSecrets.Reset(authSecretList)
 	r.log.V(2).Info("Reset AuthSecret store", "secrets", store.AuthSecrets.String())
 
-	if !r.terminating {
-		r.eventCh.Channel() <- event.NewEventReconcile()
-	}
+	event.Send(ctx, r.eventCh, event.NewEventReconcile(string(r.Name())))
 
 	return reconcile.Result{}, nil
 }
@@ -221,7 +210,4 @@ func secretGatewayConfigIndexFunc(o client.Object) []string {
 	return ret
 }
 
-func (r *gatewayConfigReconciler) Terminate() {
-	r.terminating = true
-	r.eventCh.Put()
-}
+func (r *gatewayConfigReconciler) Name() ControllerName { return GatewayConfigControllerName }

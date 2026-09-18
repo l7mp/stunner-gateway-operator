@@ -24,20 +24,17 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/internal/app"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 const (
@@ -287,78 +284,28 @@ func setupBenchmarkSystem(b *testing.B) *benchmarkSystem {
 		b.Fatalf("failed to start envtest: %v", err)
 	}
 
-	on := true
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:     scheme,
-		Controller: ctrlcfg.Controller{SkipNameValidation: &on},
-	})
+	logger := logr.Discard()
+	ctrl.SetLogger(logger)
+
+	appCfg := app.NewConfig()
+	appCfg.ThrottleTimeout = 10 * time.Millisecond
+	appCfg.StartupRenderTimeout = 500 * time.Millisecond
+	appCfg.MetricsAddr, appCfg.ProbeAddr, appCfg.PprofAddr = "0", "0", "0"
+	appCfg.SkipNameValidation = true
+	appCfg.CDSAddress = reserveLoopbackAddress(b)
+	appCfg.CDSAdvertisedAddress = appCfg.CDSAddress
+	a, err := app.New(appCfg, cfg, scheme, logger)
 	if err != nil {
 		cancel()
 		_ = testEnv.Stop()
-		b.Fatalf("failed to create manager: %v", err)
+		b.Fatalf("failed to assemble the operator: %v", err)
 	}
-
-	logger := logr.Discard()
-	ctrl.SetLogger(logger)
-	lic := licensemgr.NewManager("", logger)
-
-	r := renderer.NewRenderer(renderer.RendererConfig{
-		Scheme:         scheme,
-		LicenseManager: lic,
-		Logger:         logger,
-	})
-
-	u := updater.NewUpdater(updater.UpdaterConfig{
-		Manager: mgr,
-		Logger:  logger,
-	})
-
-	cdsAddr := reserveLoopbackAddress(b)
-	cds := config.NewCDSServer(cdsAddr, logger)
-
-	op := operator.NewOperator(operator.OperatorConfig{
-		ControllerName: opdefault.DefaultControllerName,
-		Manager:        mgr,
-		RenderCh:       r.GetRenderChannel(),
-		ConfigCh:       cds.GetConfigUpdateChannel(),
-		UpdaterCh:      u.GetUpdaterChannel(),
-		Logger:         logger,
-	})
-
-	lic.SetOperatorChannel(op.GetOperatorChannel())
-	r.SetOperatorChannel(op.GetOperatorChannel())
-	u.SetAckChannel(op.GetOperatorChannel())
-	op.SetProgressReporters(r, u, cds)
-
-	if err := r.Start(ctx); err != nil {
-		cancel()
-		_ = testEnv.Stop()
-		b.Fatalf("failed to start renderer: %v", err)
-	}
-
-	if err := u.Start(ctx); err != nil {
-		cancel()
-		_ = testEnv.Stop()
-		b.Fatalf("failed to start updater: %v", err)
-	}
-
-	if err := cds.Start(ctx); err != nil {
-		cancel()
-		_ = testEnv.Stop()
-		b.Fatalf("failed to start cds server: %v", err)
-	}
+	mgr, op, u := a.Manager, a.Operator, a.Updater
 
 	mgrCtx, mgrStop := context.WithCancel(context.Background())
 	go func() {
-		_ = mgr.Start(mgrCtx)
+		_ = a.Start(mgrCtx)
 	}()
-
-	if err := op.Start(ctx, nil); err != nil {
-		mgrStop()
-		cancel()
-		_ = testEnv.Stop()
-		b.Fatalf("failed to start operator: %v", err)
-	}
 
 	if !mgr.GetCache().WaitForCacheSync(ctx) {
 		mgrStop()

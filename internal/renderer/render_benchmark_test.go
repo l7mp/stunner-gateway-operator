@@ -129,10 +129,7 @@ func BenchmarkRenderPipeline(b *testing.B) {
 			}).(*renderer)
 
 			// Start the renderer.
-			err := r.Start(b.Context())
-			if err != nil {
-				b.Fatalf("failed to start renderer: %v", err)
-			}
+			go func() { _ = r.Start(b.Context()) }()
 
 			// Prepare the render context (outside the benchmark loop).
 			gc, err := r.getGatewayClass()
