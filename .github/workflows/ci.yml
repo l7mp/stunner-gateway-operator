@@ -12,11 +12,13 @@ defaults:
 jobs:
   run_unit_tests:
     name: Run unit tests
+    if: github.repository == 'l7mp/stunner-gateway-operator'
     uses: l7mp/stunner-gateway-operator/.github/workflows/test.yml@main
 
   push_to_registry:
     name: Push Docker image to DockerHub
     needs: run_unit_tests
+    if: github.repository == 'l7mp/stunner-gateway-operator'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -59,6 +61,7 @@ jobs:
   push_chart:
     name: Push helm charts to the web
     needs: push_to_registry
+    if: github.repository == 'l7mp/stunner-gateway-operator'
     runs-on: ubuntu-latest
     steps:
       - name: Get version
