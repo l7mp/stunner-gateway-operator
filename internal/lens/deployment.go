@@ -92,6 +92,11 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * - renderer: set from Dataplane.Spec.HostNetwork.
 // * - updater: copies scalar.
 // *
+// * * Deployment.Spec.Template.Spec.DNSPolicy
+// * - renderer: left to the API default, unless a host-networked pod must resolve cluster
+// *   Services (a premium renderer sets ClusterFirstWithHostNet).
+// * - updater: copies scalar; the API defaults an empty value.
+// *
 // * * Deployment.Spec.Template.Spec.Affinity
 // * - renderer: set from Dataplane.Spec.Affinity when non-nil.
 // * - updater: deep-copies when non-nil.
@@ -143,6 +148,7 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 	}
 
 	currentspec.HostNetwork = dpspec.HostNetwork
+	currentspec.DNSPolicy = dpspec.DNSPolicy
 	applyOwnedScalar(&currentspec.TerminationGracePeriodSeconds, dpspec.TerminationGracePeriodSeconds)
 	applyOwnedPtr(&currentspec.Affinity, dpspec.Affinity)
 	applyOwnedPtr(&currentspec.SecurityContext, dpspec.SecurityContext)
@@ -161,6 +167,14 @@ func projectDeployment(d, owned *appv1.Deployment) *appv1.Deployment {
 	ret.Spec.Template.ObjectMeta = projectTemplateMeta(&src.Spec.Template)
 	ret.Spec.Template.Spec = projectPodSpec(&src.Spec.Template.Spec, &owned.Spec.Template.Spec)
 	return ret
+}
+
+// normalizeDNSPolicy is the API's default for an unset policy.
+func normalizeDNSPolicy(p corev1.DNSPolicy) corev1.DNSPolicy {
+	if p == "" {
+		return corev1.DNSClusterFirst
+	}
+	return p
 }
 
 func normalizeReplicas(v, owned *int32) *int32 {
@@ -187,6 +201,7 @@ func copyLabelSelector(ls *metav1.LabelSelector) *metav1.LabelSelector {
 func projectPodSpec(s, owned *corev1.PodSpec) corev1.PodSpec {
 	ret := corev1.PodSpec{
 		HostNetwork:                   s.HostNetwork,
+		DNSPolicy:                     normalizeDNSPolicy(s.DNSPolicy),
 		TerminationGracePeriodSeconds: projectOwnedScalar(s.TerminationGracePeriodSeconds, owned.TerminationGracePeriodSeconds),
 		Affinity:                      projectOwnedPtr(s.Affinity, owned.Affinity),
 		Tolerations:                   projectOwnedSlice(s.Tolerations, owned.Tolerations),

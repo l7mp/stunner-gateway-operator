@@ -341,3 +341,29 @@ func testDeployment() *appv1.Deployment {
 		},
 	}
 }
+
+func TestDeploymentOwnsDNSPolicy(t *testing.T) {
+	current := testDeployment()
+	current.Spec.Template.Spec.HostNetwork = true
+	current.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirst
+	desired := testDeployment()
+	desired.Spec.Template.Spec.HostNetwork = true
+	desired.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirstWithHostNet
+
+	v := NewDeploymentLens(desired)
+	assert.False(t, v.EqualResource(current), "a changed DNS policy is a change")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+	assert.Equal(t, corev1.DNSClusterFirstWithHostNet, current.Spec.Template.Spec.DNSPolicy,
+		"the DNS policy is copied")
+
+	unset := testDeployment()
+	v = NewDeploymentLens(unset)
+	assert.True(t, v.EqualResource(testDeploymentWithDNSPolicy(corev1.DNSClusterFirst)),
+		"an unset policy equals the API default")
+}
+
+func testDeploymentWithDNSPolicy(p corev1.DNSPolicy) *appv1.Deployment {
+	d := testDeployment()
+	d.Spec.Template.Spec.DNSPolicy = p
+	return d
+}

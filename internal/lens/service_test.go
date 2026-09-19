@@ -340,3 +340,24 @@ func loadBalancerService() *corev1.Service {
 func ptrBool(v bool) *bool {
 	return &v
 }
+
+func TestServiceOwnsIPFamilyPolicyWhenSet(t *testing.T) {
+	single := corev1.IPFamilyPolicySingleStack
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+		Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer, IPFamilyPolicy: &single,
+			IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol}}}
+	desired := current.DeepCopy()
+	desired.OwnerReferences = []metav1.OwnerReference{{APIVersion: "v1", Kind: "Gateway", Name: "gw"}}
+	prefer := corev1.IPFamilyPolicyPreferDualStack
+	desired.Spec.IPFamilyPolicy = &prefer
+
+	v := NewServiceLens(desired)
+	assert.False(t, v.EqualResource(current), "a requested dual-stack policy is a change")
+	err := v.ApplyToResource(current)
+	require.NoError(t, err, "apply failed: %v", err)
+	require.NotNil(t, current.Spec.IPFamilyPolicy)
+	assert.Equal(t, corev1.IPFamilyPolicyPreferDualStack, *current.Spec.IPFamilyPolicy,
+		"the policy is copied when desired sets it")
+	assert.Equal(t, []corev1.IPFamily{corev1.IPv4Protocol}, current.Spec.IPFamilies,
+		"the families stay the API's")
+}

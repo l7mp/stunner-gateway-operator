@@ -84,6 +84,12 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 //   otherwise left empty.
 // - updater: copied from projected desired.
 //
+// * Service.Spec.IPFamilyPolicy
+// - renderer: carried over from the existing Service; a premium renderer requests
+//   PreferDualStack.
+// - updater: copied only when desired sets it; otherwise preserved from current, like the
+//   families and the cluster IPs the API assigns.
+//
 // * Service.Spec.Ports[].Name / Protocol / Port
 // - renderer: built from valid Gateway listeners, merged with existing Service ports by name.
 // - updater: copied from projected desired.
@@ -113,6 +119,10 @@ func projectService(s, owned *corev1.Service) *corev1.Service {
 	ret.Spec.Selector = maps.Clone(src.Spec.Selector)
 	ret.Spec.SessionAffinity = src.Spec.SessionAffinity
 	ret.Spec.ExternalTrafficPolicy = normalizeExternalTrafficPolicy(src.Spec.Type, src.Spec.ExternalTrafficPolicy)
+	if owned.Spec.IPFamilyPolicy != nil && src.Spec.IPFamilyPolicy != nil {
+		policy := *src.Spec.IPFamilyPolicy
+		ret.Spec.IPFamilyPolicy = &policy
+	}
 	ret.Spec.LoadBalancerIP = normalizeLoadBalancerIP(src, owned)
 	ret.Spec.Ports = make([]corev1.ServicePort, 0, len(src.Spec.Ports))
 	for i := range src.Spec.Ports {
@@ -134,6 +144,10 @@ func applyServiceSpec(current, desired, owned *corev1.Service) {
 	current.Spec.Selector = maps.Clone(desired.Spec.Selector)
 	current.Spec.SessionAffinity = desired.Spec.SessionAffinity
 	current.Spec.ExternalTrafficPolicy = desired.Spec.ExternalTrafficPolicy
+	if desired.Spec.IPFamilyPolicy != nil {
+		policy := *desired.Spec.IPFamilyPolicy
+		current.Spec.IPFamilyPolicy = &policy
+	}
 
 	nextPorts := make([]corev1.ServicePort, len(desired.Spec.Ports))
 	for i := range desired.Spec.Ports {
