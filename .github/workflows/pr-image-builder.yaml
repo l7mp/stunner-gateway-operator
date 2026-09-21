@@ -22,8 +22,6 @@ jobs:
           # the default shallow fetch has no tags and degrades it to a bare hash
           fetch-depth: 0
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -41,6 +39,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          cache-from: type=gha,scope=manager
+          cache-to: type=gha,mode=max,scope=manager
           tags: |
             l7mp/stunner-gateway-operator:pr-${{ github.event.pull_request.number }}
 
