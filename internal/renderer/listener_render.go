@@ -82,6 +82,19 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Conf
 		lc.Key = key
 	}
 
+	// the PQC mode is a per-Gateway policy of the TURN-TLS listeners
+	if proto == stnrapiv1.ListenerProtocolTURNTLS {
+		if v, ok := gw.GetAnnotations()[opdefault.PQCModeAnnotationKey]; ok {
+			mode, err := stnrapiv1.NewPQCMode(v)
+			if err != nil {
+				r.log.Info("Ignoring invalid PQC mode annotation", "gateway", store.GetObjectKey(gw),
+					"key", opdefault.PQCModeAnnotationKey, "value", v, "error", err.Error())
+			} else if mode != stnrapiv1.PQCModeDefault {
+				lc.PQCMode = mode.String()
+			}
+		}
+	}
+
 	for _, r := range rs {
 		lc.Routes = append(lc.Routes, store.GetObjectKey(r))
 	}

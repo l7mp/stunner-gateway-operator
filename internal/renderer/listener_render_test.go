@@ -19,6 +19,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func TestRenderListenerRender(t *testing.T) {
@@ -312,6 +313,85 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
+			},
+		},
+		{
+			name:  "TLS/DTLS listener - pqc-mode annotation",
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			scrts: []corev1.Secret{testutils.TestSecret},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{opdefault.PQCModeAnnotationKey: "Enforced"})
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.ListenerTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("testsecret-ok"),
+					}},
+				}
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1.PortNumber(2),
+					TLS:      &tls,
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-dtls"),
+					Protocol: gwapiv1.ProtocolType("TURN-DTLS"),
+					Port:     gwapiv1.PortNumber(3),
+					TLS:      &tls,
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				ls := gw.Spec.Listeners
+				rs := []store.Route{}
+				addr := gwAddrPort{addr: "1.2.3.4", port: 1234}
+
+				// the mode reaches the TLS listener, normalized
+				lc, err := r.renderListener(c, &ls[1], rs, addr, nil)
+				assert.NoError(t, err, "renderListener")
+				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "enforced", lc.PQCMode, "pqc mode")
+
+				// the other protocols are left alone
+				lc, err = r.renderListener(c, &ls[0], rs, addr, nil)
+				assert.NoError(t, err, "renderListener")
+				assert.Equal(t, "", lc.PQCMode, "no pqc mode on a udp listener")
+				lc, err = r.renderListener(c, &ls[2], rs, addr, nil)
+				assert.NoError(t, err, "renderListener")
+				assert.Equal(t, "", lc.PQCMode, "no pqc mode on a dtls listener")
+
+				// the default mode and an invalid mode render nothing
+				gw.SetAnnotations(map[string]string{opdefault.PQCModeAnnotationKey: "default"})
+				lc, err = r.renderListener(c, &ls[1], rs, addr, nil)
+				assert.NoError(t, err, "renderListener")
+				assert.Equal(t, "", lc.PQCMode, "default mode")
+				gw.SetAnnotations(map[string]string{opdefault.PQCModeAnnotationKey: "quantum"})
+				lc, err = r.renderListener(c, &ls[1], rs, addr, nil)
+				assert.NoError(t, err, "renderListener")
+				assert.Equal(t, "", lc.PQCMode, "invalid mode ignored")
 			},
 		},
 		{

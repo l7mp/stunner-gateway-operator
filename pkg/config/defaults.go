@@ -195,6 +195,12 @@ const (
 	// address discovery.
 	EnableRelayAddressDiscoveryAnnotationValue = "true"
 
+	// PQCModeAnnotationKey is the Gateway annotation key that sets the post-quantum key
+	// exchange policy of the Gateway's TURN-TLS listeners: "default" serves the default TLS
+	// settings, "preferred" prefers a post-quantum encryption but admits legacy clients, and
+	// "enforced" forces it.
+	PQCModeAnnotationKey = "stunner.l7mp.io/pqc-mode"
+
 	// DefaultSTUNnerAddressEnvVarName is the environment variable used for configuring
 	// stunnerd default listener address.
 	DefaultSTUNnerAddressEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddr
