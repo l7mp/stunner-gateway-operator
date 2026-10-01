@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
@@ -67,7 +67,7 @@ func runEventLoop(o *Operator) context.Context {
 	return ctx
 }
 
-func licenseKnown() event.Event { return event.NewEventLicense(stnrapiv1.NewEmptyLicenseStatus()) }
+func licenseKnown() event.Event { return event.NewEventLicense(stnrapiv2.NewEmptyLicenseStatus()) }
 
 func expectRender(renderCh chan event.Event, within time.Duration, msg string) {
 	GinkgoHelper()

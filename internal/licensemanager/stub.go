@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	licensecfg "github.com/l7mp/stunner/v2/pkg/config/license"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -28,7 +29,7 @@ func (m *stubMgr) Start(ctx context.Context) error {
 }
 func (*stubMgr) NeedLeaderElection() bool                   { return false }
 func (*stubMgr) Validate(_ licensecfg.Feature) bool         { return false }
-func (*stubMgr) Status() stnrapiv1.LicenseStatus            { return stnrapiv1.NewEmptyLicenseStatus() }
+func (*stubMgr) Status() stnrapiv2.LicenseStatus            { return stnrapiv2.NewEmptyLicenseStatus() }
 func (*stubMgr) LastError() error                           { return nil }
 func (m *stubMgr) SetOperatorChannel(ch chan<- event.Event) { m.opCh = ch }
 func (*stubMgr) GenerateLicenseConfig() (stnrapiv1.LicenseConfig, error) {

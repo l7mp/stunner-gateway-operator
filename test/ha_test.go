@@ -18,7 +18,7 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 
@@ -52,9 +52,9 @@ func haOperatorTest() {
 		var (
 			clientCtx    context.Context
 			clientCancel context.CancelFunc
-			ch           chan *stnrapiv1.StunnerConfig
+			ch           chan *stnrapiv2.StunnerConfig
 			lease        *coordinationv1.Lease
-			lastConfig   *stnrapiv1.StunnerConfig
+			lastConfig   *stnrapiv2.StunnerConfig
 			cdsAddr      string
 		)
 
@@ -78,7 +78,7 @@ func haOperatorTest() {
 		}
 
 		// receive reads the next config from the watch channel, or nil after the timeout
-		receive := func(d time.Duration) *stnrapiv1.StunnerConfig {
+		receive := func(d time.Duration) *stnrapiv2.StunnerConfig {
 			select {
 			case c := <-ch:
 				return c
@@ -89,12 +89,12 @@ func haOperatorTest() {
 
 		// complete means the route's cluster is rendered and attached to the listener the
 		// route names: a render before the route controller reported would lack both
-		complete := func(c *stnrapiv1.StunnerConfig) bool {
+		complete := func(c *stnrapiv2.StunnerConfig) bool {
 			if c == nil || len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 				return false
 			}
 			for _, l := range c.Listeners {
-				if len(l.Routes) == 1 && l.Routes[0] == c.Clusters[0].Name {
+				if s := serverOf(c, l); len(s.Clusters) == 1 && s.Clusters[0] == c.Clusters[0].Name {
 					return true
 				}
 			}
@@ -187,7 +187,7 @@ func haOperatorTest() {
 			Eventually(cdsPortOpen, timeout, interval).Should(BeTrue())
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())

@@ -377,16 +377,24 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		queueRouteStatusUpdate(c, ro)
 	}
 	r.invalidateMaskedRoutes(c)
+
+	// the objects are rendered as v1 and published as v2
+	v2conf, err := stnrapiv1.ConvertToV2(&conf)
+	if err != nil {
+		log.Error(err, "Cannot convert the dataplane config to v2", "config", conf.String())
+		return NewCriticalError(RenderingError)
+	}
+
 	r.log.Info("Update queue ready", "queue", c.update.String())
 
 	if config.DataplaneMode == config.DataplaneModeManaged {
 		// config name is the name of the gateway
 		gw := c.gws.GetFirst()
 		if gw != nil {
-			conf.Admin.Name = store.GetObjectKey(gw)
+			v2conf.Admin.Name = store.GetObjectKey(gw)
 
 			// update cds server
-			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
+			c.update.ConfigQueue = append(c.update.ConfigQueue, v2conf)
 
 			// create deployment
 			dp, err := r.generateDataplane(c)
@@ -425,7 +433,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			}
 		}
 	} else {
-		cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
+		cm, err := r.renderConfig(c, targetName, targetNamespace, v2conf)
 		if err != nil {
 			return err
 		}
@@ -433,7 +441,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
-		conf.String())
+		v2conf.String())
 
 	return nil
 }

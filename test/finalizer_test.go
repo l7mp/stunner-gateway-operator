@@ -45,7 +45,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 )
@@ -53,10 +53,10 @@ import (
 func testFinalizer() {
 	// SINGLE GATEWAY
 	Context("When creating a minimal set of API resources", Ordered, Label("managed"), func() {
-		var conf *stnrapiv1.StunnerConfig
+		var conf *stnrapiv2.StunnerConfig
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch chan *stnrapiv1.StunnerConfig
+		var ch chan *stnrapiv2.StunnerConfig
 		var cdsClient cdsclient.Client
 
 		BeforeAll(func() {
@@ -64,7 +64,7 @@ func testFinalizer() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
 				logger.NewLoggerFactory(stunnerLogLevel))
@@ -217,7 +217,7 @@ func testFinalizer() {
 			createOrUpdateService(ctx, k8sClient, testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
 					conf = c
 					return true
@@ -236,10 +236,11 @@ func testFinalizer() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -247,9 +248,10 @@ func testFinalizer() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 

@@ -18,7 +18,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -58,7 +58,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				auth, err := r.renderAuth(c)
 				assert.NoError(t, err, "auth rendered")
-				assert.Equal(t, stnrapiv1.AuthTypeStatic.String(),
+				assert.Equal(t, stnrapiv2.AuthTypeStatic.String(),
 					auth.Type, "auth type")
 				assert.Equal(t, "testrealm", auth.Realm, "realm")
 				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
@@ -145,25 +145,29 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STRICT_DNS", rc.Type, "cluster type")
+				assert.Equal(t, "FILTER", rc.RoutingPolicy, "a cluster behind a TURN listener filters")
+				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "the relay address, resolved in the pod")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Equal(t, "testservice-ok.testnamespace.svc.cluster.local",
 					rc.Endpoints[0], "backend-ref")
@@ -256,25 +260,29 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
+				assert.Equal(t, "FILTER", rc.RoutingPolicy, "a cluster behind a TURN listener filters")
+				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "the relay address, resolved in the pod")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
@@ -369,20 +377,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
@@ -482,20 +492,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
@@ -732,20 +744,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
@@ -815,22 +829,24 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
 				assert.Equal(t, "dummy-namespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "dummy-namespace/dummy-route", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "dummy-namespace/dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "dummy-namespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
@@ -993,20 +1009,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
@@ -1079,22 +1097,24 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc = conf.Listeners[0]
 				assert.Equal(t, "dummy-namespace/dummy-gateway/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "dummy-namespace/dummy-route", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "dummy-namespace/dummy-route", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "dummy-namespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
@@ -1200,20 +1220,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
@@ -1470,20 +1492,22 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Len(t, conf.Listeners, 2, "listener num")
 				lc := conf.Listeners[0]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 1, "route num")
-				assert.Equal(t, lc.Routes[0], "testnamespace/udproute-ok", "udp route")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
+				assert.Equal(t, "turn", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-				assert.Len(t, lc.Routes, 0, "route num")
+				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},

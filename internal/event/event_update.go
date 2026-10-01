@@ -3,14 +3,14 @@ package event
 import (
 	"fmt"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
 // render event
-type ConfigConf = []*stnrapiv1.StunnerConfig
+type ConfigConf = []*stnrapiv2.StunnerConfig
 type UpdateConf struct {
 	GatewayClasses store.Store
 	Gateways       store.Store
@@ -29,7 +29,7 @@ type EventUpdate struct {
 	UpsertQueue   UpdateConf
 	DeleteQueue   UpdateConf
 	ConfigQueue   ConfigConf
-	LicenseStatus stnrapiv1.LicenseStatus
+	LicenseStatus stnrapiv2.LicenseStatus
 	Generation    int
 	RequestAck    bool
 }
@@ -62,8 +62,8 @@ func NewEventUpdate(generation int) *EventUpdate {
 			Deployments:    store.NewStore(),
 			DaemonSets:     store.NewStore(),
 		},
-		ConfigQueue:   []*stnrapiv1.StunnerConfig{},
-		LicenseStatus: stnrapiv1.NewEmptyLicenseStatus(),
+		ConfigQueue:   []*stnrapiv2.StunnerConfig{},
+		LicenseStatus: stnrapiv2.NewEmptyLicenseStatus(),
 		Generation:    generation,
 		RequestAck:    false,
 	}
@@ -125,7 +125,7 @@ func (e *EventUpdate) DeepCopy() *EventUpdate {
 
 	u.LicenseStatus = e.LicenseStatus
 
-	u.ConfigQueue = make([]*stnrapiv1.StunnerConfig, len(e.ConfigQueue))
+	u.ConfigQueue = make([]*stnrapiv2.StunnerConfig, len(e.ConfigQueue))
 	copy(u.ConfigQueue, e.ConfigQueue)
 
 	return u

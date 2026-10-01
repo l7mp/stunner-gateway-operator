@@ -35,7 +35,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -48,7 +48,7 @@ import (
 func testLegacyModeEndpointController() {
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED, ENDPOINT-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -81,7 +81,7 @@ func testLegacyModeEndpointController() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+				if len(c.Listeners) == 2 && len(serverOf(&c, c.Listeners[0]).Clusters) == 1 &&
 					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
 					conf = &c
 					return true
@@ -102,10 +102,11 @@ func testLegacyModeEndpointController() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -113,9 +114,10 @@ func testLegacyModeEndpointController() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 

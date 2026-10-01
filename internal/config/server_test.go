@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 	"github.com/l7mp/stunner/v2/pkg/logger"
@@ -67,10 +67,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 		loggerFactory       logger.LoggerFactory
 		addr1, addr2        string
 		cdsc1, cdsc2, cdsc3 cdsclient.Client
-		ch1, ch2, ch3       chan *stnrapiv1.StunnerConfig
-		c1Ok, c2Ok, c3Ok    *stnrapiv1.StunnerConfig
+		ch1, ch2, ch3       chan *stnrapiv2.StunnerConfig
+		c1Ok, c2Ok, c3Ok    *stnrapiv2.StunnerConfig
 		lc                  cdsclient.LicenseStatusClient
-		licenseStatus       stnrapiv1.LicenseStatus
+		licenseStatus       stnrapiv2.LicenseStatus
 		connIds             []string
 	)
 
@@ -94,7 +94,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 
 		testCDSAddr := getRandCDSAddr()
 		log.Info("create server", "address", testCDSAddr)
-		patcher := func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
+		patcher := func(conf *stnrapiv2.StunnerConfig, node string) *stnrapiv2.StunnerConfig {
 			if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
 				// rewrite the realm to the node name
 				for _, a := range n.Status.Addresses {
@@ -136,8 +136,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		cdsc2, err = cdsclient.New(addr2, id2, "", loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
-		ch1 = make(chan *stnrapiv1.StunnerConfig, 10)
-		ch2 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ch1 = make(chan *stnrapiv2.StunnerConfig, 10)
+		ch2 = make(chan *stnrapiv2.StunnerConfig, 10)
 		err = cdsc1.Watch(ctx, ch1, true)
 		Expect(err).To(Succeed(), "watcher setup 1")
 		err = cdsc2.Watch(ctx, ch2, true)
@@ -172,7 +172,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		log.Info("creating a config for the loader", "id", "ns/gw1")
 		c1Ok = zeroConfig("ns", "gw1", "realm1")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok}
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok}
 		ch <- e
 
 		time.Sleep(50 * time.Millisecond)
@@ -211,7 +211,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		Expect(err).To(Succeed(), "license client setup")
 		status, err := lc.LicenseStatus(ctx)
 		Expect(err).To(Succeed(), "loading status 1 ok")
-		Expect(status).To(Equal(stnrapiv1.NewEmptyLicenseStatus()), "license 1 ok")
+		Expect(status).To(Equal(stnrapiv2.NewEmptyLicenseStatus()), "license 1 ok")
 
 	})
 
@@ -219,8 +219,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		log.Info("creating a config for the 2nd client", "id", "ns/gw2")
 		c2Ok = zeroConfig("ns", "gw2", "realm2")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
-		licenseStatus = stnrapiv1.LicenseStatus{
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c2Ok}
+		licenseStatus = stnrapiv2.LicenseStatus{
 			EnabledFeatures:  []string{"a", "b", "c"},
 			SubscriptionType: "test",
 			LastUpdated:      "never",
@@ -271,7 +271,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		log.Info("updating the 2nd config", "id2", c2Ok.Admin.Name)
 		c2Ok = zeroConfig("ns", "gw2", "realm2-new")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok}
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c2Ok}
 		ch <- e
 
 		time.Sleep(50 * time.Millisecond)
@@ -303,7 +303,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		cdsc3, err = cdsclient.New(addr2, id3, "", loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
-		ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ch3 = make(chan *stnrapiv2.StunnerConfig, 10)
 		ctx2, cancel2 = context.WithCancel(context.Background())
 		err = cdsc3.Watch(ctx2, ch3, false)
 		Expect(err).To(Succeed(), "watcher setup")
@@ -333,7 +333,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		log.Info("adding a config CDS for the 3rd client", "id", "ns/gw3")
 		c3Ok = zeroConfig("ns", "gw3", "realm3_new")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c2Ok, c3Ok}
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c2Ok, c3Ok}
 		ch <- e
 
 		time.Sleep(50 * time.Millisecond)
@@ -383,7 +383,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 	It("should stop serving a config that was removed", func() {
 		log.Info("removing the config for the 2nd client", "id", "ns/gw2")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{c1Ok, c3Ok}
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c3Ok}
 		ch <- e
 
 		time.Sleep(50 * time.Millisecond)
@@ -436,7 +436,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		time.Sleep(50 * time.Millisecond)
 
 		log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
-		ch3 = make(chan *stnrapiv1.StunnerConfig, 10)
+		ch3 = make(chan *stnrapiv2.StunnerConfig, 10)
 		ctx2, cancel2 = context.WithCancel(context.Background())
 		err := cdsc3.Watch(ctx2, ch3, false)
 		Expect(err).To(Succeed(), "watcher setup")
@@ -475,7 +475,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 	It("should empty the store when every config is removed", func() {
 		log.Info("removing all configs")
 		e := event.NewEventUpdate(0)
-		e.ConfigQueue = []*stnrapiv1.StunnerConfig{}
+		e.ConfigQueue = []*stnrapiv2.StunnerConfig{}
 		ch <- e
 
 		time.Sleep(50 * time.Millisecond)
@@ -499,7 +499,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		srv           *Server
 		loggerFactory logger.LoggerFactory
 		addr1, id1    string
-		config        *stnrapiv1.StunnerConfig
+		config        *stnrapiv2.StunnerConfig
 	)
 
 	BeforeAll(func() {
@@ -524,21 +524,33 @@ var _ = Describe("Config patcher", Ordered, func() {
 		}}
 		store.Nodes.Upsert(n2)
 
-		config = &stnrapiv1.StunnerConfig{
-			ApiVersion: stnrapiv1.ApiVersion,
-			Admin: stnrapiv1.AdminConfig{
+		config = &stnrapiv2.StunnerConfig{
+			ApiVersion: stnrapiv2.ApiVersion,
+			Admin: stnrapiv2.AdminConfig{
 				Name:     "ns/gw1",
 				LogLevel: stunnerTestLoglevel,
 			},
-			Auth: stnrapiv1.AuthConfig{
+			Auth: stnrapiv2.AuthConfig{
 				Credentials: map[string]string{
 					"username": "user",
 					"password": "pass",
 				},
 			},
-			Listeners: []stnrapiv1.ListenerConfig{{
-				Name: "default-listener",
-				Addr: opdefault.DefaultSTUNnerAddressEnvVarName,
+			Listeners: []stnrapiv2.ListenerConfig{{
+				Name:     "default-listener",
+				Protocol: "UDP",
+				Servers:  []string{"default-server"},
+			}},
+			Servers: []stnrapiv2.ServerConfig{{
+				Name:     "default-server",
+				Type:     "turn",
+				Clusters: []string{"default-cluster"},
+			}},
+			// the relay address the node patcher rewrites
+			Clusters: []stnrapiv2.ClusterConfig{{
+				Name:     "default-cluster",
+				Protocol: "UDP",
+				Addrs:    []string{opdefault.DefaultSTUNnerAddressEnvVarName},
 			}},
 		}
 
@@ -567,7 +579,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
-		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		config.Clusters[0].Addrs = []string{opdefault.DefaultSTUNnerAddressEnvVarName}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -581,11 +593,11 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.DefaultSTUNnerAddressEnvVarName
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> patched with testnode1 external IP")
-		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -599,7 +611,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && c.Listeners[0].Addr == "1.2.3.4" // testnode 1 external ip
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == "1.2.3.4" // testnode 1 external ip
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 	})
@@ -611,7 +623,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
-		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		config.Clusters[0].Addrs = []string{opdefault.DefaultSTUNnerAddressEnvVarName}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -625,11 +637,11 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.DefaultSTUNnerAddressEnvVarName
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> patched with testnode2 external DNS")
-		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -643,7 +655,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && net.ParseIP(c.Listeners[0].Addr) != nil // testnode2 addr should parse as ip
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && net.ParseIP(c.Clusters[0].Addrs[0]) != nil // testnode2 addr should parse as ip
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 	})
@@ -655,7 +667,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
-		config.Listeners[0].Addr = opdefault.DefaultSTUNnerAddressEnvVarName
+		config.Clusters[0].Addrs = []string{opdefault.DefaultSTUNnerAddressEnvVarName}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -669,11 +681,11 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.DefaultSTUNnerAddressEnvVarName
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> should not be patched as node does not exist")
-		config.Listeners[0].Addr = opdefault.NodeAddressPlaceholder
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -687,7 +699,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Listeners) == 1 && c.Listeners[0].Addr == opdefault.DefaultSTUNnerAddressEnvVarName
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.DefaultSTUNnerAddressEnvVarName
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 	})
@@ -714,7 +726,7 @@ var _ = Describe("getNodeAddress", func() {
 })
 
 // wait for some configurable time for a watch element
-func watchConfig(ch chan *stnrapiv1.StunnerConfig, d time.Duration) *stnrapiv1.StunnerConfig {
+func watchConfig(ch chan *stnrapiv2.StunnerConfig, d time.Duration) *stnrapiv2.StunnerConfig {
 	select {
 	case c := <-ch:
 		// fmt.Println("++++++++++++ got config ++++++++++++: ", c.String())
@@ -736,7 +748,7 @@ func getRandCDSAddr() string {
 	return fmt.Sprintf("127.0.0.1:%d", probe.Addr().(*net.TCPAddr).Port)
 }
 
-func zeroConfig(namespace, name, realm string) *stnrapiv1.StunnerConfig {
+func zeroConfig(namespace, name, realm string) *stnrapiv2.StunnerConfig {
 	id := fmt.Sprintf("%s/%s", namespace, name)
 	c := cdsclient.ZeroConfig(id)
 	c.Auth.Realm = realm
@@ -745,7 +757,7 @@ func zeroConfig(namespace, name, realm string) *stnrapiv1.StunnerConfig {
 }
 
 //nolint:unused
-func packConfig(c *stnrapiv1.StunnerConfig) *corev1.ConfigMap {
+func packConfig(c *stnrapiv2.StunnerConfig) *corev1.ConfigMap {
 	nsName := store.GetNameFromKey(c.Admin.Name)
 
 	sc, _ := json.Marshal(c)

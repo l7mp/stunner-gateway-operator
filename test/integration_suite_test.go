@@ -48,7 +48,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -258,9 +258,9 @@ func TestAPIs(t *testing.T) {
 }
 
 // managed mode test helper
-type ConfigChecker func(conf *stnrapiv1.StunnerConfig) bool
+type ConfigChecker func(conf *stnrapiv2.StunnerConfig) bool
 
-func checkConfig(ch chan *stnrapiv1.StunnerConfig, checker ConfigChecker) bool {
+func checkConfig(ch chan *stnrapiv2.StunnerConfig, checker ConfigChecker) bool {
 	timeoutCh := time.After(timeout)
 	for {
 		select {
@@ -424,4 +424,10 @@ func finalizerTest() {
 			// AfterSuite calls cancel()
 		})
 	})
+}
+
+// serverOf returns the server a listener of a config feeds.
+func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapiv2.ServerConfig {
+	s, _ := conf.GetServerConfig(l.FirstServer())
+	return s
 }

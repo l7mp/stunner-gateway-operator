@@ -147,9 +147,9 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			Image:   config.StunnerdImage,
 			Command: []string{"stunnerd"},
 			// Enable config-discovery
-			Args: []string{"-w", "--udp-thread-num=16"},
+			Args: []string{"-w"},
 			// Disable config-discovery
-			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf", "--udp-thread-num=16"},
+			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf"},
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,

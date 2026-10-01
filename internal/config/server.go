@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -105,16 +105,20 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 }
 
 func getNodeAddressPatcher(log logr.Logger) cdsserver.ConfigNodePatcher {
-	return func(conf *stnrapiv1.StunnerConfig, node string) *stnrapiv1.StunnerConfig {
-		if conf == nil || len(conf.Listeners) == 0 {
+	return func(conf *stnrapiv2.StunnerConfig, node string) *stnrapiv2.StunnerConfig {
+		if conf == nil {
 			return conf
 		}
 
+		// the node address placeholder sits among the relay addresses of the clusters
 		nodeAddr := ""
 		nodeAddrType := corev1.NodeAddressType("")
 		found, patched := false, false
-		for i := range conf.Listeners {
-			if conf.Listeners[i].Addr == config.NodeAddressPlaceholder {
+		for i := range conf.Clusters {
+			for j, a := range conf.Clusters[i].Addrs {
+				if a != config.NodeAddressPlaceholder {
+					continue
+				}
 				if !found {
 					aType, addr, err := getNodeAddress(node)
 					if err != nil {
@@ -131,10 +135,10 @@ func getNodeAddressPatcher(log logr.Logger) cdsserver.ConfigNodePatcher {
 					}
 				}
 				if found && nodeAddr != "" {
-					conf.Listeners[i].Addr = nodeAddr
+					conf.Clusters[i].Addrs[j] = nodeAddr
 					patched = true
 				} else {
-					conf.Listeners[i].Addr = config.DefaultSTUNnerAddressEnvVarName // $STUNNER_ADDR
+					conf.Clusters[i].Addrs[j] = config.DefaultSTUNnerAddressEnvVarName // $STUNNER_ADDR
 				}
 			}
 		}

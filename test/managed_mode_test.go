@@ -52,7 +52,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 )
@@ -60,10 +60,10 @@ import (
 func testManagedMode() {
 	// SINGLE GATEWAY
 	Context("When creating a minimal set of API resources", Ordered, Label("managed"), func() {
-		var conf *stnrapiv1.StunnerConfig
+		var conf *stnrapiv2.StunnerConfig
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch chan *stnrapiv1.StunnerConfig
+		var ch chan *stnrapiv2.StunnerConfig
 		var cdsClient cdsclient.Client
 		var licenseClient cdsclient.LicenseStatusClient
 
@@ -72,7 +72,7 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			log := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", log)
@@ -131,13 +131,13 @@ func testManagedMode() {
 		It("should return a default licensing status", func() {
 			Eventually(func() bool {
 				status, err := licenseClient.LicenseStatus(ctx)
-				return err == nil && reflect.DeepEqual(status, stnrapiv1.NewEmptyLicenseStatus())
+				return err == nil && reflect.DeepEqual(status, stnrapiv2.NewEmptyLicenseStatus())
 			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("should render a STUNner config with exactly 2 listeners", func() {
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 {
 					conf = c
@@ -158,7 +158,8 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
 
 			l = conf.Listeners[1]
@@ -167,7 +168,8 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 		})
 
@@ -291,7 +293,7 @@ func testManagedMode() {
 			createOrUpdateService(ctx, k8sClient, testSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
 					conf = c
 					return true
@@ -310,10 +312,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -321,9 +324,10 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -385,7 +389,7 @@ func testManagedMode() {
 			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// fmt.Printf("--------------------\nCHECKER 0: %#v\n--------------------\n", c)
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
@@ -410,7 +414,7 @@ func testManagedMode() {
 			ctrl.Log.Info("setting an IPv6 ingress IP on the LoadBalancer service status")
 			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "2001:db8::1")
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -425,7 +429,7 @@ func testManagedMode() {
 			ctrl.Log.Info("clearing the LoadBalancer service status to restore the NodePort fallback")
 			setLBServiceIngressStatus(ctx, k8sClient, store.GetNamespacedName(testGw), "")
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -446,7 +450,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "2001:db8::2"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -463,7 +467,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "1.2.3.4"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -485,7 +489,7 @@ func testManagedMode() {
 				}}
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -512,7 +516,7 @@ func testManagedMode() {
 			ctrl.Log.Info("loading a Kubernetes Node")
 			createOrUpdateNode(ctx, k8sClient, testNode, nil)
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -534,7 +538,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Address = "4.3.2.1"
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -557,7 +561,7 @@ func testManagedMode() {
 				current.Status.Addresses[1].Type = corev1.NodeInternalIP
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -586,7 +590,7 @@ func testManagedMode() {
 			})
 			Expect(err).Should(Succeed())
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -612,7 +616,7 @@ func testManagedMode() {
 					opdefault.ExternalTrafficPolicyAnnotationValue
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -692,7 +696,7 @@ func testManagedMode() {
 				})
 			})
 
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
@@ -1024,7 +1028,7 @@ func testManagedMode() {
 
 			// get the config: the targetport should be enforced!
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 2 && c.Listeners[1].Name == "testnamespace/gateway-1/gateway-1-listener-udp" &&
 					c.Listeners[1].Port == targetPort {
@@ -1044,7 +1048,8 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-random-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
 
 			l = conf.Listeners[1]
@@ -1053,7 +1058,8 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(targetPort))
 		})
 
@@ -1116,7 +1122,7 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) != 2 || len(c.Clusters) != 1 {
 					return false
 				}
@@ -1149,10 +1155,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -1160,9 +1167,10 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should install TLS cert/keys", func() {
@@ -1170,7 +1178,7 @@ func testManagedMode() {
 			createOrUpdateSecret(ctx, k8sClient, testSecret, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -1189,24 +1197,27 @@ func testManagedMode() {
 			l := conf.Listeners[0]
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			l = conf.Listeners[2]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should update TLS cert when Secret changes", func() {
@@ -1216,7 +1227,7 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) != 3 || len(c.Clusters) != 1 {
 					return false
@@ -1234,11 +1245,12 @@ func testManagedMode() {
 			Expect(conf.Listeners).To(HaveLen(3))
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should create a Deployment for the Gateway", func() {
@@ -1424,7 +1436,7 @@ func testManagedMode() {
 			Expect(err).Should(Succeed())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if c.Admin.MetricsEndpoint != "" &&
 					(c.Admin.HealthCheckEndpoint == nil || *c.Admin.HealthCheckEndpoint == "") {
 					conf = c
@@ -1440,7 +1452,8 @@ func testManagedMode() {
 			Expect(conf.Listeners).To(HaveLen(2))
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 		})
 
@@ -1523,7 +1536,7 @@ func testManagedMode() {
 			Expect(container.ImagePullPolicy).Should(Equal(corev1.PullAlways))
 			Expect(container.Ports).To(HaveLen(1))
 			Expect(container.Ports[0].Name).Should(Equal(opdefault.DefaultMetricsPortName))
-			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrapiv1.DefaultMetricsPort)))
+			Expect(container.Ports[0].ContainerPort).Should(Equal(int32(stnrapiv2.DefaultMetricsPort)))
 			Expect(container.Ports[0].Protocol).Should(Equal(corev1.ProtocolTCP))
 
 			// remainder
@@ -1633,9 +1646,9 @@ func testManagedMode() {
 			})
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
-					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
+					len(c.Listeners) == 2 && len(serverOf(c, c.Listeners[0]).Clusters) == 1 && len(serverOf(c, c.Listeners[1]).Clusters) == 1 {
 					conf = c
 					return true
 				}
@@ -1653,10 +1666,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1664,12 +1678,13 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
 			Expect(l.Cert).NotTo(Equal(""))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -1822,7 +1837,7 @@ func testManagedMode() {
 			createOrUpdateStaticService(ctx, k8sClient, updatedStaticSvc, nil)
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.16") {
 					conf = c
 					return true
@@ -1841,10 +1856,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1852,12 +1868,13 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
 			Expect(l.Cert).NotTo(Equal(""))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -1908,9 +1925,9 @@ func testManagedMode() {
 			Expect(k8sClient.Create(ctx, testUDPRouteV1A2)).Should(Succeed())
 
 			ctrl.Log.Info("trying to load STUNner config")
-			Eventually(checkConfig(ch, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) == 2 &&
-					(len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 1) &&
+					(len(serverOf(c, c.Listeners[0]).Clusters) == 1 || len(serverOf(c, c.Listeners[1]).Clusters) == 1) &&
 					len(c.Clusters) == 1 &&
 					!contains(c.Clusters[0].Endpoints, "10.11.12.13") {
 					conf = c
@@ -1927,19 +1944,21 @@ func testManagedMode() {
 				l = conf.Listeners[1]
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
@@ -2140,7 +2159,7 @@ func testManagedMode() {
 				c, err := cl.Load()
 				Expect(err).Should(Succeed())
 
-				if len(c.Listeners) == 2 && (len(c.Listeners[0].Routes) == 1 || len(c.Listeners[1].Routes) == 0) &&
+				if len(c.Listeners) == 2 && (len(serverOf(c, c.Listeners[0]).Clusters) == 1 || len(serverOf(c, c.Listeners[1]).Clusters) == 0) &&
 					len(c.Clusters) == 1 {
 					conf = c
 					return true
@@ -2156,19 +2175,21 @@ func testManagedMode() {
 				l = conf.Listeners[1]
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
 				l = conf.Listeners[0]
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
@@ -2336,10 +2357,10 @@ func testManagedMode() {
 
 	// MULTI-GATEWAY
 	Context("When creating 2 Gateways", Ordered, Label("managed"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch1, ch2 chan *stnrapiv1.StunnerConfig
+		var ch1, ch2 chan *stnrapiv2.StunnerConfig
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
@@ -2348,8 +2369,8 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch1 = make(chan *stnrapiv1.StunnerConfig, 128)
-			ch2 = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch1 = make(chan *stnrapiv2.StunnerConfig, 128)
+			ch2 = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
@@ -2406,9 +2427,9 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 1", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
-			Eventually(checkConfig(ch1, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch1, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
-				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
+				if len(c.Listeners) == 2 && len(serverOf(c, c.Listeners[1]).Clusters) == 0 && len(c.Clusters) == 1 {
 					conf = c
 					return true
 				}
@@ -2424,10 +2445,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2435,9 +2457,10 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -2454,9 +2477,9 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
-			Eventually(checkConfig(ch2, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch2, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
-				if len(c.Listeners) == 1 && len(c.Listeners[0].Routes) == 1 && len(c.Clusters) == 1 {
+				if len(c.Listeners) == 1 && len(serverOf(c, c.Listeners[0]).Clusters) == 1 && len(c.Clusters) == 1 {
 					conf = c
 					return true
 				}
@@ -2467,10 +2490,11 @@ func testManagedMode() {
 
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
@@ -3095,10 +3119,10 @@ func testManagedMode() {
 
 	// MULTI-GATEWAYCLASS
 	Context("When creating 2 GatewayClasses and Gateways", Ordered, Label("managed"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
-		var ch1, ch2 chan *stnrapiv1.StunnerConfig
+		var ch1, ch2 chan *stnrapiv2.StunnerConfig
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
@@ -3107,8 +3131,8 @@ func testManagedMode() {
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
-			ch1 = make(chan *stnrapiv1.StunnerConfig, 128)
-			ch2 = make(chan *stnrapiv1.StunnerConfig, 128)
+			ch1 = make(chan *stnrapiv2.StunnerConfig, 128)
+			ch2 = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
 			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
@@ -3210,9 +3234,9 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 1", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-1")
-			Eventually(checkConfig(ch1, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch1, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
-				if len(c.Listeners) == 2 && len(c.Listeners[1].Routes) == 0 && len(c.Clusters) == 1 {
+				if len(c.Listeners) == 2 && len(serverOf(c, c.Listeners[1]).Clusters) == 0 && len(c.Clusters) == 1 {
 					conf = c
 					return true
 				}
@@ -3228,10 +3252,11 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3239,9 +3264,10 @@ func testManagedMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -3258,7 +3284,7 @@ func testManagedMode() {
 
 		It("should render a STUNner config for Gateway 2", func() {
 			ctrl.Log.Info("trying to Get STUNner configmap", "resource", "testnamespace/gateway-2")
-			Eventually(checkConfig(ch2, func(c *stnrapiv1.StunnerConfig) bool {
+			Eventually(checkConfig(ch2, func(c *stnrapiv2.StunnerConfig) bool {
 				// conf should have valid listener confs
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 {
 					conf = c
@@ -3271,10 +3297,11 @@ func testManagedMode() {
 
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(10))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]

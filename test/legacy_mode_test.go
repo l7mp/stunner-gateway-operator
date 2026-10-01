@@ -36,7 +36,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -49,7 +49,7 @@ import (
 func testLegacyMode() {
 	// WITHOUT EDS
 	Context("When creating a minimal set of API resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -177,7 +177,8 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
 
 			l = conf.Listeners[1]
@@ -186,7 +187,8 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 		})
 
@@ -349,10 +351,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -360,9 +363,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -930,18 +934,20 @@ func testLegacyMode() {
 			l := conf.Listeners[0]
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should update TLS cert when Secret changes", func() {
@@ -986,11 +992,12 @@ func testLegacyMode() {
 			Expect(conf.Listeners).To(HaveLen(2))
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should update TLS key when Secret changes", func() {
@@ -1035,11 +1042,12 @@ func testLegacyMode() {
 			Expect(conf.Listeners).To(HaveLen(2))
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(newKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should survive installing a TLS cert/key for multiple TLS/DTLS listeners", func() {
@@ -1117,28 +1125,31 @@ func testLegacyMode() {
 			l := conf.Listeners[0]
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Cert).Should(Equal(""))
 			Expect(l.Key).Should(Equal(""))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			l = conf.Listeners[2]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tls"))
-			Expect(l.Protocol).Should(Equal("TURN-TLS"))
+			Expect(l.Protocol).Should(Equal("TLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
 		It("should set the Gateway status", func() {
@@ -1333,7 +1344,7 @@ func testLegacyMode() {
 				}
 
 				if len(c.Clusters) == 1 && contains(c.Clusters[0].Endpoints, "10.11.12.13") &&
-					len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
+					len(c.Listeners) == 2 && len(serverOf(&c, c.Listeners[0]).Clusters) == 1 && len(serverOf(&c, c.Listeners[1]).Clusters) == 1 {
 					conf = &c
 					return true
 				}
@@ -1352,10 +1363,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1363,10 +1375,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -1583,7 +1596,7 @@ func testLegacyMode() {
 	})
 
 	Context("When re-loading the gateway and the route resources (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should render a valid STUNner config", func() {
 			ctrl.Log.Info("re-loading Gateway")
@@ -1647,7 +1660,7 @@ func testLegacyMode() {
 					l = conf.Listeners[1]
 				}
 
-				if len(l.Routes) != 1 {
+				if len(serverOf(conf, l).Clusters) != 1 {
 					return false
 				}
 
@@ -1667,10 +1680,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1678,9 +1692,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -1800,7 +1815,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the DTLS listener (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-dtls")
 
 		It("should render a valid STUNner config", func() {
@@ -1832,7 +1847,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners[1].Routes) == 1 {
+				if len(serverOf(&c, c.Listeners[1]).Clusters) == 1 {
 					conf = &c
 					return true
 				}
@@ -1852,9 +1867,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1862,10 +1878,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
@@ -1986,7 +2003,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to All (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 		// snudp := gwapiv1.SectionName("gateway-1-listener-udp")
 		// sntcp := gwapiv1.SectionName("gateway-1-listener-tcp")
 
@@ -2046,7 +2063,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 1 {
+				if len(serverOf(&c, c.Listeners[0]).Clusters) == 1 && len(serverOf(&c, c.Listeners[1]).Clusters) == 1 {
 					conf = &c
 					return true
 				}
@@ -2066,10 +2083,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2077,10 +2095,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
@@ -2309,7 +2328,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners[0].Routes) == 1 && len(c.Listeners[1].Routes) == 2 {
+				if len(serverOf(&c, c.Listeners[0]).Clusters) == 1 && len(serverOf(&c, c.Listeners[1]).Clusters) == 2 {
 					conf = &c
 					return true
 				}
@@ -2329,10 +2348,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2340,11 +2360,12 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
@@ -2508,7 +2529,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a gateway namespace attachment policy to Selector (EDS DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should be possible to change the namespace attachment policy to Selector", func() {
 			ctrl.Log.Info("recreating UDPRoute with multiple parentrefs")
@@ -2607,7 +2628,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners[0].Routes) == 0 && len(c.Listeners[1].Routes) == 2 {
+				if len(serverOf(&c, c.Listeners[0]).Clusters) == 0 && len(serverOf(&c, c.Listeners[1]).Clusters) == 2 {
 					conf = &c
 					return true
 				}
@@ -2627,9 +2648,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2637,11 +2659,12 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
@@ -2880,7 +2903,7 @@ func testLegacyMode() {
 	})
 
 	Context("The controller should dynamically render a new valid STUNner config (EDS DISABLED) when", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("changing the parentRef of a route", func() {
 			ctrl.Log.Info("re-loading UDPRoute: ParentRef.SectionName = dummy")
@@ -2909,7 +2932,7 @@ func testLegacyMode() {
 				}
 
 				if len(c.Listeners) > 0 && len(c.Listeners) != 2 ||
-					len(c.Clusters) == 0 && len(c.Listeners[0].Routes) == 0 {
+					len(c.Clusters) == 0 && len(serverOf(&c, c.Listeners[0]).Clusters) == 0 {
 					conf = &c
 					return true
 				}
@@ -2927,9 +2950,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2937,9 +2961,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			Expect(conf.Clusters).To(HaveLen(0))
 
@@ -3448,7 +3473,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 2 && len(c.Clusters) == 2 {
+				if len(c.Listeners) == 2 && len(serverOf(&c, c.Listeners[0]).Clusters) == 2 && len(c.Clusters) == 2 {
 					conf = &c
 					return true
 				}
@@ -3466,10 +3491,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
-			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3477,9 +3503,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 
@@ -3624,7 +3651,7 @@ func testLegacyMode() {
 			Expect(conf).NotTo(BeNil(), "STUNner config rendered")
 
 			Expect(conf.Listeners).To(HaveLen(4))
-			l := stnrapiv1.ListenerConfig{}
+			l := stnrapiv2.ListenerConfig{}
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-udp" {
@@ -3633,10 +3660,11 @@ func testLegacyMode() {
 				}
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
-			Expect(l.Routes).To(HaveLen(2))
-			Expect(l.Routes).Should(ContainElement("testnamespace/udproute-ok"))
-			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2"))
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3645,8 +3673,9 @@ func testLegacyMode() {
 				}
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
-			Expect(l.Protocol).Should(Equal("TURN-DTLS"))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(l.Protocol).Should(Equal("DTLS"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-2/gateway-2-udp" {
@@ -3655,10 +3684,11 @@ func testLegacyMode() {
 				}
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1234))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes).Should(ContainElement("testnamespace/route-2"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2"))
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-2/gateway-2-tcp" {
@@ -3667,9 +3697,10 @@ func testLegacyMode() {
 				}
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(4321))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
@@ -3751,7 +3782,7 @@ func testLegacyMode() {
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3782,7 +3813,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+				if len(c.Listeners) == 2 && len(serverOf(&c, c.Listeners[0]).Clusters) == 1 &&
 					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
 					conf = &c
 					return true
@@ -3803,10 +3834,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -3814,9 +3846,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -3874,7 +3907,7 @@ func testLegacyMode() {
 
 	// WITH EDS, WITHOUT RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP DISABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -3905,7 +3938,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners) == 2 && len(c.Listeners[0].Routes) == 1 &&
+				if len(c.Listeners) == 2 && len(serverOf(&c, c.Listeners[0]).Clusters) == 1 &&
 					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
 					conf = &c
 					return true
@@ -3926,10 +3959,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -3937,9 +3971,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).Should(BeEmpty())
+			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -3997,7 +4032,7 @@ func testLegacyMode() {
 
 	// WITH EDS and RELAY-CLUSTER-IP
 	Context("When creating a minimal set of API resources (EDS ENABLED, RELAY-TO-CLUSTER-IP ENABLED, ENDPOINTSLICE-CONTROLLER-ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 
 		It("should survive loading a minimal config", func() {
 			// switch EDS off
@@ -4058,10 +4093,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
@@ -4085,7 +4121,7 @@ func testLegacyMode() {
 	})
 
 	Context("When changing a route parentref to the TCP listener (EDS ENABLED)", Ordered, Label("legacy"), func() {
-		conf := &stnrapiv1.StunnerConfig{}
+		conf := &stnrapiv2.StunnerConfig{}
 		sn := gwapiv1.SectionName("gateway-1-listener-tcp")
 
 		It("should render a valid STUNner config", func() {
@@ -4119,7 +4155,7 @@ func testLegacyMode() {
 					return false
 				}
 
-				if len(c.Listeners[0].Routes) == 0 && len(c.Listeners[1].Routes) == 1 {
+				if len(serverOf(&c, c.Listeners[0]).Clusters) == 0 && len(serverOf(&c, c.Listeners[1]).Clusters) == 1 {
 					conf = &c
 					return true
 				}
@@ -4139,9 +4175,10 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
-			Expect(l.Protocol).Should(Equal("TURN-UDP"))
+			Expect(l.Protocol).Should(Equal("UDP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(1))
-			Expect(l.Routes).To(HaveLen(0))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -4149,10 +4186,11 @@ func testLegacyMode() {
 			}
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
-			Expect(l.Protocol).Should(Equal("TURN-TCP"))
+			Expect(l.Protocol).Should(Equal("TCP"))
+			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Routes).To(HaveLen(1))
-			Expect(l.Routes[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]

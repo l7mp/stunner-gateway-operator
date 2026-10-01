@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 )
 
 // EventLicense carries the licensing status from the license manager to the operator. The
@@ -11,11 +11,11 @@ import (
 // rendered dataplane config depends on the licensed feature set.
 type EventLicense struct {
 	Type   EventType
-	Status stnrapiv1.LicenseStatus
+	Status stnrapiv2.LicenseStatus
 }
 
 // NewEventLicense creates a license status event.
-func NewEventLicense(status stnrapiv1.LicenseStatus) *EventLicense {
+func NewEventLicense(status stnrapiv2.LicenseStatus) *EventLicense {
 	return &EventLicense{Type: EventTypeLicense, Status: status}
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 
 	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	licensecfg "github.com/l7mp/stunner/v2/pkg/config/license"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -36,7 +37,7 @@ type Manager interface {
 	// LastError returns the last license manager error.
 	LastError() error
 	// Status returns the current licensing status.
-	Status() stnrapiv1.LicenseStatus
+	Status() stnrapiv2.LicenseStatus
 }
 
 func NewManager(key string, logger logr.Logger) Manager {
