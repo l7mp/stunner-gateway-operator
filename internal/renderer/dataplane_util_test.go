@@ -184,7 +184,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				}
 				assert.Equal(t, probe, *container.ReadinessProbe, "container 1 - readiness probe")
 
-				assert.Len(t, container.Env, 6, "container 1 - env len")
+				assert.Len(t, container.Env, 7, "container 1 - env len")
 				podAddrsFieldSelector := corev1.ObjectFieldSelector{FieldPath: "status.podIPs"}
 				podAddrsEnvVarSource := corev1.EnvVarSource{FieldRef: &podAddrsFieldSelector}
 				assert.Contains(t, container.Env,

@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 )
 
 // Labeling rules
@@ -209,10 +210,9 @@ const (
 	// (both families in a dual-stack deployment), used as the listener relay addresses.
 	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddrs
 
-	// NodeAddressPlaceholder is used internally by the operator to let the renderer to signal
-	// to the CDS server's config patcher to replace the listener address with the node
-	// external IP.
-	NodeAddressPlaceholder = stnrapiv1.DefaultNodeAddressPlaceholder
+	// NodeAddressVar is the relay address the CDS server expands, for each dataplane pod, to the
+	// external address of the pod's node.
+	NodeAddressVar = "$" + stnrapiv2.DefaultEnvVarNodeAddr
 )
 
 var (

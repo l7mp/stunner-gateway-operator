@@ -188,7 +188,7 @@ func haOperatorTest() {
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
 			ch = make(chan *stnrapiv2.StunnerConfig, 128)
-			cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
+			cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil,
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())
 			Expect(cl.Watch(clientCtx, ch, false)).Should(Succeed())

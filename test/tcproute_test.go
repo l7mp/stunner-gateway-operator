@@ -278,7 +278,7 @@ func testTCPRouteManaged() {
 			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			log := logger.NewLoggerFactory(stunnerLogLevel)
-			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", log)
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil, log)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
 		})

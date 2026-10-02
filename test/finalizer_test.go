@@ -66,7 +66,7 @@ func testFinalizer() {
 			clientCtx, clientCancel = context.WithCancel(context.Background())
 			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
-			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil,
 				logger.NewLoggerFactory(stunnerLogLevel))
 			Expect(err).Should(Succeed())
 			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())

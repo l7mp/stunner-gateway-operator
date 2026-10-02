@@ -75,7 +75,7 @@ func testManagedMode() {
 			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			log := logger.NewLoggerFactory(stunnerLogLevel)
-			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", log)
+			cdsClient, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil, log)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient.Watch(clientCtx, ch, false)).Should(Succeed())
 			licenseClient, err = cdsclient.NewLicenseStatusClient(cdsServerAddr, log.NewLogger("license-status"))
@@ -2152,7 +2152,7 @@ func testManagedMode() {
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(func() bool {
 				// there is a good chance we won't get an update so we load the new config
-				cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "",
+				cl, err := cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil,
 					logger.NewLoggerFactory(stunnerLogLevel))
 				Expect(err).Should(Succeed())
 
@@ -2373,10 +2373,10 @@ func testManagedMode() {
 			ch2 = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
-			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
+			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil, logger)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient1.Watch(clientCtx, ch1, false)).Should(Succeed())
-			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", "", logger)
+			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", nil, logger)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient2.Watch(clientCtx, ch2, false)).Should(Succeed())
 		})
@@ -3135,10 +3135,10 @@ func testManagedMode() {
 			ch2 = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
 			logger := logger.NewLoggerFactory(stunnerLogLevel)
-			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", "", logger)
+			cdsClient1, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-1", nil, logger)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient1.Watch(clientCtx, ch1, false)).Should(Succeed())
-			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", "", logger)
+			cdsClient2, err = cdsclient.New(cdsServerAddr, "testnamespace/gateway-2", nil, logger)
 			Expect(err).Should(Succeed())
 			Expect(cdsClient2.Watch(clientCtx, ch2, false)).Should(Succeed())
 		})

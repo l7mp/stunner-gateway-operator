@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -153,6 +154,10 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,
+			}, {
+				// the node address the CDS server expands, when the node has none: the pod address
+				Name:  stnrapiv2.DefaultEnvVarNodeAddr,
+				Value: "$(STUNNER_ADDR)",
 			}, {
 				Name:      stnrapiv1.DefaultEnvVarAddrs, // pod IPs (both families) for relay addresses
 				ValueFrom: &podAddrsEnvVarSource,

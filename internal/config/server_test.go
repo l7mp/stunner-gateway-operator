@@ -94,9 +94,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 
 		testCDSAddr := getRandCDSAddr()
 		log.Info("create server", "address", testCDSAddr)
-		patcher := func(conf *stnrapiv2.StunnerConfig, node string) *stnrapiv2.StunnerConfig {
+		patcher := func(conf *stnrapiv2.StunnerConfig, _ string, labels map[string]string) *stnrapiv2.StunnerConfig {
+			node := labels[stnrapiv2.DefaultCDSNodeLabel]
 			if n := nodeStore.GetObject(types.NamespacedName{Name: node}); n != nil {
-				// rewrite the realm to the node name
+				// rewrite the realm to the node's external IP
 				for _, a := range n.Status.Addresses {
 					if a.Type == corev1.NodeExternalIP {
 						conf.Auth.Realm = a.Address
@@ -127,13 +128,13 @@ var _ = Describe("Config discovery", Ordered, func() {
 		id1 := "ns/gw1"
 		addr1 = "http://" + testCDSAddr
 		log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
-		cdsc1, err = cdsclient.New(addr1, id1, "testnode-ok", loggerFactory)
+		cdsc1, err = cdsclient.New(addr1, id1, map[string]string{stnrapiv2.DefaultCDSNodeLabel: "testnode-ok"}, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		id2 := "ns/gw2"
 		addr2 = "http://" + testCDSAddr
 		log.Info("creating CDS client instance 2", "address", addr2, "id", id2)
-		cdsc2, err = cdsclient.New(addr2, id2, "", loggerFactory)
+		cdsc2, err = cdsclient.New(addr2, id2, nil, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		ch1 = make(chan *stnrapiv2.StunnerConfig, 10)
@@ -300,7 +301,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		id3 := "ns/gw3"
 		log.Info("creating CDS client instance 3", "address", addr2, "id", id3)
 		var err error
-		cdsc3, err = cdsclient.New(addr2, id3, "", loggerFactory)
+		cdsc3, err = cdsclient.New(addr2, id3, nil, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		ch3 = make(chan *stnrapiv2.StunnerConfig, 10)
@@ -572,10 +573,10 @@ var _ = Describe("Config patcher", Ordered, func() {
 
 	AfterAll(func() { store.Nodes.Flush() })
 
-	It("should patch the placeholder with the node's external IP", func() {
+	It("should expand the node address to the node's external IP", func() {
 		// first client uses testnode1
 		log.Info("creating CDS client instance 1", "address", addr1, "id", id1)
-		cdsc1, err := cdsclient.New(addr1, id1, "testnode1", loggerFactory)
+		cdsc1, err := cdsclient.New(addr1, id1, map[string]string{stnrapiv2.DefaultCDSNodeLabel: "testnode1"}, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
@@ -597,7 +598,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> patched with testnode1 external IP")
-		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressVar}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -616,10 +617,10 @@ var _ = Describe("Config patcher", Ordered, func() {
 
 	})
 
-	It("should patch the placeholder with the node's external DNS name", func() {
+	It("should expand the node address to the node's external DNS name", func() {
 		// second client uses testnode2 -> external DNS!
 		log.Info("creating CDS client instance 2", "address", addr1, "id", id1)
-		cdsc1, err := cdsclient.New(addr1, id1, "testnode2", loggerFactory)
+		cdsc1, err := cdsclient.New(addr1, id1, map[string]string{stnrapiv2.DefaultCDSNodeLabel: "testnode2"}, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
@@ -641,7 +642,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> patched with testnode2 external DNS")
-		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressVar}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -663,7 +664,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 	It("should leave the placeholder alone for an unknown node", func() {
 		// third client uses unknown node -> no patching!
 		log.Info("creating CDS client instance 3", "address", addr1, "id", id1)
-		cdsc1, err := cdsclient.New(addr1, id1, "dummy-node", loggerFactory)
+		cdsc1, err := cdsclient.New(addr1, id1, map[string]string{stnrapiv2.DefaultCDSNodeLabel: "dummy-node"}, loggerFactory)
 		Expect(err).To(Succeed(), "cds client setup")
 
 		log.Info("load default config -> no patch")
@@ -685,7 +686,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 		log.Info("load config that requires node name patching -> should not be patched as node does not exist")
-		config.Clusters[0].Addrs = []string{opdefault.NodeAddressPlaceholder}
+		config.Clusters[0].Addrs = []string{opdefault.NodeAddressVar}
 		Expect(srv.UpdateConfig([]cdsserver.Config{{
 			Name:      "gw1",
 			Namespace: "ns",
@@ -699,7 +700,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 				// nil config
 				return false
 			}
-			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.DefaultSTUNnerAddressEnvVarName
+			return len(c.Clusters) == 1 && len(c.Clusters[0].Addrs) == 1 && c.Clusters[0].Addrs[0] == opdefault.NodeAddressVar // left for the pod
 		}, time.Second, 10*time.Millisecond).Should(BeTrue())
 
 	})

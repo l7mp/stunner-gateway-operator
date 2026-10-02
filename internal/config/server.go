@@ -31,7 +31,7 @@ type Server struct {
 func NewCDSServer(addr string, logger logr.Logger) *Server {
 	log := logger.WithName("cds-server")
 	return &Server{
-		Server:          cdsserver.New(addr, getNodeAddressPatcher(log), log),
+		Server:          cdsserver.New(addr, nodeAddressPatcher(log), log),
 		configCh:        make(chan event.Event, 10),
 		ProgressTracker: NewProgressTracker(),
 		log:             log,
@@ -75,8 +75,8 @@ func (c *Server) GetConfigUpdateChannel() chan event.Event {
 	return c.configCh
 }
 
-// ProcessUpdate processes new config events and updates the server with the current
-// state-of-the-world.
+// ProcessUpdate processes new config events and updates the server with the current state of the
+// world.
 func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 	c.log.Info("Processing config update event", "generation", e.Generation, "update",
 		e.String())
@@ -98,64 +98,39 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 	if err := c.UpdateConfig(configs); err != nil {
 		return err
 	}
+	// a render follows every Node change: refresh what the patcher gives each pod
+	c.Refresh()
 
 	c.UpdateLicenseStatus(e.LicenseStatus)
 
 	return nil
 }
 
-func getNodeAddressPatcher(log logr.Logger) cdsserver.ConfigNodePatcher {
-	return func(conf *stnrapiv2.StunnerConfig, node string) *stnrapiv2.StunnerConfig {
-		if conf == nil {
+// nodeAddressPatcher relays each dataplane pod at the external address of its node: it replaces
+// the node address marker (config.NodeAddressVar) among the cluster addresses. On a node without
+// an external address it leaves the marker to the pod, whose own STUNNER_NODE_ADDR is its address.
+func nodeAddressPatcher(log logr.Logger) cdsserver.Patcher {
+	return func(conf *stnrapiv2.StunnerConfig, id string, labels map[string]string) *stnrapiv2.StunnerConfig {
+		node, ok := labels[stnrapiv2.DefaultCDSNodeLabel]
+		if !ok {
 			return conf
 		}
-
-		// the node address placeholder sits among the relay addresses of the clusters
-		nodeAddr := ""
-		nodeAddrType := corev1.NodeAddressType("")
-		found, patched := false, false
+		_, addr, err := getNodeAddress(node)
+		if err != nil {
+			log.V(4).Info("no node address", "config-id", id, "node-name", node, "reason", err.Error())
+			return conf
+		}
 		for i := range conf.Clusters {
 			for j, a := range conf.Clusters[i].Addrs {
-				if a != config.NodeAddressPlaceholder {
-					continue
-				}
-				if !found {
-					aType, addr, err := getNodeAddress(node)
-					if err != nil {
-						log.Error(err, "could not patch config with node address",
-							"config-id", conf.Admin.Name, "node-name", node)
-						nodeAddr = ""
-					} else {
-						nodeAddr = addr
-						nodeAddrType = aType
-						found = true
-						log.V(4).Info("found node address for patching config", "config-id",
-							conf.Admin.Name, "node-name", node, "address", nodeAddr,
-							"type", nodeAddrType)
-					}
-				}
-				if found && nodeAddr != "" {
-					conf.Clusters[i].Addrs[j] = nodeAddr
-					patched = true
-				} else {
-					conf.Clusters[i].Addrs[j] = config.DefaultSTUNnerAddressEnvVarName // $STUNNER_ADDR
+				if a == config.NodeAddressVar {
+					conf.Clusters[i].Addrs[j] = addr
 				}
 			}
 		}
-
-		if patched {
-			log.V(2).Info("patched config with node external IP/DNS address", "config-id",
-				conf.Admin.Name, "node-name", node, "address", nodeAddr, "type", nodeAddrType)
-		}
-
 		return conf
 	}
 }
 
-// getNodeAddress returns the node's external IP (if any)
-// - if status.addresses contains an address of type ExternalIP, return it
-// - if status.addresses contains an address of type NodeExternalDNS, try to resolve it and return the obtained IP
-// - otherwise return an error
 func getNodeAddress(node string) (corev1.NodeAddressType, string, error) {
 	n := store.Nodes.GetObject(types.NamespacedName{Name: node})
 	if n == nil {
