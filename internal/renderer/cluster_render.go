@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"net"
 	"net/netip"
 	"regexp"
 	"strconv"
@@ -29,9 +30,8 @@ func newClusterRenderer(log logr.Logger) clusterRenderer {
 	return &defaultClusterRenderer{log: log}
 }
 
-// clusterName names the cluster of a route: the namespaced name of the route, the type of the
-// server the cluster serves, and the protocol of the route kind, so that the clusters of routes of
-// different kinds never clash.
+// clusterName names the cluster of a route: the namespaced name of the route and the protocol of
+// its kind, so that the clusters of routes of different kinds never clash.
 func clusterName(ro store.Route) string {
 	proto := "unknown"
 	switch ro.(type) {
@@ -40,13 +40,13 @@ func clusterName(ro store.Route) string {
 	case *stnrgwv1.TCPRoute:
 		proto = "tcp"
 	}
-	return store.GetObjectKey(ro) + "/turn/" + proto
+	return store.GetObjectKey(ro) + "/" + proto
 }
 
-// renderCluster renders a stunnerd cluster config for a route. The route kind determines the
-// cluster protocol and the rendering strategy. Rendering a TCPRoute into a TCP cluster is a
-// premium feature: here it fails non-critically, so that the route is still accepted and the
-// reason surfaces on its ResolvedRefs condition.
+// renderCluster renders a stunnerd cluster config for a route, the same whatever servers the route
+// attaches to. The route kind determines the cluster protocol and the rendering strategy.
+// Rendering a TCPRoute into a TCP cluster is a premium feature: here it fails non-critically, so
+// that the route is still accepted and the reason surfaces on its ResolvedRefs condition.
 func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	switch ro := ro.(type) {
 	case *stnrgwv1.UDPRoute:
@@ -59,12 +59,17 @@ func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.Clust
 }
 
 // renderServiceCluster renders a cluster config from a set of route rules whose backend
-// references resolve to Kubernetes Services or StaticServices, plus the peers of the route: an
-// ALLOW rule per address or prefix of the backends, carrying the ports of the backend if the
-// backend restricts them, or the port range of a StaticService prefix written as
-// "<prefix>:<min-max>". Endpoints are addresses only: a backend address that does not parse as an
-// IP address or prefix is skipped.
+// references resolve to Kubernetes Services or StaticServices. A backend address that does not
+// parse as an IP address or prefix is skipped.
+//
+// The endpoints are the single addresses of the backends, at the port of the backend if it sets one:
+// the port a server dialing the backend uses, never a port range. Next to the cluster it returns
+// the filter rules of the route, for the filter renderer to render into explicit filters: an ALLOW
+// rule per address or prefix of the backends and per ClusterIP if relaying to it is enabled (the
+// ClusterIP is a peer but no endpoint: kube-proxy balances it already), with the port range of the
+// backend (port and endPort) or of a StaticService prefix written as "<prefix>:<min-max>".
 func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrgwv1.RouteRule, proto stnrapiv2.Protocol) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
+
 	// track down the backendref
 	if len(rs) == 0 {
 		return nil, nil, NewCriticalError(NoRuleFound)
@@ -109,6 +114,7 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 		n := types.NamespacedName{Namespace: ns, Name: string(b.Name)}
 
 		addrs := []string{}
+		clusterIPs := []string{} // admitted as peers but no endpoint: kube-proxy balances them
 		switch ref := &b; {
 		case store.IsReferenceService(ref):
 			epAddrs, errEDS := getEndpointAddrs(n, false)
@@ -124,15 +130,12 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			// the ClusterIP, if relaying to it is enabled
 			var errCluster error
 			if config.EnableRelayToClusterIP {
-				var clusterIPs []string
 				if clusterIPs, errCluster = getClusterIP(n); errCluster != nil {
 					r.log.V(1).Info("Cluster rendering error: could not render the ClusterIP route "+
 						"for Service backend", "route",
 						store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 						"error", errCluster)
 					routeError = errCluster
-				} else {
-					addrs = append(addrs, clusterIPs...)
 				}
 			}
 
@@ -185,7 +188,7 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			backendPorts = filterPorts(int(*b.Port), int(*b.EndPort))
 		}
 
-		for _, a := range addrs {
+		for i, a := range append(addrs, clusterIPs...) {
 			// a StaticService prefix may carry its own port range, which overrides the
 			// port range of the backend
 			ports := backendPorts
@@ -216,9 +219,14 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			}
 			prefix = prefix.Masked()
 
-			// a prefix is a peer block only, an address is an endpoint too
-			if prefix.IsSingleIP() {
-				eps = append(eps, prefix.Addr().String())
+			// a prefix and the ClusterIP are peer blocks only, an address is an endpoint too, at
+			// the port of the backend if it has one: the port a server dialing the backend uses
+			if prefix.IsSingleIP() && i < len(addrs) {
+				ep := prefix.Addr().String()
+				if b.Port != nil && *b.Port > 0 {
+					ep = net.JoinHostPort(ep, strconv.Itoa(int(*b.Port)))
+				}
+				eps = append(eps, ep)
 			}
 			peers = append(peers, stnrapiv2.FilterRule{
 				Action:  stnrapiv2.FilterActionAllow.String(),

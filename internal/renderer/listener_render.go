@@ -41,7 +41,7 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 	r.log.V(6).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
 
-	proto, err := getProtocol(l.Protocol)
+	proto, _, err := getProtocol(l.Protocol)
 	if err != nil {
 		return nil, err
 	}
@@ -53,23 +53,10 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 		}
 	}
 
-	// a TURN-* protocol is a TURN server over the transport underneath
-	var lproto stnrapiv2.Protocol
-	switch proto {
-	case stnrapiv2.ProtocolTURNUDP:
-		lproto = stnrapiv2.ProtocolUDP
-	case stnrapiv2.ProtocolTURNTCP:
-		lproto = stnrapiv2.ProtocolTCP
-	case stnrapiv2.ProtocolTURNTLS:
-		lproto = stnrapiv2.ProtocolTLS
-	case stnrapiv2.ProtocolTURNDTLS:
-		lproto = stnrapiv2.ProtocolDTLS
-	}
-
 	name := stnrListenerName(gw, l)
 	lc := stnrapiv2.ListenerConfig{
 		Name:     name,
-		Protocol: lproto.String(),
+		Protocol: proto.String(),
 		Servers:  []string{name},
 		Port:     port,
 	}
@@ -90,8 +77,8 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 		lc.Key = key
 	}
 
-	// the PQC mode is a per-Gateway policy of the TURN-TLS listeners
-	if proto == stnrapiv2.ProtocolTURNTLS {
+	// the PQC mode is a per-Gateway policy of the TLS listeners
+	if proto == stnrapiv2.ProtocolTLS {
 		if v, ok := gw.GetAnnotations()[opdefault.PQCModeAnnotationKey]; ok {
 			mode, err := stnrapiv2.NewPQCMode(v)
 			if err != nil {
@@ -116,13 +103,13 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 }
 
 func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool, error) {
-	proto, err := getProtocol(l.Protocol)
+	proto, _, err := getProtocol(l.Protocol)
 	if err != nil {
 		return "", "", false, nil
 	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
-		(proto != stnrapiv2.ProtocolTURNTLS && proto != stnrapiv2.ProtocolTURNDTLS) {
+		(proto != stnrapiv2.ProtocolTLS && proto != stnrapiv2.ProtocolDTLS) {
 		return "", "", false, nil
 	}
 
@@ -190,27 +177,27 @@ func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 	return "", "", false, NewNonCriticalError(InvalidCertificateRef)
 }
 
-// getProtocol parses the protocol of a Gateway listener into a TURN-* protocol, resolving the
-// aliases (UDP is TURN-UDP, etc.).
-func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv2.Protocol, error) {
-	ret, err := stnrapiv2.NewProtocol(string(proto))
+// getProtocol parses the protocol of a Gateway listener into the protocol of its dataplane listener
+// and the type of the server the listener feeds: TURN-* is a TURN server over the transport
+// underneath, a plain UDP, TCP, TLS or DTLS an L4 server.
+func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv2.Protocol, stnrapiv2.ServerType, error) {
+	p, err := stnrapiv2.NewProtocol(string(proto))
 	if err != nil {
-		return stnrapiv2.ProtocolUnknown, NewNonCriticalError(InvalidProtocol)
+		return stnrapiv2.ProtocolUnknown, stnrapiv2.ServerTypeUnknown, NewNonCriticalError(InvalidProtocol)
 	}
 
-	switch ret {
-	case stnrapiv2.ProtocolUDP:
-		return stnrapiv2.ProtocolTURNUDP, nil
-	case stnrapiv2.ProtocolTCP:
-		return stnrapiv2.ProtocolTURNTCP, nil
-	case stnrapiv2.ProtocolTLS:
-		return stnrapiv2.ProtocolTURNTLS, nil
-	case stnrapiv2.ProtocolDTLS:
-		return stnrapiv2.ProtocolTURNDTLS, nil
-	case stnrapiv2.ProtocolTURNUDP, stnrapiv2.ProtocolTURNTCP, stnrapiv2.ProtocolTURNTLS,
-		stnrapiv2.ProtocolTURNDTLS:
-		return ret, nil
+	switch p {
+	case stnrapiv2.ProtocolUDP, stnrapiv2.ProtocolTCP, stnrapiv2.ProtocolTLS, stnrapiv2.ProtocolDTLS:
+		return p, stnrapiv2.ServerTypeL4, nil
+	case stnrapiv2.ProtocolTURNUDP:
+		return stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeTURN, nil
+	case stnrapiv2.ProtocolTURNTCP:
+		return stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeTURN, nil
+	case stnrapiv2.ProtocolTURNTLS:
+		return stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeTURN, nil
+	case stnrapiv2.ProtocolTURNDTLS:
+		return stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeTURN, nil
 	}
 
-	return stnrapiv2.ProtocolUnknown, NewNonCriticalError(InvalidProtocol)
+	return stnrapiv2.ProtocolUnknown, stnrapiv2.ServerTypeUnknown, NewNonCriticalError(InvalidProtocol)
 }

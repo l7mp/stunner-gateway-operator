@@ -17,6 +17,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -988,4 +989,31 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestGetProtocol pins the Gateway listener protocols: TURN-* feeds a TURN server over the transport
+// underneath, a plain protocol an L4 server.
+func TestGetProtocol(t *testing.T) {
+	for proto, want := range map[string]struct {
+		lproto stnrapiv2.Protocol
+		stype  stnrapiv2.ServerType
+	}{
+		"TURN-UDP":  {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeTURN},
+		"TURN-TCP":  {stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeTURN},
+		"TURN-TLS":  {stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeTURN},
+		"TURN-DTLS": {stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeTURN},
+		"UDP":       {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeL4},
+		"TCP":       {stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeL4},
+		"TLS":       {stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeL4},
+		"DTLS":      {stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeL4},
+	} {
+		lproto, stype, err := getProtocol(gwapiv1.ProtocolType(proto))
+		assert.NoError(t, err, proto)
+		assert.Equal(t, want.lproto, lproto, proto)
+		assert.Equal(t, want.stype, stype, proto)
+	}
+	for _, proto := range []string{"STDIN", "FIFO", "SIP-UDP", "dummy"} {
+		_, _, err := getProtocol(gwapiv1.ProtocolType(proto))
+		assert.True(t, IsNonCriticalError(err, InvalidProtocol), proto)
+	}
 }

@@ -352,7 +352,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -369,7 +369,7 @@ func testLegacyMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 		})
@@ -934,7 +934,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
@@ -1127,7 +1127,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Cert).Should(Equal(""))
 			Expect(l.Key).Should(Equal(""))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
@@ -1363,7 +1363,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1375,13 +1375,13 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(3))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
@@ -1680,7 +1680,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1697,7 +1697,7 @@ func testLegacyMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 		})
@@ -1877,12 +1877,12 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 		})
@@ -2081,7 +2081,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2093,12 +2093,12 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 		})
@@ -2345,7 +2345,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2357,25 +2357,25 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/turn/udp"))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
-			if c.Name != "testnamespace/udproute-ok/turn/udp" {
+			if c.Name != "testnamespace/udproute-ok/udp" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 
 			c = conf.Clusters[1]
-			if c.Name != "dummy-namespace/dummy-namespace-route/turn/udp" {
+			if c.Name != "dummy-namespace/dummy-namespace-route/udp" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("dummy-namespace/dummy-namespace-route/turn/udp"))
+			Expect(c.Name).Should(Equal("dummy-namespace/dummy-namespace-route/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(BeEmpty(), "the backend has no ready pods")
 		})
@@ -2654,25 +2654,25 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/turn/udp"))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("dummy-namespace/dummy-namespace-route/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
-			if c.Name != "testnamespace/udproute-ok/turn/udp" {
+			if c.Name != "testnamespace/udproute-ok/udp" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 
 			c = conf.Clusters[1]
-			if c.Name != "dummy-namespace/dummy-namespace-route/turn/udp" {
+			if c.Name != "dummy-namespace/dummy-namespace-route/udp" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("dummy-namespace/dummy-namespace-route/turn/udp"))
+			Expect(c.Name).Should(Equal("dummy-namespace/dummy-namespace-route/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(BeEmpty(), "the backend has no ready pods")
 		})
@@ -3483,8 +3483,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/turn/udp"))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3495,25 +3495,25 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(2))
 
 			c := conf.Clusters[0]
-			if c.Name != "testnamespace/udproute-ok/turn/udp" {
+			if c.Name != "testnamespace/udproute-ok/udp" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 
 			c = conf.Clusters[1]
-			if c.Name != "testnamespace/route-2/turn/udp" {
+			if c.Name != "testnamespace/route-2/udp" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/route-2/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/route-2/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(BeEmpty(), "the backend has no ready pods")
 		})
@@ -3649,8 +3649,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("UDP"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(2))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/turn/udp"))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/udproute-ok/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/udp"))
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3674,7 +3674,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1234))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/turn/udp"))
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/route-2/udp"))
 
 			for _, _l := range conf.Listeners {
 				if _l.Name == "testnamespace/gateway-2/gateway-2-tcp" {
@@ -3690,20 +3690,20 @@ func testLegacyMode() {
 
 			Expect(conf.Clusters).To(HaveLen(2))
 			c := conf.Clusters[0]
-			if c.Name != "testnamespace/udproute-ok/turn/udp" {
+			if c.Name != "testnamespace/udproute-ok/udp" {
 				c = conf.Clusters[1]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
 
 			c = conf.Clusters[1]
-			if c.Name != "testnamespace/route-2/turn/udp" {
+			if c.Name != "testnamespace/route-2/udp" {
 				c = conf.Clusters[0]
 			}
 
-			Expect(c.Name).Should(Equal("testnamespace/route-2/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/route-2/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(BeEmpty(), "the backend has no ready pods")
 		})
@@ -3818,7 +3818,7 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -3835,7 +3835,7 @@ func testLegacyMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(4))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -3925,7 +3925,7 @@ func testLegacyMode() {
 
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 &&
 					c.Clusters[0].Type == "STATIC" &&
-					len(c.Clusters[0].Endpoints) == 5 {
+					len(c.Clusters[0].Endpoints) == 4 {
 					conf = &c
 					return true
 				}
@@ -3949,15 +3949,15 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).To(HaveLen(4))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
@@ -3965,7 +3965,7 @@ func testLegacyMode() {
 
 			svc := store.Services.GetObject(types.NamespacedName{
 				Namespace: "testnamespace", Name: "testservice-ok"})
-			Expect(c.Endpoints).Should(ContainElement(svc.Spec.ClusterIP))
+			Expect(permissionBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
 
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
@@ -4041,14 +4041,14 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).To(HaveLen(4))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
@@ -4056,7 +4056,7 @@ func testLegacyMode() {
 
 			svc := store.Services.GetObject(types.NamespacedName{
 				Namespace: "testnamespace", Name: "testservice-ok"})
-			Expect(c.Endpoints).Should(ContainElement(svc.Spec.ClusterIP))
+			Expect(permissionBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
 		})
 
 		It("should reset status on all resources", func() {

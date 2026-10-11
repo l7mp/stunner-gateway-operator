@@ -22,6 +22,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -370,4 +371,21 @@ func finalizerTest() {
 func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapiv2.ServerConfig {
 	s, _ := conf.GetServerConfig(l.FirstServer())
 	return s
+}
+
+// permissionBlocks returns the address blocks of the permission filters of a cluster, of every
+// server of a config.
+func permissionBlocks(conf *stnrapiv2.StunnerConfig, cluster string) []string {
+	ret := []string{}
+	for _, f := range conf.Filters {
+		if !strings.HasSuffix(f.Name, "/"+cluster) {
+			continue
+		}
+		for _, r := range f.Rules {
+			if r.IPBlock != nil {
+				ret = append(ret, r.IPBlock.CIDR)
+			}
+		}
+	}
+	return ret
 }

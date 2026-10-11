@@ -45,7 +45,7 @@ func TestRenderServerRender(t *testing.T) {
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", sc.Name, "server name")
 				assert.Equal(t, "TURN", sc.Type, "server type")
 				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
-				assert.Equal(t, []string{"testnamespace/udproute-ok/turn/udp"}, sc.Clusters, "clusters")
+				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, sc.Clusters, "clusters")
 				assert.Empty(t, sc.TURN.PermissionFilters, "permission filters are rendered later")
 
 				l = gw.Spec.Listeners[1]
@@ -55,6 +55,16 @@ func TestRenderServerRender(t *testing.T) {
 				assert.NoError(t, err, "renderServer")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", sc.Name, "server name")
 				assert.Empty(t, sc.Clusters, "no clusters")
+
+				// a plain protocol feeds an L4 server, naming the L4 clusters of the routes
+				l = gw.Spec.Listeners[0]
+				l.Protocol = gwapiv1.ProtocolType("UDP")
+				sc, err = r.renderServer(c, &l, r.getRoutes4Listener(gw, &l))
+				assert.NoError(t, err, "renderServer")
+				assert.Equal(t, "L4", sc.Type, "server type")
+				assert.Nil(t, sc.TURN, "no TURN block")
+				assert.Equal(t, "default", sc.L4.Auth, "auth policy")
+				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, sc.Clusters, "clusters")
 			},
 		},
 	})

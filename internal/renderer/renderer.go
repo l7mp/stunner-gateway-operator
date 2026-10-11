@@ -59,10 +59,10 @@ type filterRenderer interface {
 }
 
 // clusterRenderer is the interface for the component that renders the dataplane cluster config of
-// a route, plus the peers of the route: an ALLOW rule per peer address block, carrying the ports
-// of its backend if the backend restricts them. It is separate from configRenderer because a
-// cluster is rendered per route rather than per Gateway, so it takes the route instead of a
-// RenderContext.
+// a route, plus the filter rules of the route, kept out of the cluster
+// endpoints: an ALLOW rule per peer address block, with the port range of its backend if the
+// backend sets one. It is separate from configRenderer because a cluster is rendered per route
+// rather than per Gateway, so it takes the route instead of a RenderContext.
 type clusterRenderer interface {
 	renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error)
 }

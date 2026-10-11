@@ -81,8 +81,8 @@ func TestRenderTCPRoute(t *testing.T) {
 					assert.NoError(t, err, "renderCluster")
 					protos[rc.Name] = rc.Protocol
 				}
-				assert.Equal(t, "UDP", protos["testnamespace/udproute-ok/turn/udp"], "UDP cluster")
-				assert.NotContains(t, protos, "testnamespace/tcproute-ok/turn/tcp", "no TCP cluster")
+				assert.Equal(t, "UDP", protos["testnamespace/udproute-ok/udp"], "UDP cluster")
+				assert.NotContains(t, protos, "testnamespace/tcproute-ok/tcp", "no TCP cluster")
 
 				// the TCPRoute attaches to the TCP listener via its sectionName
 				gw := store.Gateways.GetFirst()

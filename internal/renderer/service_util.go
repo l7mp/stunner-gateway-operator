@@ -566,16 +566,16 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 // getServiceProtocol returns the sercice-compatible protocol for a listener
 func (r *renderer) getServiceProtocol(proto gwapiv1.ProtocolType) (string, error) {
-	protocol, err := getProtocol(proto)
+	protocol, _, err := getProtocol(proto)
 	if err != nil {
 		return "", err
 	}
 
 	var serviceProto string
 	switch protocol {
-	case stnrapiv2.ProtocolTURNUDP, stnrapiv2.ProtocolTURNDTLS:
+	case stnrapiv2.ProtocolUDP, stnrapiv2.ProtocolDTLS:
 		serviceProto = "UDP"
-	case stnrapiv2.ProtocolTURNTCP, stnrapiv2.ProtocolTURNTLS:
+	case stnrapiv2.ProtocolTCP, stnrapiv2.ProtocolTLS:
 		serviceProto = "TCP"
 	default:
 		return "", NewNonCriticalError(InvalidProtocol)

@@ -124,14 +124,14 @@ func testTCPRouteLegacy() {
 				// the route attaches to the listener even though no cluster is
 				// rendered for it
 				if !listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-ok/turn/tcp") {
+					"testnamespace/tcproute-ok/tcp") {
 					return false
 				}
 				conf = &c
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(findCluster(conf, "testnamespace/tcproute-ok/turn/tcp")).To(BeNil(),
+			Expect(findCluster(conf, "testnamespace/tcproute-ok/tcp")).To(BeNil(),
 				"no TCP cluster rendered")
 		})
 
@@ -144,7 +144,7 @@ func testTCPRouteLegacy() {
 				}
 			}
 			Expect(found).Should(BeTrue(), "TCP listener found")
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/tcproute-ok/turn/tcp"), "route attached")
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/tcproute-ok/tcp"), "route attached")
 		})
 
 		It("should set the TCPRoute status", func() {
@@ -192,8 +192,8 @@ func testTCPRouteLegacy() {
 				}
 				// no cluster without a license, but the route still attaches
 				return listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-gwapi/turn/tcp") &&
-					findCluster(&c, "testnamespace/tcproute-gwapi/turn/tcp") == nil
+					"testnamespace/tcproute-gwapi/tcp") &&
+					findCluster(&c, "testnamespace/tcproute-gwapi/tcp") == nil
 			}, timeout, interval).Should(BeTrue())
 		})
 
@@ -313,8 +313,8 @@ func testTCPRouteManaged() {
 				// the route attaches to the listener even though no cluster is
 				// rendered for it
 				return listenerHasCluster(c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-ok/turn/tcp") &&
-					findCluster(c, "testnamespace/tcproute-ok/turn/tcp") == nil
+					"testnamespace/tcproute-ok/tcp") &&
+					findCluster(c, "testnamespace/tcproute-ok/tcp") == nil
 			}), timeout, interval).Should(BeTrue())
 		})
 

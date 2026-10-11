@@ -215,7 +215,7 @@ func testFinalizer() {
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
-				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 5 {
+				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
 					conf = c
 					return true
 				}
@@ -237,7 +237,7 @@ func testFinalizer() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -254,9 +254,9 @@ func testFinalizer() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(5))
+			Expect(c.Endpoints).To(HaveLen(4))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))

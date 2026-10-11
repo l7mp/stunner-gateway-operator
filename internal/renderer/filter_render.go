@@ -29,9 +29,13 @@ func (r *defaultFilterRenderer) renderClusterFilter(cluster *stnrapiv2.ClusterCo
 
 // renderPermissionFilters renders the permission filters of a TURN server: one per rendered cluster
 // of the server, in the order of the clusters, named "<server>/<cluster>" and admitting the peer
-// addresses of the cluster on any port. A permission no rule allows is denied.
+// addresses of the cluster on any port. A permission no rule allows is denied. Other servers have
+// no permission filters.
 func (r *defaultFilterRenderer) renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig {
 	filters := []stnrapiv2.FilterConfig{}
+	if server.Type != stnrapiv2.ServerTypeTURN.String() {
+		return filters
+	}
 	portFiltered := false
 	for _, cluster := range server.Clusters {
 		rules, ok := peers[cluster]

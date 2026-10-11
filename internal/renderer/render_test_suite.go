@@ -3,6 +3,7 @@ package renderer
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -168,4 +170,27 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 
 		})
 	}
+}
+
+// peerBlocks returns the address blocks of filter rules.
+func peerBlocks(rules []stnrapiv2.FilterRule) []string {
+	ret := []string{}
+	for _, r := range rules {
+		if r.IPBlock != nil {
+			ret = append(ret, r.IPBlock.CIDR)
+		}
+	}
+	return ret
+}
+
+// permissionBlocks returns the address blocks of the permission filters of a cluster, of every
+// server of a config.
+func permissionBlocks(conf *stnrapiv2.StunnerConfig, cluster string) []string {
+	ret := []string{}
+	for _, f := range conf.Filters {
+		if strings.HasSuffix(f.Name, "/"+cluster) {
+			ret = append(ret, peerBlocks(f.Rules)...)
+		}
+	}
+	return ret
 }
