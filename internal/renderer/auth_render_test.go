@@ -35,6 +35,7 @@ func TestRenderAuthRender(t *testing.T) {
 				assert.NoError(t, err, "renderAuth")
 
 				assert.Equal(t, testutils.TestRealm, auth.Realm, "realm")
+				assert.Equal(t, "default", auth.Name, "auth name")
 				assert.Equal(t, "static", auth.Type, "auth-type")
 				assert.Equal(t, testutils.TestUsername, auth.Credentials["username"],
 					"username")

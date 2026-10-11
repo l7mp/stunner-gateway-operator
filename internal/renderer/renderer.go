@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -36,14 +36,35 @@ type Renderer interface {
 // configRenderer is a generic interface for the rendering components that can generate components
 // of the dataplane config.
 type configRenderer interface {
-	render(c *RenderContext, args ...any) (stnrapiv1.Config, error)
+	render(c *RenderContext, args ...any) (stnrapiv2.Config, error)
+}
+
+// listenerRenderer is the interface for the component that renders a Gateway listener into a
+// dataplane listener.
+type listenerRenderer interface {
+	renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv2.ListenerConfig, error)
+}
+
+// serverRenderer is the interface for the component that renders the dataplane server a Gateway
+// listener feeds.
+type serverRenderer interface {
+	renderServer(c *RenderContext, l *gwapiv1.Listener, rs []store.Route) (*stnrapiv2.ServerConfig, error)
+}
+
+// filterRenderer is the interface for the component that renders the filters: the port filter of
+// a cluster and the permission filters of a server, from the peers of the rendered clusters.
+type filterRenderer interface {
+	renderClusterFilter(cluster *stnrapiv2.ClusterConfig, peers []stnrapiv2.FilterRule) *stnrapiv2.FilterConfig
+	renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig
 }
 
 // clusterRenderer is the interface for the component that renders the dataplane cluster config of
-// a route. It is separate from configRenderer because a cluster is rendered per route rather than
-// per Gateway, so it takes the route instead of a RenderContext.
+// a route, plus the peers of the route: an ALLOW rule per peer address block, carrying the ports
+// of its backend if the backend restricts them. It is separate from configRenderer because a
+// cluster is rendered per route rather than per Gateway, so it takes the route instead of a
+// RenderContext.
 type clusterRenderer interface {
-	renderCluster(ro store.Route) (*stnrapiv1.ClusterConfig, error)
+	renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error)
 }
 
 // resourceGenerator is a generic interface for the generator components that can create K8s
@@ -59,15 +80,18 @@ type RendererConfig struct {
 }
 
 type renderer struct {
-	ctx                                           context.Context
-	scheme                                        *runtime.Scheme
-	licmgr                                        licensemgr.Manager
-	adminRenderer, authRenderer, listenerRenderer configRenderer
-	clusterRenderer                               clusterRenderer
-	dataplaneGenerator                            resourceGenerator
-	gen                                           int
-	renderCh                                      chan event.Event
-	operatorCh                                    chan<- event.Event
+	ctx                         context.Context
+	scheme                      *runtime.Scheme
+	licmgr                      licensemgr.Manager
+	adminRenderer, authRenderer configRenderer
+	listenerRenderer            listenerRenderer
+	serverRenderer              serverRenderer
+	clusterRenderer             clusterRenderer
+	filterRenderer              filterRenderer
+	dataplaneGenerator          resourceGenerator
+	gen                         int
+	renderCh                    chan event.Event
+	operatorCh                  chan<- event.Event
 	*config.ProgressTracker
 	log logr.Logger
 }
@@ -80,7 +104,9 @@ func NewDefaultRenderer(cfg RendererConfig) Renderer {
 		adminRenderer:      newAdminRenderer(),
 		authRenderer:       newAuthRenderer(),
 		listenerRenderer:   newListenerRenderer(cfg.Logger.WithName("listener-renderer")),
+		serverRenderer:     newServerRenderer(cfg.Logger.WithName("server-renderer")),
 		clusterRenderer:    newClusterRenderer(cfg.Logger.WithName("cluster-renderer")),
+		filterRenderer:     newFilterRenderer(cfg.Logger.WithName("filter-renderer")),
 		dataplaneGenerator: newDataplaneGenerator(cfg.Scheme),
 		renderCh:           make(chan event.Event, 10),
 		gen:                0,
@@ -135,35 +161,46 @@ func (r *renderer) SetOperatorChannel(ch chan<- event.Event) {
 }
 
 // renderAdmin is a wrapper for adminRenderer.render()
-func (r *renderer) renderAdmin(c *RenderContext) (*stnrapiv1.AdminConfig, error) {
+func (r *renderer) renderAdmin(c *RenderContext) (*stnrapiv2.AdminConfig, error) {
 	conf, err := r.adminRenderer.render(c)
 	if err != nil {
 		return nil, err
 	}
-	return conf.(*stnrapiv1.AdminConfig), nil
+	return conf.(*stnrapiv2.AdminConfig), nil
 }
 
 // renderAuth is a wrapper for authRenderer.render()
-func (r *renderer) renderAuth(c *RenderContext) (*stnrapiv1.AuthConfig, error) {
+func (r *renderer) renderAuth(c *RenderContext) (*stnrapiv2.AuthConfig, error) {
 	conf, err := r.authRenderer.render(c)
 	if err != nil {
 		return nil, err
 	}
-	return conf.(*stnrapiv1.AuthConfig), nil
+	return conf.(*stnrapiv2.AuthConfig), nil
 }
 
-// renderListener is a wrapper for listenerRenderer.render()
-func (r *renderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv1.ListenerConfig, error) {
-	conf, err := r.listenerRenderer.render(c, l, rs, ap, targetPorts)
-	if err != nil {
-		return nil, err
-	}
-	return conf.(*stnrapiv1.ListenerConfig), nil
+// renderListener is a wrapper for listenerRenderer.renderListener()
+func (r *renderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv2.ListenerConfig, error) {
+	return r.listenerRenderer.renderListener(c, l, rs, ap, targetPorts)
+}
+
+// renderServer is a wrapper for serverRenderer.renderServer()
+func (r *renderer) renderServer(c *RenderContext, l *gwapiv1.Listener, rs []store.Route) (*stnrapiv2.ServerConfig, error) {
+	return r.serverRenderer.renderServer(c, l, rs)
 }
 
 // renderCluster is a wrapper for clusterRenderer.renderCluster()
-func (r *renderer) renderCluster(ro store.Route) (*stnrapiv1.ClusterConfig, error) {
+func (r *renderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	return r.clusterRenderer.renderCluster(ro)
+}
+
+// renderClusterFilter is a wrapper for filterRenderer.renderClusterFilter()
+func (r *renderer) renderClusterFilter(cluster *stnrapiv2.ClusterConfig, peers []stnrapiv2.FilterRule) *stnrapiv2.FilterConfig {
+	return r.filterRenderer.renderClusterFilter(cluster, peers)
+}
+
+// renderPermissionFilters is a wrapper for filterRenderer.renderPermissionFilters()
+func (r *renderer) renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig {
+	return r.filterRenderer.renderPermissionFilters(server, peers)
 }
 
 // generateDataplane is a wrapper for dataplaneGenerator.generate()

@@ -1,0 +1,61 @@
+package renderer
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+)
+
+func TestRenderServerRender(t *testing.T) {
+	renderTester(t, []renderTestConfig{
+		{
+			name: "server of a listener ok",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				// the UDP listener has the route, the TCP listener none
+				l := gw.Spec.Listeners[0]
+				rs := r.getRoutes4Listener(gw, &l)
+				assert.Len(t, rs, 1, "route found")
+				sc, err := r.renderServer(c, &l, rs)
+				assert.NoError(t, err, "renderServer")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", sc.Name, "server name")
+				assert.Equal(t, "TURN", sc.Type, "server type")
+				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
+				assert.Equal(t, []string{"testnamespace/udproute-ok/turn/udp"}, sc.Clusters, "clusters")
+				assert.Empty(t, sc.TURN.PermissionFilters, "permission filters are rendered later")
+
+				l = gw.Spec.Listeners[1]
+				rs = r.getRoutes4Listener(gw, &l)
+				assert.Empty(t, rs, "no route")
+				sc, err = r.renderServer(c, &l, rs)
+				assert.NoError(t, err, "renderServer")
+				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", sc.Name, "server name")
+				assert.Empty(t, sc.Clusters, "no clusters")
+			},
+		},
+	})
+}

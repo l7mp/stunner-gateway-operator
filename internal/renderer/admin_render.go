@@ -3,7 +3,7 @@ package renderer
 import (
 	"fmt"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -18,10 +18,10 @@ func newAdminRenderer() configRenderer {
 	return &adminRenderer{}
 }
 
-func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrapiv1.Config, error) {
+func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrapiv2.Config, error) {
 	c.log.V(8).Info("renderAdmin (**default**)", "gateway-config", store.GetObjectKey(c.gwConf))
 
-	loglevel := stnrapiv1.DefaultLogLevel
+	loglevel := stnrapiv2.DefaultLogLevel
 	if c.gwConf.Spec.LogLevel != nil {
 		loglevel = *c.gwConf.Spec.LogLevel
 	}
@@ -43,7 +43,7 @@ func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrapiv1.Config, er
 		offloadIntfs = c.dp.Spec.OffloadInterfaces
 	}
 
-	admin := stnrapiv1.AdminConfig{
+	admin := stnrapiv2.AdminConfig{
 		Name:                opdefault.DefaultStunnerdInstanceName, // default, so that we don't reconcile it accidentally
 		LogLevel:            loglevel,
 		MetricsEndpoint:     me,

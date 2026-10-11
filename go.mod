@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/l7mp/stunner/v2 v2.0.0-20261002075939-c56fc2b7033a
+	github.com/l7mp/stunner/v2 v2.0.0-20261011184246-fb27348164d3
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.43.0
 	github.com/prometheus/client_golang v1.24.1

@@ -54,14 +54,15 @@ func findCluster(c *stnrapiv2.StunnerConfig, name string) *stnrapiv2.ClusterConf
 	return nil
 }
 
-// listenerHasRoute reports whether the named listener of a config attaches the named route.
-func listenerHasRoute(c *stnrapiv2.StunnerConfig, listener, route string) bool {
+// listenerHasCluster reports whether the server of the named listener of a config names the
+// named cluster.
+func listenerHasCluster(c *stnrapiv2.StunnerConfig, listener, cluster string) bool {
 	for _, lc := range c.Listeners {
 		if lc.Name != listener {
 			continue
 		}
 		for _, r := range serverOf(c, lc).Clusters {
-			if r == route {
+			if r == cluster {
 				return true
 			}
 		}
@@ -122,15 +123,15 @@ func testTCPRouteLegacy() {
 				}
 				// the route attaches to the listener even though no cluster is
 				// rendered for it
-				if !listenerHasRoute(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-ok") {
+				if !listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
+					"testnamespace/tcproute-ok/turn/tcp") {
 					return false
 				}
 				conf = &c
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(findCluster(conf, "testnamespace/tcproute-ok")).To(BeNil(),
+			Expect(findCluster(conf, "testnamespace/tcproute-ok/turn/tcp")).To(BeNil(),
 				"no TCP cluster rendered")
 		})
 
@@ -143,7 +144,7 @@ func testTCPRouteLegacy() {
 				}
 			}
 			Expect(found).Should(BeTrue(), "TCP listener found")
-			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/tcproute-ok"), "route attached")
+			Expect(serverOf(conf, l).Clusters).Should(ContainElement("testnamespace/tcproute-ok/turn/tcp"), "route attached")
 		})
 
 		It("should set the TCPRoute status", func() {
@@ -190,9 +191,9 @@ func testTCPRouteLegacy() {
 					return false
 				}
 				// no cluster without a license, but the route still attaches
-				return listenerHasRoute(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-gwapi") &&
-					findCluster(&c, "testnamespace/tcproute-gwapi") == nil
+				return listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
+					"testnamespace/tcproute-gwapi/turn/tcp") &&
+					findCluster(&c, "testnamespace/tcproute-gwapi/turn/tcp") == nil
 			}, timeout, interval).Should(BeTrue())
 		})
 
@@ -311,9 +312,9 @@ func testTCPRouteManaged() {
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				// the route attaches to the listener even though no cluster is
 				// rendered for it
-				return listenerHasRoute(c, "testnamespace/gateway-1/gateway-1-listener-tcp",
-					"testnamespace/tcproute-ok") &&
-					findCluster(c, "testnamespace/tcproute-ok") == nil
+				return listenerHasCluster(c, "testnamespace/gateway-1/gateway-1-listener-tcp",
+					"testnamespace/tcproute-ok/turn/tcp") &&
+					findCluster(c, "testnamespace/tcproute-ok/turn/tcp") == nil
 			}), timeout, interval).Should(BeTrue())
 		})
 

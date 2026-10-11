@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -18,7 +18,7 @@ func newAuthRenderer() configRenderer {
 	return &authRenderer{}
 }
 
-func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrapiv1.Config, error) {
+func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrapiv2.Config, error) {
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)
@@ -27,13 +27,14 @@ func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrapiv1.Config, err
 	return r.renderInlineAuth(c)
 }
 
-func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv1.Config, error) {
-	realm := stnrapiv1.DefaultRealm
+func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv2.Config, error) {
+	realm := stnrapiv2.DefaultRealm
 	if c.gwConf.Spec.Realm != nil {
 		realm = *c.gwConf.Spec.Realm
 	}
 
-	auth := stnrapiv1.AuthConfig{
+	auth := stnrapiv2.AuthConfig{
+		Name:        stnrapiv2.DefaultAuthName,
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -44,7 +45,7 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv1.Config, err
 	}
 
 	switch atype {
-	case stnrapiv1.AuthTypePlainText:
+	case stnrapiv2.AuthTypeStatic:
 		if c.gwConf.Spec.Username == nil || c.gwConf.Spec.Password == nil {
 			return nil, NewCriticalError(InvalidUsernamePassword)
 		}
@@ -52,7 +53,7 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv1.Config, err
 		auth.Credentials["username"] = *c.gwConf.Spec.Username
 		auth.Credentials["password"] = *c.gwConf.Spec.Password
 
-	case stnrapiv1.AuthTypeLongTerm:
+	case stnrapiv2.AuthTypeEphemeral:
 		if c.gwConf.Spec.SharedSecret == nil {
 			return nil, NewCriticalError(InvalidSharedSecret)
 		}
@@ -72,16 +73,17 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv1.Config, err
 	return &auth, nil
 }
 
-func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv1.Config, error) {
+func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv2.Config, error) {
 	gwConf := c.gwConf
 	// c.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 
-	realm := stnrapiv1.DefaultRealm
+	realm := stnrapiv2.DefaultRealm
 	if gwConf.Spec.Realm != nil {
 		realm = *gwConf.Spec.Realm
 	}
 
-	auth := stnrapiv1.AuthConfig{
+	auth := stnrapiv2.AuthConfig{
+		Name:        stnrapiv2.DefaultAuthName,
 		Realm:       realm,
 		Credentials: make(map[string]string),
 	}
@@ -120,7 +122,7 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv1.Config, e
 	}
 
 	switch atype {
-	case stnrapiv1.AuthTypePlainText:
+	case stnrapiv2.AuthTypeStatic:
 		username, usernameOk := secret.Data["username"]
 		password, passwordOk := secret.Data["password"]
 
@@ -131,7 +133,7 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv1.Config, e
 		auth.Credentials["username"] = string(username)
 		auth.Credentials["password"] = string(password)
 
-	case stnrapiv1.AuthTypeLongTerm:
+	case stnrapiv2.AuthTypeEphemeral:
 		sharedSecret, sharedSecretOk := secret.Data["secret"]
 		// accept long form
 		if !sharedSecretOk {
@@ -158,24 +160,20 @@ func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv1.Config, e
 	return &auth, nil
 }
 
-func getAuthType(hint *string) (stnrapiv1.AuthType, error) {
-	authType := stnrapiv1.DefaultAuthType
+func getAuthType(hint *string) (stnrapiv2.AuthType, error) {
+	authType := stnrapiv2.DefaultAuthType
 	if hint != nil {
 		authType = *hint
 	}
 
-	// aliases
-	switch authType {
-	// plaintext
-	case "static", "plaintext":
-		authType = "plaintext"
-	case "ephemeral", "timewindowed", "longterm":
-		authType = "longterm"
+	// NewAuthType knows the other aliases ("plaintext", "longterm")
+	if authType == "timewindowed" {
+		authType = stnrapiv2.AuthTypeEphemeral.String()
 	}
 
-	atype, err := stnrapiv1.NewAuthType(authType)
+	atype, err := stnrapiv2.NewAuthType(authType)
 	if err != nil {
-		return stnrapiv1.AuthTypeNone, NewCriticalError(InvalidAuthType)
+		return stnrapiv2.AuthTypeNone, NewCriticalError(InvalidAuthType)
 	}
 
 	return atype, nil

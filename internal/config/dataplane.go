@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiutil "k8s.io/apimachinery/pkg/util/intstr"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 	TerminationGrace    = int64(3600)
 	LivenessProbeAction = corev1.HTTPGetAction{
 		Path:   "/live",
-		Port:   apiutil.FromInt(stnrapiv1.DefaultHealthCheckPort),
+		Port:   apiutil.FromInt(stnrapiv2.DefaultHealthCheckPort),
 		Scheme: "HTTP",
 	}
 	LivenessProbe = corev1.Probe{
@@ -27,7 +27,7 @@ var (
 	}
 	ReadinessProbeAction = corev1.HTTPGetAction{
 		Path:   "/ready",
-		Port:   apiutil.FromInt(stnrapiv1.DefaultHealthCheckPort),
+		Port:   apiutil.FromInt(stnrapiv2.DefaultHealthCheckPort),
 		Scheme: "HTTP",
 	}
 	ReadinessProbe = corev1.Probe{

@@ -24,7 +24,7 @@ const (
 	ServiceNotFound
 	ClusterIPNotFound
 	EndpointNotFound
-	InconsitentClusterType
+	InvalidEndpoint
 	InvalidProtocol
 	PortUnavailable
 	InvalidCertificateRef
@@ -101,8 +101,8 @@ func (e *NonCriticalError) Error() string {
 		return "no ClusterIP found for Service (this is fine for headless Services)"
 	case EndpointNotFound:
 		return "no Endpoint found for backend"
-	case InconsitentClusterType:
-		return "inconsitent cluster type for backends"
+	case InvalidEndpoint:
+		return "invalid backend address (expecting an IP address or prefix)"
 	case PortUnavailable:
 		return "port unavailable"
 	case InvalidCertificateRef:

@@ -3,7 +3,7 @@
 package config
 
 import (
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -42,7 +42,7 @@ var (
 	DataplaneMode = NewDataplaneMode(opdefault.DefaultDataplaneMode)
 
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
-	ConfigDiscoveryAddress = stnrapiv1.DefaultConfigDiscoveryAddress
+	ConfigDiscoveryAddress = stnrapiv2.DefaultConfigDiscoveryAddress
 
 	// EnableFinalizer is a global config to switch operator finalization on. The finalizer
 	// will clean up all allocaeted Kubernetes resources (like dataplane deployments and

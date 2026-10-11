@@ -237,7 +237,7 @@ func testFinalizer() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -254,7 +254,7 @@ func testFinalizer() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))

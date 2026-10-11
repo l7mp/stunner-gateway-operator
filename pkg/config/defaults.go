@@ -8,7 +8,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 )
 
@@ -35,11 +34,11 @@ const (
 	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
 	// that the Deployments and Services created by the operator will have both the AppLabelKey
 	// and the OwnedByLabelKey labels set.
-	OwnedByLabelKey = stnrapiv1.DefaultOwnedByLabelKey
+	OwnedByLabelKey = stnrapiv2.DefaultOwnedByLabelKey
 
 	// OwnedByLabelValue is the value of OwnedByLabelKey to indicate that a resource is
 	// maintained by the operator.
-	OwnedByLabelValue = stnrapiv1.DefaultOwnedByLabelValue
+	OwnedByLabelValue = stnrapiv2.DefaultOwnedByLabelValue
 
 	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
 	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
@@ -47,18 +46,18 @@ const (
 	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
 	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
 	// legacy mode, which usually belong to multiple Gateways).
-	RelatedGatewayKey = stnrapiv1.DefaultRelatedGatewayKey
+	RelatedGatewayKey = stnrapiv2.DefaultRelatedGatewayKey
 
 	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
 	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
 	// Gateway. The value is the namespace of the related Gateway.
-	RelatedGatewayNamespace = stnrapiv1.DefaultRelatedGatewayNamespace
+	RelatedGatewayNamespace = stnrapiv2.DefaultRelatedGatewayNamespace
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
-	AppLabelKey = stnrapiv1.DefaultAppLabelKey
+	AppLabelKey = stnrapiv2.DefaultAppLabelKey
 
 	// AppLabelValue defines the label value used to mark the pods of the stunnerd deployment.
-	AppLabelValue = stnrapiv1.DefaultAppLabelValue
+	AppLabelValue = stnrapiv2.DefaultAppLabelValue
 
 	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
 	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
@@ -101,7 +100,7 @@ const (
 
 	// DefaultLeaderElectionID is the name of the Lease the operator replicas compete for. It
 	// is shared with the clients that look the leader up in the Lease.
-	DefaultLeaderElectionID = stnrapiv1.DefaultLeaderElectionID
+	DefaultLeaderElectionID = stnrapiv2.DefaultLeaderElectionID
 
 	// DefaultMetricsPortName defines the name of the container-port used to expose the metrics
 	// endpoint (if enabled).
@@ -196,13 +195,13 @@ const (
 	// "enforced" forces it.
 	PQCModeAnnotationKey = "stunner.l7mp.io/pqc-mode"
 
-	// DefaultSTUNnerAddressEnvVarName is the environment variable used for configuring
-	// stunnerd default listener address.
-	DefaultSTUNnerAddressEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddr
+	// DefaultSTUNnerAddressEnvVarName is the environment variable holding the pod's IP address,
+	// the relay address of the rendered clusters.
+	DefaultSTUNnerAddressEnvVarName string = "$" + stnrapiv2.DefaultEnvVarAddr
 
 	// DefaultSTUNnerAddrsEnvVarName is the environment variable holding the pod's IP addresses
-	// (both families in a dual-stack deployment), used as the listener relay addresses.
-	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrapiv1.DefaultEnvVarAddrs
+	// (both families in a dual-stack deployment).
+	DefaultSTUNnerAddrsEnvVarName string = "$" + stnrapiv2.DefaultEnvVarAddrs
 
 	// NodeAddressVar is the relay address the CDS server expands, for each dataplane pod, to the
 	// external address of the pod's node.
@@ -211,10 +210,10 @@ const (
 
 var (
 	// DefaultHealthCheckEndpoint is the default URI at which health-check requests are served.
-	DefaultHealthCheckEndpoint = fmt.Sprintf("http://:%d", stnrapiv1.DefaultHealthCheckPort)
+	DefaultHealthCheckEndpoint = fmt.Sprintf("http://:%d", stnrapiv2.DefaultHealthCheckPort)
 
 	// DefaultMetricsEndpoint is the default URI at which metrics scaping requests are served.
-	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrapiv1.DefaultMetricsPort)
+	DefaultMetricsEndpoint = fmt.Sprintf("http://:%d/metrics", stnrapiv2.DefaultMetricsPort)
 
 	// DefaultLabelFilter is the list of label keys that are NOT propagated from a Gateway to
 	// the Deployment that the operator creates for it; see

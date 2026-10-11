@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	licensecfg "github.com/l7mp/stunner/v2/pkg/config/license"
 
@@ -29,7 +28,7 @@ type Manager interface {
 	// SubscriptionType returns the current subscription type (e.g., free, member, enterprise).
 	SubscriptionType() licensecfg.SubscriptionType
 	// Generate a license configuration for the dataplane.
-	GenerateLicenseConfig() (stnrapiv1.LicenseConfig, error)
+	GenerateLicenseConfig() (stnrapiv2.LicenseConfig, error)
 	// SetOperatorChannel sets up the operator channel where the manager sends its license
 	// status events. Send-only on purpose: the manager is one of many producers there, so it
 	// must never coalesce that channel.

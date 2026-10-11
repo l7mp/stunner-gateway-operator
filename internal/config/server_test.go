@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
@@ -513,7 +512,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 		log = zlogger.WithName("tester")
 
 		// the CDS client expands environment variables: keep the placeholders
-		GinkgoT().Setenv(stnrapiv1.DefaultEnvVarAddr, opdefault.DefaultSTUNnerAddressEnvVarName)
+		GinkgoT().Setenv(stnrapiv2.DefaultEnvVarAddr, opdefault.DefaultSTUNnerAddressEnvVarName)
 		GinkgoT().Setenv(stnrapiv2.DefaultEnvVarNodeAddr, opdefault.NodeAddressVar)
 
 		n1 := testutils.TestNode.DeepCopy()

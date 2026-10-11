@@ -9,7 +9,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/go-logr/logr"
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
@@ -20,29 +20,23 @@ func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
 	return fmt.Sprintf("%s/%s", store.GetObjectKey(gw), string(l.Name))
 }
 
-var _ configRenderer = &listenerRenderer{}
+var _ listenerRenderer = &defaultListenerRenderer{}
 
-type listenerRenderer struct{ log logr.Logger }
+type defaultListenerRenderer struct{ log logr.Logger }
 
-func newListenerRenderer(log logr.Logger) configRenderer {
-	return &listenerRenderer{log: log}
+func newListenerRenderer(log logr.Logger) listenerRenderer {
+	return &defaultListenerRenderer{log: log}
 }
 
-func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Config, error) {
+// renderListener renders a Gateway listener into a dataplane listener feeding the server named
+// after the listener.
+func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv2.ListenerConfig, error) {
 	if c.gws.Len() != 1 {
 		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with %d gws", c.gws.Len())
 	}
+
 	gw := c.gws.GetFirst()
 	gwConf := c.gwConf
-
-	// rest of the arguments are of type any
-	if len(args) != 4 {
-		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with args %v", args)
-	}
-	l := args[0].(*gwapiv1.Listener)
-	rs := args[1].([]store.Route)
-	ap := args[2].(gwAddrPort)
-	targetPorts := args[3].(map[string]int)
 
 	r.log.V(6).Info("renderListener", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "public-addr", ap.String())
@@ -59,10 +53,24 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Conf
 		}
 	}
 
-	lc := stnrapiv1.ListenerConfig{
-		Name:     stnrListenerName(gw, l),
-		Protocol: proto.String(),
-		Addr:     opdefault.DefaultSTUNnerAddressEnvVarName, // $STUNNER_ADDR, will be filled in from the pod environment
+	// a TURN-* protocol is a TURN server over the transport underneath
+	var lproto stnrapiv2.Protocol
+	switch proto {
+	case stnrapiv2.ProtocolTURNUDP:
+		lproto = stnrapiv2.ProtocolUDP
+	case stnrapiv2.ProtocolTURNTCP:
+		lproto = stnrapiv2.ProtocolTCP
+	case stnrapiv2.ProtocolTURNTLS:
+		lproto = stnrapiv2.ProtocolTLS
+	case stnrapiv2.ProtocolTURNDTLS:
+		lproto = stnrapiv2.ProtocolDTLS
+	}
+
+	name := stnrListenerName(gw, l)
+	lc := stnrapiv2.ListenerConfig{
+		Name:     name,
+		Protocol: lproto.String(),
+		Servers:  []string{name},
 		Port:     port,
 	}
 
@@ -83,20 +91,16 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Conf
 	}
 
 	// the PQC mode is a per-Gateway policy of the TURN-TLS listeners
-	if proto == stnrapiv1.ListenerProtocolTURNTLS {
+	if proto == stnrapiv2.ProtocolTURNTLS {
 		if v, ok := gw.GetAnnotations()[opdefault.PQCModeAnnotationKey]; ok {
-			mode, err := stnrapiv1.NewPQCMode(v)
+			mode, err := stnrapiv2.NewPQCMode(v)
 			if err != nil {
 				r.log.Info("Ignoring invalid PQC mode annotation", "gateway", store.GetObjectKey(gw),
 					"key", opdefault.PQCModeAnnotationKey, "value", v, "error", err.Error())
-			} else if mode != stnrapiv1.PQCModeDefault {
+			} else if mode != stnrapiv2.PQCModeDefault {
 				lc.PQCMode = mode.String()
 			}
 		}
-	}
-
-	for _, r := range rs {
-		lc.Routes = append(lc.Routes, store.GetObjectKey(r))
 	}
 
 	// remove cert/key from dump
@@ -111,14 +115,14 @@ func (r *listenerRenderer) render(c *RenderContext, args ...any) (stnrapiv1.Conf
 	return &lc, nil
 }
 
-func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool, error) {
+func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (string, string, bool, error) {
 	proto, err := getProtocol(l.Protocol)
 	if err != nil {
 		return "", "", false, nil
 	}
 
 	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
-		(proto != stnrapiv1.ListenerProtocolTURNTLS && proto != stnrapiv1.ListenerProtocolTURNDTLS) {
+		(proto != stnrapiv2.ProtocolTURNTLS && proto != stnrapiv2.ProtocolTURNDTLS) {
 		return "", "", false, nil
 	}
 
@@ -186,27 +190,27 @@ func (r *listenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listener) (str
 	return "", "", false, NewNonCriticalError(InvalidCertificateRef)
 }
 
-// normalize protocol aliases
-func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv1.ListenerProtocol, error) {
-	protocol := string(proto)
-	switch protocol {
-	case "UDP":
-		protocol = "TURN-UDP" // v0.16: resolves to TURN-UDP
-
-	case "TCP":
-		protocol = "TURN-TCP" // v0.16: resolves to TURN-TCP
-
-	case "TLS":
-		protocol = "TURN-TLS" // v0.16: resolves to TURN-TLS
-
-	case "DTLS":
-		protocol = "TURN-DTLS" // v0.16: resolves to TURN-DTLS
-	}
-
-	ret, err := stnrapiv1.NewListenerProtocol(protocol)
+// getProtocol parses the protocol of a Gateway listener into a TURN-* protocol, resolving the
+// aliases (UDP is TURN-UDP, etc.).
+func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv2.Protocol, error) {
+	ret, err := stnrapiv2.NewProtocol(string(proto))
 	if err != nil {
-		return ret, NewNonCriticalError(InvalidProtocol)
+		return stnrapiv2.ProtocolUnknown, NewNonCriticalError(InvalidProtocol)
 	}
 
-	return ret, nil
+	switch ret {
+	case stnrapiv2.ProtocolUDP:
+		return stnrapiv2.ProtocolTURNUDP, nil
+	case stnrapiv2.ProtocolTCP:
+		return stnrapiv2.ProtocolTURNTCP, nil
+	case stnrapiv2.ProtocolTLS:
+		return stnrapiv2.ProtocolTURNTLS, nil
+	case stnrapiv2.ProtocolDTLS:
+		return stnrapiv2.ProtocolTURNDTLS, nil
+	case stnrapiv2.ProtocolTURNUDP, stnrapiv2.ProtocolTURNTCP, stnrapiv2.ProtocolTURNTLS,
+		stnrapiv2.ProtocolTURNDTLS:
+		return ret, nil
+	}
+
+	return stnrapiv2.ProtocolUnknown, NewNonCriticalError(InvalidProtocol)
 }

@@ -103,7 +103,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -116,7 +116,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -203,7 +203,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -216,7 +216,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -342,7 +342,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -355,7 +355,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -600,7 +600,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "TURN", serverOf(conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -611,7 +611,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -830,7 +830,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
@@ -838,11 +838,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "TURN", serverOf(conf, lc).Type, "server type")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -1057,7 +1057,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, 1, lc.Port, "port")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/udp-ok", lc.Name, "name")
@@ -1066,7 +1066,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, 2, lc.Port, "port")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for udp:2
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[2]
 				assert.Equal(t, "testnamespace/gateway-1/tcp", lc.Name, "name")
@@ -1075,7 +1075,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, 11, lc.Port, "port")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for tcp:11
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[3]
 				assert.Equal(t, "testnamespace/gateway-1/tcp-ok", lc.Name, "name")
@@ -1084,11 +1084,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, 12, lc.Port, "port")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip") // no service-port for tcp:11
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -1614,7 +1614,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1, lc.PublicPort, "public-port")
 				assert.Len(t, serverOf(conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")

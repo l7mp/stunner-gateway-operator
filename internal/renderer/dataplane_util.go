@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
@@ -159,19 +158,19 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 				Name:  stnrapiv2.DefaultEnvVarNodeAddr,
 				Value: "$(STUNNER_ADDR)",
 			}, {
-				Name:      stnrapiv1.DefaultEnvVarAddrs, // pod IPs (both families) for relay addresses
+				Name:      stnrapiv2.DefaultEnvVarAddrs, // pod IPs (both families) for relay addresses
 				ValueFrom: &podAddrsEnvVarSource,
 			}, {
-				Name:  stnrapiv1.DefaultEnvVarName, // gateway name for creating the stunnerd id
+				Name:  stnrapiv2.DefaultEnvVarName, // gateway name for creating the stunnerd id
 				Value: gw.GetName(),
 			}, {
-				Name:  stnrapiv1.DefaultEnvVarNamespace, // gateway namespace for creating the stunnerd id
+				Name:  stnrapiv2.DefaultEnvVarNamespace, // gateway namespace for creating the stunnerd id
 				Value: gw.GetNamespace(),
 			}, {
-				Name:      stnrapiv1.DefaultEnvVarNodeName, // nodename
+				Name:      stnrapiv2.DefaultEnvVarNodeName, // nodename
 				ValueFrom: &nodeNameEnvVarSource,
 			}, {
-				Name:  stnrapiv1.DefaultEnvVarConfigOrigin, // CDS server address
+				Name:  stnrapiv2.DefaultEnvVarConfigOrigin, // CDS server address
 				Value: cdsAddr,
 			}},
 			Resources: corev1.ResourceRequirements{
@@ -232,7 +231,7 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 
 		c.Ports = []corev1.ContainerPort{{
 			Name:          opdefault.DefaultMetricsPortName,
-			ContainerPort: int32(stnrapiv1.DefaultMetricsPort),
+			ContainerPort: int32(stnrapiv2.DefaultMetricsPort),
 			Protocol:      corev1.ProtocolTCP,
 		}}
 

@@ -151,7 +151,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -164,17 +164,133 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Equal(t, "ORIGINAL_DST", rc.RoutingPolicy, "a cluster behind a TURN listener routes to the destination the client names")
 				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "the relay address, resolved in the pod")
 				assert.Len(t, rc.Endpoints, 4, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.Empty(t, rc.Filters, "no port filter")
+
+				// the listener binds every address, its server is named after it
+				lc = conf.Listeners[0]
+				assert.Equal(t, "", lc.Addr, "bind address")
+				assert.Equal(t, []string{lc.Name}, lc.Servers, "servers")
+				sc := serverOf(&conf, lc)
+				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
+				assert.Equal(t, "default", conf.Auths[0].Name, "auth policy name")
+
+				// a permission filter per cluster, admitting its peers; a server without clusters
+				// has none, denying every peer
+				udpSrv := "testnamespace/gateway-1/gateway-1-listener-udp"
+				assert.Equal(t, []string{udpSrv + "/testnamespace/udproute-ok/turn/udp"},
+					sc.TURN.PermissionFilters, "permission filters")
+				assert.Empty(t, serverOf(&conf, conf.Listeners[1]).TURN.PermissionFilters, "permission filters")
+
+				assert.Len(t, conf.Filters, 1, "filter num")
+				f, err := conf.GetFilterConfig(udpSrv + "/testnamespace/udproute-ok/turn/udp")
+				assert.NoError(t, err, "permission filter found")
+				assert.Len(t, f.Rules, 4, "permission filter rules")
+				for _, r := range f.Rules {
+					assert.Equal(t, "ALLOW", r.Action, "permission filter action")
+					assert.Empty(t, r.Ports, "permission filter ports")
+				}
 
 				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
+
+				// restore
+				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
+				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
+			},
+		},
+		{
+			name:  "port range and multiple routes - E2E test",
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			esls:  []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			ssvcs: []stnrgwv1.StaticService{testutils.TestStaticSvc},
+			prep: func(c *renderTestConfig) {
+				port, endPort := gwapiv1.PortNumber(100), gwapiv1.PortNumber(200)
+				ro1 := testutils.TestUDPRoute.DeepCopy()
+				ro1.Spec.Rules[0].BackendRefs[0].Port = &port
+				ro1.Spec.Rules[0].BackendRefs[0].EndPort = &endPort
+
+				group := gwapiv1.Group(stnrgwv1.GroupVersion.Group)
+				kind := gwapiv1.Kind("StaticService")
+				ro2 := testutils.TestUDPRoute.DeepCopy()
+				ro2.SetName("route-2")
+				ro2.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+					BackendObjectReference: stnrgwv1.BackendObjectReference{
+						Group: &group,
+						Kind:  &kind,
+						Name:  "teststaticservice-ok",
+					},
+				}}
+				c.rs = []stnrgwv1.UDPRoute{*ro1, *ro2}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				config.DataplaneMode = config.DataplaneModeLegacy
+				config.EnableRelayToClusterIP = false
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.update = event.NewEventUpdate(0)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				assert.NoError(t, r.renderForGateways(c), "render success")
+
+				cms := c.update.UpsertQueue.ConfigMaps.Objects()
+				assert.Len(t, cms, 1, "configmap ready")
+				conf, err := store.UnpackConfigMap(asConfigMap(cms[0]))
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
+
+				assert.Len(t, conf.Clusters, 2, "cluster num")
+				c1, err := conf.GetClusterConfig("testnamespace/udproute-ok/turn/udp")
+				assert.NoError(t, err, "cluster 1 found")
+				assert.Equal(t, []string{"testnamespace/udproute-ok/turn/udp"}, c1.Filters, "port filter")
+				c2, err := conf.GetClusterConfig("testnamespace/route-2/turn/udp")
+				assert.NoError(t, err, "cluster 2 found")
+				assert.Empty(t, c2.Filters, "no port filter")
+				assert.Equal(t, []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"}, c2.Endpoints, "endpoints")
+
+				// the port filter of cluster 1: its peers on the backend ports, then a deny
+				f, err := conf.GetFilterConfig("testnamespace/udproute-ok/turn/udp")
+				assert.NoError(t, err, "port filter found")
+				assert.Len(t, f.Rules, 5, "port filter rules")
+				for _, r := range f.Rules[:4] {
+					assert.Equal(t, "ALLOW", r.Action, "port filter action")
+					assert.Equal(t, []stnrapiv2.FilterPort{{Port: 100, EndPort: 200}}, r.Ports, "port filter ports")
+				}
+				assert.Equal(t, "DENY", f.Rules[4].Action, "port filter deny")
+
+				// the permission filters of the UDP listener: per cluster in order
+				lc, err := conf.GetListenerConfig("testnamespace/gateway-1/gateway-1-listener-udp")
+				assert.NoError(t, err, "listener found")
+				sc := serverOf(&conf, lc)
+				assert.Len(t, sc.Clusters, 2, "route num")
+				pfs := []string{}
+				for _, cn := range sc.Clusters {
+					pfs = append(pfs, sc.Name+"/"+cn)
+				}
+				assert.Equal(t, pfs, sc.TURN.PermissionFilters, "permission filters")
+
+				f, err = conf.GetFilterConfig(sc.Name + "/testnamespace/udproute-ok/turn/udp")
+				assert.NoError(t, err, "permission filter 1 found")
+				assert.Len(t, f.Rules, 4, "permission filter 1 rules")
+				for _, r := range f.Rules {
+					assert.Equal(t, "ALLOW", r.Action, "permission filter action")
+					assert.Empty(t, r.Ports, "permission filter ports")
+				}
+				f, err = conf.GetFilterConfig(sc.Name + "/testnamespace/route-2/turn/udp")
+				assert.NoError(t, err, "permission filter 2 found")
+				assert.Len(t, f.Rules, 3, "permission filter 2 rules")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -265,7 +381,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -278,7 +394,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -532,7 +648,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -545,7 +661,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
@@ -622,7 +738,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "dummy-namespace/dummy-route", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "dummy-namespace/dummy-route/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "dummy-namespace/dummy-gateway/gateway-1-listener-tcp", lc.Name, "name")
@@ -635,7 +751,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc = conf.Clusters[0]
-				assert.Equal(t, "dummy-namespace/dummy-route", rc.Name, "cluster name")
+				assert.Equal(t, "dummy-namespace/dummy-route/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")
@@ -742,7 +858,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
@@ -755,7 +871,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
 				rc := conf.Clusters[0]
-				assert.Equal(t, "testnamespace/udproute-ok", rc.Name, "cluster name")
+				assert.Equal(t, "testnamespace/udproute-ok/turn/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "10.11.12.13", "staticservice endpoint ip-1")
@@ -1014,7 +1130,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
-				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok", "udp route")
+				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/turn/udp", "udp route")
 
 				lc = conf.Listeners[1]
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")

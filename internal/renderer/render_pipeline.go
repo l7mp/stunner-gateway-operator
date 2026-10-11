@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -230,8 +230,8 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	log := r.log
 	gc := c.gc
 
-	conf := stnrapiv1.StunnerConfig{
-		ApiVersion: stnrapiv1.ApiVersion,
+	conf := stnrapiv2.StunnerConfig{
+		ApiVersion: stnrapiv2.ApiVersion,
 	}
 
 	targetName, targetNamespace := getTarget(c)
@@ -248,9 +248,10 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	if err != nil {
 		return err
 	}
-	conf.Auth = *auth
+	conf.Auths = []stnrapiv2.AuthConfig{*auth}
 
-	conf.Listeners = []stnrapiv1.ListenerConfig{}
+	conf.Listeners = []stnrapiv2.ListenerConfig{}
+	conf.Servers = []stnrapiv2.ServerConfig{}
 	for _, gw := range c.gws.GetAll() {
 		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
@@ -312,7 +313,16 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 				continue
 			}
 
+			sc, err := r.renderServer(&gwCtx, &l, rs)
+			if err != nil {
+				log.Info("Error rendering server configuration for listener", "gateway",
+					store.GetObjectKey(gw), "listener", l.Name, "error", err.Error())
+				setListenerStatus(gw, &l, err, false, 0)
+				continue
+			}
+
 			conf.Listeners = append(conf.Listeners, *lc)
+			conf.Servers = append(conf.Servers, *sc)
 			setListenerStatus(gw, &l, nil, false, len(rs))
 		}
 
@@ -324,7 +334,9 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 
 	log.V(1).Info("Processing UDPRoutes")
-	conf.Clusters = []stnrapiv1.ClusterConfig{}
+	conf.Clusters = []stnrapiv2.ClusterConfig{}
+	conf.Filters = []stnrapiv2.FilterConfig{}
+	peers := map[string][]stnrapiv2.FilterRule{} // the peers of the rendered clusters
 	for _, ro := range r.allRoutes() {
 		log.V(2).Info("Considering", "route", ro.GetName())
 
@@ -346,22 +358,15 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			renderRoute = renderRoute || (!parentOutContext && parentExists && parentAccept)
 		}
 
-		rc, err := r.renderCluster(ro)
-		criticalErr := err
+		// a critical error renders no cluster, a non-critical one only goes to the status
+		rc, rcPeers, err := r.renderCluster(ro)
 		if err != nil {
-			if IsNonCritical(err) {
-				log.Info("Non-critical error rendering cluster", "route",
-					store.GetObjectKey(ro), "error", err.Error())
-				// note error but otherwise ignore
-				criticalErr = nil
-			} else {
-				log.Error(err, "Fatal error rendering cluster", "route",
-					ro.GetName())
-			}
+			log.Info("Error rendering cluster", "route", store.GetObjectKey(ro), "critical",
+				IsCritical(err), "error", err.Error())
 		}
-
-		if renderRoute && criticalErr == nil && rc != nil {
+		if renderRoute && rc != nil {
 			conf.Clusters = append(conf.Clusters, *rc)
+			peers[rc.Name] = rcPeers
 		}
 
 		// set status: we can do this only once we know whether (1) the parent accepted the
@@ -378,10 +383,25 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 	r.invalidateMaskedRoutes(c)
 
-	// the objects are rendered as v1 and published as v2
-	v2conf, err := stnrapiv1.ConvertToV2(&conf)
-	if err != nil {
-		log.Error(err, "Cannot convert the dataplane config to v2", "config", conf.String())
+	log.V(1).Info("Rendering filters")
+	for i := range conf.Clusters {
+		rc := &conf.Clusters[i]
+		if f := r.renderClusterFilter(rc, peers[rc.Name]); f != nil {
+			conf.Filters = append(conf.Filters, *f)
+			rc.Filters = []string{f.Name}
+		}
+	}
+	for i := range conf.Servers {
+		s := &conf.Servers[i]
+		for _, f := range r.renderPermissionFilters(s, peers) {
+			conf.Filters = append(conf.Filters, f)
+			s.TURN.PermissionFilters = append(s.TURN.PermissionFilters, f.Name)
+		}
+	}
+
+	// validate so that defaults get filled in
+	if err := conf.Validate(); err != nil {
+		log.Error(err, "Invalid dataplane config", "config", conf.String())
 		return NewCriticalError(RenderingError)
 	}
 
@@ -391,10 +411,10 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		// config name is the name of the gateway
 		gw := c.gws.GetFirst()
 		if gw != nil {
-			v2conf.Admin.Name = store.GetObjectKey(gw)
+			conf.Admin.Name = store.GetObjectKey(gw)
 
 			// update cds server
-			c.update.ConfigQueue = append(c.update.ConfigQueue, v2conf)
+			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
 
 			// create deployment
 			dp, err := r.generateDataplane(c)
@@ -433,7 +453,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			}
 		}
 	} else {
-		cm, err := r.renderConfig(c, targetName, targetNamespace, v2conf)
+		cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
 		if err != nil {
 			return err
 		}
@@ -441,7 +461,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
-		v2conf.String())
+		conf.String())
 
 	return nil
 }
@@ -561,7 +581,7 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 			parentExists, parendAccepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// render a stale cluster so that we know the ResolvedRefs status
-			_, err := r.renderCluster(ro)
+			_, _, err := r.renderCluster(ro)
 
 			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parendAccepted, err)
 		}

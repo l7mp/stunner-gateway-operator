@@ -1,21 +1,27 @@
 package renderer
 
 import (
-	"fmt"
+	"net/netip"
+	"regexp"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var _ clusterRenderer = &defaultClusterRenderer{}
+
+// portRangeMatcher matches a StaticService prefix with a port range: "<prefix>:<min-max>".
+var portRangeMatcher = regexp.MustCompile("^(.*):<([0-9]+)-([0-9]+)>$")
 
 type defaultClusterRenderer struct{ log logr.Logger }
 
@@ -23,27 +29,45 @@ func newClusterRenderer(log logr.Logger) clusterRenderer {
 	return &defaultClusterRenderer{log: log}
 }
 
+// clusterName names the cluster of a route: the namespaced name of the route, the type of the
+// server the cluster serves, and the protocol of the route kind, so that the clusters of routes of
+// different kinds never clash.
+func clusterName(ro store.Route) string {
+	proto := "unknown"
+	switch ro.(type) {
+	case *stnrgwv1.UDPRoute:
+		proto = "udp"
+	case *stnrgwv1.TCPRoute:
+		proto = "tcp"
+	}
+	return store.GetObjectKey(ro) + "/turn/" + proto
+}
+
 // renderCluster renders a stunnerd cluster config for a route. The route kind determines the
 // cluster protocol and the rendering strategy. Rendering a TCPRoute into a TCP cluster is a
 // premium feature: here it fails non-critically, so that the route is still accepted and the
 // reason surfaces on its ResolvedRefs condition.
-func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv1.ClusterConfig, error) {
+func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	switch ro := ro.(type) {
 	case *stnrgwv1.UDPRoute:
-		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv1.ClusterProtocolUDP)
+		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP)
 	case *stnrgwv1.TCPRoute:
-		return nil, NewNonCriticalError(FeatureNotLicensed)
+		return nil, nil, NewNonCriticalError(FeatureNotLicensed)
 	default:
-		return nil, NewCriticalError(InternalError)
+		return nil, nil, NewCriticalError(InternalError)
 	}
 }
 
 // renderServiceCluster renders a cluster config from a set of route rules whose backend
-// references resolve to Kubernetes Services or StaticServices.
-func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrgwv1.RouteRule, proto stnrapiv1.ClusterProtocol) (*stnrapiv1.ClusterConfig, error) {
+// references resolve to Kubernetes Services or StaticServices, plus the peers of the route: an
+// ALLOW rule per address or prefix of the backends, carrying the ports of the backend if the
+// backend restricts them, or the port range of a StaticService prefix written as
+// "<prefix>:<min-max>". Endpoints are addresses only: a backend address that does not parse as an
+// IP address or prefix is skipped.
+func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrgwv1.RouteRule, proto stnrapiv2.Protocol) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	// track down the backendref
 	if len(rs) == 0 {
-		return nil, NewCriticalError(NoRuleFound)
+		return nil, nil, NewCriticalError(NoRuleFound)
 	}
 
 	if len(rs) > 1 {
@@ -52,12 +76,11 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 	}
 
 	eps := []string{}
+	peers := []stnrapiv2.FilterRule{}
 
 	// the rest of the errors are not critical, but we still need to keep track of each in
 	// order to set the ResolvedRefs Route status: last error is reported only
 	var routeError error
-
-	ctype, prevCType := stnrapiv1.ClusterTypeStatic, stnrapiv1.ClusterTypeUnknown
 	for _, b := range rs[0].BackendRefs {
 		b := b
 
@@ -83,37 +106,34 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 		if b.Namespace != nil {
 			ns = string(*b.Namespace)
 		}
+		n := types.NamespacedName{Namespace: ns, Name: string(b.Name)}
 
-		ep := []string{}
+		addrs := []string{}
 		switch ref := &b; {
 		case store.IsReferenceService(ref):
-			var errEDS error
-
-			// get endpoints (checks EDS inline)
-			epEDS, ctypeEDS, err := getEndpointsForService(ref, ns)
-			if err != nil {
+			epAddrs, errEDS := getEndpointAddrs(n, false)
+			if errEDS != nil {
 				r.log.V(1).Info("Cluster rendering error: could not render Endpoints for Service backend",
 					"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
-					"error", err)
-				errEDS = err
-				routeError = err
+					"error", errEDS)
+				routeError = errEDS
 			} else {
-				ep = append(ep, epEDS...)
-				ctype = ctypeEDS
+				addrs = append(addrs, epAddrs...)
 			}
 
 			// the ClusterIP, if relaying to it is enabled
-			epCluster, ctypeCluster, errCluster := getClusterRouteForService(ref, ns)
-			if errCluster != nil {
-				r.log.V(1).Info("Cluster rendering error: could not render the ClusterIP route "+
-					"for Service backend", "route",
-					store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
-					"error", errCluster)
-
-				routeError = errCluster
-			} else {
-				ep = append(ep, epCluster...)
-				ctype = ctypeCluster
+			var errCluster error
+			if config.EnableRelayToClusterIP {
+				var clusterIPs []string
+				if clusterIPs, errCluster = getClusterIP(n); errCluster != nil {
+					r.log.V(1).Info("Cluster rendering error: could not render the ClusterIP route "+
+						"for Service backend", "route",
+						store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
+						"error", errCluster)
+					routeError = errCluster
+				} else {
+					addrs = append(addrs, clusterIPs...)
+				}
 			}
 
 			if errCluster != nil && errEDS != nil {
@@ -126,15 +146,17 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			}
 
 		case store.IsReferenceStaticService(ref):
-			var err error
-			ep, ctype, err = getEndpointsForStaticService(ref, ns)
-			if err != nil {
-				routeError = err
+			ssvc := store.StaticServices.GetObject(n)
+			if ssvc == nil {
+				routeError = NewNonCriticalError(BackendNotFound)
 				r.log.Info("Cluster rendering error: could not render endpoints for StaticService backend",
 					"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 					"error", routeError)
 				continue
 			}
+			// ignore Spec.Ports
+			addrs = append(addrs, ssvc.Spec.Prefixes...)
+
 		default:
 			// error could also be InvalidBackendGroup: both are reported with the same
 			// reason in the route status
@@ -144,134 +166,92 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			continue
 		}
 
-		if IsNonCriticalError(routeError, BackendNotFound) {
-			r.log.Info("Cluster rendering: skipping backend", "route", store.GetObjectKey(ro),
-				"backendRef", store.DumpBackendRef(&b))
-			continue
+		// the filter ports of a port range; the full range restricts nothing
+		filterPorts := func(port, endPort int) []stnrapiv2.FilterPort {
+			if port == stnrapiv2.DefaultMinRelayPort && endPort == stnrapiv2.DefaultMaxRelayPort {
+				return nil
+			}
+			p := stnrapiv2.FilterPort{Port: port}
+			if endPort != port {
+				p.EndPort = endPort
+			}
+			return []stnrapiv2.FilterPort{p}
 		}
 
-		if prevCType != stnrapiv1.ClusterTypeUnknown && prevCType != ctype {
-			routeError = NewNonCriticalError(InconsitentClusterType)
-			r.log.Info("Cluster rendering error: inconsistent cluster type", "route",
-				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
-				"prevous-ctype", fmt.Sprintf("%#v", prevCType))
-			continue
+		// the port range of the backend: only a backend setting endPort restricts the ports, a
+		// bare port is the mandatory port of a Gateway API backend reference (1 in old manifests)
+		var backendPorts []stnrapiv2.FilterPort
+		if b.Port != nil && b.EndPort != nil && *b.Port > 0 && *b.Port <= *b.EndPort {
+			backendPorts = filterPorts(int(*b.Port), int(*b.EndPort))
 		}
 
-		if err := injectPortRange(&b, ep, ctype); err != nil {
-			routeError = NewNonCriticalError(InvalidPortRange)
-			r.log.Info("Cluster rendering error", "route",
-				store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
-				"cluster-ctype", ctype.String(), "error", err.Error())
-			continue
+		for _, a := range addrs {
+			// a StaticService prefix may carry its own port range, which overrides the
+			// port range of the backend
+			ports := backendPorts
+			if m := portRangeMatcher.FindStringSubmatch(a); m != nil {
+				p, _ := strconv.Atoi(m[2])
+				e, _ := strconv.Atoi(m[3])
+				if p < 1 || e < p || e > 65535 {
+					routeError = NewNonCriticalError(InvalidPortRange)
+					r.log.Info("Cluster rendering error: skipping backend address", "route",
+						store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
+						"address", a, "error", routeError)
+					continue
+				}
+				a, ports = m[1], filterPorts(p, e)
+			}
+
+			prefix, err := netip.ParsePrefix(a)
+			if err != nil {
+				addr, aerr := netip.ParseAddr(a)
+				if aerr != nil {
+					routeError = NewNonCriticalError(InvalidEndpoint)
+					r.log.Info("Cluster rendering error: skipping backend address", "route",
+						store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
+						"address", a, "error", routeError)
+					continue
+				}
+				prefix = netip.PrefixFrom(addr.Unmap(), addr.Unmap().BitLen())
+			}
+			prefix = prefix.Masked()
+
+			// a prefix is a peer block only, an address is an endpoint too
+			if prefix.IsSingleIP() {
+				eps = append(eps, prefix.Addr().String())
+			}
+			peers = append(peers, stnrapiv2.FilterRule{
+				Action:  stnrapiv2.FilterActionAllow.String(),
+				IPBlock: &stnrapiv2.IPBlock{CIDR: prefix.String()},
+				Ports:   ports,
+			})
 		}
 
 		r.log.V(2).Info("Cluster rendering: adding Endpoints for backend", "route",
-			store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b),
-			"cluster-type", ctype.String(), "endpoints", ep)
-
-		eps = append(eps, ep...)
-		prevCType = ctype
+			store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b), "addresses", addrs)
 	}
 
-	if ctype == stnrapiv1.ClusterTypeUnknown {
-		return nil, NewNonCriticalError(BackendNotFound)
-	}
-
-	cluster := stnrapiv1.ClusterConfig{
-		Name:      store.GetObjectKey(ro),
-		Type:      ctype.String(),
-		Protocol:  proto.String(),
+	cluster := stnrapiv2.ClusterConfig{
+		Name:      clusterName(ro),
+		Type:      stnrapiv2.ClusterTypeStatic.String(),
 		Endpoints: eps,
+		Protocol:  proto.String(),
+		// $STUNNER_ADDR, the relay address, filled in from the pod environment
+		Addrs: []string{opdefault.DefaultSTUNnerAddressEnvVarName},
 	}
 
 	// validate so that defaults get filled in
 	if err := cluster.Validate(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	backendStatus := "None"
 	if routeError != nil {
 		backendStatus = routeError.Error()
 	}
+
 	r.log.V(2).Info("Finished rendering cluster config", "route", store.GetObjectKey(ro), "result",
-		fmt.Sprintf("%#v", cluster), "backend-error", backendStatus)
+		cluster.String(), "peers", len(peers), "backend-error", backendStatus)
 
-	return &cluster, routeError
-}
-
-func getEndpointsForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrapiv1.ClusterType, error) {
-	ctype := stnrapiv1.ClusterTypeUnknown
-	ep := []string{}
-
-	n := types.NamespacedName{
-		Namespace: ns,
-		Name:      string(b.Name),
-	}
-
-	ips, err := getEndpointAddrs(n, false)
-	if err != nil {
-		return ep, ctype, err
-	}
-
-	ctype = stnrapiv1.ClusterTypeStatic
-	ep = append(ep, ips...)
-
-	return ep, ctype, nil
-}
-
-// getClusterRouteForService returns the ClusterIP of a Service backend if relaying to it is
-// enabled, else no endpoint.
-func getClusterRouteForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrapiv1.ClusterType, error) {
-	ctype := stnrapiv1.ClusterTypeStatic
-	if !config.EnableRelayToClusterIP {
-		return []string{}, ctype, nil
-	}
-	ips, err := getClusterIP(types.NamespacedName{Namespace: ns, Name: string(b.Name)})
-	if err != nil {
-		return []string{}, ctype, err
-	}
-	return ips, ctype, nil
-}
-
-func getEndpointsForStaticService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrapiv1.ClusterType, error) {
-	ctype := stnrapiv1.ClusterTypeUnknown
-	ep := []string{}
-
-	n := types.NamespacedName{Namespace: ns, Name: string(b.Name)}
-	ssvc := store.StaticServices.GetObject(n)
-	if ssvc == nil {
-		return ep, ctype, NewNonCriticalError(BackendNotFound)
-	}
-
-	// ignore Spec.Ports
-	ep = make([]string, len(ssvc.Spec.Prefixes))
-	copy(ep, ssvc.Spec.Prefixes)
-
-	return ep, stnrapiv1.ClusterTypeStatic, nil
-}
-
-func injectPortRange(b *stnrgwv1.BackendRef, eps []string, ctype stnrapiv1.ClusterType) error {
-	// only static clusters know how to handle port ranges
-	if ctype != stnrapiv1.ClusterTypeStatic {
-		return nil
-	}
-
-	port, endPort := stnrapiv1.DefaultMinRelayPort, stnrapiv1.DefaultMaxRelayPort
-	if b.Port != nil && int(*b.Port) > 0 && int(*b.Port) < 65536 {
-		port = int(*b.Port)
-		endPort = int(*b.Port)
-	}
-	if b.EndPort != nil && int(*b.EndPort) > 0 && int(*b.EndPort) < 65536 && int(*b.EndPort) >= port {
-		endPort = int(*b.EndPort)
-	}
-
-	// default port range is not injected
-	if port != stnrapiv1.DefaultMinRelayPort || endPort != stnrapiv1.DefaultMaxRelayPort {
-		for i := range eps {
-			eps[i] += fmt.Sprintf(":<%d-%d>", port, endPort)
-		}
-	}
-
-	return nil
+	return &cluster, peers, routeError
 }

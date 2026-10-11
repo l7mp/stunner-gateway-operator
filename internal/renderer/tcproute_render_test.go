@@ -46,7 +46,7 @@ func TestRenderTCPRoute(t *testing.T) {
 
 				// the route is accepted, but the open-source renderer does not
 				// render a TCP cluster for it
-				rc, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(ro)
 				assert.Nil(t, rc, "no cluster rendered")
 				assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
 					"feature-not-licensed error")
@@ -72,7 +72,7 @@ func TestRenderTCPRoute(t *testing.T) {
 
 				protos := map[string]string{}
 				for _, ro := range rs {
-					rc, err := r.renderCluster(ro)
+					rc, _, err := r.renderCluster(ro)
 					if _, ok := ro.(*stnrgwv1.TCPRoute); ok {
 						assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
 							"TCP cluster needs a license")
@@ -81,8 +81,8 @@ func TestRenderTCPRoute(t *testing.T) {
 					assert.NoError(t, err, "renderCluster")
 					protos[rc.Name] = rc.Protocol
 				}
-				assert.Equal(t, "UDP", protos["testnamespace/udproute-ok"], "UDP cluster")
-				assert.NotContains(t, protos, "testnamespace/tcproute-ok", "no TCP cluster")
+				assert.Equal(t, "UDP", protos["testnamespace/udproute-ok/turn/udp"], "UDP cluster")
+				assert.NotContains(t, protos, "testnamespace/tcproute-ok/turn/tcp", "no TCP cluster")
 
 				// the TCPRoute attaches to the TCP listener via its sectionName
 				gw := store.Gateways.GetFirst()
@@ -189,7 +189,7 @@ func TestRenderTCPRoute(t *testing.T) {
 				initRouteStatus(ro)
 				p := ro.GetParentRefs()[0]
 				exists, accepted := r.isParentAcceptingRoute(ro, &p, "")
-				_, backendErr := r.renderCluster(ro)
+				_, _, backendErr := r.renderCluster(ro)
 				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, backendErr)
 
 				parents := ro.GetRouteStatus().Parents

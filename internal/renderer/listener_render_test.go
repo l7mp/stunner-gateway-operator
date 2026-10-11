@@ -59,9 +59,11 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
+				assert.Equal(t, "", lc.Addr, "bind address")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
+				assert.Equal(t, []string{lc.Name}, lc.Servers, "servers")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
 				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 			},
@@ -131,7 +133,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, []store.Route{}, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
-				assert.Equal(t, "TURN-TCP", lc.Protocol, "proto")
+				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
 				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
@@ -178,13 +180,9 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
-				// assert.Equal(t, stnrapiv1.DefaultMinRelayPort,
-				// 	lc.MinRelayPort, "min-port")
-				// assert.Equal(t, stnrapiv1.DefaultMaxRelayPort,
-				// 	lc.MaxRelayPort, "max-port")
 			},
 		},
 		{
@@ -288,7 +286,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "TURN-UDP", lc.Protocol, "proto")
+				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, "", lc.Cert, "cert")
@@ -298,7 +296,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err = r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
@@ -308,7 +306,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err = r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-dtls", lc.Name, "name")
-				assert.Equal(t, "TURN-DTLS", lc.Protocol, "proto")
+				assert.Equal(t, "DTLS", lc.Protocol, "proto")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
@@ -372,7 +370,7 @@ func TestRenderListenerRender(t *testing.T) {
 				// the mode reaches the TLS listener, normalized
 				lc, err := r.renderListener(c, &ls[1], rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, "enforced", lc.PQCMode, "pqc mode")
 
 				// the other protocols are left alone
@@ -450,7 +448,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
@@ -505,7 +503,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
@@ -616,7 +614,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, "", lc.Cert, "cert")
 				assert.Equal(t, "", lc.Key, "key")
 			},
@@ -677,7 +675,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
@@ -738,7 +736,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
@@ -918,7 +916,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},
@@ -984,7 +982,7 @@ func TestRenderListenerRender(t *testing.T) {
 				lc, err := r.renderListener(c, &l, rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TURN-TLS", lc.Protocol, "proto")
+				assert.Equal(t, "TLS", lc.Protocol, "proto")
 				assert.Equal(t, testutils.TestCert64, lc.Cert, "cert")
 				assert.Equal(t, testutils.TestKey64, lc.Key, "key")
 			},

@@ -313,7 +313,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -330,7 +330,7 @@ func testManagedMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -1156,7 +1156,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-tcp" {
@@ -1198,7 +1198,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
@@ -1667,7 +1667,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1681,13 +1681,13 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
 			Expect(l.Cert).NotTo(Equal(""))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(8))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
@@ -1857,7 +1857,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1871,13 +1871,13 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
 			Expect(l.Cert).NotTo(Equal(""))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(8))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
@@ -1945,7 +1945,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -1959,7 +1959,7 @@ func testManagedMode() {
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -2176,7 +2176,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2190,7 +2190,7 @@ func testManagedMode() {
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -2443,7 +2443,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -2460,7 +2460,7 @@ func testManagedMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -2488,11 +2488,11 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -3247,7 +3247,7 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			l = conf.Listeners[1]
 			if l.Name != "testnamespace/gateway-1/gateway-1-listener-dtls" {
@@ -3264,7 +3264,7 @@ func testManagedMode() {
 
 			c := conf.Clusters[0]
 
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
@@ -3292,11 +3292,11 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
+			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
-			Expect(c.Name).Should(Equal("testnamespace/udproute-ok"))
+			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/turn/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
 			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))

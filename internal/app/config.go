@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	stnrv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
+	stnrv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -89,7 +89,7 @@ func NewConfig() Config {
 		ThrottleTimeout:      opdefault.DefaultThrottleTimeout,
 		StartupRenderTimeout: opdefault.DefaultStartupRenderTimeout,
 		LabelFilter:          append([]string(nil), opdefault.DefaultLabelFilter...),
-		CDSAddress:           stnrv1.DefaultConfigDiscoveryAddress,
+		CDSAddress:           stnrv2.DefaultConfigDiscoveryAddress,
 		MetricsAddr:          ":8080",
 		ProbeAddr:            ":8081",
 		PprofAddr:            "0",
