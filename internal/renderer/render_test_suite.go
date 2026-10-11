@@ -51,7 +51,6 @@ type renderTestConfig struct {
 	trsGwAPI []stnrgwv1.TCPRoute // internal format is always ours, not gwapiv1
 	svcs     []corev1.Service
 	nodes    []corev1.Node
-	eps      []corev1.Endpoints
 	esls     []discoveryv1.EndpointSlice
 	scrts    []corev1.Secret
 	ascrts   []corev1.Secret
@@ -128,11 +127,6 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.Nodes.Flush()
 			for i := range c.nodes {
 				store.Nodes.Upsert(&c.nodes[i])
-			}
-
-			store.Endpoints.Flush()
-			for i := range c.eps {
-				store.Endpoints.Upsert(&c.eps[i])
 			}
 
 			store.EndpointSlices.Flush()

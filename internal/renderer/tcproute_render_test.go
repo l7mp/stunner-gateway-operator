@@ -29,13 +29,11 @@ func TestRenderTCPRoute(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
-				config.EndpointSliceAvailable = true
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *renderer) {
-				config.EndpointSliceAvailable = true
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
@@ -64,13 +62,11 @@ func TestRenderTCPRoute(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
-				config.EndpointSliceAvailable = true
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *renderer) {
-				config.EndpointSliceAvailable = true
 				rs := r.allRoutes()
 				assert.Len(t, rs, 2, "route len")
 
@@ -181,7 +177,6 @@ func TestRenderTCPRoute(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
-				config.EndpointSliceAvailable = true
 				s1 := testutils.TestSvc.DeepCopy()
 				s1.Spec.ClusterIP = "1.1.1.1"
 				c.svcs = []corev1.Service{*s1}

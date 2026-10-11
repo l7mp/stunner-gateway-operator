@@ -60,7 +60,6 @@ func testFinalizer() {
 		var cdsClient cdsclient.Client
 
 		BeforeAll(func() {
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
@@ -73,14 +72,12 @@ func testFinalizer() {
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			close(ch)
 		})
 
 		It("should survive loading a minimal config", func() {
-			// switch EDS on
 			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
 			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
 			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
@@ -237,7 +234,7 @@ func testFinalizer() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -249,7 +246,7 @@ func testFinalizer() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
@@ -508,12 +505,10 @@ func testFinalizer() {
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
 
 			// ctrl.Log.Info("deleting Endpoints")
-			// Expect(k8sClient.Delete(ctx, testEndpoint)).Should(Succeed())
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())
 
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})

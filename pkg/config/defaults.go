@@ -28,9 +28,6 @@ const (
 	// DefaultDataplaneMode is the default dataplane mode.
 	DefaultDataplaneMode = "managed"
 
-	// DefaultEndpointSliceAvailable enables the EndpointSlice controller.
-	DefaultEndpointSliceAvailable = true
-
 	// DefaultEnableFinalizer controls whether to enable the operator finalizer.
 	DefaultEnableFinalizer = false
 
@@ -88,9 +85,6 @@ const (
 	// will appear in the filesystem of the stunnerd pods. This is also the key on the
 	// ConfigMap that maintains the stunnerd config.
 	DefaultStunnerdConfigfileName = "stunnerd.conf"
-
-	// DefaultEnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints.
-	DefaultEnableEndpointDiscovery = true
 
 	// DefaultEnableRelayToClusterIP allows clients to create transport relay connections to the
 	// ClusterIP of a service.

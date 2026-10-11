@@ -19,13 +19,9 @@ var (
 	// ConfigMapName names a ConfigMap the operator renders the stunnerd config file into
 	ConfigMapName = opdefault.DefaultConfigMapName
 
-	// EnableEndpointDiscovery enables EDS for finding the UDP-route backend endpoints
-	EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
-
 	// EnableRelayToClusterIP allows clients to create transport relay connections directly to
 	// the ClusterIP of a Kubernetes service. This is useful for hiding the pod IPs behind the
-	// ClusterIP. If both EnableEndpointDiscovery and EnableRelayToClusterIP are on, clients
-	// can connect to both the ClusterIP and any direct pod IP.
+	// ClusterIP. Clients can then connect to both the ClusterIP and any direct pod IP.
 	EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 
 	// ThrottleTimeout defines the amount of time to wait before initiating a new config render
@@ -47,14 +43,6 @@ var (
 
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
 	ConfigDiscoveryAddress = stnrapiv1.DefaultConfigDiscoveryAddress
-
-	// EndpointSliceAvailable is a global flag indicating whether EndpointSlices are available
-	// in the current cluster. This is detected in the UDPRoute controller trying to create a
-	// Watch for EndpointSlices. If successful, only EndpointSlices will be considered and
-	// Endpoints support is disables. Otherwise, the opetator falls back to Endoints support
-	// (note that this breaks graceful backend shutdown, see
-	// https://github.com/l7mp/stunner/issues/138).
-	EndpointSliceAvailable = opdefault.DefaultEndpointSliceAvailable
 
 	// EnableFinalizer is a global config to switch operator finalization on. The finalizer
 	// will clean up all allocaeted Kubernetes resources (like dataplane deployments and

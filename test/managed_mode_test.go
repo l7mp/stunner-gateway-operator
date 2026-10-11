@@ -68,7 +68,6 @@ func testManagedMode() {
 		var licenseClient cdsclient.LicenseStatusClient
 
 		BeforeAll(func() {
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
@@ -83,14 +82,12 @@ func testManagedMode() {
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			close(ch)
 		})
 
 		It("should survive loading a minimal config", func() {
-			// switch EDS on
 			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
 			createOrUpdateGatewayConfig(ctx, k8sClient, testGwConfig, nil)
 			createOrUpdateGateway(ctx, k8sClient, testGw, nil)
@@ -159,7 +156,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 
 			l = conf.Listeners[1]
@@ -169,7 +166,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 		})
 
@@ -313,7 +310,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -325,7 +322,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
@@ -1049,7 +1046,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-random-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 
 			l = conf.Listeners[1]
@@ -1059,7 +1056,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(targetPort))
 		})
 
@@ -1156,7 +1153,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -1168,7 +1165,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
@@ -1198,7 +1195,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -1206,7 +1203,7 @@ func testManagedMode() {
 			l = conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.Cert).Should(Equal(testutils.TestCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
@@ -1215,7 +1212,7 @@ func testManagedMode() {
 			l = conf.Listeners[2]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
@@ -1246,7 +1243,7 @@ func testManagedMode() {
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(3))
 			Expect(l.Cert).Should(Equal(newCert64))
 			Expect(l.Key).Should(Equal(testutils.TestKey64))
@@ -1453,7 +1450,7 @@ func testManagedMode() {
 			l := conf.Listeners[1]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-tcp"))
 			Expect(l.Protocol).Should(Equal("TCP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 		})
 
@@ -1667,7 +1664,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -1679,7 +1676,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
@@ -1857,7 +1854,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -1869,7 +1866,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(l.Key).NotTo(Equal(""))
@@ -1945,7 +1942,7 @@ func testManagedMode() {
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -1956,7 +1953,7 @@ func testManagedMode() {
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
@@ -2176,7 +2173,7 @@ func testManagedMode() {
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -2187,7 +2184,7 @@ func testManagedMode() {
 			}
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
@@ -2364,8 +2361,6 @@ func testManagedMode() {
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
-			// switch EDS on
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
@@ -2382,7 +2377,6 @@ func testManagedMode() {
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			close(ch1)
@@ -2446,7 +2440,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -2458,7 +2452,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
@@ -2491,7 +2485,7 @@ func testManagedMode() {
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -3126,8 +3120,6 @@ func testManagedMode() {
 		var cdsClient1, cdsClient2 cdsclient.Client
 
 		BeforeAll(func() {
-			// switch EDS on
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
@@ -3144,7 +3136,6 @@ func testManagedMode() {
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			close(ch1)
@@ -3253,7 +3244,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -3265,7 +3256,7 @@ func testManagedMode() {
 
 			Expect(l.Name).Should(Equal("testnamespace/gateway-1/gateway-1-listener-dtls"))
 			Expect(l.Protocol).Should(Equal("DTLS"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
@@ -3298,7 +3289,7 @@ func testManagedMode() {
 			l := conf.Listeners[0]
 			Expect(l.Name).Should(Equal("testnamespace/gateway-2/gateway-2-listener-udp"))
 			Expect(l.Protocol).Should(Equal("UDP"))
-			Expect(serverOf(conf, l).Type).Should(Equal("turn"))
+			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(10))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok"))
@@ -4087,7 +4078,6 @@ func testManagedMode() {
 			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
 
 			// ctrl.Log.Info("deleting Endpoints")
-			// Expect(k8sClient.Delete(ctx, testEndpoint)).Should(Succeed())
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())
@@ -4114,7 +4104,6 @@ func testManagedMode() {
 			}}
 			Expect(k8sClient.Delete(ctx, gw2)).Should(Succeed())
 
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})

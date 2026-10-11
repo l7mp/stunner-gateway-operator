@@ -82,18 +82,16 @@ func routeAcceptedCondition(parents []gwapiv1.RouteParentStatus) *metav1.Conditi
 // TCP-protocol cluster per TCPRoute, both the STUNner-native and the official Gateway API kinds
 // render, statuses are set, and a same-name native route masks the official one.
 func testTCPRouteLegacy() {
-	Context("When creating TCPRoutes (LEGACY, EDS ENABLED)", Ordered, Label("legacy"), func() {
+	Context("When creating TCPRoutes (LEGACY)", Ordered, Label("legacy"), func() {
 		conf := &stnrapiv2.StunnerConfig{}
 		tcpRouteGwAPI := testutils.TestTCPRouteV1.DeepCopy()
 		tcpRouteGwAPI.SetName("tcproute-gwapi")
 
 		BeforeAll(func() {
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 
@@ -264,14 +262,13 @@ func testTCPRouteLegacy() {
 
 // testTCPRouteManaged exercises TCPRoute handling in managed mode via the CDS server.
 func testTCPRouteManaged() {
-	Context("When creating TCPRoutes (MANAGED, EDS ENABLED)", Ordered, Label("managed"), func() {
+	Context("When creating TCPRoutes (MANAGED)", Ordered, Label("managed"), func() {
 		var clientCtx context.Context
 		var clientCancel context.CancelFunc
 		var ch chan *stnrapiv2.StunnerConfig
 		var cdsClient cdsclient.Client
 
 		BeforeAll(func() {
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
 
 			clientCtx, clientCancel = context.WithCancel(context.Background())
@@ -284,7 +281,6 @@ func testTCPRouteManaged() {
 		})
 
 		AfterAll(func() {
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			// do not close(ch): the watcher may deliver an in-flight config after the

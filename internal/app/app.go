@@ -54,8 +54,6 @@ func NewScheme() *runtime.Scheme {
 func New(cfg Config, restConfig *rest.Config, scheme *runtime.Scheme, logger logr.Logger) (*App, error) {
 	log := logger.WithName("setup")
 
-	config.EnableEndpointDiscovery = cfg.EnableEndpointDiscovery
-	config.EndpointSliceAvailable = !cfg.DisableEndpointSliceController // controller may override this
 	config.EnableFinalizer = cfg.EnableFinalizer
 	config.DataplaneMode = config.NewDataplaneMode(cfg.DataplaneMode)
 	config.ConfigDiscoveryAddress = cfg.CDSAdvertisedAddress

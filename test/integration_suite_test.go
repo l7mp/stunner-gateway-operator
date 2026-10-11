@@ -83,7 +83,6 @@ var (
 	testTCPRoute      *stnrgwv1.TCPRoute
 	testTCPRouteV1    *gwapiv1.TCPRoute
 	testSvc           *corev1.Service
-	testEndpoint      *corev1.Endpoints
 	testEndpointSlice *discoveryv1.EndpointSlice
 	testNode          *corev1.Node
 	testSecret        *corev1.Secret
@@ -179,7 +178,6 @@ var _ = AfterSuite(func() {
 func initOperator(ctx context.Context, tweak ...func(*app.Config)) {
 	appCfg := app.NewConfig()
 	appCfg.DataplaneMode = config.DataplaneMode.String()
-	appCfg.DisableEndpointSliceController = !config.EndpointSliceAvailable
 	// make rendering fast, and do not hold the first render for controllers with nothing to
 	// reconcile
 	appCfg.ThrottleTimeout = 10 * time.Millisecond
@@ -224,7 +222,6 @@ func InitResources() {
 	testGw = testutils.TestGw.DeepCopy()
 	testUDPRoute = testutils.TestUDPRoute.DeepCopy()
 	testSvc = testutils.TestSvc.DeepCopy()
-	testEndpoint = testutils.TestEndpoint.DeepCopy()
 	testEndpointSlice = testutils.TestEndpointSlice.DeepCopy()
 	testNode = testutils.TestNode.DeepCopy()
 	testSecret = testutils.TestSecret.DeepCopy()
@@ -285,19 +282,9 @@ func checkConfig(ch chan *stnrapiv2.StunnerConfig, checker ConfigChecker) bool {
 // -----------------------
 var _ = Describe("Integration test:", Ordered, func() {
 	// LEGACY
-	// Endpoints controller
-	legacyModeEndpointControllerTest()
-
-	// LEGACY
-	// EndpointSlice controller
 	legacyModeTest()
 
 	// MANAGED
-	// Endpoints controller
-	managedModeEndpointControllerTest()
-
-	// MANAGED
-	// EndpointSlice controller
 	managedModeTest()
 
 	// HA: standby and restart
@@ -311,33 +298,10 @@ var _ = Describe("Integration test:", Ordered, func() {
 	finalizerTest()
 })
 
-func legacyModeEndpointControllerTest() {
-	Context(`When using the "legacy" dataplane mode with the legacy endpoints controller`, Ordered, func() {
+func legacyModeTest() {
+	Context(`When using the "legacy" dataplane mode`, func() {
 		It(`should be possible to initialize the operator`, func() {
 			config.DataplaneMode = config.DataplaneModeLegacy
-			config.EndpointSliceAvailable = false
-			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx)
-			op.SetFinalizer(false) // we call the finalizer manually
-			InitResources()
-		})
-	})
-
-	testLegacyModeEndpointController()
-
-	Context(`When terminating the operator after the legacy-mode test with the endpoints controller`, Ordered, func() {
-		It("should stabilize", func() {
-			op.Stabilize()
-			cancel()
-		})
-	})
-}
-
-func legacyModeTest() {
-	Context(`When using the "legacy" dataplane mode with the legacy endpointslice controller`, func() {
-		It(`should be possible to restart the operator using ghe endpointslice controller`, func() {
-			config.DataplaneMode = config.DataplaneModeLegacy
-			config.EndpointSliceAvailable = true
 			ctx, cancel = context.WithCancel(context.Background())
 			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
@@ -347,29 +311,7 @@ func legacyModeTest() {
 
 	testLegacyMode()
 
-	Context(`When terminating the operator after the legacy-mode test with the endpointslice controller`, Ordered, func() {
-		It("should stabilize", func() {
-			op.Stabilize()
-			cancel()
-		})
-	})
-}
-
-func managedModeEndpointControllerTest() {
-	Context(`When using the "managed" dataplane mode with the legacy endpoints controller`, func() {
-		It(`should be possible to set the dataplane mode to "managed"`, func() {
-			config.EndpointSliceAvailable = false
-			config.DataplaneMode = config.DataplaneModeManaged
-			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx)
-			op.SetFinalizer(false) // we call the finalizer manually
-			InitResources()
-		})
-	})
-
-	testManagedModeEndpointController()
-
-	Context(`When terminating the operator after the managed-mode test with the endpointslice controller`, Ordered, func() {
+	Context(`When terminating the operator after the legacy-mode test`, Ordered, func() {
 		It("should stabilize", func() {
 			op.Stabilize()
 			cancel()
@@ -378,9 +320,8 @@ func managedModeEndpointControllerTest() {
 }
 
 func managedModeTest() {
-	Context(`When using the "managed" dataplane mode with the legacy endpointslice controller`, func() {
+	Context(`When using the "managed" dataplane mode`, func() {
 		It(`should be possible to set the dataplane mode to "managed"`, func() {
-			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
 			initOperator(ctx)
@@ -391,7 +332,7 @@ func managedModeTest() {
 
 	testManagedMode()
 
-	Context(`When terminating the operator after the managed-mode test with the endpointslice controller`, Ordered, func() {
+	Context(`When terminating the operator after the managed-mode test`, Ordered, func() {
 		It("should stabilize", func() {
 			op.Stabilize()
 			cancel()
@@ -402,7 +343,6 @@ func managedModeTest() {
 func finalizerTest() {
 	Context(`When trying to finalize the operator`, Ordered, func() {
 		It(`should be possible to set up a new operator`, func() {
-			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
 			// the operator gets its own context: stopping it runs the finalizer on the way

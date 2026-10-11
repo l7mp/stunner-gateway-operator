@@ -209,16 +209,13 @@ func runBootstrapBenchmark(b *testing.B) {
 
 	oldThrottleTimeout := config.ThrottleTimeout
 	oldDataplaneMode := config.DataplaneMode
-	oldEndpointSliceAvailable := config.EndpointSliceAvailable
 
 	config.ThrottleTimeout = 10 * time.Millisecond
 	config.DataplaneMode = config.DataplaneModeManaged
-	config.EndpointSliceAvailable = true
 
 	defer func() {
 		config.ThrottleTimeout = oldThrottleTimeout
 		config.DataplaneMode = oldDataplaneMode
-		config.EndpointSliceAvailable = oldEndpointSliceAvailable
 	}()
 
 	sys := setupBenchmarkSystem(b)

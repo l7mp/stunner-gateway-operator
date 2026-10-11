@@ -258,41 +258,15 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 	r.log.Info("Watching Service objects")
 
-	// watch EndPoints object references by one of the ref'd Services
-	if config.EnableEndpointDiscovery {
-		// try to set up a watch for EndpointSlices if the endpointslice controller was not
-		// explicitly disabled on the command line
-		if config.EndpointSliceAvailable {
-			if err := c.Watch(
-				source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
-					&handler.TypedEnqueueRequestForObject[*discoveryv1.EndpointSlice]{},
-					predicate.NewTypedPredicateFuncs[*discoveryv1.EndpointSlice](r.validateEndpointSliceForReconcile)),
-			); err == nil {
-				r.log.Info("Watching EndpointSlice objects")
-				config.EndpointSliceAvailable = true
-			} else {
-				r.log.Info("Warning: EndpointSlice support diabled, falling back to " +
-					"the Endpoints controller and disabling graceful backend " +
-					"shutdown, see https://github.com/l7mp/stunner/issues/138")
-				config.EndpointSliceAvailable = false
-			}
-		}
-
-		// if EndpointSlices are still not available, fall back to wathing Endpoints
-		if !config.EndpointSliceAvailable {
-			if err := c.Watch(
-				//nolint:staticcheck
-				source.Kind(mgr.GetCache(), &corev1.Endpoints{},
-					&handler.TypedEnqueueRequestForObject[*corev1.Endpoints]{},
-					predicate.NewTypedPredicateFuncs[*corev1.Endpoints](r.validateBackendEndpointsForReconcile)),
-			); err != nil {
-				return nil, err
-			}
-
-			config.EndpointSliceAvailable = false
-			r.log.Info("Watching Endpoints objects")
-		}
+	// watch EndpointSlices of the referenced Services
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
+			&handler.TypedEnqueueRequestForObject[*discoveryv1.EndpointSlice]{},
+			predicate.NewTypedPredicateFuncs[*discoveryv1.EndpointSlice](r.validateEndpointSliceForReconcile)),
+	); err != nil {
+		return nil, err
 	}
+	r.log.Info("Watching EndpointSlice objects")
 
 	// watch StaticService objects referenced by one of our routes
 	if err := c.Watch(
@@ -307,7 +281,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	return r, nil
 }
 
-// Reconcile handles an update to a route or a Service/Endpoints referenced by a route.
+// Reconcile handles an update to a route or a Service/EndpointSlice referenced by a route.
 func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("resource", req.String())
 
@@ -439,13 +413,8 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	store.Services.Reset(backends.svcList)
 	r.log.V(2).Info("Reset Service store", "services", store.Services.String())
 
-	if config.EndpointSliceAvailable {
-		store.EndpointSlices.Reset(backends.endpointList)
-		r.log.V(2).Info("Reset EndpointSlice store", "endpointslices", store.EndpointSlices.String())
-	} else {
-		store.Endpoints.Reset(backends.endpointList)
-		r.log.V(2).Info("Reset Endpoints store", "endpoints", store.Endpoints.String())
-	}
+	store.EndpointSlices.Reset(backends.endpointList)
+	r.log.V(2).Info("Reset EndpointSlice store", "endpointslices", store.EndpointSlices.String())
 
 	store.StaticServices.Reset(backends.ssvcList)
 	r.log.V(2).Info("Reset StaticService store", "static-services", store.StaticServices.String())
@@ -455,7 +424,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	return reconcile.Result{}, nil
 }
 
-// collectBackends gathers the backend Services, StaticServices, Endpoints/EndpointSlices and the
+// collectBackends gathers the backend Services, StaticServices, EndpointSlices and the
 // namespace referenced by a route into the accumulator.
 func (r *routeReconciler) collectBackends(ctx context.Context, ro client.Object, rules []stnrgwv1.RouteRule, acc *routeBackends) {
 	for _, rule := range rules {
@@ -479,16 +448,8 @@ func (r *routeReconciler) collectBackends(ctx context.Context, ro client.Object,
 					acc.svcList = append(acc.svcList, svc)
 				}
 
-				if config.EnableEndpointDiscovery {
-					if config.EndpointSliceAvailable {
-						es := r.getEndpointSlicesForBackend(ctx, ro, &ref)
-						acc.endpointList = append(acc.endpointList, es...)
-					} else {
-						if e := r.getEndpointsForBackend(ctx, ro, &ref); e != nil {
-							acc.endpointList = append(acc.endpointList, e)
-						}
-					}
-				}
+				es := r.getEndpointSlicesForBackend(ctx, ro, &ref)
+				acc.endpointList = append(acc.endpointList, es...)
 
 				continue
 			}
@@ -515,12 +476,6 @@ func (r *routeReconciler) validateBackendServiceForReconcile(svc *corev1.Service
 func (r *routeReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.StaticService) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(staticSvc), staticServiceUDPRouteIndex,
 		staticServiceUDPRouteIndexGwAPI, staticServiceTCPRouteIndex, staticServiceTCPRouteIndexGwAPI)
-}
-
-//nolint:staticcheck
-func (r *routeReconciler) validateBackendEndpointsForReconcile(e *corev1.Endpoints) bool {
-	return r.validateBackendForReconcile(store.GetObjectKey(e), serviceUDPRouteIndex,
-		serviceUDPRouteIndexGwAPI, serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI)
 }
 
 // validateBackendForReconcile checks whether the Service or StaticService belongs to a valid
@@ -654,8 +609,7 @@ func (r *routeReconciler) getServiceForBackend(ctx context.Context, ro client.Ob
 
 // getEndpointSlicesForBackend finds all EndpointSlices associated with a backendRef
 func (r *routeReconciler) getEndpointSlicesForBackend(ctx context.Context, ro client.Object, ref *stnrgwv1.BackendRef) []client.Object {
-	// if no explicit Endpoints namespace is provided, use the route namespace to lookup the
-	// Endpoints
+	// if no explicit namespace is provided, look up the EndpointSlices in the route namespace
 	namespace := ro.GetNamespace()
 	if ref.Namespace != nil {
 		namespace = string(*ref.Namespace)
@@ -687,33 +641,6 @@ func (r *routeReconciler) getEndpointSlicesForBackend(ctx context.Context, ro cl
 	}
 
 	return es
-}
-
-// getEndpointsForBackend finds the Endpoints associated with a backendRef
-func (r *routeReconciler) getEndpointsForBackend(ctx context.Context, ro client.Object, ref *stnrgwv1.BackendRef) client.Object {
-	// if no explicit Endpoints namespace is provided, use the route namespace to lookup the
-	// Endpoints
-	namespace := ro.GetNamespace()
-	if ref.Namespace != nil {
-		namespace = string(*ref.Namespace)
-	}
-
-	ep := corev1.Endpoints{} //nolint:staticcheck
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, &ep); err != nil {
-		// not fatal
-		if !apierrors.IsNotFound(err) {
-			r.log.Error(err, "Error getting Endpoints", "namespace", namespace, "name",
-				string(ref.Name))
-		}
-
-		r.log.Info("No Endpoints found for route backend", "route",
-			store.GetObjectKey(ro), "namespace", namespace, "name",
-			string(ref.Name))
-
-		return nil
-	}
-
-	return &ep
 }
 
 // getStaticServiceForBackend finds the StaticService associated with a backendRef

@@ -129,28 +129,6 @@ func createOrUpdateStaticService(ctx context.Context, k8sClient client.Client, t
 	Expect(err).Should(Succeed())
 }
 
-type EndpointsMutator func(current *corev1.Endpoints)
-
-func createOrUpdateEndpoints(ctx context.Context, k8sClient client.Client, template *corev1.Endpoints, f EndpointsMutator) {
-	current := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
-		Name:      template.GetName(),
-		Namespace: template.GetNamespace(),
-	}}
-
-	_, err := createOrUpdate(ctx, k8sClient, current, func() error {
-		current.SetLabels(template.GetLabels())
-		current.Subsets = make([]corev1.EndpointSubset, len(template.Subsets))
-		for i := range template.Subsets {
-			template.Subsets[i].DeepCopyInto(&current.Subsets[i])
-		}
-		if f != nil {
-			f(current)
-		}
-		return nil
-	})
-	Expect(err).Should(Succeed())
-}
-
 type EndpointSliceMutator func(current *discoveryv1.EndpointSlice)
 
 func createOrUpdateEndpointSlice(ctx context.Context, k8sClient client.Client, template *discoveryv1.EndpointSlice, f EndpointSliceMutator) {

@@ -90,25 +90,23 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			var errEDS error
 
 			// get endpoints (checks EDS inline)
-			if config.EnableEndpointDiscovery {
-				epEDS, ctypeEDS, err := getEndpointsForService(ref, ns)
-				if err != nil {
-					r.log.V(1).Info("Cluster rendering error: could not render Endpoints for Service backend",
-						"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
-						"error", err)
-					errEDS = err
-					routeError = err
-				} else {
-					ep = append(ep, epEDS...)
-					ctype = ctypeEDS
-				}
+			epEDS, ctypeEDS, err := getEndpointsForService(ref, ns)
+			if err != nil {
+				r.log.V(1).Info("Cluster rendering error: could not render Endpoints for Service backend",
+					"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
+					"error", err)
+				errEDS = err
+				routeError = err
+			} else {
+				ep = append(ep, epEDS...)
+				ctype = ctypeEDS
 			}
 
-			// the clusterIP or STRICT_DNS cluster if EDS is disabled
+			// the ClusterIP, if relaying to it is enabled
 			epCluster, ctypeCluster, errCluster := getClusterRouteForService(ref, ns)
 			if errCluster != nil {
-				r.log.V(1).Info("Cluster rendering error: could not render service-route (ClusterIP/DNS "+
-					"route) for Service backend", "route",
+				r.log.V(1).Info("Cluster rendering error: could not render the ClusterIP route "+
+					"for Service backend", "route",
 					store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 					"error", errCluster)
 
@@ -206,10 +204,6 @@ func getEndpointsForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrap
 	ctype := stnrapiv1.ClusterTypeUnknown
 	ep := []string{}
 
-	if !config.EnableEndpointDiscovery {
-		return ep, ctype, NewCriticalError(InternalError)
-	}
-
 	n := types.NamespacedName{
 		Namespace: ns,
 		Name:      string(b.Name),
@@ -226,34 +220,18 @@ func getEndpointsForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrap
 	return ep, ctype, nil
 }
 
-// either the ClusterIP if EDS is enabled, or a STRICT_DNS route if EDS is disabled
+// getClusterRouteForService returns the ClusterIP of a Service backend if relaying to it is
+// enabled, else no endpoint.
 func getClusterRouteForService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrapiv1.ClusterType, error) {
-	var ctype stnrapiv1.ClusterType
-	ep := []string{}
-
-	if config.EnableEndpointDiscovery {
-		ctype = stnrapiv1.ClusterTypeStatic
-		if config.EnableRelayToClusterIP {
-			n := types.NamespacedName{
-				Namespace: ns,
-				Name:      string(b.Name),
-			}
-			ips, err := getClusterIP(n)
-			if err != nil {
-				return ep, ctype, err
-			}
-			ep = append(ep, ips...)
-		} else {
-			//otherwise, return an empy endpoint list: make this explicit
-			ep = []string{}
-		}
-	} else {
-		// fall back to strict DNS and hope for the best
-		ctype = stnrapiv1.ClusterTypeStrictDNS
-		ep = append(ep, fmt.Sprintf("%s.%s.svc.cluster.local", string(b.Name), ns))
+	ctype := stnrapiv1.ClusterTypeStatic
+	if !config.EnableRelayToClusterIP {
+		return []string{}, ctype, nil
 	}
-
-	return ep, ctype, nil
+	ips, err := getClusterIP(types.NamespacedName{Namespace: ns, Name: string(b.Name)})
+	if err != nil {
+		return []string{}, ctype, err
+	}
+	return ips, ctype, nil
 }
 
 func getEndpointsForStaticService(b *stnrgwv1.BackendRef, ns string) ([]string, stnrapiv1.ClusterType, error) {

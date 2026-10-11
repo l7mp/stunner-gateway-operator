@@ -199,14 +199,12 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 		return cm
 	}
 
-	if _, ok := conf.Auth.Credentials["username"]; ok {
-		conf.Auth.Credentials["username"] = "-SECRET-"
-	}
-	if _, ok := conf.Auth.Credentials["password"]; ok {
-		conf.Auth.Credentials["password"] = "-SECRET-"
-	}
-	if _, ok := conf.Auth.Credentials["secret"]; ok {
-		conf.Auth.Credentials["secret"] = "-SECRET-"
+	for i := range conf.Auths {
+		for _, k := range []string{"username", "password", "secret"} {
+			if _, ok := conf.Auths[i].Credentials[k]; ok {
+				conf.Auths[i].Credentials[k] = "-SECRET-"
+			}
+		}
 	}
 
 	for i := range conf.Listeners {

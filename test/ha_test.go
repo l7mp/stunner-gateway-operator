@@ -35,7 +35,7 @@ func resetStores() {
 	for _, st := range []store.Store{
 		store.GatewayClasses, store.GatewayConfigs, store.Gateways, store.UDPRoutes,
 		store.UDPRoutesGwAPI, store.TCPRoutes, store.TCPRoutesGwAPI, store.Services,
-		store.StaticServices, store.Endpoints, store.EndpointSlices, store.ConfigMaps,
+		store.StaticServices, store.EndpointSlices, store.ConfigMaps,
 		store.Deployments, store.DaemonSets, store.Dataplanes, store.Nodes, store.Namespaces,
 		store.TLSSecrets, store.AuthSecrets,
 	} {
@@ -102,7 +102,6 @@ func haOperatorTest() {
 		}
 
 		BeforeAll(func() {
-			config.EndpointSliceAvailable = true
 			config.DataplaneMode = config.DataplaneModeManaged
 			InitResources()
 			ctx, cancel = context.WithCancel(context.Background())

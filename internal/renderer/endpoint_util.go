@@ -1,25 +1,14 @@
 package renderer
 
 import (
-	// "fmt"
-
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-// find the list of endpoint IP addresses associated with a service
+// getEndpointAddrs finds the endpoint IP addresses of a Service from its EndpointSlices.
 func getEndpointAddrs(n types.NamespacedName, suppressNotReady bool) ([]string, error) {
-	if config.EndpointSliceAvailable {
-		return getEndpointAddrsFromEndpointSlice(n, suppressNotReady)
-	} else {
-		return getEndpointAddrsFromEndpoints(n, suppressNotReady)
-	}
-}
-
-func getEndpointAddrsFromEndpointSlice(n types.NamespacedName, suppressNotReady bool) ([]string, error) {
 	ret := []string{}
 
 	// find all endpointslices in the given namespace labeled with the service name
@@ -56,34 +45,6 @@ func getEndpointAddrsFromEndpointSlice(n types.NamespacedName, suppressNotReady 
 
 	if len(ret) == 0 {
 		return ret, NewNonCriticalError(EndpointNotFound)
-	}
-
-	return ret, nil
-}
-
-func getEndpointAddrsFromEndpoints(n types.NamespacedName, suppressNotReady bool) ([]string, error) {
-	ret := []string{}
-
-	ep := store.Endpoints.GetObject(n)
-	if ep == nil {
-		return ret, NewNonCriticalError(EndpointNotFound)
-	}
-
-	// allow clients to reach not-ready addresses: they have already gone through ICE
-	// negotiation so they may have a better idea on endpoint-readiness than Kubernetes
-	for _, s := range ep.Subsets {
-		for _, a := range s.Addresses {
-			if a.IP != "" {
-				ret = append(ret, a.IP)
-			}
-		}
-		if !suppressNotReady {
-			for _, a := range s.NotReadyAddresses {
-				if a.IP != "" {
-					ret = append(ret, a.IP)
-				}
-			}
-		}
 	}
 
 	return ret, nil

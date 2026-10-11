@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	stnrapiv1 "github.com/l7mp/stunner/v2/pkg/apis/v1"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
@@ -100,7 +101,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 				// rewrite the realm to the node's external IP
 				for _, a := range n.Status.Addresses {
 					if a.Type == corev1.NodeExternalIP {
-						conf.Auth.Realm = a.Address
+						conf.Auths[0].Realm = a.Address
 						return conf
 					}
 				}
@@ -181,8 +182,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 
 		c2, err := cdsc2.Load()
@@ -192,8 +193,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		// we should have received a config update
 		c1 = watchConfig(ch1, 1500*time.Millisecond)
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 
 		// no config update from client 2
@@ -240,8 +241,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client 1 config ok")
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err := cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client 2 config ok")
@@ -280,8 +281,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err := cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -342,8 +343,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err := cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -392,8 +393,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auth.Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auth.Realm = "realm1" // reset
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err := cdsc2.Load()
 		Expect(err).To(HaveOccurred(), "load")
@@ -511,6 +512,10 @@ var _ = Describe("Config patcher", Ordered, func() {
 		zlogger := zapr.NewLogger(z)
 		log = zlogger.WithName("tester")
 
+		// the CDS client expands environment variables: keep the placeholders
+		GinkgoT().Setenv(stnrapiv1.DefaultEnvVarAddr, opdefault.DefaultSTUNnerAddressEnvVarName)
+		GinkgoT().Setenv(stnrapiv2.DefaultEnvVarNodeAddr, opdefault.NodeAddressVar)
+
 		n1 := testutils.TestNode.DeepCopy()
 		n1.SetName("testnode1")
 		store.Nodes.Upsert(n1)
@@ -531,12 +536,12 @@ var _ = Describe("Config patcher", Ordered, func() {
 				Name:     "ns/gw1",
 				LogLevel: stunnerTestLoglevel,
 			},
-			Auth: stnrapiv2.AuthConfig{
+			Auths: []stnrapiv2.AuthConfig{{
 				Credentials: map[string]string{
 					"username": "user",
 					"password": "pass",
 				},
-			},
+			}},
 			Listeners: []stnrapiv2.ListenerConfig{{
 				Name:     "default-listener",
 				Protocol: "UDP",
@@ -544,7 +549,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 			}},
 			Servers: []stnrapiv2.ServerConfig{{
 				Name:     "default-server",
-				Type:     "turn",
+				Type:     "TURN",
 				Clusters: []string{"default-cluster"},
 			}},
 			// the relay address the node patcher rewrites
@@ -752,7 +757,7 @@ func getRandCDSAddr() string {
 func zeroConfig(namespace, name, realm string) *stnrapiv2.StunnerConfig {
 	id := fmt.Sprintf("%s/%s", namespace, name)
 	c := cdsclient.ZeroConfig(id)
-	c.Auth.Realm = realm
+	c.Auths[0].Realm = realm
 	_ = c.Validate()
 	return c
 }

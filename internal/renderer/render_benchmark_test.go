@@ -116,11 +116,9 @@ func BenchmarkRenderPipeline(b *testing.B) {
 			// Setup: prepare stores with N resources.
 			benchmarkSetup(n)
 
-			// Configure managed mode with EDS enabled (like the reference test).
+			// Configure managed mode with relay-to-ClusterIP (like the reference test).
 			config.DataplaneMode = config.DataplaneModeManaged
-			config.EnableEndpointDiscovery = true
 			config.EnableRelayToClusterIP = true
-			config.EndpointSliceAvailable = true
 
 			// Create the renderer.
 			r := NewDefaultRenderer(RendererConfig{
@@ -175,7 +173,6 @@ func BenchmarkRenderPipeline(b *testing.B) {
 			b.StopTimer()
 
 			// Restore default config.
-			config.EnableEndpointDiscovery = opdefault.DefaultEnableEndpointDiscovery
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 		})

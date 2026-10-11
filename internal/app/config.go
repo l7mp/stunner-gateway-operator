@@ -35,10 +35,6 @@ type Config struct {
 	ControllerName string
 	// DataplaneMode is "managed" or "legacy".
 	DataplaneMode string
-	// EnableEndpointDiscovery enables EDS for the UDPRoute backends.
-	EnableEndpointDiscovery bool
-	// DisableEndpointSliceController falls back to the legacy Endpoints controller.
-	DisableEndpointSliceController bool
 	// EnableFinalizer cleans up allocated resources and invalidates statuses on exit. It is
 	// incompatible with leader election.
 	EnableFinalizer bool
@@ -87,18 +83,17 @@ type Config struct {
 // NewConfig returns the default configuration.
 func NewConfig() Config {
 	return Config{
-		ControllerName:          opdefault.DefaultControllerName,
-		DataplaneMode:           opdefault.DefaultDataplaneMode,
-		EnableEndpointDiscovery: opdefault.DefaultEnableEndpointDiscovery,
-		EnableFinalizer:         opdefault.DefaultEnableFinalizer,
-		ThrottleTimeout:         opdefault.DefaultThrottleTimeout,
-		StartupRenderTimeout:    opdefault.DefaultStartupRenderTimeout,
-		LabelFilter:             append([]string(nil), opdefault.DefaultLabelFilter...),
-		CDSAddress:              stnrv1.DefaultConfigDiscoveryAddress,
-		MetricsAddr:             ":8080",
-		ProbeAddr:               ":8081",
-		PprofAddr:               "0",
-		LeaderElectionID:        opdefault.DefaultLeaderElectionID,
+		ControllerName:       opdefault.DefaultControllerName,
+		DataplaneMode:        opdefault.DefaultDataplaneMode,
+		EnableFinalizer:      opdefault.DefaultEnableFinalizer,
+		ThrottleTimeout:      opdefault.DefaultThrottleTimeout,
+		StartupRenderTimeout: opdefault.DefaultStartupRenderTimeout,
+		LabelFilter:          append([]string(nil), opdefault.DefaultLabelFilter...),
+		CDSAddress:           stnrv1.DefaultConfigDiscoveryAddress,
+		MetricsAddr:          ":8080",
+		ProbeAddr:            ":8081",
+		PprofAddr:            "0",
+		LeaderElectionID:     opdefault.DefaultLeaderElectionID,
 	}
 }
 
@@ -116,16 +111,12 @@ func (c *Config) BindFlags(fs *flag.FlagSet, lookup LookupEnv) {
 		"Time interval to wait between subsequent config renders.")
 	fs.DurationVar(&c.StartupRenderTimeout, "startup-render-timeout", c.StartupRenderTimeout,
 		"Time to wait after becoming leader for every controller to report before the first render.")
-	fs.BoolVar(&c.EnableEndpointDiscovery, "endpoint-discovery", c.EnableEndpointDiscovery,
-		fmt.Sprintf("Enable endpoint discovery, default: %t.", c.EnableEndpointDiscovery))
 	fs.StringVar(&c.DataplaneMode, "dataplane-mode", c.DataplaneMode,
 		`Managed dataplane mode: either "managed" (automatic dataplane provisioning using the config discovery service) or "legacy" (dataplane(s) provided by the user).`)
 	fs.StringVar(&c.CDSAddress, "config-discovery-address", c.CDSAddress, "Config discovery server endpoint.")
 	fs.StringVar(&c.MetricsAddr, "metrics-bind-address", c.MetricsAddr, "The address the metric endpoint binds to.")
 	fs.StringVar(&c.ProbeAddr, "health-probe-bind-address", c.ProbeAddr, "The address the probe endpoint binds to.")
 	fs.StringVar(&c.PprofAddr, "pprof-bind-address", c.PprofAddr, "The address the pprof endpoint binds to. Set to \"0\" to disable.")
-	fs.BoolVar(&c.DisableEndpointSliceController, "disable-endpontslice-controller", c.DisableEndpointSliceController,
-		"Disable the EndpointSlice controller and fall back to the legacy Endpoints controller.")
 	fs.BoolVar(&c.LeaderElection, "leader-elect", c.LeaderElection,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -199,8 +190,6 @@ func (c *Config) Summary() []any {
 	return []any{
 		"controller-name", c.ControllerName,
 		"dataplane-mode", c.DataplaneMode,
-		"endpoint-discovery", c.EnableEndpointDiscovery,
-		"endpointslice-controller", !c.DisableEndpointSliceController,
 		"finalizer", c.EnableFinalizer,
 		"throttle-timeout", c.ThrottleTimeout.String(),
 		"startup-render-timeout", c.StartupRenderTimeout.String(),
