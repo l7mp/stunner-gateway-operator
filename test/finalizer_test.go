@@ -340,11 +340,11 @@ func testFinalizer() {
 			Expect(svc).NotTo(BeNil(), "Deployment rendered")
 		})
 
-		It("should should be possible to run the finalizer sequence", func() {
+		It("should be possible to run the finalizer sequence", func() {
 			opCancel()
 		})
 
-		It("should should invalidate the GatewayClass status", func() {
+		It("should invalidate the GatewayClass status", func() {
 			gc := &gwapiv1.GatewayClass{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass), gc)
@@ -357,7 +357,7 @@ func testFinalizer() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("should should invalidate the Gateway status", func() {
+		It("should invalidate the Gateway status", func() {
 			gw := &gwapiv1.Gateway{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGw), gw)
@@ -430,7 +430,7 @@ func testFinalizer() {
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 		})
 
-		It("should should invalidate the UDPRoute status", func() {
+		It("should invalidate the UDPRoute status", func() {
 			ro := &stnrgwv1.UDPRoute{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), ro)
@@ -469,7 +469,7 @@ func testFinalizer() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
-		It("should should remove the Deployment for the Gateway status", func() {
+		It("should remove the Deployment of the Gateway", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			deploy := &appv1.Deployment{}
 
@@ -480,7 +480,7 @@ func testFinalizer() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("should should remove the LB service for the Gateway status", func() {
+		It("should remove the LB service of the Gateway", func() {
 			lookupKey := store.GetNamespacedName(testGw)
 			svc := &corev1.Service{}
 
@@ -503,8 +503,6 @@ func testFinalizer() {
 
 			ctrl.Log.Info("deleting Route")
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
-
-			// ctrl.Log.Info("deleting Endpoints")
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())

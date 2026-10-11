@@ -175,12 +175,7 @@ func TestRenderGatewayUtil(t *testing.T) {
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				// u := testutils.TestUDPRoute.DeepCopy()
-				// u.ObjectMeta.SetName("tcp")
-				// u.Spec.
-				// 	c.rs = []gwapiv1.UDPRoute{*u, testutils.TestUDPRoute}
-			},
+			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")

@@ -224,7 +224,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				dp := c.dps[0].DeepCopy()
 				dp.Spec.DisableHealthCheck = true
-				dp.Spec.EnableMetricsEnpoint = true
+				dp.Spec.EnableMetricsEndpoint = true
 				dp.Spec.HostNetwork = false
 				dp.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{
 					Name: "testpullsecret1",

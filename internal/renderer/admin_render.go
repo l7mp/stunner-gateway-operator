@@ -27,7 +27,7 @@ func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrapiv2.Config, er
 	}
 
 	var me string
-	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.EnableMetricsEnpoint {
+	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.EnableMetricsEndpoint {
 		me = opdefault.DefaultMetricsEndpoint
 	}
 

@@ -108,6 +108,11 @@ func (r *TURNRoute) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status
 }
 
+// GetRules returns the rules of the route.
+func (r *TURNRoute) GetRules() []stnrgwv1.RouteRule {
+	return r.Spec.Rules
+}
+
 // +kubebuilder:object:root=true
 
 // TURNRouteList holds a list of TURNRoutes.

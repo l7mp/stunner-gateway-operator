@@ -22,6 +22,7 @@ import (
 	// "reflect"
 	// "testing"
 	// "fmt"
+	"slices"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -384,12 +385,6 @@ func testLegacyMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController("gatewayclass-ok")))
-
-			// Expect(ps.ParentRef.Group).To(BeNil())
-			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
@@ -2199,10 +2194,8 @@ func testLegacyMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1.Namespace("testnamespace"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
-			// Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(snudp)))
 			Expect(ps.ParentRef.SectionName).To(BeNil())
 			Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController(config.ControllerName)))
 
@@ -3192,7 +3185,7 @@ func testLegacyMode() {
 			Expect(conf.Auths[0].Credentials["password"]).Should(Equal("ext-testpass"))
 		})
 
-		It("cnanging the external auth ref type should re-generate the config", func() {
+		It("changing the external auth ref type should re-generate the config", func() {
 			ctrl.Log.Info("re-loading the external auth Secret")
 			createOrUpdateSecret(ctx, k8sClient, &testutils.TestAuthSecret, func(current *corev1.Secret) {
 				current.Data["type"] = []byte("ephemeral")
@@ -3722,7 +3715,7 @@ func testLegacyMode() {
 			}}
 			Expect(k8sClient.Delete(ctx, gw)).Should(Succeed())
 
-			ctrl.Log.Info("deleting route-3")
+			ctrl.Log.Info("deleting route-2")
 			ro := &stnrgwv1.UDPRoute{ObjectMeta: metav1.ObjectMeta{
 				Name:      "route-2",
 				Namespace: testUDPRoute.GetNamespace(),
@@ -3842,6 +3835,11 @@ func testLegacyMode() {
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+
+			svc := store.Services.GetObject(types.NamespacedName{
+				Namespace: "testnamespace", Name: "testservice-ok"})
+			Expect(svc).NotTo(BeNil())
+			Expect(permissionBlocks(conf, c.Name)).ShouldNot(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is not a peer")
 		})
 
 		It("should set the Route status", func() {
@@ -3854,12 +3852,6 @@ func testLegacyMode() {
 
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
-			// Expect(ps.ParentRef.Namespace).To(HaveValue(Equal(gwapiv1.Namespace("testnamespace"))))
-			// Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
-			// Expect(ps.ControllerName).To(Equal(gwapiv1.GatewayController("gatewayclass-ok")))
-
-			// Expect(ps.ParentRef.Group).To(BeNil())
-			// Expect(ps.ParentRef.Kind).To(BeNil())
 			Expect(ps.ParentRef.Namespace).To(BeNil())
 			Expect(ps.ParentRef.Name).To(Equal(gwapiv1.ObjectName("gateway-1")))
 			Expect(ps.ParentRef.SectionName).To(HaveValue(Equal(testutils.TestSectionName)))
@@ -3879,7 +3871,7 @@ func testLegacyMode() {
 				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			// restoure
+			// restore
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
 	})
@@ -3923,9 +3915,16 @@ func testLegacyMode() {
 					return false
 				}
 
+				svc := store.Services.GetObject(types.NamespacedName{
+					Namespace: "testnamespace", Name: "testservice-ok"})
+				if svc == nil {
+					return false
+				}
+
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 &&
 					c.Clusters[0].Type == "STATIC" &&
-					len(c.Clusters[0].Endpoints) == 4 {
+					len(c.Clusters[0].Endpoints) == 4 &&
+					slices.Contains(permissionBlocks(&c, c.Clusters[0].Name), svc.Spec.ClusterIP+"/32") {
 					conf = &c
 					return true
 				}
@@ -3935,7 +3934,7 @@ func testLegacyMode() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("should re-render STUNner config with one cluster with the Cluster-IP", func() {
+		It("should re-render STUNner config with one cluster and the ClusterIP as a peer", func() {
 			Expect(conf.Listeners).To(HaveLen(1))
 
 			// not sure about the order

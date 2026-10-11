@@ -1,6 +1,6 @@
 package renderer
 
-// ErrorType species the type of a non-critical rendering error
+// ErrorType specifies the type of a rendering error.
 type ErrorType int
 
 const (
@@ -93,9 +93,9 @@ func NewNonCriticalError(reason ErrorType) error {
 func (e *NonCriticalError) Error() string {
 	switch e.reason {
 	case InvalidBackendGroup:
-		return "invalid Group in backend reference (expecing: None)"
+		return "invalid Group in backend reference (expecting core or stunner.l7mp.io)"
 	case InvalidBackendKind:
-		return "invalid Kind in backend reference (expecting Service)"
+		return "invalid Kind in backend reference (expecting Service or StaticService)"
 	case BackendNotFound:
 		return "backend not found"
 	case ServiceNotFound:
@@ -103,7 +103,7 @@ func (e *NonCriticalError) Error() string {
 	case ClusterIPNotFound:
 		return "no ClusterIP found for Service (this is fine for headless Services)"
 	case EndpointNotFound:
-		return "no Endpoint found for backend"
+		return "no endpoints found for backend"
 	case InvalidTunnelURI:
 		return "invalid tunnel URI (expecting a TURN URI)"
 	case TunnelAuthNotFound:
@@ -130,26 +130,20 @@ func (e *NonCriticalError) Error() string {
 	return "Unknown error"
 }
 
-// IsCritical returns true of an error is critical.
+// IsCritical returns true if an error is critical.
 func IsCritical(e error) bool {
 	_, ok := e.(*CriticalError)
 	return ok
 }
 
-// IsCriticalError returns true of an error is a critical error of the given type.
-func IsCriticalError(e error, reason ErrorType) bool {
-	err, ok := e.(*CriticalError)
-	return ok && err.reason == reason
-}
-
-// IsNonCritical returns true of an error is critical.
+// IsNonCritical returns true if an error is non-critical.
 func IsNonCritical(e error) bool {
 	_, ok := e.(*NonCriticalError)
 	return ok
 }
 
-// IsNonCriticalError returns true of an error is a critical error of the given type.
+// IsNonCriticalError returns true if an error is a non-critical error of the given type.
 func IsNonCriticalError(e error, reason ErrorType) bool {
 	err, ok := e.(*NonCriticalError)
-	return err != nil && ok && err.reason == reason
+	return ok && err.reason == reason
 }

@@ -34,10 +34,10 @@ import (
 func resetStores() {
 	for _, st := range []store.Store{
 		store.GatewayClasses, store.GatewayConfigs, store.Gateways, store.UDPRoutes,
-		store.UDPRoutesGwAPI, store.TCPRoutes, store.TCPRoutesGwAPI, store.Services,
+		store.UDPRoutesGwAPI, store.TCPRoutes, store.TCPRoutesGwAPI, store.TURNRoutes, store.Services,
 		store.StaticServices, store.EndpointSlices, store.ConfigMaps,
 		store.Deployments, store.DaemonSets, store.Dataplanes, store.Nodes, store.Namespaces,
-		store.TLSSecrets, store.AuthSecrets,
+		store.TLSSecrets, store.AuthSecrets, store.TunnelAuthSecrets,
 	} {
 		st.Reset(nil)
 	}

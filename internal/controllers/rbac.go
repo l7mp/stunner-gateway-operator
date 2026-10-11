@@ -17,7 +17,6 @@ package controllers
 
 // discovery.k8s.io
 // +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
-// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices/status,verbs=get;list;watch
 
 // gateway.networking.k8s.io
 // +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses;gateways;udproutes;tcproutes,verbs=get;list;watch;update;patch

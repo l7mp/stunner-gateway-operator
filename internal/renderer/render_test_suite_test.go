@@ -185,6 +185,12 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 	}
 }
 
+// serverOf returns the server a listener of a config feeds.
+func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapiv2.ServerConfig {
+	s, _ := conf.GetServerConfig(l.FirstServer())
+	return s
+}
+
 // peerBlocks returns the address blocks of filter rules.
 func peerBlocks(rules []stnrapiv2.FilterRule) []string {
 	ret := []string{}

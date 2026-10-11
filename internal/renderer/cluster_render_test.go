@@ -44,7 +44,6 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.True(t, accepted, "route accepted")
 
 				_, _, err := r.renderCluster(ro)
-				// we have a non-critical error!
 				assert.Nil(t, err, "no error")
 			},
 		},
@@ -72,7 +71,6 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.True(t, accepted, "route accepted")
 
 				_, _, err := r.renderCluster(ro)
-				// we have a non-critical error!
 				assert.Nil(t, err, "no error")
 			},
 		},
@@ -283,7 +281,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = false
 
-				rc, _, err := r.renderCluster(ro)
+				rc, peers, err := r.renderCluster(ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -293,6 +291,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, peerBlocks(peers), "4.3.2.1/32", "cluster-ip: not a peer")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -423,7 +422,7 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
-			name: "cluster with headless setvice OK",
+			name: "cluster with headless service ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -715,9 +714,9 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, rc.Endpoints, "1.2.3.8", "endpoint ip-5")
 				// plus the clusterIPs
-				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "endpoint cluster-ip-1: a peer, no endpoint")
-				assert.Contains(t, peerBlocks(peers), "2.2.2.2/32", "endpoint cluster-ip-2: a peer, no endpoint")
-				assert.Contains(t, peerBlocks(peers), "3.3.3.3/32", "endpoint cluster-ip-3: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "2.2.2.2/32", "cluster-ip-2: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "3.3.3.3/32", "cluster-ip-3: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -798,9 +797,9 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, rc.Endpoints, "1.2.3.8", "endpoint ip-5")
 				// plus the clusterIPs
-				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "endpoint cluster-ip-1: a peer, no endpoint")
-				assert.Contains(t, peerBlocks(peers), "2.2.2.2/32", "endpoint cluster-ip-2: a peer, no endpoint")
-				assert.Contains(t, peerBlocks(peers), "3.3.3.3/32", "endpoint cluster-ip-3: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "2.2.2.2/32", "cluster-ip-2: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "3.3.3.3/32", "cluster-ip-3: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -867,7 +866,7 @@ func TestRenderClusterRender(t *testing.T) {
 				config.EnableRelayToClusterIP = true
 
 				rc, peers, err := r.renderCluster(rs[0])
-				// no endpoint for dummy svc: handle non-critical error!
+				// no endpoint for testservice-ok-2: non-critical EndpointNotFound error
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found error")
@@ -880,7 +879,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				// plus the clusterIP
-				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "endpoint cluster-ip-1: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -128,7 +129,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
@@ -148,8 +149,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/udp", "udp route")
 
@@ -158,8 +157,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -179,6 +176,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "", lc.Addr, "bind address")
 				assert.Equal(t, []string{lc.Name}, lc.Servers, "servers")
 				sc := serverOf(&conf, lc)
+				require.NotNil(t, sc.TURN, "TURN server")
 				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
 				assert.Equal(t, "default", conf.Auths[0].Name, "auth policy name")
 
@@ -187,7 +185,9 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				udpSrv := "testnamespace/gateway-1/gateway-1-listener-udp"
 				assert.Equal(t, []string{udpSrv + "/testnamespace/udproute-ok/udp"},
 					sc.TURN.PermissionFilters, "permission filters")
-				assert.Empty(t, serverOf(&conf, conf.Listeners[1]).TURN.PermissionFilters, "permission filters")
+				sc = serverOf(&conf, conf.Listeners[1])
+				require.NotNil(t, sc.TURN, "TURN server")
+				assert.Empty(t, sc.TURN.PermissionFilters, "permission filters")
 
 				assert.Len(t, conf.Filters, 1, "filter num")
 				f, err := conf.GetFilterConfig(udpSrv + "/testnamespace/udproute-ok/udp")
@@ -197,8 +197,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					assert.Equal(t, "ALLOW", r.Action, "permission filter action")
 					assert.Empty(t, r.Ports, "permission filter ports")
 				}
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -441,7 +439,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
@@ -461,8 +459,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/udp", "udp route")
 
@@ -471,8 +467,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -485,8 +479,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, permissionBlocks(&conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -541,8 +533,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.True(t, found, "configmap data: stunnerd.conf found")
 				assert.Equal(t, "", conf, "configmap data: stunnerd.conf empty")
 
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
-
 				//statuses
 				setGatewayClassStatusAccepted(gc, nil)
 				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
@@ -551,7 +541,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
 				assert.Equal(t, string(gwapiv1.GatewayClassReasonAccepted),
-					gc.Status.Conditions[0].Type, "conditions reason")
+					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
@@ -593,8 +583,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
-				config.EnableRelayToClusterIP = false
-
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
@@ -708,7 +696,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err := store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
@@ -728,8 +716,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/udp", "udp route")
 
@@ -738,8 +724,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -752,8 +736,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, permissionBlocks(&conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// config for the modified gateway-class
 				gc = gcs[1]
@@ -796,7 +778,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.NotNil(t, cm, "configmap cast")
 
 				conf, err = store.UnpackConfigMap(cm)
-				assert.NoError(t, err, "configmap stunner-config unmarschal")
+				assert.NoError(t, err, "configmap stunner-config unmarshal")
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName,
 					conf.Admin.Name, "name")
@@ -818,8 +800,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				// the service links to the original gateway, our gateway does not
 				// have linkage, so public addr should be empty
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "dummy-namespace/dummy-route/udp", "udp route")
 
@@ -828,8 +808,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -838,8 +816,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Len(t, rc.Endpoints, 1, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-1")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -890,8 +866,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				c.update = event.NewEventUpdate(0)
 				assert.NotNil(t, c.update, "update event create")
 
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gateway-conf obtained")
 				c.gws.ResetGateways(r.getGateways4Class(c))
 
 				err = r.renderForGateways(c)
@@ -938,8 +912,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/udp", "udp route")
 
@@ -948,8 +920,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				assert.Len(t, conf.Clusters, 1, "cluster num")
@@ -969,7 +939,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
 				assert.Equal(t, string(gwapiv1.GatewayClassReasonAccepted),
-					gc.Status.Conditions[0].Type, "conditions reason")
+					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
@@ -1002,7 +972,7 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 					gw.Status.Conditions[1].Reason, "reason")
 
 				ros := c.update.UpsertQueue.UDPRoutes.Objects()
-				assert.Len(t, ros, 1, "routenum")
+				assert.Len(t, ros, 1, "route num")
 				ro, ok := ros[0].(*stnrgwv1.UDPRoute)
 				assert.True(t, ok, "udproute cast")
 				assert.NotNil(t, ro, "route found")
@@ -1043,83 +1013,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
-		// {
-		// 	name: "reject uncontrolled route",
-		// 	cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-		// 	cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-		// 	gws:  []gwapiv1.Gateway{testutils.TestGw},
-		// 	rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-		// 	prep: func(c *renderTestConfig) {
-		// 		// a new gatewayclass that specifies a different gateway-config
-		// 		dummyGc := testutils.TestGwClass.DeepCopy()
-		// 		dummyGc.SetName("dummy-gateway-class")
-		// 		dummyGc.Spec.ControllerName = "dummy-controller"
-		// 		dummyGc.Spec.ParametersRef = &gwapiv1.ParametersReference{
-		// 			Group:     gwapiv1.Group(stnrgwv1.GroupVersion.Group),
-		// 			Kind:      gwapiv1.Kind("GatewayConfig"),
-		// 			Name:      "dummy-gateway-config",
-		// 			Namespace: &testutils.TestNsName,
-		// 		}
-		// 		c.cls = []gwapiv1.GatewayClass{testutils.TestGwClass, *dummyGc}
-
-		// 		// the new gateway-config that renders into a different stunner configmap
-		// 		dummyConf := testutils.TestGwConfig.DeepCopy()
-		// 		dummyConf.SetName("dummy-gateway-config")
-		// 		target := "dummy-stunner-config"
-		// 		dummyConf.Spec.StunnerConfig = &target
-		// 		c.cfs = []stnrgwv1.GatewayConfig{testutils.TestGwConfig, *dummyConf}
-
-		// 		// a new gateway whose controller-name is the new gatewayclass
-		// 		dummyGw := testutils.TestGw.DeepCopy()
-		// 		dummyGw.SetName("dummy-gateway")
-		// 		dummyGw.Spec.GatewayClassName =
-		// 			gwapiv1.ObjectName("dummy-gateway-class")
-		// 		c.gws = []gwapiv1.Gateway{*dummyGw, testutils.TestGw}
-
-		// 		// a route for dummy-gateway
-		// 		dummyUdp := testutils.TestUDPRoute.DeepCopy()
-		// 		dummyUdp.SetName("dummy-route")
-		// 		dummyUdp.Spec.CommonRouteSpec.ParentRefs[0].Name = "dummy-gateway"
-		// 		dummyUdp.Spec.Rules[0].BackendRefs[0].BackendObjectReference.Name =
-		// 			gwapiv1.ObjectName("dummy-service")
-		// 		c.rs = []stnrgwv1.UDPRoute{*dummyUdp}
-		// 	},
-		// 	tester: func(t *testing.T, r *DefaultRenderer) {
-		// 		config.DataplaneMode = config.DataplaneModeLegacy
-
-		// 		gcs := r.getGatewayClasses()
-		// 		assert.Len(t, gcs, 1, "gw-classes found")
-
-		// 		// render our own gatewayclass
-		// 		c := &RenderContext{gc: gcs[0], gws: store.NewGatewayStore(), log: log}
-		// 		c.update = event.NewEventUpdate(0)
-		// 		assert.NotNil(t, c.update, "update event create")
-
-		// 		gwConf, err := r.getGatewayConfig4Class(c)
-		// 		assert.NoError(t, err, "gateway-conf obtained")
-		// 		c.gwConf = gwConf
-		// 		c.gws.ResetGateways(r.getGateways4Class(c))
-
-		// 		err = r.renderForGateways(c)
-		// 		assert.NoError(t, err, "render success")
-
-		// 		// the update list should contain zero routes
-		// 		ros := c.update.UpsertQueue.UDPRoutes.Objects()
-		// 		assert.Len(t, ros, 0, "routenum")
-
-		// 		// after the render our udpRoute should have an empty status
-		// 		// (handled by another controller)
-		// 		udpRoutes := store.UDPRoutes.GetAll()
-		// 		assert.Len(t, udpRoutes, 1, "routenum")
-		// 		ro := udpRoutes[0]
-		// 		assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "dummy-route"),
-		// 			store.GetObjectKey(ro), "route name found")
-
-		// 		assert.Len(t, ro.GetRouteStatus().Parents, 0, "parent status len")
-
-		// 		config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
-		// 	},
-		// },
 		{
 			name: "Address hint set in Gw.spec.addresses",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
@@ -1210,8 +1103,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 1, "route num")
 				assert.Equal(t, serverOf(&conf, lc).Clusters[0], "testnamespace/udproute-ok/udp", "udp route")
 
@@ -1220,8 +1111,6 @@ func TestRenderPipelineLegacyMode(t *testing.T) {
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
 				assert.Equal(t, "TURN", serverOf(&conf, lc).Type, "server type")
 				assert.Equal(t, "1.1.1.1", lc.PublicAddr, "public-ip")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 				assert.Len(t, serverOf(&conf, lc).Clusters, 0, "route num")
 
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)

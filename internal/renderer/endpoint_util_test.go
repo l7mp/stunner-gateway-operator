@@ -18,9 +18,6 @@ import (
 func TestRenderEndpointUtil(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		//
-		// Endpoints
-		//
-		//
 		// EndpointSlice
 		//
 		{
@@ -77,7 +74,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "endpointslice: wrong endpoint object name gives empty addr list",
+			name: "endpointslice: wrong service-name label of the EndpointSlice gives empty addr list",
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
@@ -103,7 +100,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "endpointslice: wrong endpoint object namespace gives empty addr list",
+			name: "endpointslice: wrong namespace of the EndpointSlice gives empty addr list",
 			svcs: []corev1.Service{testutils.TestSvc},
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {

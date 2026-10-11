@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	stnrv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -89,7 +89,7 @@ func NewConfig() Config {
 		ThrottleTimeout:      opdefault.DefaultThrottleTimeout,
 		StartupRenderTimeout: opdefault.DefaultStartupRenderTimeout,
 		LabelFilter:          append([]string(nil), opdefault.DefaultLabelFilter...),
-		CDSAddress:           stnrv2.DefaultConfigDiscoveryAddress,
+		CDSAddress:           stnrapiv2.DefaultConfigDiscoveryAddress,
 		MetricsAddr:          ":8080",
 		ProbeAddr:            ":8081",
 		PprofAddr:            "0",
@@ -106,7 +106,7 @@ func (c *Config) BindFlags(fs *flag.FlagSet, lookup LookupEnv) {
 	}
 
 	fs.StringVar(&c.ControllerName, "controller-name", c.ControllerName,
-		"The conroller name to be used in the GatewayClass resource to bind it to this operator.")
+		"The controller name to be used in the GatewayClass resource to bind it to this operator.")
 	fs.DurationVar(&c.ThrottleTimeout, "throttle-timeout", c.ThrottleTimeout,
 		"Time interval to wait between subsequent config renders.")
 	fs.DurationVar(&c.StartupRenderTimeout, "startup-render-timeout", c.StartupRenderTimeout,

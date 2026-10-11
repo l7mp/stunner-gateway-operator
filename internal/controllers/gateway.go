@@ -134,7 +134,7 @@ func NewGatewayController(mgr manager.Manager, ch chan<- event.Event, log logr.L
 		r.log.Info("Watching dataplane DaemonSet objects")
 	}
 
-	// NOTE: LoadBalancer Service resources are watched by the UDPRoute controller (together
+	// NOTE: LoadBalancer Service resources are watched by the route controller (together
 	// with backend Services)
 
 	return r, nil
@@ -207,8 +207,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 					// obtain ref'd secret
 					secret := corev1.Secret{}
 
-					// if no explicit Service namespace is provided, use the
-					// Gateway namespace to lookup the provided Service
+					// if no explicit Secret namespace is provided, use the
+					// Gateway namespace to lookup the provided Secret
 					secretNamespace := gw.Namespace
 					if ref.Namespace != nil {
 						secretNamespace = string(*ref.Namespace)
@@ -233,7 +233,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 
 					// TODO: check for ReferenceGrants
 
-					r.log.V(2).Info("found Secret", "name", store.GetObjectKey(&gc))
+					r.log.V(2).Info("found Secret", "name", store.GetObjectKey(&secret))
 					secretList = append(secretList, &secret)
 				}
 			}
@@ -242,13 +242,13 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 				resourceName := store.GetNamespacedName(&gw)
 
 				dp := &appv1.Deployment{}
-				if err := r.Get(context.Background(), resourceName, dp); err == nil {
+				if err := r.Get(ctx, resourceName, dp); err == nil {
 					deploymentList = append(deploymentList, dp)
 				}
 
 				ds := &appv1.DaemonSet{}
-				if err := r.Get(context.Background(), resourceName, ds); err == nil {
-					daemonSetList = append(daemonSetList, dp)
+				if err := r.Get(ctx, resourceName, ds); err == nil {
+					daemonSetList = append(daemonSetList, ds)
 				}
 			}
 		}

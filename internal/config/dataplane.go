@@ -1,8 +1,6 @@
 package config
 
 import (
-	// "fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiutil "k8s.io/apimachinery/pkg/util/intstr"
@@ -12,9 +10,6 @@ import (
 
 var (
 	StunnerdImage       = "l7mp/stunnerd:latest"
-	ConfigWatcherName   = "config-watcher"
-	ConfigWatcherImage  = "kiwigrid/k8s-sidecar:latest"
-	ConfigVolumeName    = "stunnerd-config-volume"
 	TerminationGrace    = int64(3600)
 	LivenessProbeAction = corev1.HTTPGetAction{
 		Path:   "/live",

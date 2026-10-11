@@ -258,10 +258,6 @@ func IsReferenceStaticService(ref *stnrgwv1.BackendRef) bool {
 
 // taken from redhat operator-utils: https://github.com/redhat-cop/operator-utils/blob/master/pkg/util/owner.go
 func IsOwner(owner, owned metav1.Object, kind string) bool {
-	// fmt.Println("-------------------------")
-	// fmt.Printf("%#v\n", owner)
-	// fmt.Printf("%#v\n", owned)
-	// fmt.Println("-------------------------")
 	for _, ownerRef := range owned.GetOwnerReferences() {
 		if ownerRef.Name == owner.GetName() && ownerRef.UID == owner.GetUID() &&
 			ownerRef.Kind == kind {

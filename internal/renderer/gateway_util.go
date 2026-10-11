@@ -4,10 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	// "github.com/go-logr/logr"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// ctlr "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/manager" corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,14 +15,12 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
-// maxConds is the maximum number of conditions that can be stored at one in a Gateway object
+// maxGwayStatusConds is the maximum number of conditions stored in a Gateway status.
 const maxGwayStatusConds = 8
 
 type portMap map[int]bool
 
 func (r *renderer) getGateways4Class(c *RenderContext) []*gwapiv1.Gateway {
-	// r.log.V(4).Info("getGateways4Class", "gateway-class", store.GetObjectKey(c.gc))
-
 	ret := []*gwapiv1.Gateway{}
 
 	for _, g := range store.Gateways.GetAll() {
@@ -205,9 +199,8 @@ func getStatus4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listener) *gwapiv1.Liste
 	return nil
 }
 
-// sets "Detached" to true with reason "UnsupportedProtocol" or false, depending on "accepted"
-// sets ResolvedRefs to true
-// sets "Ready" to <ready> depending on "ready"
+// setListenerStatus sets the Accepted, Conflicted and ResolvedRefs conditions and the number of
+// attached routes of a listener.
 func setListenerStatus(gw *gwapiv1.Gateway, l *gwapiv1.Listener, err error, conflicted bool, routes int) {
 	s := getStatus4Listener(gw, l)
 	if s == nil {
@@ -218,8 +211,6 @@ func setListenerStatus(gw *gwapiv1.Gateway, l *gwapiv1.Listener, err error, conf
 	setListenerStatusAccepted(gw, s, err)
 	setListenerStatusConflicted(gw, s, conflicted)
 	setListenerStatusResolvedRefs(gw, s, err)
-	// listener ready status deprecated
-	// setListenerStatusReady(gw, s, ready)
 	s.AttachedRoutes = int32(routes)
 }
 
@@ -314,28 +305,6 @@ func setListenerStatusResolvedRefs(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatu
 		ObservedGeneration: gw.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(gwapiv1.ListenerReasonResolvedRefs),
-		Message:            "listener object references sucessfully resolved",
+		Message:            "listener object references successfully resolved",
 	})
 }
-
-// func setListenerStatusReady(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, ready bool) {
-// 	if ready {
-// 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1.ListenerConditionReady),
-// 			Status:             metav1.ConditionTrue,
-// 			ObservedGeneration: gw.Generation,
-// 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1.ListenerReasonReady),
-// 			Message:            "public address found for gateway",
-// 		})
-// 	} else {
-// 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
-// 			Type:               string(gwapiv1.ListenerConditionReady),
-// 			Status:             metav1.ConditionFalse,
-// 			ObservedGeneration: gw.Generation,
-// 			LastTransitionTime: metav1.Now(),
-// 			Reason:             string(gwapiv1.ListenerReasonPending),
-// 			Message:            "public address pending",
-// 		})
-// 	}
-// }

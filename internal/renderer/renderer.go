@@ -150,7 +150,7 @@ func (r *renderer) Start(ctx context.Context) error {
 	}
 }
 
-// GetRenderChannel returns the channel onn which the renderer listenens to rendering requests.
+// GetRenderChannel returns the channel on which the renderer listens to rendering requests.
 func (r *renderer) GetRenderChannel() chan event.Event {
 	return r.renderCh
 }
@@ -205,9 +205,5 @@ func (r *renderer) renderPermissionFilters(server *stnrapiv2.ServerConfig, peers
 
 // generateDataplane is a wrapper for dataplaneGenerator.generate()
 func (r *renderer) generateDataplane(c *RenderContext) (client.Object, error) {
-	obj, err := r.dataplaneGenerator.generate(c)
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
+	return r.dataplaneGenerator.generate(c)
 }

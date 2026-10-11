@@ -183,12 +183,12 @@ type DataplaneSpec struct {
 	// +optional
 	DisableHealthCheck bool `json:"disableHealthCheck,omitempty"`
 
-	// EnableMetricsEnpoint can be used to enable metrics scraping (Prometheus). If enabled, a
+	// EnableMetricsEndpoint can be used to enable metrics scraping (Prometheus). If enabled, a
 	// metrics endpoint will be available at http://0.0.0.0:8080 at all dataplane pods. Default
 	// is no metrics collection.
 	//
 	// +optional
-	EnableMetricsEnpoint bool `json:"enableMetricsEndpoint,omitempty"`
+	EnableMetricsEndpoint bool `json:"enableMetricsEndpoint,omitempty"`
 
 	// OffloadEngine defines the dataplane offload mode, either "None", "XDP", "TC", or
 	// "Auto". Set to "Auto" to let STUNner find the optimal offload mode. Default is "None".
@@ -207,7 +207,7 @@ type DataplaneSpec struct {
 
 // +kubebuilder:object:root=true
 
-// DataplaneList holds a list of static services.
+// DataplaneList holds a list of Dataplanes.
 type DataplaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

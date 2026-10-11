@@ -10,34 +10,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// // set owner ref without using the scheme:
-// func setOwner2GatewayConfig(gc, object client.Object) {
-// 	gvk := stunnerv1alpha1.GroupVersion.WithKind("GatewayConfig")
-// 	ref := metav1.OwnerReference{
-// 		APIVersion: gvk.GroupVersion().String(),
-// 		Kind:       gvk.Kind,
-// 		UID:        gc.GetUID(),
-// 		Name:       gc.GetName(),
-// 	}
-
-// 	owners := object.GetOwnerReferences()
-// 	if idx := indexOwnerRef(owners, ref); idx == -1 {
-// 		owners = append(owners, ref)
-// 	} else {
-// 		owners[idx] = ref
-// 	}
-// 	object.SetOwnerReferences(owners)
-// }
-
-// func indexOwnerRef(ownerReferences []metav1.OwnerReference, ref metav1.OwnerReference) int {
-// 	for index, r := range ownerReferences {
-// 		if r.Kind == ref.Kind && r.Name == ref.Name {
-// 			return index
-// 		}
-// 	}
-// 	return -1
-// }
-
 // getSecretNameFromRef obtains a namespaced name from a SecretObjectReference, performing validity
 // checks along the way.
 func getSecretNameFromRef(ref *gwapiv1.SecretObjectReference, namespace string) (types.NamespacedName, error) {
@@ -48,16 +20,16 @@ func getSecretNameFromRef(ref *gwapiv1.SecretObjectReference, namespace string) 
 
 	// - group MUST be set to "" (corev1.GroupName), "v1", or omitted,
 	if ref.Group != nil && (string(*ref.Group) != corev1.GroupName && string(*ref.Group) != "v1") {
-		return ret, fmt.Errorf("Internal error obtaining Secret: invalid Group")
+		return ret, fmt.Errorf("Invalid Secret reference: invalid Group")
 	}
 
 	// - kind MUST be set to "Secret" or omitted,
 	if ref.Kind != nil && string(*ref.Kind) != "Secret" {
-		return ret, fmt.Errorf("Internal error obtaining Secret: invalid Kind")
+		return ret, fmt.Errorf("Invalid Secret reference: invalid Kind")
 	}
 
-	// - namespace MAY be omitted, in which case it defaults to the namespace of
-	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+	// - namespace MAY be omitted, in which case it defaults to the given namespace, or it
+	//   MAY be any valid namespace where the Secret lives.
 	if ref.Namespace != nil {
 		namespace = string(*ref.Namespace)
 	}
@@ -82,8 +54,8 @@ func dumpSecretRef(ref *gwapiv1.SecretObjectReference, namespace string) string 
 		kind = string(*ref.Kind)
 	}
 
-	// - namespace MAY be omitted, in which case it defaults to the namespace of
-	//   the GatewayConfig, or it MAY be any valid namespace where the Secret lives.
+	// - namespace MAY be omitted, in which case it defaults to the given namespace, or it
+	//   MAY be any valid namespace where the Secret lives.
 	if ref.Namespace != nil {
 		namespace = string(*ref.Namespace)
 	}

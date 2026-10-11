@@ -529,68 +529,6 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - single listener",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				w := testutils.TestGw.DeepCopy()
-				w.Spec.Listeners = []gwapiv1.Listener{{
-					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
-					Port:     gwapiv1.PortNumber(1),
-					Protocol: gwapiv1.ProtocolType("UDP"),
-				}}
-				c.gws = []gwapiv1.Gateway{*w}
-			},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: log}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gateways for class")
-				gw := gws[0]
-
-				s, tp := r.createLbService4Gateway(c, gw)
-				assert.NotNil(t, s, "svc create")
-				assert.Nil(t, tp, "targetports")
-				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
-
-				ls := s.GetLabels()
-				assert.Len(t, ls, 3, "labels len")
-				lab, found := ls[opdefault.OwnedByLabelKey]
-				assert.True(t, found, "label found")
-				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
-				lab, found = ls[opdefault.RelatedGatewayKey]
-				assert.True(t, found, "label found")
-				assert.Equal(t, gw.GetName(), lab, "label ok")
-				lab, found = ls[opdefault.RelatedGatewayNamespace]
-				assert.True(t, found, "label found")
-				assert.Equal(t, gw.GetNamespace(), lab, "label ok")
-
-				as := s.GetAnnotations()
-				assert.Len(t, as, 1, "annotations len")
-				gwa, found := as[opdefault.RelatedGatewayKey]
-				assert.True(t, found, "annotation found")
-				assert.Equal(t, store.GetObjectKey(gw), gwa, "annotation ok")
-
-				spec := s.Spec
-				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
-				assert.Equal(t, defaultExternalTrafficPolicy, spec.ExternalTrafficPolicy,
-					"ext traffic policy default")
-
-				sp := spec.Ports
-				assert.Len(t, sp, 1, "service-port len")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Name), string(sp[0].Name), "sp name")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Protocol), string(sp[0].Protocol), "sp proto")
-				assert.Equal(t, string(gw.Spec.Listeners[0].Port), string(sp[0].Port), "sp port")
-			},
-		},
-		{
 			name: "lb service - single listener, no valid listener",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
@@ -1778,8 +1716,8 @@ func TestRenderServiceUtil(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				w.Spec.LoadBalancerServiceAnnotations = make(map[string]string)
-				w.Spec.LoadBalancerServiceAnnotations[opdefault.DisableSessionAffiffinityAnnotationKey] =
-					opdefault.DisableSessionAffiffinityAnnotationValue
+				w.Spec.LoadBalancerServiceAnnotations[opdefault.DisableSessionAffinityAnnotationKey] =
+					opdefault.DisableSessionAffinityAnnotationValue
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 			},
 			tester: func(t *testing.T, r *renderer) {

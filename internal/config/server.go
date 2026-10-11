@@ -1,6 +1,5 @@
 package config
 
-// updater uploads client updates
 import (
 	"context"
 	"errors"
@@ -16,7 +15,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	"github.com/l7mp/stunner-gateway-operator/pkg/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 // Server is the config discovery server the dataplane pods watch. Starts only at the leader so CDS
@@ -69,8 +68,8 @@ func (c *Server) Start(ctx context.Context) error {
 	}
 }
 
-// GetConfigUpdateChannel returns the channel on which the config discovery server listenens to
-// update resuests.
+// GetConfigUpdateChannel returns the channel on which the config discovery server listens to
+// update requests.
 func (c *Server) GetConfigUpdateChannel() chan event.Event {
 	return c.configCh
 }
@@ -107,7 +106,7 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 }
 
 // nodeAddressPatcher relays each dataplane pod at the external address of its node: it replaces
-// the node address marker (config.NodeAddressVar) among the cluster addresses. On a node without
+// the node address marker (opdefault.NodeAddressVar) among the cluster addresses. On a node without
 // an external address it leaves the marker to the pod, whose own STUNNER_NODE_ADDR is its address.
 func nodeAddressPatcher(log logr.Logger) cdsserver.Patcher {
 	return func(conf *stnrapiv2.StunnerConfig, id string, labels map[string]string) *stnrapiv2.StunnerConfig {
@@ -122,7 +121,7 @@ func nodeAddressPatcher(log logr.Logger) cdsserver.Patcher {
 		}
 		for i := range conf.Clusters {
 			for j, a := range conf.Clusters[i].Addrs {
-				if a == config.NodeAddressVar {
+				if a == opdefault.NodeAddressVar {
 					conf.Clusters[i].Addrs[j] = addr
 				}
 			}
@@ -142,7 +141,7 @@ func getNodeAddress(node string) (corev1.NodeAddressType, string, error) {
 	}
 	// resolve family-neutrally: a bare IP literal (v4 or v6) resolves to itself, a DNS name to its
 	// A/AAAA records. This handles IPv6-only and dual-stack nodes; selecting a family across a
-	// dual-stack result is a separate concern (see the IP-family selection work).
+	// dual-stack result is a separate concern.
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip", addr)
 	if err != nil {
 		return corev1.NodeAddressType(""), "", fmt.Errorf("could not resolve node address: %w", err)

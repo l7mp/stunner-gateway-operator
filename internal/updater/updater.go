@@ -1,6 +1,5 @@
 package updater
 
-// updater uploads client updates
 import (
 	"context"
 	"strings"
@@ -116,7 +115,7 @@ func (u *Updater) Start(ctx context.Context) error {
 	}
 }
 
-// GetUpdaterChannel returns the channel on which the updater listenens to update resuests
+// GetUpdaterChannel returns the channel on which the updater listens to update requests
 func (u *Updater) GetUpdaterChannel() chan event.Event {
 	return u.updaterCh
 }
@@ -149,7 +148,7 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 
 	for _, o := range q.UDPRoutesGwAPI.Objects() {
 		if err := u.updateStatusObject(ctx, o, gen); err != nil {
-			u.log.Error(err, "Cannot update UDPRouteV1A2 status", "route", store.DumpObject(o))
+			u.log.Error(err, "Cannot update Gateway API UDPRoute status", "route", store.DumpObject(o))
 		}
 	}
 
@@ -161,7 +160,7 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 
 	for _, o := range q.TCPRoutesGwAPI.Objects() {
 		if err := u.updateStatusObject(ctx, o, gen); err != nil {
-			u.log.Error(err, "Cannot update TCPRouteV1 status", "route", store.DumpObject(o))
+			u.log.Error(err, "Cannot update Gateway API TCPRoute status", "route", store.DumpObject(o))
 		}
 	}
 
@@ -231,7 +230,7 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 
 	for _, ro := range q.UDPRoutesGwAPI.Objects() {
 		if err := u.deleteObject(ctx, ro, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("Cannot delete UDPRouteV1A2", "route",
+			u.log.V(1).Info("Cannot delete Gateway API UDPRoute", "route",
 				store.DumpObject(ro), "error", err)
 			continue
 		}
@@ -247,7 +246,7 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 
 	for _, ro := range q.TCPRoutesGwAPI.Objects() {
 		if err := u.deleteObject(ctx, ro, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("Cannot delete TCPRouteV1", "route",
+			u.log.V(1).Info("Cannot delete Gateway API TCPRoute", "route",
 				store.DumpObject(ro), "error", err)
 			continue
 		}

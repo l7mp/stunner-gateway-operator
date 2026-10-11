@@ -78,10 +78,10 @@ func (e *EventUpdate) GetType() EventType {
 
 func (e *EventUpdate) String() string {
 	return fmt.Sprintf("%s (gen: %d, ack: %t, license: %s): upsert-queue: gway-cls: %d, gway: %d, "+
-		"udp-route: %d, udp-routeV1A2: %d, tcp-route: %d, tcp-routeV1: %d, turn-route: %d, "+
+		"udp-route: %d, udp-route-gwapi: %d, tcp-route: %d, tcp-route-gwapi: %d, turn-route: %d, "+
 		"svc: %d, confmap: %d, dp: %d, ds: %d / "+
-		"delete-queue: gway-cls: %d, gway: %d, udp-route: %d, udp-routeV1A2: %d, "+
-		"tcp-route: %d, tcp-routeV1: %d, turn-route: %d, "+
+		"delete-queue: gway-cls: %d, gway: %d, udp-route: %d, udp-route-gwapi: %d, "+
+		"tcp-route: %d, tcp-route-gwapi: %d, turn-route: %d, "+
 		"svc: %d, confmap: %d, dp: %d, ds: %d / config-queue: %d",
 		e.Type.String(), e.Generation, e.RequestAck, e.LicenseStatus.String(),
 		e.UpsertQueue.GatewayClasses.Len(), e.UpsertQueue.Gateways.Len(),

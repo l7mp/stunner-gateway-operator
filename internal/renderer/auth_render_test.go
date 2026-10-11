@@ -145,14 +145,14 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "auth type alias: static - ok",
+			name: "auth type alias: plaintext - ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
-				*w.Spec.AuthType = "static"
+				*w.Spec.AuthType = "plaintext"
 				u, p := "testuser", "testpasswd"
 				w.Spec.Username = &u
 				w.Spec.Password = &p
@@ -174,7 +174,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "lonterm no-secret errs",
+			name: "ephemeral no-secret errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -228,7 +228,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "auth type alias: ephemeral - ok",
+			name: "auth type alias: longterm - ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -236,7 +236,7 @@ func TestRenderAuthRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				w := testutils.TestGwConfig.DeepCopy()
 				*w.Spec.Realm = "dummy"
-				*w.Spec.AuthType = "timewindowed"
+				*w.Spec.AuthType = "longterm"
 				s := "dummy"
 				w.Spec.SharedSecret = &s
 				c.cfs = []stnrgwv1.GatewayConfig{*w}

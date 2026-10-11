@@ -2,14 +2,7 @@ package operator
 
 import (
 	"time"
-
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
 )
-
-// GetOperatorChannel returns the channel on which the operator event dispatcher listens.
-func (o *Operator) GetOperatorChannel() chan event.Event {
-	return o.operatorCh
-}
 
 // ProgressReport returns the number of ongoing operations (rendering processes, updates, etc) plus
 // the number of throttled rendering processes in progress.

@@ -67,7 +67,7 @@ func (r *renderer) getPublicAddr(gw *gwapiv1.Gateway) ([]gwAddrPort, error) {
 		status[i] = "<nil>"
 		ap, err := r.getPublicListenerAddr(svc, gw, &gw.Spec.Listeners[i])
 		if err != nil {
-			r.log.Info("Could not find public adddress for listener",
+			r.log.Info("Could not find public address for listener",
 				"gateway", store.GetObjectKey(gw), "listener", l.Name,
 				"error", err.Error())
 			retErr = NewNonCriticalError(PublicListenerAddressNotFound)
@@ -89,13 +89,13 @@ func (r *renderer) getPublicSvc(gw *gwapiv1.Gateway) (*corev1.Service, error) {
 	for _, svc := range store.Services.GetAll() {
 		if !isServiceAnnotated4Gateway(svc, gw) {
 			r.log.V(4).Info("Skipping service: not annotated for gateway", "svc",
-				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
+				store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
 			continue
 		}
 
 		if !store.IsOwner(gw, svc, "Gateway") {
 			r.log.V(4).Info("Skipping service: no owner-reference to gateway", "svc",
-				store.GetObjectKey(svc), "gateway", store.GetObjectKey(svc))
+				store.GetObjectKey(svc), "gateway", store.GetObjectKey(gw))
 			continue
 		}
 
@@ -324,8 +324,7 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	} else {
 		// mandatory labels and annotations must always be there
 		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
-		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(),
-			mergeMaps(gw.GetAnnotations(), requestedAnnotations)))
+		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(), requestedAnnotations))
 	}
 
 	// set selectors
@@ -401,20 +400,18 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		}
 	}
 
-	if len(listenerNodeports) != 0 {
-		for k, v := range listenerNodeports {
-			found := false
-			for _, l := range gw.Spec.Listeners {
-				if string(l.Name) == k {
-					found = true
-					break
-				}
+	for k, v := range listenerNodeports {
+		found := false
+		for _, l := range gw.Spec.Listeners {
+			if string(l.Name) == k {
+				found = true
+				break
 			}
-			if !found {
-				// no need to delete: later we won't use this listener key anyway
-				r.log.Info("Could not enforce nodeport: unknown listener", "gateway",
-					store.GetObjectKey(gw), "listener-name", k, "nodeport", v)
-			}
+		}
+		if !found {
+			// no need to delete: later we won't use this listener key anyway
+			r.log.Info("Could not enforce nodeport: unknown listener", "gateway",
+				store.GetObjectKey(gw), "listener-name", k, "nodeport", v)
 		}
 	}
 
@@ -450,8 +447,6 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	ports := []corev1.ServicePort{}
 	serviceProto := ""
 	for _, l := range gw.Spec.Listeners {
-		var proto string
-
 		proto, err := r.getServiceProtocol(l.Protocol)
 		if err != nil {
 			continue
@@ -511,8 +506,8 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 	// Set session affinity
 	disableSessionAffinity := false
-	if v, ok := annotations[opdefault.DisableSessionAffiffinityAnnotationKey]; ok &&
-		strings.ToLower(v) == opdefault.DisableSessionAffiffinityAnnotationValue {
+	if v, ok := annotations[opdefault.DisableSessionAffinityAnnotationKey]; ok &&
+		strings.ToLower(v) == opdefault.DisableSessionAffinityAnnotationValue {
 		disableSessionAffinity = true
 	}
 
@@ -541,9 +536,7 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 
 	// forward the first requested address to Kubernetes
 	if len(gw.Spec.Addresses) > 0 {
-		if gw.Spec.Addresses[0].Type == nil ||
-			(gw.Spec.Addresses[0].Type != nil &&
-				*gw.Spec.Addresses[0].Type == gwapiv1.IPAddressType) {
+		if gw.Spec.Addresses[0].Type == nil || *gw.Spec.Addresses[0].Type == gwapiv1.IPAddressType {
 			svc.Spec.LoadBalancerIP = gw.Spec.Addresses[0].Value
 		}
 	}
@@ -602,7 +595,7 @@ func mergeServicePorts(existingSp, stnrSp []corev1.ServicePort) []corev1.Service
 		sp := existingSp[spIdx].DeepCopy()
 		sp.Protocol = stnrSp[i].Protocol
 		sp.Port = stnrSp[i].Port
-		// do not touch ndoeport and targetport: if requested in an annotation then we will
+		// do not touch nodeport and targetport: if requested in an annotation then we will
 		// update these later, otherwise leave them as chosen by K8s
 		ret = append(ret, *sp)
 	}
@@ -619,29 +612,14 @@ func getServicePortsFromAnn(v string) (map[string]int, error) {
 		// try our best to parse: add missing curlies
 		v = "{" + v + "}"
 		if err := json.Unmarshal([]byte(v), &kvs); err != nil {
-			// Service return the original error
-			return map[string]int{}, fmt.Errorf("Could node parse port annotation as a "+
+			// return the original error
+			return map[string]int{}, fmt.Errorf("Could not parse port annotation as a "+
 				"formatted list of key-value pairs: %w", ret)
 		}
 	}
 
 	return kvs, nil
 }
-
-// // fallback
-// func getServiceNodePortForSingleListener(v string, gw *gwapiv1.Gateway) (map[string]int, error) {
-// 	// parse as int
-// 	kvs := make(map[string]int)
-// 	if gw != nil && len(gw.Spec.Listeners) == 1 {
-// 		if i, err := strconv.Atoi(v); err != nil {
-// 			return map[string]int{}, fmt.Errorf("Could not parse "+
-// 				"nodeport annotation as int (listener-num: 1): %w", ret)
-// 		}
-// 		kvs[string(gw.Spec.Listeners[0].Name)] = i
-// 	}
-
-// 	return kvs, nil
-// }
 
 func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, error) {
 	var healthCheckPort int32
@@ -674,11 +652,11 @@ func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, 
 	healthCheckName := "gateway-health-check"
 	if healthCheckPort > 0 && healthCheckProtocol != "" {
 		servicePortExists := false
-		for _, s := range svc.Spec.Ports {
-			if string(s.Name) == healthCheckName {
+		for i := range svc.Spec.Ports {
+			if svc.Spec.Ports[i].Name == healthCheckName {
 				// found one, let's update it and move on
-				s.Protocol = corev1.Protocol(healthCheckProtocol)
-				s.Port = int32(healthCheckPort)
+				svc.Spec.Ports[i].Protocol = corev1.Protocol(healthCheckProtocol)
+				svc.Spec.Ports[i].Port = healthCheckPort
 				servicePortExists = true
 				break
 			}
@@ -687,10 +665,10 @@ func setHealthCheck(annotations map[string]string, svc *corev1.Service) (int32, 
 			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 				Name:     healthCheckName,
 				Protocol: corev1.Protocol(healthCheckProtocol),
-				Port:     int32(healthCheckPort),
+				Port:     healthCheckPort,
 			})
 		}
-		return int32(healthCheckPort), nil
+		return healthCheckPort, nil
 	}
 	return 0, nil
 }
@@ -715,7 +693,7 @@ func mergeAnnotations(svcA, gwA map[string]string) map[string]string {
 
 	// remove STUNner-specific annotations that do not exist in the gw
 	for k := range svcA {
-		// only STUNner-specifc annotations are special-cased, everything else are free to
+		// only STUNner-specific annotations are special-cased, everything else are free to
 		// be set by the user
 		if !strings.HasPrefix(strings.ToLower(k), stnrgwv1.GroupVersion.Group) {
 			continue

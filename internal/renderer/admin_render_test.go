@@ -102,7 +102,7 @@ func TestRenderAdminRender(t *testing.T) {
 				c.cfs = []stnrgwv1.GatewayConfig{*w}
 
 				dp := testutils.TestDataplane.DeepCopy()
-				dp.Spec.EnableMetricsEnpoint = true
+				dp.Spec.EnableMetricsEndpoint = true
 				dp.Spec.DisableHealthCheck = true
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},

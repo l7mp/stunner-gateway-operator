@@ -27,26 +27,26 @@ func (r *renderer) allRoutes() []store.Route {
 		ret = append(ret, ro)
 	}
 
-	for _, uv1a2 := range store.UDPRoutesGwAPI.GetAll() {
-		if isRouteMasked(uv1a2) {
-			r.log.Info("Ignoring gwapiv1a2.UDPRoute masking a stunnerv1.UDPRoute:",
-				"name", uv1a2.GetName(), "namespace", uv1a2.GetNamespace())
+	for _, ro := range store.UDPRoutesGwAPI.GetAll() {
+		if isRouteMasked(ro) {
+			r.log.Info("Ignoring Gateway API UDPRoute masked by a STUNner UDPRoute",
+				"route", store.GetObjectKey(ro))
 			continue
 		}
-		ret = append(ret, uv1a2)
+		ret = append(ret, ro)
 	}
 
 	for _, ro := range store.TCPRoutes.GetAll() {
 		ret = append(ret, ro)
 	}
 
-	for _, tv1 := range store.TCPRoutesGwAPI.GetAll() {
-		if isRouteMasked(tv1) {
-			r.log.Info("Ignoring gwapiv1.TCPRoute masking a stunnerv1.TCPRoute:",
-				"name", tv1.GetName(), "namespace", tv1.GetNamespace())
+	for _, ro := range store.TCPRoutesGwAPI.GetAll() {
+		if isRouteMasked(ro) {
+			r.log.Info("Ignoring Gateway API TCPRoute masked by a STUNner TCPRoute",
+				"route", store.GetObjectKey(ro))
 			continue
 		}
-		ret = append(ret, tv1)
+		ret = append(ret, ro)
 	}
 
 	for _, ro := range store.TURNRoutes.GetAll() {
@@ -85,8 +85,9 @@ func (r *renderer) getRoutes4Listener(gw *gwapiv1.Gateway, l *gwapiv1.Listener) 
 				store.GetObjectKey(gw), "listener", l.Name, "route",
 				store.GetObjectKey(ro))
 
-			// route made it this far: attach!
+			// route made it this far: attach once, whatever other parents match
 			ret = append(ret, ro)
+			break
 		}
 	}
 
@@ -542,19 +543,12 @@ func setRouteAcceptedCondition(ro store.Route, s *[]metav1.Condition, reason gwa
 	})
 }
 
-// check by pointer: namespacedname is not unique across stunnerv1 and v1a2 routes
-//
-//nolint:unused
-func isRouteV1(ro client.Object) bool {
-	return store.UDPRoutes.Get(store.GetNamespacedName(ro)) == ro
-}
-
-// check by pointer: namespacedname is not unique across stunnerv1 and v1a2 routes
+// check by pointer: namespacedname is not unique across STUNner and Gateway API routes
 func isRouteGwAPIUDP(ro client.Object) bool {
 	return store.UDPRoutesGwAPI.Get(store.GetNamespacedName(ro)) == ro
 }
 
-// check by pointer: namespacedname is not unique across stunnerv1 and gwapiv1 routes
+// check by pointer: namespacedname is not unique across STUNner and Gateway API routes
 func isRouteGwAPITCP(ro client.Object) bool {
 	return store.TCPRoutesGwAPI.Get(store.GetNamespacedName(ro)) == ro
 }

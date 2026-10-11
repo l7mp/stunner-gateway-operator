@@ -198,15 +198,18 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				assert.Nil(t, f.Rules[0].IPBlock, "every address")
 
 				// the route resolves
+				turnRoutes := 0
 				for _, ro := range r.allRoutes() {
 					if _, ok := ro.(*stnrgwv1a1.TURNRoute); !ok {
 						continue
 					}
+					turnRoutes++
 					d := meta.FindStatusCondition(ro.GetRouteStatus().Parents[0].Conditions,
 						string(gwapiv1.RouteConditionResolvedRefs))
 					assert.NotNil(t, d, "resolved-refs found")
 					assert.Equal(t, metav1.ConditionTrue, d.Status, "resolved")
 				}
+				assert.Equal(t, 1, turnRoutes, "TURNRoute num")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP

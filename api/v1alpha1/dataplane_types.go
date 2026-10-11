@@ -129,7 +129,7 @@ type DataplaneSpec struct {
 
 // +kubebuilder:object:root=true
 
-// DataplaneList holds a list of static services.
+// DataplaneList holds a list of Dataplanes.
 type DataplaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

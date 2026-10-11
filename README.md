@@ -10,7 +10,7 @@
 
 # STUNner Kubernetes Gateway Operator
 
-The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data plane. The goal is to implement the part of the core Gateway API, namely Gateway, GatewayClass and UDPRoute resources, that are necessary to fully configure the STUNner WebRTC ingress gateway via the Kubernetes control plane. The STUNner Kubernetes Gateway Operator is currently supports only a subset of the Gateway API.
+The STUNner Kubernetes Gateway Operator is an open-source implementation of the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io) using [STUNner](https://github.com/l7mp/stunner) as the data plane. The goal is to implement the part of the core Gateway API, namely Gateway, GatewayClass, UDPRoute and TCPRoute resources, plus the STUNner-specific TURNRoute, that are necessary to fully configure the STUNner WebRTC ingress gateway via the Kubernetes control plane. The STUNner Kubernetes Gateway Operator is currently supports only a subset of the Gateway API.
 
 ## Documentation
 
@@ -94,7 +94,7 @@ Prometheus metrics are served at `--metrics-bind-address` (default `:8080/metric
 | `update_errors_total`                             | Counter   | Update cycles that returned an error.                                                                                                                                      |
 | `update_time_seconds`                             | Histogram | Duration of a full update cycle.                                                                                                                                           |
 | `resource_operations_total{scope,kind,operation}` | Counter   | Individual Kubernetes API calls made by the updater, labelled by scope (`spec`/`status`), resource kind, and operation (`created`, `updated`, `error`, `suppressed`, ...). |
-| `reconcile_events_total{result}`                  | Counter   | Reconcile events received by the operator event loop (`passed` when a render is scheduled, `throttled` when rate-limited).                                                 |
+| `reconcile_events_total{result}`                  | Counter   | Reconcile events received by the operator event loop (`passed` when a render is scheduled, `throttled` when rate-limited, `gated` when held by the startup gate).                                                 |
 | `generation`                                      | Gauge     | Current config generation number.                                                                                                                                          |
 | `generation_last_acked`                           | Gauge     | Generation number of the last update acknowledged by the updater.                                                                                                          |
 

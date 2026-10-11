@@ -37,7 +37,7 @@ func getSecret(s Store, nsName types.NamespacedName) *corev1.Secret {
 	return r
 }
 
-// TLSSecrets holding Gateway TLS cets
+// TLSSecrets holds the Gateway TLS certificates.
 var TLSSecrets = NewTLSSecretStore()
 
 type TLSSecretStore struct {
@@ -77,22 +77,3 @@ func (s *AuthSecretStore) GetAll() []*corev1.Secret { return getAllSecrets(s) }
 func (s *AuthSecretStore) GetObject(nsName types.NamespacedName) *corev1.Secret {
 	return getSecret(s, nsName)
 }
-
-// // Image pull secrets
-// var ImagePullSecrets = NewImagePullSecretStore()
-
-// type ImagePullSecretStore struct {
-// 	Store
-// }
-
-// func NewImagePullSecretStore() *ImagePullSecretStore {
-// 	return &ImagePullSecretStore{
-// 		Store: NewStore(),
-// 	}
-// }
-
-// func (s *ImagePullSecretStore) GetAll() []*corev1.Secret { return getAllSecrets(s) }
-
-// func (s *ImagePullSecretStore) GetObject(nsName types.NamespacedName) *corev1.Secret {
-// 	return getSecret(s, nsName)
-// }

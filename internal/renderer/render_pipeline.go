@@ -43,7 +43,7 @@ func (r *renderer) Finalize(gen int) *event.EventUpdate {
 
 	switch config.DataplaneMode {
 	case config.DataplaneModeLegacy:
-		r.log.Info("Finalization not suported for legacy dataplane mode")
+		r.log.Info("Finalization not supported for legacy dataplane mode")
 	case config.DataplaneModeManaged:
 		return r.finalizeManagedGateways()
 	default:
@@ -71,13 +71,13 @@ func (r *renderer) renderGatewayClass(e *event.EventRender) {
 			names = append(names, fmt.Sprintf("%q", store.GetObjectKey(gc)))
 		}
 
-		r.log.Info("Multiple gateway-class objects found: this is most probably UNINTENED - "+
+		r.log.Info("Multiple gateway-class objects found: this is most probably UNINTENDED - "+
 			"the operator will attempt to render a configuration for each gateway-class but there "+
 			"is no guarantee that this will work - this mode is UNSUPPORTED, "+
 			"if unsure, remove one of the gateway-class objects", "names", strings.Join(names, ", "))
 	}
 
-	// render each GatewayClass: hopefully they won's step on each other's throat: we cannot
+	// render each GatewayClass: hopefully they won't step on each other's throat: we cannot
 	// help if multiple GatewayClasses (or the GatewayConfigs thereof) set the rendering
 	// pipeline to render into the same configmap, but at least we can prevent race conditions
 	// by serializing update requests on the updaterChannel
@@ -157,8 +157,6 @@ func (r *renderer) renderManagedGateways(e *event.EventRender) {
 		gcCtx.dp = dp
 
 		for _, gw := range r.getGateways4Class(gcCtx) {
-			gw := gw
-
 			r.log.V(1).Info("Rendering for gateway",
 				"gateway-class", store.GetObjectKey(gc),
 				"gateway", store.GetObjectKey(gw),
@@ -198,7 +196,7 @@ func (r *renderer) renderManagedGateways(e *event.EventRender) {
 // finalizeManagedGateways invalidates all managed resources and returns the update that applies
 // the invalidation.
 func (r *renderer) finalizeManagedGateways() *event.EventUpdate {
-	r.log.Info("Stating finalization", "mode", "managed")
+	r.log.Info("Starting finalization", "mode", "managed")
 
 	pipelineCtx := NewRenderContext(r, nil)
 
@@ -333,7 +331,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		c.update.UpsertQueue.Gateways.Upsert(gw.DeepCopy())
 	}
 
-	log.V(1).Info("Processing UDPRoutes")
+	log.V(1).Info("Processing routes")
 	conf.Clusters = []stnrapiv2.ClusterConfig{}
 	conf.Filters = []stnrapiv2.FilterConfig{}
 	peers := map[string][]stnrapiv2.FilterRule{} // the peers of the rendered clusters
@@ -543,7 +541,7 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 			}
 			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
 			log.V(2).Info("Deleting dataplane ConfigMap", "generation", r.gen,
-				"deployment", store.DumpObject(cm))
+				"configmap", store.DumpObject(cm))
 
 			svc := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -567,7 +565,7 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		}
 	}
 
-	log.V(1).Info("Processing UDPRoutes")
+	log.V(1).Info("Processing routes")
 	for _, ro := range r.allRoutes() {
 		log.V(2).Info("Considering", "route", ro.GetName())
 
@@ -582,12 +580,12 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 				continue
 			}
 
-			parentExists, parendAccepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
+			parentExists, parentAccepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// render a stale cluster so that we know the ResolvedRefs status
 			_, _, err := r.renderCluster(ro)
 
-			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parendAccepted, err)
+			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccepted, err)
 		}
 
 		queueRouteStatusUpdate(c, ro)

@@ -1186,7 +1186,7 @@ spec:
                 type: boolean
               enableMetricsEndpoint:
                 description: |-
-                  EnableMetricsEnpoint can be used to enable metrics scraping (Prometheus). If enabled, a
+                  EnableMetricsEndpoint can be used to enable metrics scraping (Prometheus). If enabled, a
                   metrics endpoint will be available at http://0.0.0.0:8080 at all dataplane pods. Default
                   is no metrics collection.
                 type: boolean

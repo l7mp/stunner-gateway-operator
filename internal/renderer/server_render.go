@@ -25,7 +25,7 @@ func newServerRenderer(log logr.Logger) serverRenderer {
 // of a TURN server are rendered once the clusters are known.
 func (r *defaultServerRenderer) renderServer(c *RenderContext, l *gwapiv1.Listener, rs []store.Route) (*stnrapiv2.ServerConfig, error) {
 	if c.gws.Len() != 1 {
-		return nil, fmt.Errorf("Internal error: Invalid call to serverRender with %d gws", c.gws.Len())
+		return nil, fmt.Errorf("Internal error: Invalid call to renderServer with %d gws", c.gws.Len())
 	}
 	gw := c.gws.GetFirst()
 

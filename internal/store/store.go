@@ -41,7 +41,6 @@ func Merge(dst, src Store) {
 type storeImpl struct {
 	lock    sync.RWMutex
 	objects map[string]client.Object
-	// log     logr.Logger
 }
 
 // NewStore creates a new local object storage

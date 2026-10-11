@@ -2,7 +2,6 @@ package renderer
 
 import (
 	"encoding/json"
-	// "fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,14 +27,17 @@ func (r *renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 		s = string(sc)
 	}
 
+	// owned by the gateway-config in legacy mode and by the gateway in managed mode
 	relatedGateway := store.GetObjectKey(c.gc)
+	var owner client.Object = c.gwConf
+	gw := c.gws.GetFirst()
 	if config.DataplaneMode == config.DataplaneModeManaged {
-		gw := c.gws.GetFirst()
 		if gw == nil {
 			r.log.Info("Internal error: config renderer called with empty Gateway ref in managed mode")
 			return nil, NewCriticalError(RenderingError)
 		}
 		relatedGateway = store.GetObjectKey(gw)
+		owner = gw
 	}
 
 	immutable := true
@@ -56,15 +58,7 @@ func (r *renderer) renderConfig(c *RenderContext, name, namespace string, conf *
 		},
 	}
 
-	// owned by the gateway-config in legacy mode
-	var owner client.Object = c.gwConf
 	if config.DataplaneMode == config.DataplaneModeManaged {
-		gw := c.gws.GetFirst()
-		if gw == nil {
-			panic("renderConfig called with empty Gateway ref in managed mode")
-		}
-		owner = gw
-
 		// add also the missing labels
 		labels := cm.GetLabels()
 		labels[opdefault.RelatedGatewayKey] = gw.GetName()

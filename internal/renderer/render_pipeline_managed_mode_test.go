@@ -125,8 +125,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
-
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
@@ -224,8 +222,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -364,8 +360,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
 				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
-
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
@@ -418,7 +412,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue,
 					gc.Status.Conditions[0].Status, "conditions status")
 				assert.Equal(t, string(gwapiv1.GatewayClassReasonAccepted),
-					gc.Status.Conditions[0].Type, "conditions reason")
+					gc.Status.Conditions[0].Reason, "conditions reason")
 				assert.Equal(t, int64(0),
 					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
@@ -461,7 +455,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {
-				// a new gatewayclass that specifies a different gateway-config
 				// a new gatewayclass that specifies a different gateway-config
 				dummyGc := testutils.TestGwClass.DeepCopy()
 				dummyGc.SetName("dummy-gateway-class")
@@ -776,8 +769,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
 				assert.Equal(t, "ResolvedRefs", d.Reason, "reason")
 
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
-
 				// config for the modified gateway-class
 				gc = gcs[1]
 				// we can never know the order...
@@ -858,8 +849,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 					IPBlock: &stnrapiv2.IPBlock{CIDR: "1.2.3.4/32", Except: []string{}},
 					Ports:   []stnrapiv2.FilterPort{{Port: 10, EndPort: 100}}}, "ip-1 ports")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-5")
-
-				// fmt.Printf("%#v\n", cm.(*corev1.ConfigMap))
 
 				// gateway status
 				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
@@ -1633,10 +1622,4 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 			},
 		},
 	})
-}
-
-// serverOf returns the server a listener of a config feeds.
-func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapiv2.ServerConfig {
-	s, _ := conf.GetServerConfig(l.FirstServer())
-	return s
 }

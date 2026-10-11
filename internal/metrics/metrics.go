@@ -80,7 +80,8 @@ var (
 	}, []string{"scope", "kind", "operation"})
 
 	// ReconcileEventsTotal counts reconcile events received by the operator event loop,
-	// split by result ("passed" when a render is triggered, "throttled" when rate-limited).
+	// split by result ("passed" when a render is triggered, "throttled" when rate-limited, "gated"
+	// when held by the startup gate).
 	ReconcileEventsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "stunner_gateway_operator_reconcile_events_total",
 		Help: "Total number of reconcile events received by the operator event loop.",

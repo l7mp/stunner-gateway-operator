@@ -77,7 +77,6 @@ func (r *authRenderer) renderInlineAuth(c *RenderContext) (stnrapiv2.Config, err
 
 func (r *authRenderer) renderExternalAuth(c *RenderContext) (stnrapiv2.Config, error) {
 	gwConf := c.gwConf
-	// c.log.V(4).Info("renderExternalAuth", "gateway-config", store.GetObjectKey(gwConf))
 
 	realm := stnrapiv2.DefaultRealm
 	if gwConf.Spec.Realm != nil {

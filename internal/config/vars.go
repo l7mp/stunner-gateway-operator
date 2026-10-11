@@ -16,9 +16,6 @@ var (
 	// ControllerName is the current controller name which indicates this operator's name
 	ControllerName = opdefault.DefaultControllerName
 
-	// ConfigMapName names a ConfigMap the operator renders the stunnerd config file into
-	ConfigMapName = opdefault.DefaultConfigMapName
-
 	// EnableRelayToClusterIP allows clients to create transport relay connections directly to
 	// the ClusterIP of a Kubernetes service. This is useful for hiding the pod IPs behind the
 	// ClusterIP. Clients can then connect to both the ClusterIP and any direct pod IP.

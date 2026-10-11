@@ -56,9 +56,10 @@ type routeReconciler struct {
 	// route resources are watched (empty if the CRD is not installed): the graduated v1
 	// version is preferred over the deprecated v1alpha2.
 	udpRouteVersion, tcpRouteVersion string
-	// turnRouteServed is true if the cluster serves the TURNRoute CRD.
-	turnRouteServed bool
-	log             logr.Logger
+	// tcpRouteServed and turnRouteServed are true if the cluster serves the TCPRoute and the
+	// TURNRoute CRD, respectively.
+	tcpRouteServed, turnRouteServed bool
+	log                             logr.Logger
 }
 
 // routeBackends accumulates the backend objects referenced by the reconciled routes.
@@ -103,12 +104,12 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch TCPRoute objects when the cluster serves the CRD
-	tcpRouteServed, err := r.isRouteResourceServed(mgr, &stnrgwv1.TCPRoute{}, "tcproutes")
+	r.tcpRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1.TCPRoute{}, "tcproutes")
 	if err != nil {
 		return nil, err
 	}
 
-	if tcpRouteServed {
+	if r.tcpRouteServed {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &stnrgwv1.TCPRoute{},
 				&handler.TypedEnqueueRequestForObject[*stnrgwv1.TCPRoute]{},
@@ -287,9 +288,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	loadBalancerPredicate, err := ServiceLabelSelectorPredicate(
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				// LB services have both "app:stunner" and
-				// "stunner.l7mp.io/owned-by:stunner" labels set, we use the app
-				// label here
+				// LB services carry the "stunner.l7mp.io/owned-by:stunner" label
 				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
 			},
 		})
@@ -346,8 +345,8 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	turnRouteList := []client.Object{}
 	backends := routeBackends{}
 
-	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
-	// "app:stunner")
+	// find all related-services that we use as LoadBalancers for Gateways (i.e., have the
+	// owned-by label)
 	svcs := &corev1.ServiceList{}
 	err := r.List(ctx, svcs, client.MatchingLabels{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	if err == nil {
@@ -404,16 +403,18 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	}
 
 	// find all TCPRoutes
-	tcpRoutes := &stnrgwv1.TCPRouteList{}
-	if err := r.List(ctx, tcpRoutes); err != nil {
-		r.log.Info("No TCPRoutes found")
-	} else {
-		for i := range tcpRoutes.Items {
-			ro := &tcpRoutes.Items[i]
-			r.log.V(1).Info("Processing TCPRoute", "name", store.GetObjectKey(ro))
+	if r.tcpRouteServed {
+		tcpRoutes := &stnrgwv1.TCPRouteList{}
+		if err := r.List(ctx, tcpRoutes); err != nil {
+			r.log.Info("No TCPRoutes found")
+		} else {
+			for i := range tcpRoutes.Items {
+				ro := &tcpRoutes.Items[i]
+				r.log.V(1).Info("Processing TCPRoute", "name", store.GetObjectKey(ro))
 
-			tcpRouteList = append(tcpRouteList, ro)
-			r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
+				tcpRouteList = append(tcpRouteList, ro)
+				r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
+			}
 		}
 	}
 
@@ -623,13 +624,15 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 	}
 
 	// find the TCPRoutes referring to this service
-	tcpRouteList := &stnrgwv1.TCPRouteList{}
-	if err := r.List(context.Background(), tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(tcpIndex, key),
-	}); err != nil {
-		r.log.Error(err, "Unable to find associated TCPRoute", "service", key)
-	} else {
-		routeNum += len(tcpRouteList.Items)
+	if r.tcpRouteServed {
+		tcpRouteList := &stnrgwv1.TCPRouteList{}
+		if err := r.List(context.Background(), tcpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(tcpIndex, key),
+		}); err != nil {
+			r.log.Error(err, "Unable to find associated TCPRoute", "service", key)
+		} else {
+			routeNum += len(tcpRouteList.Items)
+		}
 	}
 
 	// find official Gateway API TCPRoutes referring to this service
@@ -667,7 +670,7 @@ func (r *routeReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.End
 	// TODO: also check ownership
 	svcName, ok := esl.GetLabels()[discoveryv1.LabelServiceName]
 	if !ok {
-		r.log.Info("Calidate EndpointSlice:", "label", "not ok")
+		r.log.Info("EndpointSlice has no service-name label", "endpointslice", store.GetObjectKey(esl))
 		return false
 	}
 
@@ -726,7 +729,7 @@ func (r *routeReconciler) getEndpointSlicesForBackend(ctx context.Context, ro cl
 		namespace = string(*ref.Namespace)
 	}
 
-	// find the EndpointSlicce corresponding to the backend service
+	// find the EndpointSlice corresponding to the backend service
 	esls := discoveryv1.EndpointSliceList{}
 	labelSelector := labels.SelectorFromSet(labels.Set{discoveryv1.LabelServiceName: string(ref.Name)})
 	listOptions := &client.ListOptions{
@@ -965,7 +968,7 @@ func staticServiceRouteIndexFunc(o client.Object) []string {
 
 func (r *routeReconciler) Name() ControllerName { return RouteControllerName }
 
-// TypedLabelSelectorPredicate is the generic version of LabelSelectorPredicate that somehow seems
+// ServiceLabelSelectorPredicate is the typed version of LabelSelectorPredicate that somehow seems
 // to be missing in controller-runtime to construct a TypedPredicate from a LabelSelector.  Only
 // objects matching the LabelSelector will be admitted.
 func ServiceLabelSelectorPredicate(s metav1.LabelSelector) (predicate.TypedPredicate[*corev1.Service], error) {

@@ -36,7 +36,6 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -87,14 +86,6 @@ func testTCPRouteLegacy() {
 		conf := &stnrapiv2.StunnerConfig{}
 		tcpRouteGwAPI := testutils.TestTCPRouteV1.DeepCopy()
 		tcpRouteGwAPI.SetName("tcproute-gwapi")
-
-		BeforeAll(func() {
-			config.EnableRelayToClusterIP = true
-		})
-
-		AfterAll(func() {
-			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
-		})
 
 		It("should survive loading the base resources and a TCPRoute", func() {
 			createOrUpdateGatewayClass(ctx, k8sClient, testGwClass, nil)
@@ -270,8 +261,6 @@ func testTCPRouteManaged() {
 		var cdsClient cdsclient.Client
 
 		BeforeAll(func() {
-			config.EnableRelayToClusterIP = true
-
 			clientCtx, clientCancel = context.WithCancel(context.Background())
 			ch = make(chan *stnrapiv2.StunnerConfig, 128)
 			var err error
@@ -282,7 +271,6 @@ func testTCPRouteManaged() {
 		})
 
 		AfterAll(func() {
-			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
 			// do not close(ch): the watcher may deliver an in-flight config after the
 			// cancel and would panic on a closed channel; the channel is dropped with

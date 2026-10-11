@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
@@ -551,7 +549,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 				Type:     "TURN",
 				Clusters: []string{"default-cluster"},
 			}},
-			// the relay address the node patcher rewrites
+			// the pod address placeholder: the node patcher rewrites only the node address placeholder
 			Clusters: []stnrapiv2.ClusterConfig{{
 				Name:     "default-cluster",
 				Protocol: "UDP",
@@ -759,30 +757,4 @@ func zeroConfig(namespace, name, realm string) *stnrapiv2.StunnerConfig {
 	c.Auths[0].Realm = realm
 	_ = c.Validate()
 	return c
-}
-
-//nolint:unused
-func packConfig(c *stnrapiv2.StunnerConfig) *corev1.ConfigMap {
-	nsName := store.GetNameFromKey(c.Admin.Name)
-
-	sc, _ := json.Marshal(c)
-	s := string(sc)
-
-	immutable := true
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nsName.Name,
-			Namespace: nsName.Namespace,
-			Labels: map[string]string{
-				opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue,
-			},
-			Annotations: map[string]string{
-				opdefault.RelatedGatewayKey: "dummy",
-			},
-		},
-		Immutable: &immutable,
-		Data: map[string]string{
-			opdefault.DefaultStunnerdConfigfileName: s,
-		},
-	}
 }

@@ -68,10 +68,6 @@ const (
 	// to external clients.
 	DefaultServiceType = corev1.ServiceTypeLoadBalancer
 
-	// // GatewayManagedLabelValue indicates that the object's lifecycle is managed by
-	// // the gateway controller.
-	// GatewayManagedLabelValue = "gateway"
-
 	// DefaultConfigMapName names a ConfigMap by the operator to render the stunnerd
 	// config file.
 	DefaultConfigMapName = "stunnerd-config"
@@ -158,7 +154,7 @@ const (
 	// exposing the health-check port.
 	DisableHealthCheckExposeAnnotationValue = "true"
 
-	// DisableSessionAffiffinityAnnotationKey is a Gateway annotation to prevent STUNner from
+	// DisableSessionAffinityAnnotationKey is a Gateway annotation to prevent STUNner from
 	// applying the sessionAffinity=client setting in the LB service. Normally this setting
 	// improves stability by ensuring that TURN sessions are pinned to the right dataplane
 	// pod. However, certain ingress controllers (in particular, Oracle Kubernetes) reject UDP
@@ -167,11 +163,11 @@ const (
 	// Gateway will remove this setting from the LB Service created STUNner for the Gateway in
 	// order to improve compatibility with Kubernetes deployments that reject it. Default is to
 	// apply the session affinity setting.
-	DisableSessionAffiffinityAnnotationKey = "stunner.l7mp.io/disable-session-affinity"
+	DisableSessionAffinityAnnotationKey = "stunner.l7mp.io/disable-session-affinity"
 
-	// DisableSessionAffiffinityAnnotationValue is the value that can be used to remove
+	// DisableSessionAffinityAnnotationValue is the value that can be used to remove
 	// session-affinity settings from the LB service.
-	DisableSessionAffiffinityAnnotationValue = "true"
+	DisableSessionAffinityAnnotationValue = "true"
 
 	// EnableRelayAddressDiscoveryAnnotationKey is a Gateway annotation to allow STUNner to
 	// discover the public address of the node it is scheduled to run on. By default the relay

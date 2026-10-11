@@ -46,8 +46,8 @@ func clusterName(ro store.Route) string {
 	return store.GetObjectKey(ro) + "/" + proto
 }
 
-// renderCluster renders a stunnerd cluster config for a route, the same whatever servers the route
-// attaches to. The route kind determines the cluster protocol and the rendering strategy.
+// renderCluster renders a stunnerd cluster config for a route. The route kind determines the
+// cluster protocol and the rendering strategy.
 // Rendering a TCPRoute into a TCP cluster is a premium feature: here it fails non-critically, so
 // that the route is still accepted and the reason surfaces on its ResolvedRefs condition.
 func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
@@ -76,16 +76,18 @@ func (r *defaultClusterRenderer) renderTunnelCluster(ro *stnrgwv1a1.TURNRoute) (
 		return nil, nil, err
 	}
 
-	cluster := &stnrapiv2.ClusterConfig{
-		Name:     clusterName(ro),
-		Protocol: stnrapiv2.ProtocolUDP.String(),
-		// $STUNNER_ADDR, the relay address, filled in from the pod environment
-		Addrs: []string{opdefault.DefaultSTUNnerAddressEnvVarName},
-	}
+	var cluster *stnrapiv2.ClusterConfig
 	var routeError error
 	if len(ro.Spec.Rules) > 0 {
 		if cluster, _, routeError = r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP); cluster == nil {
 			return nil, nil, routeError
+		}
+	} else {
+		cluster = &stnrapiv2.ClusterConfig{
+			Name:     clusterName(ro),
+			Protocol: stnrapiv2.ProtocolUDP.String(),
+			// $STUNNER_ADDR, the relay address, filled in from the pod environment
+			Addrs: []string{opdefault.DefaultSTUNnerAddressEnvVarName},
 		}
 	}
 	cluster.Tunnel = &stnrapiv2.TunnelConfig{URL: ro.Spec.Tunnel.URI, Insecure: ro.Spec.Tunnel.Insecure,
@@ -123,8 +125,8 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 	}
 
 	if len(rs) > 1 {
-		r.log.V(1).Info("Cluster rendering error: too many rules (%d) in route %q, "+
-			"considering only the first one", len(rs), store.GetObjectKey(ro))
+		r.log.V(1).Info("Cluster rendering error: too many rules in route, considering only "+
+			"the first one", "route", store.GetObjectKey(ro), "rules", len(rs))
 	}
 
 	eps := []string{}
@@ -132,10 +134,20 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 
 	// the rest of the errors are not critical, but we still need to keep track of each in
 	// order to set the ResolvedRefs Route status: last error is reported only
+	// the filter ports of a port range; the full range restricts nothing
+	filterPorts := func(port, endPort int) []stnrapiv2.FilterPort {
+		if port == stnrapiv2.DefaultMinRelayPort && endPort == stnrapiv2.DefaultMaxRelayPort {
+			return nil
+		}
+		p := stnrapiv2.FilterPort{Port: port}
+		if endPort != port {
+			p.EndPort = endPort
+		}
+		return []stnrapiv2.FilterPort{p}
+	}
+
 	var routeError error
 	for _, b := range rs[0].BackendRefs {
-		b := b
-
 		if b.Group != nil && string(*b.Group) != corev1.GroupName &&
 			string(*b.Group) != stnrgwv1.GroupVersion.Group {
 			routeError = NewNonCriticalError(InvalidBackendGroup)
@@ -164,12 +176,12 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 		clusterIPs := []string{} // admitted as peers but no endpoint: kube-proxy balances them
 		switch ref := &b; {
 		case store.IsReferenceService(ref):
-			epAddrs, errEDS := getEndpointAddrs(n, false)
-			if errEDS != nil {
-				r.log.V(1).Info("Cluster rendering error: could not render Endpoints for Service backend",
-					"route", store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
-					"error", errEDS)
-				routeError = errEDS
+			epAddrs, errEps := getEndpointAddrs(n, false)
+			if errEps != nil {
+				r.log.V(1).Info("Cluster rendering error: could not find the EndpointSlices of "+
+					"Service backend", "route", store.GetObjectKey(ro), "backendRef",
+					store.DumpBackendRef(ref), "error", errEps)
+				routeError = errEps
 			} else {
 				addrs = append(addrs, epAddrs...)
 			}
@@ -178,15 +190,15 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			var errCluster error
 			if config.EnableRelayToClusterIP {
 				if clusterIPs, errCluster = getClusterIP(n); errCluster != nil {
-					r.log.V(1).Info("Cluster rendering error: could not render the ClusterIP route "+
-						"for Service backend", "route",
+					r.log.V(1).Info("Cluster rendering error: could not find the ClusterIP "+
+						"of Service backend", "route",
 						store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
 						"error", errCluster)
 					routeError = errCluster
 				}
 			}
 
-			if errCluster != nil && errEDS != nil {
+			if errCluster != nil && errEps != nil {
 				// both attempts failed: skip backend
 				r.log.V(1).Info("Cluster rendering: skipping Service backend", "route",
 					store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(ref),
@@ -216,20 +228,8 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			continue
 		}
 
-		// the filter ports of a port range; the full range restricts nothing
-		filterPorts := func(port, endPort int) []stnrapiv2.FilterPort {
-			if port == stnrapiv2.DefaultMinRelayPort && endPort == stnrapiv2.DefaultMaxRelayPort {
-				return nil
-			}
-			p := stnrapiv2.FilterPort{Port: port}
-			if endPort != port {
-				p.EndPort = endPort
-			}
-			return []stnrapiv2.FilterPort{p}
-		}
-
 		// the port range of the backend: only a backend setting endPort restricts the ports, a
-		// bare port is the mandatory port of a Gateway API backend reference (1 in old manifests)
+		// bare port is the mandatory port of a Gateway API backend reference
 		var backendPorts []stnrapiv2.FilterPort
 		if b.Port != nil && b.EndPort != nil && *b.Port > 0 && *b.Port <= *b.EndPort {
 			backendPorts = filterPorts(int(*b.Port), int(*b.EndPort))
@@ -282,7 +282,7 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			})
 		}
 
-		r.log.V(2).Info("Cluster rendering: adding Endpoints for backend", "route",
+		r.log.V(2).Info("Cluster rendering: adding backend addresses", "route",
 			store.GetObjectKey(ro), "backendRef", store.DumpBackendRef(&b), "addresses", addrs)
 	}
 

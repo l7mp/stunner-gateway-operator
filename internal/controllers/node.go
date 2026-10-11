@@ -23,10 +23,6 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
 
-// NodeListSize defines how many nodes we visit in one go to find one with a valid external
-// address.
-const NodeListSize = 10
-
 type nodeReconciler struct {
 	client.Client
 	eventCh chan<- event.Event

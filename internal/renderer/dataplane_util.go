@@ -23,7 +23,7 @@ import (
 
 var _ resourceGenerator = &dataplaneGenerator{}
 
-// The dataplane generator creates a new deployment for a managed Gateway. The later the
+// The dataplane generator renders the dataplane Deployment of a managed Gateway. The later the
 // label/annotation in the below orders the higher prio on conflict.
 //
 // Deployment-level labels:
@@ -116,7 +116,7 @@ func (r *dataplaneGenerator) generate(c *RenderContext) (client.Object, error) {
 		return nil, NewCriticalError(RenderingError)
 	}
 
-	c.log.V(2).Info("Fnished creating dataplane",
+	c.log.V(2).Info("Finished creating dataplane",
 		"gateway-class", store.GetObjectKey(c.gc),
 		"gateway-config", store.GetObjectKey(c.gwConf),
 		"gateway", store.GetObjectKey(gw),
@@ -148,8 +148,6 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			Command: []string{"stunnerd"},
 			// Enable config-discovery
 			Args: []string{"-w"},
-			// Disable config-discovery
-			// Args:    []string{"-w", "-c", "/etc/stunnerd/stunnerd.conf"},
 			Env: []corev1.EnvVar{{
 				Name:      "STUNNER_ADDR", // default transport relay address
 				ValueFrom: &podAddrEnvVarSource,

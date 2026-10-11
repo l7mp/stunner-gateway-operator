@@ -10,8 +10,6 @@ import (
 )
 
 func (r *renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayConfig, error) {
-	// r.log.V(4).Info("getGatewayConfig4Class", "gateway-class", store.GetObjectKey(c.gc))
-
 	// ref already checked
 	ref := c.gc.Spec.ParametersRef
 
@@ -26,7 +24,7 @@ func (r *renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayCo
 			gwConfName.String())
 	}
 
-	r.log.V(4).Info("Finished searching gateways for gateway-class", "gateway-class", store.GetObjectKey(c.gc),
+	r.log.V(4).Info("Found gateway-config for gateway-class", "gateway-class", store.GetObjectKey(c.gc),
 		"result", store.GetObjectKey(gwConf))
 
 	return gwConf, nil

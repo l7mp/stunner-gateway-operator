@@ -13,9 +13,9 @@ import (
 	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
-// RouteLens is the lens for every route kind (STUNner-native and Gateway API UDPRoute and
-// TCPRoute): routes are all status-only from the operator's viewpoint and their status is exactly
-// a gwapiv1.RouteStatus, so one lens serves all four kinds.
+// RouteLens is the lens for every route kind (STUNner UDPRoute, TCPRoute and TURNRoute, Gateway API
+// UDPRoute and TCPRoute): routes are all status-only from the operator's viewpoint and their status
+// is exactly a gwapiv1.RouteStatus, so one lens serves all kinds.
 type RouteLens struct {
 	client.Object
 }

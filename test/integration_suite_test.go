@@ -83,7 +83,6 @@ var (
 	testUDPRouteV1A2  *gwapiv1a2.UDPRoute
 	testUDPRoute      *stnrgwv1.UDPRoute
 	testTCPRoute      *stnrgwv1.TCPRoute
-	testTCPRouteV1    *gwapiv1.TCPRoute
 	testTURNRoute     *stnrgwv1a1.TURNRoute
 	testTunnelSecret  *corev1.Secret
 	testSvc           *corev1.Service
@@ -236,7 +235,6 @@ func InitResources() {
 	testDataplane = testutils.TestDataplane.DeepCopy()
 	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
 	testTCPRoute = testutils.TestTCPRoute.DeepCopy()
-	testTCPRouteV1 = testutils.TestTCPRouteV1.DeepCopy()
 	testTURNRoute = testutils.TestTURNRoute.DeepCopy()
 	testTunnelSecret = testutils.TestTunnelSecret.DeepCopy()
 	testDaemonSet = testutils.TestDaemonSet.DeepCopy()

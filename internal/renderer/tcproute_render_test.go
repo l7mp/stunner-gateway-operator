@@ -105,8 +105,7 @@ func TestRenderTCPRoute(t *testing.T) {
 				// the masked gwapiv1 route is skipped by allRoutes
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
-				assert.True(t, isRouteV1(rs[0].(*stnrgwv1.TCPRoute)) ||
-					store.TCPRoutes.Get(store.GetNamespacedName(rs[0])) == rs[0],
+				assert.Same(t, store.TCPRoutes.GetObject(store.GetNamespacedName(rs[0])), rs[0],
 					"route is the stunner-native one")
 
 				masked := store.TCPRoutesGwAPI.GetAll()[0]

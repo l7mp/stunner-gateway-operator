@@ -661,8 +661,8 @@ func testManagedMode() {
 			ctrl.Log.Info("re-loading gateway with annotation: stunner.l7mp.io/disable-session-affinity=true")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				current.SetAnnotations(map[string]string{
-					opdefault.DisableSessionAffiffinityAnnotationKey: // newline
-					opdefault.DisableSessionAffiffinityAnnotationValue,
+					opdefault.DisableSessionAffinityAnnotationKey: // newline
+					opdefault.DisableSessionAffinityAnnotationValue,
 				})
 			})
 
@@ -984,7 +984,7 @@ func testManagedMode() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("should use also use a specific target port when requested in a Gateway annotation", func() {
+		It("should also use a specific target port when requested in a Gateway annotation", func() {
 			// set target port
 			targetPort := 12345
 			ann := fmt.Sprintf("{\"gateway-1-listener-udp\": %d, \"random-listener\": 321}", targetPort)
@@ -1421,7 +1421,7 @@ func testManagedMode() {
 
 				current.Spec.HostNetwork = false
 				current.Spec.DisableHealthCheck = true
-				current.Spec.EnableMetricsEnpoint = true
+				current.Spec.EnableMetricsEndpoint = true
 
 				current.Spec.Labels = map[string]string{"dummy-label-key": "dummy-value",
 					"app": "conflicted-value"}
@@ -4076,8 +4076,6 @@ func testManagedMode() {
 
 			ctrl.Log.Info("deleting Service")
 			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
-
-			// ctrl.Log.Info("deleting Endpoints")
 
 			ctrl.Log.Info("deleting Dataplane")
 			Expect(k8sClient.Delete(ctx, testDataplane)).Should(Succeed())

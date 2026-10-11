@@ -32,7 +32,7 @@ func newListenerRenderer(log logr.Logger) listenerRenderer {
 // after the listener.
 func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Listener, rs []store.Route, ap gwAddrPort, targetPorts map[string]int) (*stnrapiv2.ListenerConfig, error) {
 	if c.gws.Len() != 1 {
-		return nil, fmt.Errorf("Internal error: Invalid call to listenerRender with %d gws", c.gws.Len())
+		return nil, fmt.Errorf("Internal error: Invalid call to renderListener with %d gws", c.gws.Len())
 	}
 
 	gw := c.gws.GetFirst()
@@ -125,7 +125,6 @@ func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 	}
 
 	for _, ref := range l.TLS.CertificateRefs {
-		ref := ref
 
 		n, err := getSecretNameFromRef(&ref, gw.GetNamespace())
 		if err != nil {

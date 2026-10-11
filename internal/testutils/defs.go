@@ -49,7 +49,6 @@ var (
 		Requests: TestResourceRequest,
 	}
 	TestPort        = gwapiv1.PortNumber(1)
-	TestEndPort     = gwapiv1.PortNumber(2)
 	TestPortUDPName = "udp-port"
 	TestProtocolUDP = corev1.ProtocolUDP
 	TestPortTCPName = "tcp-port"
@@ -140,7 +139,6 @@ var TestUDPRoute = stnrgwv1.UDPRoute{
 				BackendObjectReference: stnrgwv1.BackendObjectReference{
 					Name: gwapiv1.ObjectName("testservice-ok"),
 					// Port:    &TestPort,
-					// EndPort: &TestEndPort,
 				},
 			}},
 		}},
@@ -187,13 +185,11 @@ var TestSvc = corev1.Service{
 				Name:     "udp-ok",
 				Protocol: corev1.ProtocolUDP,
 				Port:     1,
-				// NodePort: 30001,
 			},
 			{
 				Name:     "tcp-ok",
 				Protocol: corev1.ProtocolTCP,
 				Port:     2,
-				// NodePort: 30002,
 			},
 		},
 	},

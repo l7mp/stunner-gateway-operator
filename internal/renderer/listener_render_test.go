@@ -65,8 +65,6 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.Equal(t, "1.2.3.4", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 1234, lc.PublicPort, "public-port")
 				assert.Equal(t, []string{lc.Name}, lc.Servers, "servers")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
 			},
 		},
 		{
@@ -135,53 +133,6 @@ func TestRenderListenerRender(t *testing.T) {
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tcp", lc.Name, "name")
 				assert.Equal(t, "TCP", lc.Protocol, "proto")
-				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
-				assert.Equal(t, 4321, lc.PublicPort, "public-port")
-				// assert.Equal(t, int(testutils.TestMinPort), lc.MinRelayPort, "min-port")
-				// assert.Equal(t, int(testutils.TestMaxPort), lc.MaxRelayPort, "max-port")
-			},
-		},
-		{
-			name: "listener defaults ok",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				conf := testutils.TestGwConfig.DeepCopy()
-				// conf.Spec.MinPort = nil
-				// conf.Spec.MaxPort = nil
-				c.cfs = []stnrgwv1.GatewayConfig{*conf}
-			},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: log}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				c.gws = store.NewGatewayStore()
-				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
-
-				ls := gw.Spec.Listeners
-				l := ls[0]
-
-				rs := r.getRoutes4Listener(gw, &l)
-				assert.Len(t, rs, 1, "route found")
-
-				addr := gwAddrPort{
-					addr: "5.6.7.8",
-					port: 4321,
-				}
-
-				lc, err := r.renderListener(c, &l, rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-udp", lc.Name, "name")
-				assert.Equal(t, "UDP", lc.Protocol, "proto")
 				assert.Equal(t, "5.6.7.8", lc.PublicAddr, "public-ip")
 				assert.Equal(t, 4321, lc.PublicPort, "public-port")
 			},
