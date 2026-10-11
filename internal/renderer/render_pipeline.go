@@ -367,6 +367,10 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		if renderRoute && rc != nil {
 			conf.Clusters = append(conf.Clusters, *rc)
 			peers[rc.Name] = rcPeers
+			// the authentication policy of the tunnel of a TURNRoute
+			if auth, _ := renderTunnelAuth(ro); auth != nil {
+				conf.Auths = append(conf.Auths, *auth)
+			}
 		}
 
 		// set status: we can do this only once we know whether (1) the parent accepted the

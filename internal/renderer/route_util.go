@@ -13,6 +13,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -46,6 +47,10 @@ func (r *renderer) allRoutes() []store.Route {
 			continue
 		}
 		ret = append(ret, tv1)
+	}
+
+	for _, ro := range store.TURNRoutes.GetAll() {
+		ret = append(ret, ro)
 	}
 
 	return ret
@@ -211,6 +216,8 @@ func routeKind(ro store.Route) gwapiv1.Kind {
 		return gwapiv1.Kind("UDPRoute")
 	case *stnrgwv1.TCPRoute:
 		return gwapiv1.Kind("TCPRoute")
+	case *stnrgwv1a1.TURNRoute:
+		return gwapiv1.Kind("TURNRoute")
 	default:
 		return gwapiv1.Kind("")
 	}
@@ -382,6 +389,8 @@ func queueRouteStatusUpdate(c *RenderContext, ro store.Route) {
 		default:
 			c.update.UpsertQueue.TCPRoutesGwAPI.Upsert(statusTargetV1TCPRoute(ro))
 		}
+	case *stnrgwv1a1.TURNRoute:
+		c.update.UpsertQueue.TURNRoutes.Upsert(ro.DeepCopy())
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var (
@@ -305,6 +306,43 @@ var TestAuthSecret = corev1.Secret{
 		"username": []byte("ext-testuser"),
 		"password": []byte("ext-testpass"),
 		"secret":   []byte("ext-secret"),
+	},
+}
+
+// TURNRoute
+var TestTURNRoute = stnrgwv1a1.TURNRoute{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "turnroute-ok",
+		Namespace: "testnamespace",
+	},
+	Spec: stnrgwv1a1.TURNRouteSpec{
+		CommonRouteSpec: gwapiv1.CommonRouteSpec{
+			ParentRefs: []gwapiv1.ParentReference{{
+				Name:        "gateway-1",
+				SectionName: &TestSectionName,
+			}},
+		},
+		Tunnel: stnrgwv1a1.TURNTunnel{
+			URI:      "turns:turn.example.com:443?transport=tcp",
+			AuthRef:  &gwapiv1.SecretObjectReference{Name: "testtunnelsecret-ok"},
+			Insecure: true,
+			SNI:      "sni.example.com",
+		},
+	},
+}
+
+// Tunnel auth Secret of the TURNRoute
+var TestTunnelSecret = corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "testnamespace",
+		Name:      "testtunnelsecret-ok",
+	},
+	Type: corev1.SecretTypeOpaque,
+	Data: map[string][]byte{
+		"type":     []byte("static"),
+		"realm":    []byte("upstream.example.com"),
+		"username": []byte("tunnel-user"),
+		"password": []byte("tunnel-pass"),
 	},
 }
 

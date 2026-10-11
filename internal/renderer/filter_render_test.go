@@ -43,7 +43,7 @@ func TestRenderPermissionFilters(t *testing.T) {
 		Clusters: []string{"ns/r2/udp", "ns/missing/udp", "ns/r1/udp"}}}
 	peers := map[string][]stnrapiv2.FilterRule{
 		"ns/r1/udp": {allow("1.2.3.4/32")},
-		// the same block on two port ranges admits the block once, on any port
+		// the same block on two port ranges admits the block twice, on any port
 		"ns/r2/udp": {
 			allow("10.0.0.0/8", stnrapiv2.FilterPort{Port: 100}),
 			allow("10.0.0.0/8", stnrapiv2.FilterPort{Port: 200, EndPort: 300}),
@@ -53,7 +53,7 @@ func TestRenderPermissionFilters(t *testing.T) {
 	// a filter per rendered cluster, in the order of the clusters, and no default deny
 	fs := r.renderPermissionFilters(server, peers)
 	assert.Equal(t, []stnrapiv2.FilterConfig{
-		{Name: "ns/gw/l/ns/r2/udp", Rules: []stnrapiv2.FilterRule{allow("10.0.0.0/8")}},
+		{Name: "ns/gw/l/ns/r2/udp", Rules: []stnrapiv2.FilterRule{allow("10.0.0.0/8"), allow("10.0.0.0/8")}},
 		{Name: "ns/gw/l/ns/r1/udp", Rules: []stnrapiv2.FilterRule{allow("1.2.3.4/32")}},
 	}, fs, "permission filters")
 

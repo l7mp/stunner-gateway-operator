@@ -25,6 +25,7 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // var testerLogLevel = zapcore.Level(-10)
@@ -51,6 +52,8 @@ type renderTestConfig struct {
 	rsGwAPI  []stnrgwv1.UDPRoute // internal format is always ours, not v1a2
 	trs      []stnrgwv1.TCPRoute
 	trsGwAPI []stnrgwv1.TCPRoute // internal format is always ours, not gwapiv1
+	turnrs   []stnrgwv1a1.TURNRoute
+	tscrts   []corev1.Secret // tunnel auth Secrets
 	svcs     []corev1.Service
 	nodes    []corev1.Node
 	esls     []discoveryv1.EndpointSlice
@@ -139,6 +142,16 @@ func renderTester(t *testing.T, testConf []renderTestConfig) {
 			store.TLSSecrets.Flush()
 			for i := range c.scrts {
 				store.TLSSecrets.Upsert(&c.scrts[i])
+			}
+
+			store.TURNRoutes.Flush()
+			for i := range c.turnrs {
+				store.TURNRoutes.Upsert(&c.turnrs[i])
+			}
+
+			store.TunnelAuthSecrets.Flush()
+			for i := range c.tscrts {
+				store.TunnelAuthSecrets.Upsert(&c.tscrts[i])
 			}
 
 			store.AuthSecrets.Flush()

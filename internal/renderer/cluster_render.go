@@ -17,6 +17,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var _ clusterRenderer = &defaultClusterRenderer{}
@@ -39,6 +40,8 @@ func clusterName(ro store.Route) string {
 		proto = "udp"
 	case *stnrgwv1.TCPRoute:
 		proto = "tcp"
+	case *stnrgwv1a1.TURNRoute:
+		proto = "turn"
 	}
 	return store.GetObjectKey(ro) + "/" + proto
 }
@@ -53,9 +56,53 @@ func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.Clust
 		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP)
 	case *stnrgwv1.TCPRoute:
 		return nil, nil, NewNonCriticalError(FeatureNotLicensed)
+	case *stnrgwv1a1.TURNRoute:
+		return r.renderTunnelCluster(ro)
 	default:
 		return nil, nil, NewCriticalError(InternalError)
 	}
+}
+
+// renderTunnelCluster renders the cluster of a TURNRoute: the cluster of its backends (see
+// renderServiceCluster, no backends is no endpoint), tunnelled through the upstream TURN server
+// of the route, presenting the authentication policy of the route if it has one. The tunnel
+// admits every peer: the filter rules of the route are a single ALLOW of every address.
+func (r *defaultClusterRenderer) renderTunnelCluster(ro *stnrgwv1a1.TURNRoute) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
+	if u, err := stnrapiv2.ParseURI(ro.Spec.Tunnel.URI); err != nil || !u.Protocol.IsTURN() {
+		return nil, nil, NewNonCriticalError(InvalidTunnelURI)
+	}
+	auth, err := renderTunnelAuth(ro)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cluster := &stnrapiv2.ClusterConfig{
+		Name:     clusterName(ro),
+		Protocol: stnrapiv2.ProtocolUDP.String(),
+		// $STUNNER_ADDR, the relay address, filled in from the pod environment
+		Addrs: []string{opdefault.DefaultSTUNnerAddressEnvVarName},
+	}
+	var routeError error
+	if len(ro.Spec.Rules) > 0 {
+		if cluster, _, routeError = r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP); cluster == nil {
+			return nil, nil, routeError
+		}
+	}
+	cluster.Tunnel = &stnrapiv2.TunnelConfig{URL: ro.Spec.Tunnel.URI, Insecure: ro.Spec.Tunnel.Insecure,
+		SNI: ro.Spec.Tunnel.SNI}
+	if auth != nil {
+		cluster.Tunnel.Auth = auth.Name
+	}
+
+	// validate so that defaults get filled in
+	if err := cluster.Validate(); err != nil {
+		return nil, nil, NewNonCriticalError(InvalidTunnelURI)
+	}
+
+	r.log.V(2).Info("Finished rendering tunnel cluster config", "route", store.GetObjectKey(ro),
+		"result", cluster.String())
+
+	return cluster, []stnrapiv2.FilterRule{{Action: stnrapiv2.FilterActionAllow.String()}}, routeError
 }
 
 // renderServiceCluster renders a cluster config from a set of route rules whose backend

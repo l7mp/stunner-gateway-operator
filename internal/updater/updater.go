@@ -165,6 +165,12 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 		}
 	}
 
+	for _, o := range q.TURNRoutes.Objects() {
+		if err := u.updateStatusObject(ctx, o, gen); err != nil {
+			u.log.Error(err, "Cannot update TURNRoute status", "route", store.DumpObject(o))
+		}
+	}
+
 	for _, o := range q.Services.Objects() {
 		if op, err := u.upsertResourceObject(ctx, o, gen); err != nil {
 			u.log.Error(err, "Cannot update Service", "operation", op,
@@ -242,6 +248,14 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 	for _, ro := range q.TCPRoutesGwAPI.Objects() {
 		if err := u.deleteObject(ctx, ro, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("Cannot delete TCPRouteV1", "route",
+				store.DumpObject(ro), "error", err)
+			continue
+		}
+	}
+
+	for _, ro := range q.TURNRoutes.Objects() {
+		if err := u.deleteObject(ctx, ro, gen); err != nil && !apierrors.IsNotFound(err) {
+			u.log.V(1).Info("Cannot delete TURNRoute", "route",
 				store.DumpObject(ro), "error", err)
 			continue
 		}

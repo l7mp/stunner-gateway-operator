@@ -30,6 +30,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/app"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
@@ -603,6 +604,10 @@ func mustAddScheme(b *testing.B, scheme *runtime.Scheme) {
 
 	if err := stnrgwv1.AddToScheme(scheme); err != nil { //nolint:staticcheck
 		b.Fatalf("failed to add stunner gateway scheme: %v", err)
+	}
+
+	if err := stnrgwv1a1.AddToScheme(scheme); err != nil { //nolint:staticcheck
+		b.Fatalf("failed to add stunner gateway v1alpha1 scheme: %v", err)
 	}
 
 	if err := appv1.AddToScheme(scheme); err != nil { //nolint:staticcheck

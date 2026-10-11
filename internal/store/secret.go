@@ -59,6 +59,9 @@ func (s *TLSSecretStore) GetObject(nsName types.NamespacedName) *corev1.Secret {
 // Authentication secrets for GatewayConfigs
 var AuthSecrets = NewAuthSecretStore()
 
+// TunnelAuthSecrets holds the Secrets the tunnels of TURNRoutes authenticate with.
+var TunnelAuthSecrets = NewAuthSecretStore()
+
 type AuthSecretStore struct {
 	Store
 }

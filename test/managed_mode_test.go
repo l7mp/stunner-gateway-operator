@@ -4109,4 +4109,5 @@ func testManagedMode() {
 	})
 
 	testTCPRouteManaged()
+	testTURNRouteManaged()
 }

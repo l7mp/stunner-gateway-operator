@@ -10,6 +10,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // RouteLens is the lens for every route kind (STUNner-native and Gateway API UDPRoute and
@@ -38,6 +39,8 @@ func routeStatus(o client.Object) *gwapiv1.RouteStatus {
 		return &ro.Status.RouteStatus
 	case *gwapiv1a2.TCPRoute:
 		return &ro.Status.RouteStatus
+	case *stnrgwv1a1.TURNRoute:
+		return &ro.Status
 	}
 	return nil
 }

@@ -24,5 +24,5 @@ package controllers
 // +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;udproutes/status;tcproutes/status,verbs=update;patch
 
 // stunner.l7mp.io
-// +kubebuilder:rbac:groups="stunner.l7mp.io",resources=gatewayconfigs;staticservices;dataplanes;udproutes;tcproutes,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups="stunner.l7mp.io",resources=staticservices/finalizers;udproutes/finalizers;udproutes/status;tcproutes/finalizers;tcproutes/status,verbs=update;patch
+// +kubebuilder:rbac:groups="stunner.l7mp.io",resources=gatewayconfigs;staticservices;dataplanes;udproutes;tcproutes;turnroutes,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups="stunner.l7mp.io",resources=staticservices/finalizers;udproutes/finalizers;udproutes/status;tcproutes/finalizers;tcproutes/status;turnroutes/finalizers;turnroutes/status,verbs=update;patch

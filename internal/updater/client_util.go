@@ -16,6 +16,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/lens"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -162,6 +163,8 @@ func emptyObjectFor(o client.Object) (client.Object, error) {
 		return &gwapiv1.TCPRoute{ObjectMeta: meta}, nil
 	case *gwapiv1a2.TCPRoute:
 		return &gwapiv1a2.TCPRoute{ObjectMeta: meta}, nil
+	case *stnrgwv1a1.TURNRoute:
+		return &stnrgwv1a1.TURNRoute{ObjectMeta: meta}, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type %T", o)
 	}

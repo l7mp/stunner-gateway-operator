@@ -29,14 +29,14 @@ func (r *defaultFilterRenderer) renderClusterFilter(cluster *stnrapiv2.ClusterCo
 
 // renderPermissionFilters renders the permission filters of a TURN server: one per rendered cluster
 // of the server, in the order of the clusters, named "<server>/<cluster>" and admitting the peer
-// addresses of the cluster on any port. A permission no rule allows is denied. Other servers have
-// no permission filters.
+// addresses of the cluster on any port (every address for the cluster of a TURNRoute). A
+// permission no rule allows is denied. Other servers have no permission filters.
 func (r *defaultFilterRenderer) renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig {
 	filters := []stnrapiv2.FilterConfig{}
 	if server.Type != stnrapiv2.ServerTypeTURN.String() {
 		return filters
 	}
-	portFiltered := false
+	portFiltered, tunnel := false, false
 	for _, cluster := range server.Clusters {
 		rules, ok := peers[cluster]
 		if !ok {
@@ -45,12 +45,10 @@ func (r *defaultFilterRenderer) renderPermissionFilters(server *stnrapiv2.Server
 		f := stnrapiv2.FilterConfig{Name: server.Name + "/" + cluster, Rules: []stnrapiv2.FilterRule{}}
 		for _, rule := range rules {
 			portFiltered = portFiltered || len(rule.Ports) > 0
+			tunnel = tunnel || rule.IPBlock == nil
+			// a permission is granted by address only
 			rule.Ports = nil
-			if !slices.ContainsFunc(f.Rules, func(fr stnrapiv2.FilterRule) bool {
-				return fr.IPBlock.CIDR == rule.IPBlock.CIDR
-			}) {
-				f.Rules = append(f.Rules, rule)
-			}
+			f.Rules = append(f.Rules, rule)
 		}
 		filters = append(filters, f)
 	}
@@ -60,6 +58,11 @@ func (r *defaultFilterRenderer) renderPermissionFilters(server *stnrapiv2.Server
 	if portFiltered && len(server.Clusters) > 1 {
 		r.log.Info("Warning: a route of a listener with multiple routes restricts the peer "+
 			"ports, the first route's port filter applies to every peer of the listener",
+			"listener", server.Name, "routes", server.Clusters)
+	}
+	if tunnel && len(server.Clusters) > 1 {
+		r.log.Info("Warning: a TURNRoute shares a listener with other routes, the first route "+
+			"makes the relay sockets of every client of the listener",
 			"listener", server.Name, "routes", server.Clusters)
 	}
 

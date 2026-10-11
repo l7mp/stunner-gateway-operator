@@ -14,6 +14,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 
@@ -484,4 +485,24 @@ func TestRenderGatewayUtil(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestListenerSupportedKinds pins that a listener supports the optional TURNRoute only when the
+// cluster serves its CRD.
+func TestListenerSupportedKinds(t *testing.T) {
+	defer func(served bool) { config.TURNRouteServed = served }(config.TURNRouteServed)
+	kinds := func() []string {
+		gw := testutils.TestGw.DeepCopy()
+		initGatewayStatus(gw, nil)
+		ret := []string{}
+		for _, k := range gw.Status.Listeners[0].SupportedKinds {
+			ret = append(ret, string(k.Kind))
+		}
+		return ret
+	}
+
+	config.TURNRouteServed = false
+	assert.NotContains(t, kinds(), "TURNRoute", "CRD not served")
+	config.TURNRouteServed = true
+	assert.Contains(t, kinds(), "TURNRoute", "CRD served")
 }

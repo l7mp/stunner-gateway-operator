@@ -32,6 +32,7 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 const (
@@ -43,6 +44,9 @@ const (
 	serviceTCPRouteIndexGwAPI       = "serviceTCPRouteIndexGwAPI"
 	staticServiceTCPRouteIndex      = "staticServiceTCPRouteIndex"
 	staticServiceTCPRouteIndexGwAPI = "staticServiceTCPRouteIndexGwAPI"
+	serviceTURNRouteIndex           = "serviceTURNRouteIndex"
+	staticServiceTURNRouteIndex     = "staticServiceTURNRouteIndex"
+	secretTURNRouteIndex            = "secretTURNRouteIndex"
 )
 
 type routeReconciler struct {
@@ -52,12 +56,14 @@ type routeReconciler struct {
 	// route resources are watched (empty if the CRD is not installed): the graduated v1
 	// version is preferred over the deprecated v1alpha2.
 	udpRouteVersion, tcpRouteVersion string
-	log                              logr.Logger
+	// turnRouteServed is true if the cluster serves the TURNRoute CRD.
+	turnRouteServed bool
+	log             logr.Logger
 }
 
 // routeBackends accumulates the backend objects referenced by the reconciled routes.
 type routeBackends struct {
-	svcList, ssvcList, endpointList, namespaceList []client.Object
+	svcList, ssvcList, endpointList, namespaceList, secretList []client.Object
 }
 
 func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Logger) (Controller, error) {
@@ -126,6 +132,53 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 		r.log.Info("The TCPRoute CRD is not served by the cluster: TCPRoutes will be " +
 			"ignored entirely. Apply the stunner.l7mp.io CRDs from the chart to enable " +
 			"TCP routing; note that helm upgrade does not update CRDs")
+	}
+
+	// watch TURNRoute objects, and the Secrets they reference, when the cluster serves the CRD
+	r.turnRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1a1.TURNRoute{}, "turnroutes")
+	if err != nil {
+		return nil, err
+	}
+	config.TURNRouteServed = r.turnRouteServed
+
+	if r.turnRouteServed {
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &stnrgwv1a1.TURNRoute{},
+				&handler.TypedEnqueueRequestForObject[*stnrgwv1a1.TURNRoute]{},
+				predicate.TypedGenerationChangedPredicate[*stnrgwv1a1.TURNRoute]{}),
+		); err != nil {
+			return nil, err
+		}
+		r.log.Info("Watching TURNRoute objects")
+
+		// index TURNRoute objects as per the referenced Services, StaticServices and Secrets
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+			serviceTURNRouteIndex, serviceRouteIndexFunc); err != nil {
+			return nil, err
+		}
+
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+			staticServiceTURNRouteIndex, staticServiceRouteIndexFunc); err != nil {
+			return nil, err
+		}
+
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+			secretTURNRouteIndex, secretTURNRouteIndexFunc); err != nil {
+			return nil, err
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &corev1.Secret{},
+				&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
+				predicate.NewTypedPredicateFuncs[*corev1.Secret](r.validateSecretForReconcile)),
+		); err != nil {
+			return nil, err
+		}
+		r.log.Info("Watching Secret objects referenced by TURNRoutes")
+	} else {
+		r.log.Info("The TURNRoute CRD is not served by the cluster: TURNRoutes will be " +
+			"ignored entirely. Apply the stunner.l7mp.io CRDs from the chart to enable " +
+			"TURN tunnels; note that helm upgrade does not update CRDs")
 	}
 
 	// watch the official Gateway API UDPRoute objects at the served version (only when the
@@ -290,6 +343,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	udpRouteListGwAPI := []client.Object{}
 	tcpRouteList := []client.Object{}
 	tcpRouteListGwAPI := []client.Object{}
+	turnRouteList := []client.Object{}
 	backends := routeBackends{}
 
 	// find all related-services that we use as LoadBalancers for Gateways (i.e., have label
@@ -395,6 +449,31 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		}
 	}
 
+	// find all TURNRoutes and the Secrets their tunnels authenticate with
+	if r.turnRouteServed {
+		turnRoutes := &stnrgwv1a1.TURNRouteList{}
+		if err := r.List(ctx, turnRoutes); err != nil {
+			r.log.Info("No TURNRoutes found")
+		} else {
+			for i := range turnRoutes.Items {
+				ro := &turnRoutes.Items[i]
+				r.log.V(1).Info("Processing TURNRoute", "name", store.GetObjectKey(ro))
+
+				turnRouteList = append(turnRouteList, ro)
+				r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
+				if n, ok := tunnelAuthSecretName(ro); ok {
+					secret := &corev1.Secret{}
+					if err := r.Get(ctx, n, secret); err != nil {
+						r.log.Info("No Secret found for TURNRoute tunnel auth", "route",
+							store.GetObjectKey(ro), "secret", n.String(), "error", err.Error())
+					} else {
+						backends.secretList = append(backends.secretList, secret)
+					}
+				}
+			}
+		}
+	}
+
 	store.UDPRoutes.Reset(udpRouteList)
 	r.log.V(2).Info("Reset UDPRoute store", "udproutes", store.UDPRoutes.String())
 
@@ -406,6 +485,12 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 
 	store.TCPRoutesGwAPI.Reset(tcpRouteListGwAPI)
 	r.log.V(2).Info("Reset Gateway API TCPRoute store", "tcproutes", store.TCPRoutesGwAPI.String())
+
+	store.TURNRoutes.Reset(turnRouteList)
+	r.log.V(2).Info("Reset TURNRoute store", "turnroutes", store.TURNRoutes.String())
+
+	store.TunnelAuthSecrets.Reset(backends.secretList)
+	r.log.V(2).Info("Reset tunnel auth Secret store", "secrets", store.TunnelAuthSecrets.String())
 
 	store.Namespaces.Reset(backends.namespaceList)
 	r.log.V(2).Info("Reset Namespace store", "namespaces", store.Namespaces.String())
@@ -470,18 +555,44 @@ func (r *routeReconciler) collectBackends(ctx context.Context, ro client.Object,
 
 func (r *routeReconciler) validateBackendServiceForReconcile(svc *corev1.Service) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(svc), serviceUDPRouteIndex,
-		serviceUDPRouteIndexGwAPI, serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI)
+		serviceUDPRouteIndexGwAPI, serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI,
+		serviceTURNRouteIndex)
 }
 
 func (r *routeReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.StaticService) bool {
 	return r.validateBackendForReconcile(store.GetObjectKey(staticSvc), staticServiceUDPRouteIndex,
-		staticServiceUDPRouteIndexGwAPI, staticServiceTCPRouteIndex, staticServiceTCPRouteIndexGwAPI)
+		staticServiceUDPRouteIndexGwAPI, staticServiceTCPRouteIndex, staticServiceTCPRouteIndexGwAPI,
+		staticServiceTURNRouteIndex)
+}
+
+// validateSecretForReconcile checks whether a Secret is the auth Secret of a TURNRoute.
+func (r *routeReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
+	turnRouteList := &stnrgwv1a1.TURNRouteList{}
+	if err := r.List(context.Background(), turnRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretTURNRouteIndex, store.GetObjectKey(secret)),
+	}); err != nil {
+		r.log.Error(err, "Unable to find associated TURNRoute", "secret", store.GetObjectKey(secret))
+		return false
+	}
+	return len(turnRouteList.Items) > 0
 }
 
 // validateBackendForReconcile checks whether the Service or StaticService belongs to a valid
 // route. Uses the indexers in the argument.
-func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwAPI, tcpIndex, tcpIndexGwAPI string) bool {
+func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwAPI, tcpIndex, tcpIndexGwAPI, turnIndex string) bool {
 	routeNum := 0
+
+	// find the TURNRoutes referring to this service
+	if r.turnRouteServed {
+		turnRouteList := &stnrgwv1a1.TURNRouteList{}
+		if err := r.List(context.Background(), turnRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(turnIndex, key),
+		}); err != nil {
+			r.log.Error(err, "Unable to find associated TURNRoute", "service", key)
+		} else {
+			routeNum += len(turnRouteList.Items)
+		}
+	}
 
 	// find the UDPRoutes referring to this service
 	udpRouteList := &stnrgwv1.UDPRouteList{}
@@ -749,9 +860,39 @@ func canonicalRoute(o client.Object) (client.Object, []stnrgwv1.RouteRule) {
 	case *gwapiv1a2.TCPRoute:
 		c := stnrgwv1.ConvertV1A2TCPRouteToStnrV1(ro)
 		return c, c.Spec.Rules
+	case *stnrgwv1a1.TURNRoute:
+		return ro, ro.Spec.Rules
 	default:
 		return nil, nil
 	}
+}
+
+// secretTURNRouteIndexFunc indexes a TURNRoute by the Secret its tunnel authenticates with.
+func secretTURNRouteIndexFunc(o client.Object) []string {
+	ro, ok := o.(*stnrgwv1a1.TURNRoute)
+	if !ok {
+		return []string{}
+	}
+	n, ok := tunnelAuthSecretName(ro)
+	if !ok {
+		return []string{}
+	}
+	return []string{n.String()}
+}
+
+// tunnelAuthSecretName returns the name of the Secret the tunnel of a TURNRoute authenticates
+// with; ok is false when the route references no Secret.
+func tunnelAuthSecretName(ro *stnrgwv1a1.TURNRoute) (types.NamespacedName, bool) {
+	ref := ro.Spec.Tunnel.AuthRef
+	if ref == nil || (ref.Group != nil && *ref.Group != corev1.GroupName && *ref.Group != "v1") ||
+		(ref.Kind != nil && *ref.Kind != "Secret") {
+		return types.NamespacedName{}, false
+	}
+	namespace := ro.GetNamespace()
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+	return types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}, true
 }
 
 func serviceRouteIndexFunc(o client.Object) []string {

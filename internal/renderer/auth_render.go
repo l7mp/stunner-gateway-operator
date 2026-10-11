@@ -8,6 +8,8 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
+
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var _ configRenderer = &authRenderer{}
@@ -177,4 +179,41 @@ func getAuthType(hint *string) (stnrapiv2.AuthType, error) {
 	}
 
 	return atype, nil
+}
+
+// renderTunnelAuth renders the authentication policy the tunnel of a TURNRoute presents to the
+// upstream TURN server, named after the cluster of the route, from the Secret the route references:
+// the key "type", the optional keys "realm" and "lifetime", and every other key a credential. It
+// returns nil for any other route and for a TURNRoute referencing no Secret.
+func renderTunnelAuth(ro store.Route) (*stnrapiv2.AuthConfig, error) {
+	tr, ok := ro.(*stnrgwv1a1.TURNRoute)
+	if !ok || tr.Spec.Tunnel.AuthRef == nil {
+		return nil, nil
+	}
+	n, err := getSecretNameFromRef(tr.Spec.Tunnel.AuthRef, tr.GetNamespace())
+	if err != nil {
+		return nil, NewNonCriticalError(TunnelAuthNotFound)
+	}
+	secret := store.TunnelAuthSecrets.GetObject(n)
+	if secret == nil {
+		return nil, NewNonCriticalError(TunnelAuthNotFound)
+	}
+
+	auth := stnrapiv2.AuthConfig{Name: clusterName(ro), Credentials: map[string]string{}}
+	for k, v := range secret.Data {
+		switch k {
+		case "type":
+			auth.Type = string(v)
+		case "realm":
+			auth.Realm = string(v)
+		case "lifetime":
+			auth.Lifetime = string(v)
+		default:
+			auth.Credentials[k] = string(v)
+		}
+	}
+	if err := auth.Validate(); err != nil {
+		return nil, NewNonCriticalError(InvalidTunnelAuth)
+	}
+	return &auth, nil
 }

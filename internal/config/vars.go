@@ -66,6 +66,9 @@ var (
 	// GwAPITCPRouteVersion is the API version at which the cluster serves the official
 	// Gateway API TCPRoute resource (see GwAPIUDPRouteVersion).
 	GwAPITCPRouteVersion = GwAPIVersionUnavailable
+
+	// TURNRouteServed is true if the cluster serves the optional TURNRoute CRD.
+	TURNRouteServed = false
 )
 
 // Gateway API route resource version markers.

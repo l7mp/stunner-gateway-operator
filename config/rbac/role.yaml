@@ -98,6 +98,7 @@ rules:
   - gatewayconfigs
   - staticservices
   - tcproutes
+  - turnroutes
   - udproutes
   verbs:
   - get
@@ -111,6 +112,8 @@ rules:
   - staticservices/finalizers
   - tcproutes/finalizers
   - tcproutes/status
+  - turnroutes/finalizers
+  - turnroutes/status
   - udproutes/finalizers
   - udproutes/status
   verbs:

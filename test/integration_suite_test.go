@@ -52,6 +52,7 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // auxiliary tests
@@ -83,6 +84,8 @@ var (
 	testUDPRoute      *stnrgwv1.UDPRoute
 	testTCPRoute      *stnrgwv1.TCPRoute
 	testTCPRouteV1    *gwapiv1.TCPRoute
+	testTURNRoute     *stnrgwv1a1.TURNRoute
+	testTunnelSecret  *corev1.Secret
 	testSvc           *corev1.Service
 	testEndpointSlice *discoveryv1.EndpointSlice
 	testNode          *corev1.Node
@@ -151,6 +154,8 @@ var _ = BeforeSuite(func() {
 
 	// STUNner CRD scheme
 	err = stnrgwv1.AddToScheme(scheme) //nolint:staticcheck
+	Expect(err).NotTo(HaveOccurred())
+	err = stnrgwv1a1.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -232,6 +237,8 @@ func InitResources() {
 	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
 	testTCPRoute = testutils.TestTCPRoute.DeepCopy()
 	testTCPRouteV1 = testutils.TestTCPRouteV1.DeepCopy()
+	testTURNRoute = testutils.TestTURNRoute.DeepCopy()
+	testTunnelSecret = testutils.TestTunnelSecret.DeepCopy()
 	testDaemonSet = testutils.TestDaemonSet.DeepCopy()
 }
 

@@ -25,6 +25,9 @@ const (
 	ClusterIPNotFound
 	EndpointNotFound
 	InvalidEndpoint
+	InvalidTunnelURI
+	TunnelAuthNotFound
+	InvalidTunnelAuth
 	InvalidProtocol
 	PortUnavailable
 	InvalidCertificateRef
@@ -101,6 +104,12 @@ func (e *NonCriticalError) Error() string {
 		return "no ClusterIP found for Service (this is fine for headless Services)"
 	case EndpointNotFound:
 		return "no Endpoint found for backend"
+	case InvalidTunnelURI:
+		return "invalid tunnel URI (expecting a TURN URI)"
+	case TunnelAuthNotFound:
+		return "missing or invalid Secret for the tunnel authentication"
+	case InvalidTunnelAuth:
+		return "invalid tunnel authentication in Secret"
 	case InvalidEndpoint:
 		return "invalid backend address (expecting an IP address or prefix)"
 	case PortUnavailable:

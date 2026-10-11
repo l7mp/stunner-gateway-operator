@@ -130,6 +130,14 @@ func initGatewayStatus(gw *gwapiv1.Gateway, reason error) {
 				}},
 				Conditions: []metav1.Condition{},
 			})
+		// TURNRoute is optional: supported only when the cluster serves its CRD
+		if config.TURNRouteServed {
+			ls := &gw.Status.Listeners[len(gw.Status.Listeners)-1]
+			ls.SupportedKinds = append(ls.SupportedKinds, gwapiv1.RouteGroupKind{
+				Group: &groupStunner,
+				Kind:  gwapiv1.Kind("TURNRoute"),
+			})
+		}
 	}
 }
 
