@@ -357,7 +357,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		}
 
 		// a critical error renders no cluster, a non-critical one only goes to the status
-		rc, rcPeers, err := r.renderCluster(ro)
+		rc, rcPeers, err := r.renderCluster(c, ro)
 		if err != nil {
 			log.Info("Error rendering cluster", "route", store.GetObjectKey(ro), "critical",
 				IsCritical(err), "error", err.Error())
@@ -583,7 +583,7 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 			parentExists, parentAccepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
 
 			// render a stale cluster so that we know the ResolvedRefs status
-			_, _, err := r.renderCluster(ro)
+			_, _, err := r.renderCluster(c, ro)
 
 			setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccepted, err)
 		}

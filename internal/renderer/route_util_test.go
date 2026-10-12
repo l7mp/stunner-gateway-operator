@@ -1117,7 +1117,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				_, _, err = r.renderCluster(ro)
+				_, _, err = r.renderCluster(nil, ro)
 				assert.Error(t, err, "render cluster")
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
@@ -1196,7 +1196,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				_, _, err = r.renderCluster(ro)
+				_, _, err = r.renderCluster(nil, ro)
 				assert.Error(t, err, "render cluster")
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")

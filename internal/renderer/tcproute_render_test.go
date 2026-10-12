@@ -46,7 +46,7 @@ func TestRenderTCPRoute(t *testing.T) {
 
 				// the route is accepted, but the open-source renderer does not
 				// render a TCP cluster for it
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 				assert.Nil(t, rc, "no cluster rendered")
 				assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
 					"feature-not-licensed error")
@@ -72,7 +72,7 @@ func TestRenderTCPRoute(t *testing.T) {
 
 				protos := map[string]string{}
 				for _, ro := range rs {
-					rc, _, err := r.renderCluster(ro)
+					rc, _, err := r.renderCluster(nil, ro)
 					if _, ok := ro.(*stnrgwv1.TCPRoute); ok {
 						assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
 							"TCP cluster needs a license")
@@ -188,7 +188,7 @@ func TestRenderTCPRoute(t *testing.T) {
 				initRouteStatus(ro)
 				p := ro.GetParentRefs()[0]
 				exists, accepted := r.isParentAcceptingRoute(ro, &p, "")
-				_, _, backendErr := r.renderCluster(ro)
+				_, _, backendErr := r.renderCluster(nil, ro)
 				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, backendErr)
 
 				parents := ro.GetRouteStatus().Parents

@@ -50,7 +50,7 @@ func clusterName(ro store.Route) string {
 // cluster protocol and the rendering strategy.
 // Rendering a TCPRoute into a TCP cluster is a premium feature: here it fails non-critically, so
 // that the route is still accepted and the reason surfaces on its ResolvedRefs condition.
-func (r *defaultClusterRenderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
+func (r *defaultClusterRenderer) renderCluster(_ *RenderContext, ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	switch ro := ro.(type) {
 	case *stnrgwv1.UDPRoute:
 		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP)

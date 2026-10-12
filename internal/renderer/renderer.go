@@ -61,10 +61,10 @@ type filterRenderer interface {
 // clusterRenderer is the interface for the component that renders the dataplane cluster config of
 // a route, plus the filter rules of the route, kept out of the cluster
 // endpoints: an ALLOW rule per peer address block, with the port range of its backend if the
-// backend sets one. It is separate from configRenderer because a cluster is rendered per route
-// rather than per Gateway, so it takes the route instead of a RenderContext.
+// backend sets one. A cluster is rendered per route, in the render context of the Gateways that
+// carry the route; the default renderer uses only the route.
 type clusterRenderer interface {
-	renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error)
+	renderCluster(c *RenderContext, ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error)
 }
 
 // resourceGenerator is a generic interface for the generator components that can create K8s
@@ -189,8 +189,8 @@ func (r *renderer) renderServer(c *RenderContext, l *gwapiv1.Listener, rs []stor
 }
 
 // renderCluster is a wrapper for clusterRenderer.renderCluster()
-func (r *renderer) renderCluster(ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
-	return r.clusterRenderer.renderCluster(ro)
+func (r *renderer) renderCluster(c *RenderContext, ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
+	return r.clusterRenderer.renderCluster(c, ro)
 }
 
 // renderClusterFilter is a wrapper for filterRenderer.renderClusterFilter()

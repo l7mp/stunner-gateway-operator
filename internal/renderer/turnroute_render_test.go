@@ -36,7 +36,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, "testnamespace/turnroute-ok/turn", rc.Name, "cluster name")
 				assert.Equal(t, "UDP", rc.Protocol, "protocol")
@@ -85,7 +85,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				assert.Len(t, rs, 1, "route len")
 
 				// the backends at their port, dialed through the tunnel by an L4 server
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, "testnamespace/turnroute-ok/turn", rc.Name, "cluster name")
 				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000", "1.2.3.6:5000", "1.2.3.7:5000"},
@@ -105,20 +105,20 @@ func TestRenderTURNRouteRender(t *testing.T) {
 			tester: func(t *testing.T, r *renderer) {
 				// no Secret
 				ro := testutils.TestTURNRoute.DeepCopy()
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 				assert.Nil(t, rc, "no cluster")
 				assert.True(t, IsNonCriticalError(err, TunnelAuthNotFound), "missing Secret")
 
 				// not a TURN URI
 				ro.Spec.Tunnel.URI = "stun:turn.example.com:3478"
-				rc, _, err = r.renderCluster(ro)
+				rc, _, err = r.renderCluster(nil, ro)
 				assert.Nil(t, rc, "no cluster")
 				assert.True(t, IsNonCriticalError(err, InvalidTunnelURI), "invalid URI")
 
 				// no Secret needed without an authRef
 				ro.Spec.Tunnel.URI = "turn:turn.example.com:3478"
 				ro.Spec.Tunnel.AuthRef = nil
-				rc, _, err = r.renderCluster(ro)
+				rc, _, err = r.renderCluster(nil, ro)
 				assert.NoError(t, err, "no authRef")
 				assert.Equal(t, "", rc.Tunnel.Auth, "no tunnel auth")
 				auth, err := renderTunnelAuth(ro)

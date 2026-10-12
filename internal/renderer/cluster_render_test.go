@@ -43,7 +43,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
-				_, _, err := r.renderCluster(ro)
+				_, _, err := r.renderCluster(nil, ro)
 				assert.Nil(t, err, "no error")
 			},
 		},
@@ -70,7 +70,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
-				_, _, err := r.renderCluster(ro)
+				_, _, err := r.renderCluster(nil, ro)
 				assert.Nil(t, err, "no error")
 			},
 		},
@@ -103,7 +103,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -148,7 +148,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				_, peers, err := r.renderCluster(rs[0])
+				_, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.NotEmpty(t, peers, "peers")
 				for _, p := range peers {
@@ -179,7 +179,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Len(t, rs, 1, "route len")
 
 				// the addresses at the backend port, the port range only in the filter rules
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000", "1.2.3.6:5000", "1.2.3.7:5000"},
@@ -222,7 +222,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				// single addresses at the backend port; prefixes and port ranges only in the
 				// filter rules, a bare backend port is no port range
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, []string{"1.2.3.4:7000", "10.11.12.13:7000"}, rc.Endpoints, "endpoints")
 				assert.Len(t, peers, 3, "peers len")
@@ -281,7 +281,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = false
 
-				rc, peers, err := r.renderCluster(ro)
+				rc, peers, err := r.renderCluster(nil, ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -319,7 +319,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -363,7 +363,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(ro)
+				rc, peers, err := r.renderCluster(nil, ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -405,7 +405,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(ro)
+				rc, peers, err := r.renderCluster(nil, ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -447,7 +447,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -491,7 +491,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-wrong/udp", rc.Name, "cluster name")
@@ -529,7 +529,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -570,7 +570,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, _, err := r.renderCluster(ro)
+				rc, _, err := r.renderCluster(nil, ro)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -621,7 +621,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(ro)
+				rc, peers, err := r.renderCluster(nil, ro)
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -699,7 +699,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				// no endpoint for dummy svc: handle non-critical error!
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -782,7 +782,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				// no endpoint for dummy svc: handle non-critical error!
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -865,7 +865,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = true
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				// no endpoint for testservice-ok-2: non-critical EndpointNotFound error
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -910,7 +910,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				rc, _, err := r.renderCluster(rs[0])
+				rc, _, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
@@ -949,7 +949,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.True(t, IsNonCriticalError(err, InvalidEndpoint), "invalid endpoint error")
 				assert.NotNil(t, rc, "cluster rendered")
 				assert.Equal(t, []string{"10.11.12.13"}, rc.Endpoints, "endpoints")
@@ -989,7 +989,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.True(t, IsNonCriticalError(err, InvalidPortRange), "invalid port range error")
 				assert.NotNil(t, rc, "cluster rendered")
 				assert.Equal(t, []string{"1.2.3.4:1000", "10.11.12.13:1000"}, rc.Endpoints,
@@ -1028,7 +1028,7 @@ func TestRenderClusterRender(t *testing.T) {
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 
-				_, _, err := r.renderCluster(rs[0])
+				_, _, err := r.renderCluster(nil, rs[0])
 				assert.Error(t, err, "render cluster")
 
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -1078,7 +1078,7 @@ func TestRenderClusterRender(t *testing.T) {
 
 				config.EnableRelayToClusterIP = false
 
-				rc, peers, err := r.renderCluster(rs[0])
+				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
