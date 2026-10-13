@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -280,6 +281,29 @@ func MergeMetadata(a, b map[string]string) map[string]string {
 	}
 
 	return ret
+}
+
+// ParseManagedLabels parses the value of the managed-labels annotation (a comma-separated list of
+// label keys) into a set of label keys. Empty entries are ignored.
+func ParseManagedLabels(v string) map[string]struct{} {
+	ret := map[string]struct{}{}
+	for _, k := range strings.Split(v, ",") {
+		if k = strings.TrimSpace(k); k != "" {
+			ret[k] = struct{}{}
+		}
+	}
+	return ret
+}
+
+// FormatManagedLabels renders a set of label keys into the value of the managed-labels annotation:
+// a sorted, comma-separated list of the keys. Sorting keeps the value stable across reconciles.
+func FormatManagedLabels(keys map[string]struct{}) string {
+	ks := make([]string, 0, len(keys))
+	for k := range keys {
+		ks = append(ks, k)
+	}
+	sort.Strings(ks)
+	return strings.Join(ks, ",")
 }
 
 // FilterLabels returns a copy of in with any key in filter removed. Each removed key is logged

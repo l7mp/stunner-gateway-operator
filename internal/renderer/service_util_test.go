@@ -1013,6 +1013,148 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - lb labels",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceLabels = map[string]string{
+					"test":  "testval",
+					"dummy": "dummyval",
+					// mandatory labels must win
+					opdefault.OwnedByLabelKey: "someone-else",
+				}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 5, "labels len")
+				assert.Equal(t, opdefault.OwnedByLabelValue, ls[opdefault.OwnedByLabelKey],
+					"mandatory label wins")
+				assert.Equal(t, gw.GetName(), ls[opdefault.RelatedGatewayKey], "label ok")
+				assert.Equal(t, gw.GetNamespace(), ls[opdefault.RelatedGatewayNamespace], "label ok")
+				assert.Equal(t, "testval", ls["test"], "user label 1 ok")
+				assert.Equal(t, "dummyval", ls["dummy"], "user label 2 ok")
+
+				as := s.GetAnnotations()
+				a, found := as[opdefault.ManagedLabelsAnnotationKey]
+				assert.True(t, found, "managed-labels annotation found")
+				assert.Equal(t, "dummy,test", a, "managed-labels annotation ok")
+
+				// selector is unaffected
+				assert.NotContains(t, s.Spec.Selector, "test", "selector")
+			},
+		},
+		{
+			name: "lb service - lb labels pruned on update",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceLabels = map[string]string{"keep": "newval"}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				// existing LB service from a previous reconcile
+				s := testutils.TestSvc.DeepCopy()
+				s.SetName(testutils.TestGw.GetName())
+				s.SetLabels(map[string]string{
+					opdefault.OwnedByLabelKey:         opdefault.OwnedByLabelValue,
+					opdefault.RelatedGatewayNamespace: testutils.TestGw.GetNamespace(),
+					opdefault.RelatedGatewayKey:       testutils.TestGw.GetName(),
+					"keep":                            "oldval",
+					"stale":                           "val",
+					"external":                        "val",
+				})
+				s.SetAnnotations(map[string]string{
+					opdefault.RelatedGatewayKey:          store.GetObjectKey(&testutils.TestGw),
+					opdefault.ManagedLabelsAnnotationKey: "keep,stale",
+				})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc update")
+
+				ls := s.GetLabels()
+				assert.Len(t, ls, 5, "labels len")
+				assert.Equal(t, "newval", ls["keep"], "managed label updated")
+				assert.NotContains(t, ls, "stale", "removed managed label pruned")
+				assert.Equal(t, "val", ls["external"], "external label preserved")
+
+				assert.Equal(t, "keep", s.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey],
+					"managed-labels annotation updated")
+			},
+		},
+		{
+			name: "lb service - all lb labels removed",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.SetName(testutils.TestGw.GetName())
+				s.SetLabels(map[string]string{"stale": "val", "external": "val"})
+				s.SetAnnotations(map[string]string{
+					opdefault.RelatedGatewayKey:          store.GetObjectKey(&testutils.TestGw),
+					opdefault.ManagedLabelsAnnotationKey: "stale",
+				})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc update")
+
+				ls := s.GetLabels()
+				assert.NotContains(t, ls, "stale", "removed managed label pruned")
+				assert.Equal(t, "val", ls["external"], "external label preserved")
+
+				a, found := s.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+				assert.True(t, found, "managed-labels annotation kept for the updater")
+				assert.Equal(t, "", a, "managed-labels annotation empty")
+			},
+		},
+		{
 			name: "lb service - lb health check annotations (aws)",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
