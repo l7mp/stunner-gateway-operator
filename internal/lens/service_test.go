@@ -361,3 +361,67 @@ func TestServiceOwnsIPFamilyPolicyWhenSet(t *testing.T) {
 	assert.Equal(t, []corev1.IPFamily{corev1.IPv4Protocol}, current.Spec.IPFamilies,
 		"the families stay the API's")
 }
+
+func TestServiceApplyPrunesManagedLabels(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Labels: map[string]string{
+			"keep":     "oldval",
+			"stale":    "val",
+			"external": "val",
+		},
+		Annotations: map[string]string{
+			opdefault.ManagedLabelsAnnotationKey: "keep,stale",
+		},
+	}}
+
+	desired := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Labels:    map[string]string{"keep": "newval"},
+		Annotations: map[string]string{
+			opdefault.ManagedLabelsAnnotationKey: "keep",
+		},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Gateway",
+			Name:       "gw",
+		}},
+	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	v := NewServiceLens(desired)
+	assert.False(t, v.EqualResource(current), "managed-labels change must be detected")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, "newval", current.Labels["keep"], "managed label updated")
+	assert.NotContains(t, current.Labels, "stale", "stale managed label pruned")
+	assert.Equal(t, "val", current.Labels["external"], "external label preserved")
+	assert.Equal(t, "keep", current.Annotations[opdefault.ManagedLabelsAnnotationKey],
+		"managed-labels annotation updated")
+	assert.True(t, v.EqualResource(current), "applied service matches desired")
+}
+
+func TestServiceApplyNoPruneWithoutTracking(t *testing.T) {
+	// a desired object without the managed-labels annotation must never prune anything
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:        "svc",
+		Namespace:   "default",
+		Labels:      map[string]string{"stale": "val"},
+		Annotations: map[string]string{opdefault.ManagedLabelsAnnotationKey: "stale"},
+	}}
+
+	desired := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Gateway",
+			Name:       "gw",
+		}},
+	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+	assert.Equal(t, "val", current.Labels["stale"], "label preserved without tracking")
+}

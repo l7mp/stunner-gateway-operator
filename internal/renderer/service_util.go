@@ -295,6 +295,25 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
 		opdefault.RelatedGatewayKey:       gw.GetName(),
 	}
+
+	// user-defined labels from GatewayConfig.Spec.LoadBalancerServiceLabels: mandatory labels
+	// always win so that a misconfiguration cannot break the selectors the operator relies on
+	userLabels := make(map[string]string, len(c.gwConf.Spec.LoadBalancerServiceLabels))
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceLabels {
+		if _, ok := mandatoryLabels[k]; ok {
+			r.log.Info("Ignoring GatewayConfig LoadBalancer service label: key is reserved "+
+				"by the operator", "gateway-config", store.GetObjectKey(c.gwConf), "label", k)
+			continue
+		}
+		userLabels[k] = v
+	}
+	requestedLabels := mergeMaps(userLabels, mandatoryLabels)
+
+	managedLabelKeys := make(map[string]struct{}, len(userLabels))
+	for k := range userLabels {
+		managedLabelKeys[k] = struct{}{}
+	}
+
 	requestedAnnotations := mergeMaps(
 		// base: GatewayConfig.Spec.LBServiceAnnotations
 		c.gwConf.Spec.LoadBalancerServiceAnnotations,
@@ -308,11 +327,17 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
 	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
 	if svc == nil {
+		// only track managed labels if there is anything to track
+		if len(managedLabelKeys) > 0 {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] =
+				store.FormatManagedLabels(managedLabelKeys)
+		}
+
 		svc = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:   gw.GetNamespace(),
 				Name:        gw.GetName(),
-				Labels:      mandatoryLabels,
+				Labels:      requestedLabels,
 				Annotations: requestedAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
@@ -322,8 +347,25 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			},
 		}
 	} else {
+		// prune the labels we added in a previous reconcile that are no longer requested, but
+		// leave labels set by other actors alone
+		labels := mergeMaps(svc.GetLabels())
+		prevManaged, tracked := svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+		for k := range store.ParseManagedLabels(prevManaged) {
+			if _, ok := requestedLabels[k]; !ok {
+				delete(labels, k)
+			}
+		}
+
+		// keep the tracking annotation once it exists (possibly with an empty value), so
+		// that the updater can prune stale labels from the live object as well
+		if tracked || len(managedLabelKeys) > 0 {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] =
+				store.FormatManagedLabels(managedLabelKeys)
+		}
+
 		// mandatory labels and annotations must always be there
-		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
+		svc.SetLabels(mergeMaps(labels, requestedLabels))
 		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(), requestedAnnotations))
 	}
 

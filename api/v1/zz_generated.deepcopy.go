@@ -365,6 +365,13 @@ func (in *GatewayConfigSpec) DeepCopyInto(out *GatewayConfigSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.LoadBalancerServiceLabels != nil {
+		in, out := &in.LoadBalancerServiceLabels, &out.LoadBalancerServiceLabels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.LogLevel != nil {
 		in, out := &in.LogLevel, &out.LogLevel
 		*out = new(string)

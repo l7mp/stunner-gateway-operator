@@ -131,6 +131,20 @@ spec:
                   GatewayConfig and then recreate the Gateways, so that the newly created LoadBalancer
                   services will contain the required annotations.
                 type: object
+              loadBalancerServiceLabels:
+                additionalProperties:
+                  type: string
+                description: |-
+                  LoadBalancerServiceLabels is a list of labels that will go into the LoadBalancer services
+                  created automatically by the operator to wrap Gateways.
+
+                  Labels managed by the operator (e.g., the owned-by and related-gateway labels) always take
+                  precedence, a user-defined label with the same key will be ignored. Unlike annotations,
+                  removing a label from the GatewayConfig removes it from the LoadBalancer services as well:
+                  the operator keeps track of the labels it has added in the
+                  "stunner.l7mp.io/managed-labels" annotation and prunes only those, so labels set on the
+                  service by other actors are left intact.
+                type: object
               logLevel:
                 description: LogLevel specifies the default loglevel for the STUNner
                   daemon.

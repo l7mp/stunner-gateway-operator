@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -37,6 +38,8 @@ func (l *ServiceLens) ApplyToResource(target client.Object) error {
 	if !ok {
 		return fmt.Errorf("service lens: invalid target type %T", target)
 	}
+
+	pruneManagedLabels(svc, &l.Service)
 
 	if err := setMetadata(svc, &l.Service); err != nil {
 		return err
@@ -64,8 +67,12 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 
 // * Service.ObjectMeta.Labels / Service.ObjectMeta.Annotations / Service.ObjectMeta.OwnerReferences
 // - renderer: starts from existing Service (if present), enforces operator mandatory metadata,
-//   merges Gateway/GatewayConfig annotations, and sets Gateway owner reference.
-// - updater: merges top-level labels/annotations and updates owner reference via setMetadata/addOwnerRef.
+//   merges GatewayConfig labels and Gateway/GatewayConfig annotations, records the
+//   GatewayConfig labels it added in the managed-labels annotation, and sets Gateway owner
+//   reference.
+// - updater: removes labels listed in the current managed-labels annotation but not in the
+//   desired one, then merges top-level labels/annotations and updates owner reference via
+//   setMetadata/addOwnerRef.
 //
 // * Service.Spec.Type
 // - renderer: derived from service-type annotations with fallback to operator default.
@@ -210,4 +217,34 @@ func getNodePortByName(ports []corev1.ServicePort, name string) int32 {
 	}
 
 	return 0
+}
+
+// pruneManagedLabels removes the labels from current that the operator added from
+// GatewayConfig.Spec.LoadBalancerServiceLabels in a previous reconcile but are no longer
+// requested. Only keys listed in current's managed-labels annotation are ever removed, so labels
+// set by other actors are preserved. If desired does not carry the annotation, nothing is pruned.
+func pruneManagedLabels(current, desired *corev1.Service) {
+	desiredManaged, ok := desired.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+	if !ok {
+		return
+	}
+
+	currentManaged, ok := current.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+	if !ok {
+		return
+	}
+
+	keep := store.ParseManagedLabels(desiredManaged)
+	labels := maps.Clone(current.GetLabels())
+	for k := range store.ParseManagedLabels(currentManaged) {
+		if _, ok := keep[k]; ok {
+			continue
+		}
+		if _, ok := desired.GetLabels()[k]; ok {
+			// still explicitly desired (e.g., a mandatory label), leave it to setMetadata
+			continue
+		}
+		delete(labels, k)
+	}
+	current.SetLabels(labels)
 }
