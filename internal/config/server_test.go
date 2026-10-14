@@ -542,6 +542,7 @@ var _ = Describe("Config patcher", Ordered, func() {
 			Listeners: []stnrapiv2.ListenerConfig{{
 				Name:     "default-listener",
 				Protocol: "UDP",
+				Port:     stnrapiv2.DefaultPort,
 				Servers:  []string{"default-server"},
 			}},
 			Servers: []stnrapiv2.ServerConfig{{

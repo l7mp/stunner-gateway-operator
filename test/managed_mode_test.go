@@ -1182,7 +1182,7 @@ func testManagedMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Cert != "" && c.Listeners[1].Key != "" {
+				if tlsOf(c.Listeners[1]).Cert != "" && tlsOf(c.Listeners[1]).Key != "" {
 					conf = c
 					return true
 				}
@@ -1205,8 +1205,8 @@ func testManagedMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.Cert).Should(Equal(testutils.TestCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(testutils.TestCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			l = conf.Listeners[2]
@@ -1231,7 +1231,7 @@ func testManagedMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Cert == newCert64 {
+				if tlsOf(c.Listeners[1]).Cert == newCert64 {
 					conf = c
 					return true
 				}
@@ -1245,8 +1245,8 @@ func testManagedMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.Cert).Should(Equal(newCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(newCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
@@ -1679,8 +1679,8 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(l.Key).NotTo(Equal(""))
-			Expect(l.Cert).NotTo(Equal(""))
+			Expect(tlsOf(l).Key).NotTo(Equal(""))
+			Expect(tlsOf(l).Cert).NotTo(Equal(""))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))
@@ -1869,8 +1869,8 @@ func testManagedMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(l.Key).NotTo(Equal(""))
-			Expect(l.Cert).NotTo(Equal(""))
+			Expect(tlsOf(l).Key).NotTo(Equal(""))
+			Expect(tlsOf(l).Cert).NotTo(Equal(""))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			Expect(conf.Clusters).To(HaveLen(1))

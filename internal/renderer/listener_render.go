@@ -73,8 +73,7 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 	}
 
 	if ok {
-		lc.Cert = cert
-		lc.Key = key
+		lc.TLS = &stnrapiv2.TLSConfig{Cert: cert, Key: key}
 	}
 
 	// the PQC mode is a per-Gateway policy of the TLS listeners
@@ -85,15 +84,21 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 				r.log.Info("Ignoring invalid PQC mode annotation", "gateway", store.GetObjectKey(gw),
 					"key", opdefault.PQCModeAnnotationKey, "value", v, "error", err.Error())
 			} else if mode != stnrapiv2.PQCModeDefault {
-				lc.PQCMode = mode.String()
+				if lc.TLS == nil {
+					lc.TLS = &stnrapiv2.TLSConfig{}
+				}
+				lc.TLS.PQCMode = mode.String()
 			}
 		}
 	}
 
 	// remove cert/key from dump
 	tmp := lc
-	tmp.Cert = "<SECRET>"
-	tmp.Key = "<SECRET>"
+	if lc.TLS != nil {
+		t := *lc.TLS
+		t.Cert, t.Key = "<SECRET>", "<SECRET>"
+		tmp.TLS = &t
+	}
 
 	r.log.V(2).Info("Finished rendering listener config", "gateway", store.GetObjectKey(gw), "gateway-config",
 		store.GetObjectKey(gwConf), "listener", l.Name, "route number", len(rs), "result",

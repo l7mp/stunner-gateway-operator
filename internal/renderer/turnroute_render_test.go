@@ -44,8 +44,9 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				assert.NotNil(t, rc.Tunnel, "tunnel")
 				assert.Equal(t, "turns:turn.example.com:443?transport=tcp", rc.Tunnel.URL, "tunnel URL")
 				assert.Equal(t, rc.Name, rc.Tunnel.Auth, "tunnel auth")
-				assert.True(t, rc.Tunnel.Insecure, "insecure")
-				assert.Equal(t, "sni.example.com", rc.Tunnel.SNI, "SNI")
+				assert.NotNil(t, rc.Tunnel.TLS, "tunnel TLS")
+				assert.True(t, rc.Tunnel.TLS.Insecure, "insecure")
+				assert.Equal(t, "sni.example.com", rc.Tunnel.TLS.SNI, "SNI")
 
 				// the tunnel admits every peer
 				assert.Equal(t, []stnrapiv2.FilterRule{{Action: "ALLOW"}}, peers, "peers")

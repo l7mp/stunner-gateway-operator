@@ -372,6 +372,14 @@ func finalizerTest() {
 	})
 }
 
+// tlsOf returns the TLS of a listener, empty for none.
+func tlsOf(l stnrapiv2.ListenerConfig) stnrapiv2.TLSConfig {
+	if l.TLS == nil {
+		return stnrapiv2.TLSConfig{}
+	}
+	return *l.TLS
+}
+
 // serverOf returns the server a listener of a config feeds.
 func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapiv2.ServerConfig {
 	s, _ := conf.GetServerConfig(l.FirstServer())

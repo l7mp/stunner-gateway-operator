@@ -90,8 +90,11 @@ func (r *defaultClusterRenderer) renderTunnelCluster(ro *stnrgwv1a1.TURNRoute) (
 			Addrs: []string{opdefault.DefaultSTUNnerAddressEnvVarName},
 		}
 	}
-	cluster.Tunnel = &stnrapiv2.TunnelConfig{URL: ro.Spec.Tunnel.URI, Insecure: ro.Spec.Tunnel.Insecure,
-		SNI: ro.Spec.Tunnel.SNI}
+	cluster.Tunnel = &stnrapiv2.TunnelConfig{URL: ro.Spec.Tunnel.URI}
+	if ro.Spec.Tunnel.Insecure || ro.Spec.Tunnel.SNI != "" {
+		cluster.Tunnel.TLS = &stnrapiv2.TLSConfig{Insecure: ro.Spec.Tunnel.Insecure,
+			SNI: ro.Spec.Tunnel.SNI}
+	}
 	if auth != nil {
 		cluster.Tunnel.Auth = auth.Name
 	}

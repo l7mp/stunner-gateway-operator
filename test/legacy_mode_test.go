@@ -913,7 +913,7 @@ func testLegacyMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Cert != "" && c.Listeners[1].Key != "" {
+				if tlsOf(c.Listeners[1]).Cert != "" && tlsOf(c.Listeners[1]).Key != "" {
 					conf = &c
 					return true
 				}
@@ -936,8 +936,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Cert).Should(Equal(testutils.TestCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(testutils.TestCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
@@ -972,7 +972,7 @@ func testLegacyMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Cert == newCert64 {
+				if tlsOf(c.Listeners[1]).Cert == newCert64 {
 					conf = &c
 					return true
 				}
@@ -986,8 +986,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Cert).Should(Equal(newCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(newCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
@@ -1022,7 +1022,7 @@ func testLegacyMode() {
 				}
 
 				// the UDP listener should have a valid public IP set on both listeners
-				if c.Listeners[1].Key == newKey64 {
+				if tlsOf(c.Listeners[1]).Key == newKey64 {
 					conf = &c
 					return true
 				}
@@ -1036,8 +1036,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Cert).Should(Equal(testutils.TestCert64))
-			Expect(l.Key).Should(Equal(newKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(testutils.TestCert64))
+			Expect(tlsOf(l).Key).Should(Equal(newKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 
@@ -1103,8 +1103,8 @@ func testLegacyMode() {
 				}
 
 				// certs/keys should be installed on the last 2 listeners
-				if c.Listeners[1].Cert != "" && c.Listeners[1].Key != "" &&
-					c.Listeners[2].Cert != "" && c.Listeners[2].Key != "" {
+				if tlsOf(c.Listeners[1]).Cert != "" && tlsOf(c.Listeners[1]).Key != "" &&
+					tlsOf(c.Listeners[2]).Cert != "" && tlsOf(c.Listeners[2]).Key != "" {
 					conf = &c
 					return true
 				}
@@ -1120,8 +1120,8 @@ func testLegacyMode() {
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(1))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(1))
-			Expect(l.Cert).Should(Equal(""))
-			Expect(l.Key).Should(Equal(""))
+			Expect(tlsOf(l).Cert).Should(Equal(""))
+			Expect(tlsOf(l).Key).Should(Equal(""))
 			Expect(serverOf(conf, l).Clusters[0]).Should(Equal("testnamespace/udproute-ok/udp"))
 
 			l = conf.Listeners[1]
@@ -1129,8 +1129,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("DTLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(3))
-			Expect(l.Cert).Should(Equal(testutils.TestCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(testutils.TestCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 
 			l = conf.Listeners[2]
@@ -1138,8 +1138,8 @@ func testLegacyMode() {
 			Expect(l.Protocol).Should(Equal("TLS"))
 			Expect(serverOf(conf, l).Type).Should(Equal("TURN"))
 			Expect(l.Port).Should(Equal(2))
-			Expect(l.Cert).Should(Equal(testutils.TestCert64))
-			Expect(l.Key).Should(Equal(testutils.TestKey64))
+			Expect(tlsOf(l).Cert).Should(Equal(testutils.TestCert64))
+			Expect(tlsOf(l).Key).Should(Equal(testutils.TestKey64))
 			Expect(serverOf(conf, l).Clusters).Should(BeEmpty())
 		})
 

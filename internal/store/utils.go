@@ -208,11 +208,13 @@ func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
 	}
 
 	for i := range conf.Listeners {
-		if conf.Listeners[i].Cert != "" {
-			conf.Listeners[i].Cert = "-SECRET-"
-		}
-		if conf.Listeners[i].Key != "" {
-			conf.Listeners[i].Key = "-SECRET-"
+		if t := conf.Listeners[i].TLS; t != nil {
+			if t.Cert != "" {
+				t.Cert = "-SECRET-"
+			}
+			if t.Key != "" {
+				t.Key = "-SECRET-"
+			}
 		}
 	}
 
