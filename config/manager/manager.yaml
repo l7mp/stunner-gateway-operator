@@ -56,5 +56,11 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        env:
+          - name: CUSTOMER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: customer-secret
+                key: CUSTOMER_KEY
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

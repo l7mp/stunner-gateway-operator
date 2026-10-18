@@ -14,3 +14,8 @@ images:
 - name: controller
   newName: controller
   newTag: latest
+
+secretGenerator:
+- literals:
+  - CUSTOMER_KEY=customer_key
+  name: customer-secret
