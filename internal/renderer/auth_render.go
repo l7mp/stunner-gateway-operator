@@ -9,7 +9,7 @@ import (
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 var _ configRenderer = &authRenderer{}
@@ -193,7 +193,7 @@ func getAuthType(hint *string) (stnrapiv2.AuthType, error) {
 // the key "type", the optional keys "realm" and "lifetime", and every other key a credential. It
 // returns nil for any other route and for a TURNRoute referencing no Secret.
 func renderTunnelAuth(ro store.Route) (*stnrapiv2.AuthConfig, error) {
-	tr, ok := ro.(*stnrgwv1a1.TURNRoute)
+	tr, ok := ro.(*stnrgwv1.TURNRoute)
 	if !ok || tr.Spec.Tunnel.AuthRef == nil {
 		return nil, nil
 	}

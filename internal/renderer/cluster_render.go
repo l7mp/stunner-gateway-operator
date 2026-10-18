@@ -17,7 +17,6 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var _ clusterRenderer = &defaultClusterRenderer{}
@@ -40,7 +39,7 @@ func clusterName(ro store.Route) string {
 		proto = "udp"
 	case *stnrgwv1.TCPRoute:
 		proto = "tcp"
-	case *stnrgwv1a1.TURNRoute:
+	case *stnrgwv1.TURNRoute:
 		proto = "turn"
 	}
 	return store.GetObjectKey(ro) + "/" + proto
@@ -54,7 +53,7 @@ func (r *defaultClusterRenderer) renderCluster(_ *RenderContext, ro store.Route)
 		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP)
 	case *stnrgwv1.TCPRoute:
 		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolTCP)
-	case *stnrgwv1a1.TURNRoute:
+	case *stnrgwv1.TURNRoute:
 		return r.renderTunnelCluster(ro)
 	default:
 		return nil, nil, NewCriticalError(InternalError)
@@ -65,7 +64,7 @@ func (r *defaultClusterRenderer) renderCluster(_ *RenderContext, ro store.Route)
 // renderServiceCluster, no backends is no endpoint), tunnelled through the upstream TURN server
 // of the route, presenting the authentication policy of the route if it has one. The tunnel
 // admits every peer: the filter rules of the route are a single ALLOW of every address.
-func (r *defaultClusterRenderer) renderTunnelCluster(ro *stnrgwv1a1.TURNRoute) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
+func (r *defaultClusterRenderer) renderTunnelCluster(ro *stnrgwv1.TURNRoute) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	if u, err := stnrapiv2.ParseURI(ro.Spec.Tunnel.URI); err != nil || !u.Protocol.IsTURN() {
 		return nil, nil, NewNonCriticalError(InvalidTunnelURI)
 	}

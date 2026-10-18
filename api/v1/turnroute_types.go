@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
 
 func init() {
@@ -62,7 +60,7 @@ type TURNRouteSpec struct {
 	// them.
 	//
 	// +optional
-	Rules []stnrgwv1.RouteRule `json:"rules,omitempty"`
+	Rules []RouteRule `json:"rules,omitempty"`
 
 	// Tunnel is the upstream TURN server the peers are reached through.
 	Tunnel TURNTunnel `json:"tunnel"`
@@ -109,7 +107,7 @@ func (r *TURNRoute) GetRouteStatus() *gwapiv1.RouteStatus {
 }
 
 // GetRules returns the rules of the route.
-func (r *TURNRoute) GetRules() []stnrgwv1.RouteRule {
+func (r *TURNRoute) GetRules() []RouteRule {
 	return r.Spec.Rules
 }
 

@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -209,14 +208,10 @@ func runBootstrapBenchmark(b *testing.B) {
 	b.Helper()
 
 	oldThrottleTimeout := config.ThrottleTimeout
-	oldDataplaneMode := config.DataplaneMode
-
 	config.ThrottleTimeout = 10 * time.Millisecond
-	config.DataplaneMode = config.DataplaneModeManaged
 
 	defer func() {
 		config.ThrottleTimeout = oldThrottleTimeout
-		config.DataplaneMode = oldDataplaneMode
 	}()
 
 	sys := setupBenchmarkSystem(b)
@@ -596,10 +591,6 @@ func mustAddScheme(b *testing.B, scheme *runtime.Scheme) {
 
 	if err := gwapiv1.AddToScheme(scheme); err != nil { //nolint:staticcheck
 		b.Fatalf("failed to add gateway v1 scheme: %v", err)
-	}
-
-	if err := gwapiv1a2.AddToScheme(scheme); err != nil { //nolint:staticcheck
-		b.Fatalf("failed to add gateway v1alpha2 scheme: %v", err)
 	}
 
 	if err := stnrgwv1.AddToScheme(scheme); err != nil { //nolint:staticcheck

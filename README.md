@@ -21,7 +21,6 @@ Full documentation for the stable version can be found [here](https://docs.l7mp.
 The operator supports both command-line flags and environment variables.
 
 - `--controller-name` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME`.
-- `--dataplane-mode` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE`.
 - `--config-discovery-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_ADDRESS`.
 - `--pprof-bind-address` can be set directly or the environment var `STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS`.
 - `CUSTOMER_KEY` is read from the environment for licensing.
@@ -101,7 +100,7 @@ Prometheus metrics are served at `--metrics-bind-address` (default `:8080/metric
 ## Caveats
 
 * STUNner implements its own UDPRoute resource instead of using the official UDPRoute provided by the Gateway API. The reason is that STUNner's UDPRoutes omit the port defined in backend references, in contrast to standard UDPRoutes that make the port mandatory. The rationale is that WebRTC media servers typically spawn zillions of UDP/SRTP listeners on essentially any UDP port, so enforcing a single backend port would block all client access. Instead, STUNner's UDPRoutes do not limit port access on backend services at all by default, and provide an optional pair or port/end-port fields per backend reference to define a target port range in which peer connections to the backend are to be accepted.
-* The operator actively reconciles the changes in the GatewayClass resource; e.g., if the `parametersRef` changes then we take this into account (this is not recommended in the spec to [limit the blast radius of a mistaken config update](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClassSpec)).
+* The operator actively reconciles the changes in the GatewayClass resource; e.g., if the `parametersRef` changes then we take this into account (this is not recommended in the spec to [limit the blast radius of a mistaken config update](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClassSpec)).
 * ReferenceGrants are not implemented: routes can refer to Services and StaticServices in any namespace.
 * The operator does not invalidate the GatewayClass status on exit and does not handle the case when the parent GatewayClass is removed from Gateway.
 

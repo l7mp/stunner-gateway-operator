@@ -50,8 +50,3 @@ func (s *NamespaceStore) GetObject(nsName types.NamespacedName) *corev1.Namespac
 
 	return r
 }
-
-// // AddNamespace adds a Namespace object to the the global storage (this is used mainly for testing)
-// func (s *NamespaceStore) AddNamespace(gc *gatewayv1alpha2.Namespace) {
-// 	s.Upsert(gc)
-// }

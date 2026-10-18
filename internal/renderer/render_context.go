@@ -53,7 +53,6 @@ func (r *RenderContext) Merge(mergeable *RenderContext) {
 	store.Merge(upsertQueue1.TCPRoutesGwAPI, upsertQueue2.TCPRoutesGwAPI)
 	store.Merge(upsertQueue1.TURNRoutes, upsertQueue2.TURNRoutes)
 	store.Merge(upsertQueue1.Services, upsertQueue2.Services)
-	store.Merge(upsertQueue1.ConfigMaps, upsertQueue2.ConfigMaps)
 	store.Merge(upsertQueue1.Deployments, upsertQueue2.Deployments)
 	store.Merge(upsertQueue1.DaemonSets, upsertQueue2.DaemonSets)
 
@@ -68,7 +67,6 @@ func (r *RenderContext) Merge(mergeable *RenderContext) {
 	store.Merge(deleteQueue1.TCPRoutesGwAPI, deleteQueue2.TCPRoutesGwAPI)
 	store.Merge(deleteQueue1.TURNRoutes, deleteQueue2.TURNRoutes)
 	store.Merge(deleteQueue1.Services, deleteQueue2.Services)
-	store.Merge(deleteQueue1.ConfigMaps, deleteQueue2.ConfigMaps)
 	store.Merge(deleteQueue1.Deployments, deleteQueue2.Deployments)
 	store.Merge(deleteQueue1.DaemonSets, deleteQueue2.DaemonSets)
 

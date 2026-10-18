@@ -24,7 +24,6 @@ import (
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	"github.com/l7mp/stunner-gateway-operator/internal/app"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -35,7 +34,7 @@ func resetStores() {
 	for _, st := range []store.Store{
 		store.GatewayClasses, store.GatewayConfigs, store.Gateways, store.UDPRoutes,
 		store.UDPRoutesGwAPI, store.TCPRoutes, store.TCPRoutesGwAPI, store.TURNRoutes, store.Services,
-		store.StaticServices, store.EndpointSlices, store.ConfigMaps,
+		store.StaticServices, store.EndpointSlices,
 		store.Deployments, store.DaemonSets, store.Dataplanes, store.Nodes, store.Namespaces,
 		store.TLSSecrets, store.AuthSecrets, store.TunnelAuthSecrets,
 	} {
@@ -102,7 +101,6 @@ func haOperatorTest() {
 		}
 
 		BeforeAll(func() {
-			config.DataplaneMode = config.DataplaneModeManaged
 			InitResources()
 			ctx, cancel = context.WithCancel(context.Background())
 		})

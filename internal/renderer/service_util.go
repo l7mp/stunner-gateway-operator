@@ -20,7 +20,6 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
@@ -328,19 +327,10 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	}
 
 	// set selectors
-	switch config.DataplaneMode {
-	case config.DataplaneModeLegacy:
-		// legacy mode: note that this may break for multiple gateway hierarchies but we
-		// leave it as is for compatibility
-		svc.Spec.Selector = map[string]string{
-			opdefault.AppLabelKey: opdefault.AppLabelValue,
-		}
-	case config.DataplaneModeManaged:
-		svc.Spec.Selector = map[string]string{
-			opdefault.AppLabelKey:             opdefault.AppLabelValue,
-			opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
-			opdefault.RelatedGatewayKey:       gw.GetName(),
-		}
+	svc.Spec.Selector = map[string]string{
+		opdefault.AppLabelKey:             opdefault.AppLabelValue,
+		opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
+		opdefault.RelatedGatewayKey:       gw.GetName(),
 	}
 
 	// Service type

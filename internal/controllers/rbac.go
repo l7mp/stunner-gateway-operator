@@ -6,8 +6,6 @@ package controllers
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=nodes;secrets;namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=nodes/status;services/status,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=update
 
 // apps
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete

@@ -112,27 +112,25 @@ func NewGatewayController(mgr manager.Manager, ch chan<- event.Event, log logr.L
 	}
 	r.log.Info("watching Secret objects")
 
-	if config.DataplaneMode == config.DataplaneModeManaged {
-		// watch Deployment objects referenced by one of our Gateways
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &appv1.Deployment{},
-				&handler.TypedEnqueueRequestForObject[*appv1.Deployment]{},
-				predicate.NewTypedPredicateFuncs[*appv1.Deployment](r.validateDeploymentForReconcile)),
-		); err != nil {
-			return nil, err
-		}
-		r.log.Info("Watching dataplane Deployment objects")
-
-		// watch DaemonSet objects referenced by one of our Gateways
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &appv1.DaemonSet{},
-				&handler.TypedEnqueueRequestForObject[*appv1.DaemonSet]{},
-				predicate.NewTypedPredicateFuncs[*appv1.DaemonSet](r.validateDaemonSetForReconcile)),
-		); err != nil {
-			return nil, err
-		}
-		r.log.Info("Watching dataplane DaemonSet objects")
+	// watch Deployment objects referenced by one of our Gateways
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &appv1.Deployment{},
+			&handler.TypedEnqueueRequestForObject[*appv1.Deployment]{},
+			predicate.NewTypedPredicateFuncs[*appv1.Deployment](r.validateDeploymentForReconcile)),
+	); err != nil {
+		return nil, err
 	}
+	r.log.Info("Watching dataplane Deployment objects")
+
+	// watch DaemonSet objects referenced by one of our Gateways
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &appv1.DaemonSet{},
+			&handler.TypedEnqueueRequestForObject[*appv1.DaemonSet]{},
+			predicate.NewTypedPredicateFuncs[*appv1.DaemonSet](r.validateDaemonSetForReconcile)),
+	); err != nil {
+		return nil, err
+	}
+	r.log.Info("Watching dataplane DaemonSet objects")
 
 	// NOTE: LoadBalancer Service resources are watched by the route controller (together
 	// with backend Services)
@@ -238,18 +236,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 				}
 			}
 
-			if config.DataplaneMode == config.DataplaneModeManaged {
-				resourceName := store.GetNamespacedName(&gw)
+			resourceName := store.GetNamespacedName(&gw)
 
-				dp := &appv1.Deployment{}
-				if err := r.Get(ctx, resourceName, dp); err == nil {
-					deploymentList = append(deploymentList, dp)
-				}
+			dp := &appv1.Deployment{}
+			if err := r.Get(ctx, resourceName, dp); err == nil {
+				deploymentList = append(deploymentList, dp)
+			}
 
-				ds := &appv1.DaemonSet{}
-				if err := r.Get(ctx, resourceName, ds); err == nil {
-					daemonSetList = append(daemonSetList, ds)
-				}
+			ds := &appv1.DaemonSet{}
+			if err := r.Get(ctx, resourceName, ds); err == nil {
+				daemonSetList = append(daemonSetList, ds)
 			}
 		}
 	}
@@ -335,11 +331,6 @@ func (r *gatewayReconciler) validateDaemonSetForReconcile(daemonSet *appv1.Daemo
 // validateDataplaneResourceForReconcile checks whether there is a Gateway with the same name as
 // the dataplane resource (Deployment or DaemonSet) and the resource is owned by us.
 func (r *gatewayReconciler) validateDataplaneResourceForReconcile(obj client.Object) bool {
-	// we don't watch dataplane resources in legacy mode
-	if config.DataplaneMode != config.DataplaneModeManaged {
-		return false
-	}
-
 	// is the dataplane resource owned by us?
 	val, ok := obj.GetLabels()[opdefault.OwnedByLabelKey]
 	if !ok || val != opdefault.OwnedByLabelValue {

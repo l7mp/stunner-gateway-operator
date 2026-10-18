@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -24,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
@@ -32,7 +30,6 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 const (
@@ -52,10 +49,9 @@ const (
 type routeReconciler struct {
 	client.Client
 	eventCh chan<- event.Event
-	// udpRouteVersion and tcpRouteVersion hold the Gateway API version at which the official
-	// route resources are watched (empty if the CRD is not installed): the graduated v1
-	// version is preferred over the deprecated v1alpha2.
-	udpRouteVersion, tcpRouteVersion string
+	// gwAPIUDPRouteServed and gwAPITCPRouteServed are true if the cluster serves the official
+	// Gateway API UDPRoute and TCPRoute resources at v1, respectively.
+	gwAPIUDPRouteServed, gwAPITCPRouteServed bool
 	// tcpRouteServed and turnRouteServed are true if the cluster serves the TCPRoute and the
 	// TURNRoute CRD, respectively.
 	tcpRouteServed, turnRouteServed bool
@@ -136,7 +132,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch TURNRoute objects, and the Secrets they reference, when the cluster serves the CRD
-	r.turnRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1a1.TURNRoute{}, "turnroutes")
+	r.turnRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1.TURNRoute{}, "turnroutes")
 	if err != nil {
 		return nil, err
 	}
@@ -144,26 +140,26 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 
 	if r.turnRouteServed {
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &stnrgwv1a1.TURNRoute{},
-				&handler.TypedEnqueueRequestForObject[*stnrgwv1a1.TURNRoute]{},
-				predicate.TypedGenerationChangedPredicate[*stnrgwv1a1.TURNRoute]{}),
+			source.Kind(mgr.GetCache(), &stnrgwv1.TURNRoute{},
+				&handler.TypedEnqueueRequestForObject[*stnrgwv1.TURNRoute]{},
+				predicate.TypedGenerationChangedPredicate[*stnrgwv1.TURNRoute]{}),
 		); err != nil {
 			return nil, err
 		}
 		r.log.Info("Watching TURNRoute objects")
 
 		// index TURNRoute objects as per the referenced Services, StaticServices and Secrets
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.TURNRoute{},
 			serviceTURNRouteIndex, serviceRouteIndexFunc); err != nil {
 			return nil, err
 		}
 
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.TURNRoute{},
 			staticServiceTURNRouteIndex, staticServiceRouteIndexFunc); err != nil {
 			return nil, err
 		}
 
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1a1.TURNRoute{},
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &stnrgwv1.TURNRoute{},
 			secretTURNRouteIndex, secretTURNRouteIndexFunc); err != nil {
 			return nil, err
 		}
@@ -182,17 +178,13 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 			"TURN tunnels; note that helm upgrade does not update CRDs")
 	}
 
-	// watch the official Gateway API UDPRoute objects at the served version (only when the
-	// CRD is loaded, preferring v1 over the deprecated v1alpha2 -- never both, as the two
-	// versions represent the same objects)
-	r.udpRouteVersion, err = r.gwAPIRouteVersion(mgr, &gwapiv1.UDPRoute{}, &gwapiv1a2.UDPRoute{}, "udproutes")
+	// watch the official Gateway API UDPRoute objects when the cluster serves them at v1
+	r.gwAPIUDPRouteServed, err = r.isRouteResourceServed(mgr, &gwapiv1.UDPRoute{}, "udproutes")
 	if err != nil {
 		return nil, err
 	}
-	config.GwAPIUDPRouteVersion = r.udpRouteVersion
 
-	switch r.udpRouteVersion {
-	case config.GwAPIVersionV1:
+	if r.gwAPIUDPRouteServed {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
 				&handler.TypedEnqueueRequestForObject[*gwapiv1.UDPRoute]{},
@@ -211,38 +203,17 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 			return nil, err
 		}
 		r.log.Info("Watching Gateway API v1 UDPRoute objects")
-	case config.GwAPIVersionV1A2:
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.UDPRoute]{},
-				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-		); err != nil {
-			return nil, err
-		}
-
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
-			serviceUDPRouteIndexGwAPI, serviceRouteIndexFunc); err != nil {
-			return nil, err
-		}
-
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{},
-			staticServiceUDPRouteIndexGwAPI, staticServiceRouteIndexFunc); err != nil {
-			return nil, err
-		}
-		r.log.Info("Watching Gateway API v1alpha2 UDPRoute objects")
-	default:
-		r.log.V(1).Info("Gateway API UDPRoute CRD not available, skipping")
+	} else {
+		r.log.V(1).Info("Gateway API UDPRoute CRD not served at v1, skipping")
 	}
 
-	// watch the official Gateway API TCPRoute objects at the served version
-	r.tcpRouteVersion, err = r.gwAPIRouteVersion(mgr, &gwapiv1.TCPRoute{}, &gwapiv1a2.TCPRoute{}, "tcproutes")
+	// watch the official Gateway API TCPRoute objects when the cluster serves them at v1
+	r.gwAPITCPRouteServed, err = r.isRouteResourceServed(mgr, &gwapiv1.TCPRoute{}, "tcproutes")
 	if err != nil {
 		return nil, err
 	}
-	config.GwAPITCPRouteVersion = r.tcpRouteVersion
 
-	switch r.tcpRouteVersion {
-	case config.GwAPIVersionV1:
+	if r.gwAPITCPRouteServed {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.TCPRoute{},
 				&handler.TypedEnqueueRequestForObject[*gwapiv1.TCPRoute]{},
@@ -261,27 +232,8 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 			return nil, err
 		}
 		r.log.Info("Watching Gateway API v1 TCPRoute objects")
-	case config.GwAPIVersionV1A2:
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-				&handler.TypedEnqueueRequestForObject[*gwapiv1a2.TCPRoute]{},
-				predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{}),
-		); err != nil {
-			return nil, err
-		}
-
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{},
-			serviceTCPRouteIndexGwAPI, serviceRouteIndexFunc); err != nil {
-			return nil, err
-		}
-
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{},
-			staticServiceTCPRouteIndexGwAPI, staticServiceRouteIndexFunc); err != nil {
-			return nil, err
-		}
-		r.log.Info("Watching Gateway API v1alpha2 TCPRoute objects")
-	default:
-		r.log.V(1).Info("Gateway API TCPRoute CRD not available, skipping")
+	} else {
+		r.log.V(1).Info("Gateway API TCPRoute CRD not served at v1, skipping")
 	}
 
 	// a label-selector predicate to select the loadbalancer services we are interested in
@@ -371,8 +323,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	}
 
 	// find all official Gateway API UDPRoutes and convert to our own UDPRoute format
-	switch r.udpRouteVersion {
-	case config.GwAPIVersionV1:
+	if r.gwAPIUDPRouteServed {
 		routesV1 := &gwapiv1.UDPRouteList{}
 		if err := r.List(ctx, routesV1); err != nil {
 			r.log.V(2).Info("No Gateway API UDPRoute resources found")
@@ -381,20 +332,6 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 
 		for i := range routesV1.Items {
 			ro := stnrgwv1.ConvertV1UDPRouteToStnrV1(&routesV1.Items[i])
-			r.log.V(1).Info("Processing Gateway API UDPRoute", "name", store.GetObjectKey(ro))
-
-			udpRouteListGwAPI = append(udpRouteListGwAPI, ro)
-			r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
-		}
-	case config.GwAPIVersionV1A2:
-		routesV1A2 := &gwapiv1a2.UDPRouteList{}
-		if err := r.List(ctx, routesV1A2); err != nil {
-			r.log.V(2).Info("No Gateway API UDPRoute resources found")
-			return reconcile.Result{}, err
-		}
-
-		for i := range routesV1A2.Items {
-			ro := stnrgwv1.ConvertV1A2UDPRouteToStnrV1(&routesV1A2.Items[i])
 			r.log.V(1).Info("Processing Gateway API UDPRoute", "name", store.GetObjectKey(ro))
 
 			udpRouteListGwAPI = append(udpRouteListGwAPI, ro)
@@ -419,8 +356,7 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	}
 
 	// find all official Gateway API TCPRoutes and convert to our own TCPRoute format
-	switch r.tcpRouteVersion {
-	case config.GwAPIVersionV1:
+	if r.gwAPITCPRouteServed {
 		routesV1 := &gwapiv1.TCPRouteList{}
 		if err := r.List(ctx, routesV1); err != nil {
 			r.log.V(2).Info("No Gateway API TCPRoute resources found")
@@ -434,25 +370,11 @@ func (r *routeReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 			tcpRouteListGwAPI = append(tcpRouteListGwAPI, ro)
 			r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
 		}
-	case config.GwAPIVersionV1A2:
-		routesV1A2 := &gwapiv1a2.TCPRouteList{}
-		if err := r.List(ctx, routesV1A2); err != nil {
-			r.log.V(2).Info("No Gateway API TCPRoute resources found")
-			return reconcile.Result{}, err
-		}
-
-		for i := range routesV1A2.Items {
-			ro := stnrgwv1.ConvertV1A2TCPRouteToStnrV1(&routesV1A2.Items[i])
-			r.log.V(1).Info("Processing Gateway API TCPRoute", "name", store.GetObjectKey(ro))
-
-			tcpRouteListGwAPI = append(tcpRouteListGwAPI, ro)
-			r.collectBackends(ctx, ro, ro.Spec.Rules, &backends)
-		}
 	}
 
 	// find all TURNRoutes and the Secrets their tunnels authenticate with
 	if r.turnRouteServed {
-		turnRoutes := &stnrgwv1a1.TURNRouteList{}
+		turnRoutes := &stnrgwv1.TURNRouteList{}
 		if err := r.List(ctx, turnRoutes); err != nil {
 			r.log.Info("No TURNRoutes found")
 		} else {
@@ -568,7 +490,7 @@ func (r *routeReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.
 
 // validateSecretForReconcile checks whether a Secret is the auth Secret of a TURNRoute.
 func (r *routeReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
-	turnRouteList := &stnrgwv1a1.TURNRouteList{}
+	turnRouteList := &stnrgwv1.TURNRouteList{}
 	if err := r.List(context.Background(), turnRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretTURNRouteIndex, store.GetObjectKey(secret)),
 	}); err != nil {
@@ -585,7 +507,7 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 
 	// find the TURNRoutes referring to this service
 	if r.turnRouteServed {
-		turnRouteList := &stnrgwv1a1.TURNRouteList{}
+		turnRouteList := &stnrgwv1.TURNRouteList{}
 		if err := r.List(context.Background(), turnRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(turnIndex, key),
 		}); err != nil {
@@ -606,20 +528,14 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 	}
 
 	// find official Gateway API UDPRoutes referring to this service
-	var udpRouteListGwAPI client.ObjectList
-	switch r.udpRouteVersion {
-	case config.GwAPIVersionV1:
-		udpRouteListGwAPI = &gwapiv1.UDPRouteList{}
-	case config.GwAPIVersionV1A2:
-		udpRouteListGwAPI = &gwapiv1a2.UDPRouteList{}
-	}
-	if udpRouteListGwAPI != nil {
+	if r.gwAPIUDPRouteServed {
+		udpRouteListGwAPI := &gwapiv1.UDPRouteList{}
 		if err := r.List(context.Background(), udpRouteListGwAPI, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(udpIndexGwAPI, key),
 		}); err != nil {
 			r.log.Error(err, "Unable to find associated Gateway API UDPRoute", "service", key)
-		} else if items, err := meta.ExtractList(udpRouteListGwAPI); err == nil {
-			routeNum += len(items)
+		} else {
+			routeNum += len(udpRouteListGwAPI.Items)
 		}
 	}
 
@@ -636,20 +552,14 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 	}
 
 	// find official Gateway API TCPRoutes referring to this service
-	var tcpRouteListGwAPI client.ObjectList
-	switch r.tcpRouteVersion {
-	case config.GwAPIVersionV1:
-		tcpRouteListGwAPI = &gwapiv1.TCPRouteList{}
-	case config.GwAPIVersionV1A2:
-		tcpRouteListGwAPI = &gwapiv1a2.TCPRouteList{}
-	}
-	if tcpRouteListGwAPI != nil {
+	if r.gwAPITCPRouteServed {
+		tcpRouteListGwAPI := &gwapiv1.TCPRouteList{}
 		if err := r.List(context.Background(), tcpRouteListGwAPI, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(tcpIndexGwAPI, key),
 		}); err != nil {
 			r.log.Error(err, "Unable to find associated Gateway API TCPRoute", "service", key)
-		} else if items, err := meta.ExtractList(tcpRouteListGwAPI); err == nil {
-			routeNum += len(items)
+		} else {
+			routeNum += len(tcpRouteListGwAPI.Items)
 		}
 	}
 
@@ -788,28 +698,6 @@ func (r *routeReconciler) getStaticServiceForBackend(ctx context.Context, ro cli
 	return &svc
 }
 
-// gwAPIRouteVersion returns the Gateway API version at which the cluster serves an official
-// route resource, preferring the graduated v1 version over the deprecated v1alpha2.
-func (r *routeReconciler) gwAPIRouteVersion(mgr manager.Manager, v1Obj, v1a2Obj client.Object, resourceName string) (string, error) {
-	served, err := r.isRouteResourceServed(mgr, v1Obj, resourceName)
-	if err != nil {
-		return config.GwAPIVersionUnavailable, err
-	}
-	if served {
-		return config.GwAPIVersionV1, nil
-	}
-
-	served, err = r.isRouteResourceServed(mgr, v1a2Obj, resourceName)
-	if err != nil {
-		return config.GwAPIVersionUnavailable, err
-	}
-	if served {
-		return config.GwAPIVersionV1A2, nil
-	}
-
-	return config.GwAPIVersionUnavailable, nil
-}
-
 // isRouteResourceServed checks whether the API server serves the given route resource at the
 // group/version of the object.
 func (r *routeReconciler) isRouteResourceServed(mgr manager.Manager, obj client.Object, resourceName string) (bool, error) {
@@ -852,18 +740,12 @@ func canonicalRoute(o client.Object) (client.Object, []stnrgwv1.RouteRule) {
 	case *gwapiv1.UDPRoute:
 		c := stnrgwv1.ConvertV1UDPRouteToStnrV1(ro)
 		return c, c.Spec.Rules
-	case *gwapiv1a2.UDPRoute:
-		c := stnrgwv1.ConvertV1A2UDPRouteToStnrV1(ro)
-		return c, c.Spec.Rules
 	case *stnrgwv1.TCPRoute:
 		return ro, ro.Spec.Rules
 	case *gwapiv1.TCPRoute:
 		c := stnrgwv1.ConvertV1TCPRouteToStnrV1(ro)
 		return c, c.Spec.Rules
-	case *gwapiv1a2.TCPRoute:
-		c := stnrgwv1.ConvertV1A2TCPRouteToStnrV1(ro)
-		return c, c.Spec.Rules
-	case *stnrgwv1a1.TURNRoute:
+	case *stnrgwv1.TURNRoute:
 		return ro, ro.Spec.Rules
 	default:
 		return nil, nil
@@ -872,7 +754,7 @@ func canonicalRoute(o client.Object) (client.Object, []stnrgwv1.RouteRule) {
 
 // secretTURNRouteIndexFunc indexes a TURNRoute by the Secret its tunnel authenticates with.
 func secretTURNRouteIndexFunc(o client.Object) []string {
-	ro, ok := o.(*stnrgwv1a1.TURNRoute)
+	ro, ok := o.(*stnrgwv1.TURNRoute)
 	if !ok {
 		return []string{}
 	}
@@ -885,7 +767,7 @@ func secretTURNRouteIndexFunc(o client.Object) []string {
 
 // tunnelAuthSecretName returns the name of the Secret the tunnel of a TURNRoute authenticates
 // with; ok is false when the route references no Secret.
-func tunnelAuthSecretName(ro *stnrgwv1a1.TURNRoute) (types.NamespacedName, bool) {
+func tunnelAuthSecretName(ro *stnrgwv1.TURNRoute) (types.NamespacedName, bool) {
 	ref := ro.Spec.Tunnel.AuthRef
 	if ref == nil || (ref.Group != nil && *ref.Group != corev1.GroupName && *ref.Group != "v1") ||
 		(ref.Kind != nil && *ref.Kind != "Secret") {

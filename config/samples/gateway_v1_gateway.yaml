@@ -1,4 +1,4 @@
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: gateway-sample
@@ -8,7 +8,7 @@ spec:
   listeners:
     - name: sample-listener-udp
       port: 3478
-      protocol: UDP
+      protocol: TURN-UDP
     - name: sample-listener-tcp
       port: 3478
-      protocol: TCP
+      protocol: TURN-TCP

@@ -14,7 +14,6 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -22,7 +21,7 @@ import (
 func TestRenderAdminRender(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
-			name: "admin ok - legacy",
+			name: "admin ok - no dataplane",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -30,9 +29,6 @@ func TestRenderAdminRender(t *testing.T) {
 			svcs: []corev1.Service{},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
-				dpMode := config.DataplaneMode
-				config.DataplaneMode = config.DataplaneModeLegacy
-
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: log}
@@ -44,12 +40,10 @@ func TestRenderAdminRender(t *testing.T) {
 
 				assert.Equal(t, opdefault.DefaultStunnerdInstanceName, admin.Name, "name")
 				assert.Equal(t, testutils.TestLogLevel, admin.LogLevel, "loglevel")
-
-				config.DataplaneMode = dpMode
 			},
 		},
 		{
-			name: "admin ok - managed",
+			name: "admin ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -58,9 +52,6 @@ func TestRenderAdminRender(t *testing.T) {
 			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep: func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
-				dpMode := config.DataplaneMode
-				config.DataplaneMode = config.DataplaneModeManaged
-
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: log}
@@ -84,12 +75,10 @@ func TestRenderAdminRender(t *testing.T) {
 				// the admin-config validator sets the default
 				assert.Equal(t, "None", admin.OffloadEngine, "offload-engine")
 				assert.Len(t, admin.OffloadInterfaces, 0, "offload-intfs len")
-
-				config.DataplaneMode = dpMode
 			},
 		},
 		{
-			name: "admin metricsendpoint/healthcheckendpoint ok - managed",
+			name: "admin metricsendpoint/healthcheckendpoint ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -107,9 +96,6 @@ func TestRenderAdminRender(t *testing.T) {
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
 			tester: func(t *testing.T, r *renderer) {
-				dpMode := config.DataplaneMode
-				config.DataplaneMode = config.DataplaneModeManaged
-
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: log}
@@ -125,8 +111,6 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Equal(t, stnrapiv2.DefaultLogLevel, admin.LogLevel, "loglevel")
 				assert.Equal(t, opdefault.DefaultMetricsEndpoint, admin.MetricsEndpoint, "Metrics_endpoint")
 				assert.Equal(t, "", *admin.HealthCheckEndpoint, "health-check default on")
-
-				config.DataplaneMode = dpMode
 			},
 		},
 		{
@@ -144,9 +128,6 @@ func TestRenderAdminRender(t *testing.T) {
 				c.dps = []stnrgwv1.Dataplane{*dp}
 			},
 			tester: func(t *testing.T, r *renderer) {
-				dpMode := config.DataplaneMode
-				config.DataplaneMode = config.DataplaneModeManaged
-
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class not found")
 				c := &RenderContext{gc: gc, log: log}
@@ -164,8 +145,6 @@ func TestRenderAdminRender(t *testing.T) {
 				assert.Len(t, admin.OffloadInterfaces, 2, "offload-intfs len")
 				assert.Contains(t, admin.OffloadInterfaces, "lo", "offload-intfs lo")
 				assert.Contains(t, admin.OffloadInterfaces, "eth0", "offload-intfs eth0")
-
-				config.DataplaneMode = dpMode
 			},
 		},
 	})

@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/lens"
 )
@@ -209,7 +208,7 @@ func TestRouteStatusEqual(t *testing.T) {
 	kind := gwapiv1.Kind("Gateway")
 	name := gwapiv1.ObjectName("gw")
 
-	current := gwapiv1a2.UDPRouteStatus{RouteStatus: gwapiv1a2.RouteStatus{Parents: []gwapiv1.RouteParentStatus{{
+	current := gwapiv1.UDPRouteStatus{RouteStatus: gwapiv1.RouteStatus{Parents: []gwapiv1.RouteParentStatus{{
 		ParentRef:      gwapiv1.ParentReference{Group: &group, Kind: &kind, Name: name},
 		ControllerName: gwapiv1.GatewayController("stunner.l7mp.io/gateway-operator"),
 		Conditions: []metav1.Condition{{
@@ -237,7 +236,7 @@ func TestRouteStatusParentDiff(t *testing.T) {
 	kind := gwapiv1.Kind("Gateway")
 	name := gwapiv1.ObjectName("gw")
 
-	current := gwapiv1a2.UDPRouteStatus{RouteStatus: gwapiv1a2.RouteStatus{Parents: []gwapiv1.RouteParentStatus{{
+	current := gwapiv1.UDPRouteStatus{RouteStatus: gwapiv1.RouteStatus{Parents: []gwapiv1.RouteParentStatus{{
 		ParentRef:      gwapiv1.ParentReference{Group: &group, Kind: &kind, Name: name},
 		ControllerName: gwapiv1.GatewayController("stunner.l7mp.io/gateway-operator"),
 	}}}}

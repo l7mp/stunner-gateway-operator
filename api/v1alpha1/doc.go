@@ -15,5 +15,3 @@ limitations under the License.
 */
 
 package v1alpha1
-
-// +k8s:conversion-gen=github.com/l7mp/stunner-gateway-operator/api/v1

@@ -19,7 +19,6 @@ import (
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 func TestRenderTURNRouteRender(t *testing.T) {
@@ -29,7 +28,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:    []gwapiv1.Gateway{testutils.TestGw},
-			turnrs: []stnrgwv1a1.TURNRoute{testutils.TestTURNRoute},
+			turnrs: []stnrgwv1.TURNRoute{testutils.TestTURNRoute},
 			tscrts: []corev1.Secret{testutils.TestTunnelSecret},
 			prep:   func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
@@ -65,7 +64,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:    []gwapiv1.Gateway{testutils.TestGw},
-			turnrs: []stnrgwv1a1.TURNRoute{testutils.TestTURNRoute},
+			turnrs: []stnrgwv1.TURNRoute{testutils.TestTURNRoute},
 			tscrts: []corev1.Secret{testutils.TestTunnelSecret},
 			svcs:   []corev1.Service{testutils.TestSvc},
 			esls:   []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
@@ -78,7 +77,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 						Port: &port,
 					},
 				}}}}
-				c.turnrs = []stnrgwv1a1.TURNRoute{*ro}
+				c.turnrs = []stnrgwv1.TURNRoute{*ro}
 			},
 			tester: func(t *testing.T, r *renderer) {
 				config.EnableRelayToClusterIP = false
@@ -101,7 +100,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:    []gwapiv1.Gateway{testutils.TestGw},
-			turnrs: []stnrgwv1a1.TURNRoute{testutils.TestTURNRoute},
+			turnrs: []stnrgwv1.TURNRoute{testutils.TestTURNRoute},
 			prep:   func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
 				// no Secret
@@ -150,13 +149,13 @@ func TestRenderTURNRouteRender(t *testing.T) {
 			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:    []gwapiv1.Gateway{testutils.TestGw},
 			rs:     []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			turnrs: []stnrgwv1a1.TURNRoute{testutils.TestTURNRoute},
+			turnrs: []stnrgwv1.TURNRoute{testutils.TestTURNRoute},
 			tscrts: []corev1.Secret{testutils.TestTunnelSecret},
 			svcs:   []corev1.Service{testutils.TestSvc},
 			esls:   []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			dps:    []stnrgwv1.Dataplane{testutils.TestDataplane},
 			prep:   func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
-				config.DataplaneMode = config.DataplaneModeLegacy
 				config.EnableRelayToClusterIP = false
 
 				gc, err := r.getGatewayClass()
@@ -168,10 +167,10 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				c.gws.ResetGateways(r.getGateways4Class(c))
 				assert.NoError(t, r.renderForGateways(c), "render success")
 
-				cms := c.update.UpsertQueue.ConfigMaps.Objects()
-				assert.Len(t, cms, 1, "configmap ready")
-				conf, err := store.UnpackConfigMap(asConfigMap(cms[0]))
-				assert.NoError(t, err, "configmap stunner-config unmarshal")
+				cs := c.update.ConfigQueue
+				assert.Len(t, cs, 1, "config ready")
+				conf := cs[0]
+				assert.Equal(t, "testnamespace/gateway-1", conf.Admin.Name, "name")
 
 				// the default policy and the tunnel's
 				assert.Len(t, conf.Auths, 2, "auth num")
@@ -187,7 +186,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 
 				lc, err := conf.GetListenerConfig("testnamespace/gateway-1/gateway-1-listener-udp")
 				assert.NoError(t, err, "listener")
-				sc := serverOf(&conf, lc)
+				sc := serverOf(conf, lc)
 				assert.ElementsMatch(t, []string{"testnamespace/udproute-ok/udp",
 					"testnamespace/turnroute-ok/turn"}, sc.Clusters, "clusters")
 
@@ -201,7 +200,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				// the route resolves
 				turnRoutes := 0
 				for _, ro := range r.allRoutes() {
-					if _, ok := ro.(*stnrgwv1a1.TURNRoute); !ok {
+					if _, ok := ro.(*stnrgwv1.TURNRoute); !ok {
 						continue
 					}
 					turnRoutes++
@@ -214,7 +213,6 @@ func TestRenderTURNRouteRender(t *testing.T) {
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
-				config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 			},
 		},
 	})

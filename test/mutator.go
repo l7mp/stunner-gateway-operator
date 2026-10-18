@@ -32,7 +32,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 type GatewayClassMutator func(current *gwapiv1.GatewayClass)
@@ -219,10 +218,10 @@ func createOrUpdateTCPRoute(ctx context.Context, k8sClient client.Client, templa
 	Expect(err).Should(Succeed())
 }
 
-type TURNRouteMutator func(current *stnrgwv1a1.TURNRoute)
+type TURNRouteMutator func(current *stnrgwv1.TURNRoute)
 
-func createOrUpdateTURNRoute(ctx context.Context, k8sClient client.Client, template *stnrgwv1a1.TURNRoute, f TURNRouteMutator) {
-	current := &stnrgwv1a1.TURNRoute{ObjectMeta: metav1.ObjectMeta{
+func createOrUpdateTURNRoute(ctx context.Context, k8sClient client.Client, template *stnrgwv1.TURNRoute, f TURNRouteMutator) {
+	current := &stnrgwv1.TURNRoute{ObjectMeta: metav1.ObjectMeta{
 		Name:      template.GetName(),
 		Namespace: template.GetNamespace(),
 	}}

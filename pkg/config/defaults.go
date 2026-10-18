@@ -12,10 +12,10 @@ import (
 )
 
 // Labeling rules
-// - all top-level resources (Service, Deployment, ConfigMap) are labeled with "OwnedByLabelKey:OwnedByLabelValue"
+// - all top-level resources (Service, Deployment, DaemonSet) are labeled with "OwnedByLabelKey:OwnedByLabelValue"
 // - additional mandatory labels are "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
 // - Deployment pods are labeled with "AppLabelKey:AppLabelValue" and "RelatedGatewayKey:Gateway.GetName()" and "RelatedGatewayNamespace:Gateway.GetNamespace()"
-// - all resources must have an owner-reference to a Gateway or a GatewayConfig (stunnerd-config ConfigMap in legacy dataplane mode) for the operator to pick them up
+// - all resources must have an owner-reference to a Gateway for the operator to pick them up
 
 const (
 	// DefaultControllerName is a unique identifier which indicates this operator's name.
@@ -24,14 +24,11 @@ const (
 	// DefaultDataplaneName is the name of the default Dataplane to use when no dataplane is specified explicitly.
 	DefaultDataplaneName = "default"
 
-	// DefaultDataplaneMode is the default dataplane mode.
-	DefaultDataplaneMode = "managed"
-
 	// DefaultEnableFinalizer controls whether to enable the operator finalizer.
 	DefaultEnableFinalizer = false
 
 	// OwnedByLabelKey is the name of the label that is used to mark resources (Services,
-	// ConfigMaps, and Deployments) dynamically created and maintained by the operator. Note
+	// Deployments and DaemonSets) dynamically created and maintained by the operator. Note
 	// that the Deployments and Services created by the operator will have both the AppLabelKey
 	// and the OwnedByLabelKey labels set.
 	OwnedByLabelKey = stnrapiv2.DefaultOwnedByLabelKey
@@ -40,17 +37,13 @@ const (
 	// maintained by the operator.
 	OwnedByLabelValue = stnrapiv2.DefaultOwnedByLabelValue
 
-	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service, a
-	// STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
-	// Gateway. The value is either a singular pair of a namespace and name when of the related
-	// Gateway (in the form "namespace/name", mostly used for associating a LB Service to a
-	// Gateway) or GatewayConfig (used for ConfigMaps storing STUNner dataplane configs in
-	// legacy mode, which usually belong to multiple Gateways).
+	// RelatedGatewayKey is the name of the label that is used to tie a LoadBalancer service or a
+	// stunnerd Deployment or DaemonSet to a Gateway. As a label its value is the name of the
+	// related Gateway, as an annotation it is the "namespace/name" of the Gateway.
 	RelatedGatewayKey = stnrapiv2.DefaultRelatedGatewayKey
 
 	// RelatedGatewayNamespace is the name of the label that is used to tie a LoadBalancer
-	// service, a STUNner dataplane ConfigMap, or a stunnerd Deployment (in managed mode) to a
-	// Gateway. The value is the namespace of the related Gateway.
+	// service or a stunnerd Deployment or DaemonSet to a Gateway. The value is the namespace of the related Gateway.
 	RelatedGatewayNamespace = stnrapiv2.DefaultRelatedGatewayNamespace
 
 	// AppLabelKey defines the label used to mark the pods of the stunnerd Deployment.
@@ -68,18 +61,9 @@ const (
 	// to external clients.
 	DefaultServiceType = corev1.ServiceTypeLoadBalancer
 
-	// DefaultConfigMapName names a ConfigMap by the operator to render the stunnerd
-	// config file.
-	DefaultConfigMapName = "stunnerd-config"
-
 	// DefaultStunnerdInstanceName specifies the name of the stunnerd instance managed by the
 	// operator.
 	DefaultStunnerdInstanceName = "stunner-daemon"
-
-	// DefaultStunnerdConfigfileName defines the file name under which the generated configfile
-	// will appear in the filesystem of the stunnerd pods. This is also the key on the
-	// ConfigMap that maintains the stunnerd config.
-	DefaultStunnerdConfigfileName = "stunnerd.conf"
 
 	// DefaultEnableRelayToClusterIP allows clients to create transport relay connections to the
 	// ClusterIP of a service.

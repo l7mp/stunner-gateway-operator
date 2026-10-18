@@ -36,7 +36,6 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 // testTURNRouteManaged exercises TURNRoute handling in managed mode via the CDS server: the tunnel
@@ -106,7 +105,7 @@ func testTURNRouteManaged() {
 		})
 
 		It("should set the TURNRoute status", func() {
-			ro := &stnrgwv1a1.TURNRoute{}
+			ro := &stnrgwv1.TURNRoute{}
 			lookupKey := store.GetNamespacedName(testTURNRoute)
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, lookupKey, ro); err != nil {

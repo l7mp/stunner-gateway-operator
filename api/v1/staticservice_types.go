@@ -28,9 +28,6 @@ func init() {
 	})
 }
 
-// Hub marks StaticService.v1 as a conversion hub.
-func (*StaticService) Hub() {}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner,shortName=ssvc
 // +kubebuilder:storageversion

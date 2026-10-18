@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func init() {
@@ -38,10 +37,6 @@ func init() {
 //   - port-ranges are correctly handled ([port, endPort])
 //   - port is not mandatory
 //   - backend weight is not supported
-//
-// Rendering a TCPRoute into a dataplane cluster is supported only in the premium tier. Without a
-// license the route is still accepted and its status maintained, but no cluster is rendered for
-// it and the ResolvedRefs condition reports the reason.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner
@@ -87,24 +82,6 @@ type TCPRouteList struct {
 // representation, dropping the unsupported upstream backend-reference fields (see
 // convertBackendRefs).
 func ConvertV1TCPRouteToStnrV1(src *gwapiv1.TCPRoute) *TCPRoute {
-	if src == nil {
-		return nil
-	}
-	dst := new(TCPRoute)
-	src.ObjectMeta.DeepCopyInto(&dst.ObjectMeta)
-	src.Spec.CommonRouteSpec.DeepCopyInto(&dst.Spec.CommonRouteSpec)
-	src.Status.RouteStatus.DeepCopyInto(&dst.Status.RouteStatus)
-
-	dst.Spec.Rules = make([]RouteRule, len(src.Spec.Rules))
-	for i := range src.Spec.Rules {
-		dst.Spec.Rules[i].BackendRefs = convertBackendRefs(src.Spec.Rules[i].BackendRefs)
-	}
-	return dst
-}
-
-// ConvertV1A2TCPRouteToStnrV1 converts a deprecated Gateway API v1alpha2 TCPRoute to the
-// STUNner-native representation (see ConvertV1TCPRouteToStnrV1).
-func ConvertV1A2TCPRouteToStnrV1(src *gwapiv1a2.TCPRoute) *TCPRoute {
 	if src == nil {
 		return nil
 	}

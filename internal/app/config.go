@@ -18,7 +18,6 @@ import (
 
 // Environment variables that override the defaults or the flags.
 const (
-	EnvVarMode           = "STUNNER_GATEWAY_OPERATOR_DATAPLANE_MODE"
 	EnvVarAddress        = "STUNNER_GATEWAY_OPERATOR_ADDRESS"
 	EnvVarControllerName = "STUNNER_GATEWAY_OPERATOR_CONTROLLER_NAME"
 	EnvVarPprofAddr      = "STUNNER_GATEWAY_OPERATOR_PPROF_BIND_ADDRESS"
@@ -33,8 +32,6 @@ type LookupEnv func(key string) (string, bool)
 type Config struct {
 	// ControllerName is the controller name bound to the GatewayClass resources.
 	ControllerName string
-	// DataplaneMode is "managed" or "legacy".
-	DataplaneMode string
 	// EnableFinalizer cleans up allocated resources and invalidates statuses on exit. It is
 	// incompatible with leader election.
 	EnableFinalizer bool
@@ -74,17 +71,12 @@ type Config struct {
 	// SkipNameValidation lets several managers register controllers of the same names in one
 	// process. Tests only.
 	SkipNameValidation bool
-
-	// flags is the flag set BindFlags registered on, so that Complete can tell an explicitly
-	// set flag from its default.
-	flags *flag.FlagSet
 }
 
 // NewConfig returns the default configuration.
 func NewConfig() Config {
 	return Config{
 		ControllerName:       opdefault.DefaultControllerName,
-		DataplaneMode:        opdefault.DefaultDataplaneMode,
 		EnableFinalizer:      opdefault.DefaultEnableFinalizer,
 		ThrottleTimeout:      opdefault.DefaultThrottleTimeout,
 		StartupRenderTimeout: opdefault.DefaultStartupRenderTimeout,
@@ -100,7 +92,6 @@ func NewConfig() Config {
 // BindFlags registers the command line flags on fs. The controller name default comes from the
 // environment, so that the flag help shows the effective default.
 func (c *Config) BindFlags(fs *flag.FlagSet, lookup LookupEnv) {
-	c.flags = fs
 	if name, ok := lookup(EnvVarControllerName); ok {
 		c.ControllerName = name
 	}
@@ -111,8 +102,6 @@ func (c *Config) BindFlags(fs *flag.FlagSet, lookup LookupEnv) {
 		"Time interval to wait between subsequent config renders.")
 	fs.DurationVar(&c.StartupRenderTimeout, "startup-render-timeout", c.StartupRenderTimeout,
 		"Time to wait after becoming leader for every controller to report before the first render.")
-	fs.StringVar(&c.DataplaneMode, "dataplane-mode", c.DataplaneMode,
-		`Managed dataplane mode: either "managed" (automatic dataplane provisioning using the config discovery service) or "legacy" (dataplane(s) provided by the user).`)
 	fs.StringVar(&c.CDSAddress, "config-discovery-address", c.CDSAddress, "Config discovery server endpoint.")
 	fs.StringVar(&c.MetricsAddr, "metrics-bind-address", c.MetricsAddr, "The address the metric endpoint binds to.")
 	fs.StringVar(&c.ProbeAddr, "health-probe-bind-address", c.ProbeAddr, "The address the probe endpoint binds to.")
@@ -131,13 +120,6 @@ func (c *Config) BindFlags(fs *flag.FlagSet, lookup LookupEnv) {
 // Complete applies the environment overrides that take effect after flag parsing, derives the
 // advertised config discovery address and validates the result.
 func (c *Config) Complete(lookup LookupEnv) error {
-	// dataplane mode not set on the command line: use the env var
-	if !c.flagSet("dataplane-mode") {
-		if mode, ok := lookup(EnvVarMode); ok {
-			c.DataplaneMode = mode
-		}
-	}
-
 	if c.PprofAddr == "0" {
 		if addr, ok := lookup(EnvVarPprofAddr); ok {
 			c.PprofAddr = addr
@@ -176,20 +158,10 @@ func (c *Config) Complete(lookup LookupEnv) error {
 	return nil
 }
 
-// flagSet reports whether the named flag was given on the command line.
-func (c *Config) flagSet(name string) bool {
-	set := false
-	if c.flags != nil {
-		c.flags.Visit(func(f *flag.Flag) { set = set || f.Name == name })
-	}
-	return set
-}
-
 // Summary lists the effective settings for the startup log.
 func (c *Config) Summary() []any {
 	return []any{
 		"controller-name", c.ControllerName,
-		"dataplane-mode", c.DataplaneMode,
 		"finalizer", c.EnableFinalizer,
 		"throttle-timeout", c.ThrottleTimeout.String(),
 		"startup-render-timeout", c.StartupRenderTimeout.String(),

@@ -22,9 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Hub marks Dataplane.v1 as a conversion hub.
-func (*Dataplane) Hub() {}
-
 func init() {
 	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
 		scheme.AddKnownTypes(GroupVersion, &Dataplane{}, &DataplaneList{})

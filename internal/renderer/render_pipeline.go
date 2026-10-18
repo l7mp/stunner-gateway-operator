@@ -2,8 +2,6 @@ package renderer
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +13,6 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config
@@ -23,15 +20,7 @@ func (r *renderer) Render(e *event.EventRender) {
 	r.gen = e.Generation
 	r.log.Info("Rendering configuration", "generation", r.gen, "event", e.String())
 
-	switch config.DataplaneMode {
-	case config.DataplaneModeLegacy:
-		r.renderGatewayClass(e)
-	case config.DataplaneModeManaged:
-		r.renderManagedGateways(e)
-	default:
-		r.log.Info(`Unknown dataplane mode (must be either "managed" or "legacy")`)
-		return
-	}
+	r.renderManagedGateways(e)
 }
 
 // Finalize performs the finalization sequence:
@@ -41,78 +30,7 @@ func (r *renderer) Render(e *event.EventRender) {
 func (r *renderer) Finalize(gen int) *event.EventUpdate {
 	r.gen = gen
 
-	switch config.DataplaneMode {
-	case config.DataplaneModeLegacy:
-		r.log.Info("Finalization not supported for legacy dataplane mode")
-	case config.DataplaneModeManaged:
-		return r.finalizeManagedGateways()
-	default:
-		r.log.Info(`Finalizer: unknown dataplane mode (must be either "managed" or "legacy")`)
-	}
-
-	return nil
-}
-
-// renderGatewayClass generates and sets a STUNner daemon configuration in the "legacy" dataplane mode.
-func (r *renderer) renderGatewayClass(e *event.EventRender) {
-	r.log.Info("Starting dataplane render", "mode", "legacy")
-
-	r.log.V(1).Info("Obtaining gateway-class objects")
-	gcs := r.getGatewayClasses()
-
-	if len(gcs) == 0 {
-		r.log.Info("No gateway-class objects found", "event", e.String())
-		return
-	}
-
-	if len(gcs) > 1 {
-		names := []string{}
-		for _, gc := range gcs {
-			names = append(names, fmt.Sprintf("%q", store.GetObjectKey(gc)))
-		}
-
-		r.log.Info("Multiple gateway-class objects found: this is most probably UNINTENDED - "+
-			"the operator will attempt to render a configuration for each gateway-class but there "+
-			"is no guarantee that this will work - this mode is UNSUPPORTED, "+
-			"if unsure, remove one of the gateway-class objects", "names", strings.Join(names, ", "))
-	}
-
-	// render each GatewayClass: hopefully they won't step on each other's throat: we cannot
-	// help if multiple GatewayClasses (or the GatewayConfigs thereof) set the rendering
-	// pipeline to render into the same configmap, but at least we can prevent race conditions
-	// by serializing update requests on the updaterChannel
-	for _, gc := range gcs {
-		r.log.Info("Rendering configuration", "gateway-class", store.GetObjectKey(gc))
-		c := NewRenderContext(r, gc)
-
-		r.log.V(1).Info("Obtaining gateway-config", "gateway-class", gc.GetName())
-		var err error
-		c.gwConf, err = r.getGatewayConfig4Class(c)
-		if err != nil {
-			r.log.Error(err, "Error obtaining gateway-config",
-				"gateway-class", gc.GetName())
-			r.invalidateGatewayClass(c, err)
-			continue
-		}
-
-		r.log.V(1).Info("Finding gateways", "gateway-class", store.GetObjectKey(gc))
-		gws := r.getGateways4Class(c)
-		c.gws.ResetGateways(gws)
-
-		// render for ALL gateways that correspond to this gateway-class
-		if err := r.renderForGateways(c); err != nil {
-			// an irreparable error happened, invalidate the config and set all related
-			// object statuses to signal the error
-			r.log.Error(err, "Rendering error", "gateway-class", store.GetObjectKey(gc))
-			r.invalidateGatewayClass(c, err)
-		}
-
-		setGatewayClassStatusAccepted(gc, nil)
-		c.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
-
-		// send the update back to the operator
-		event.Send(r.ctx, r.operatorCh, c.update.DeepCopy())
-	}
+	return r.finalizeManagedGateways()
 }
 
 // renderManagedGateways generates and sets a STUNner daemon configuration for the "managed" dataplane mode.
@@ -231,8 +149,6 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	conf := stnrapiv2.StunnerConfig{
 		ApiVersion: stnrapiv2.ApiVersion,
 	}
-
-	targetName, targetNamespace := getTarget(c)
 
 	log.V(1).Info("Rendering admin config")
 	admin, err := r.renderAdmin(c)
@@ -419,57 +335,49 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 
 	r.log.Info("Update queue ready", "queue", c.update.String())
 
-	if config.DataplaneMode == config.DataplaneModeManaged {
-		// config name is the name of the gateway
-		gw := c.gws.GetFirst()
-		if gw != nil {
-			conf.Admin.Name = store.GetObjectKey(gw)
+	// config name is the name of the gateway
+	gw := c.gws.GetFirst()
+	if gw != nil {
+		conf.Admin.Name = store.GetObjectKey(gw)
 
-			// update cds server
-			c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
+		// update cds server
+		c.update.ConfigQueue = append(c.update.ConfigQueue, &conf)
 
-			// create deployment
-			dp, err := r.generateDataplane(c)
-			if err != nil {
-				return err
-			}
-			if isManagedDataplaneDisabled(gw) {
-				if dep, ok := dp.(*appv1.Deployment); ok {
-					c.update.DeleteQueue.Deployments.Upsert(dep.DeepCopy())
-				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
-					c.update.DeleteQueue.DaemonSets.Upsert(ds.DeepCopy())
-				}
-				log.V(1).Info("Removing STUNner dataplane resource for Gateway",
-					"gateway", store.DumpObject(gw),
-					"disable-dataplane-annotation", true)
-			} else {
-				if dep, ok := dp.(*appv1.Deployment); ok {
-					c.update.UpsertQueue.Deployments.Upsert(dep.DeepCopy())
-					// delete lingering DeamonSets
-					ds := &appv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
-						Namespace: dep.GetNamespace(),
-						Name:      dep.GetName(),
-					}}
-					c.update.DeleteQueue.DaemonSets.Upsert(ds)
-				} else if ds, ok := dp.(*appv1.DaemonSet); ok {
-					c.update.UpsertQueue.DaemonSets.Upsert(ds.DeepCopy())
-					// delete lingering Deployments
-					dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-						Namespace: ds.GetNamespace(),
-						Name:      ds.GetName(),
-					}}
-					c.update.DeleteQueue.Deployments.Upsert(dep)
-				}
-				log.Info("STUNner dataplane resource rendering ready",
-					"generation", r.gen, "resource", store.DumpObject(dp))
-			}
-		}
-	} else {
-		cm, err := r.renderConfig(c, targetName, targetNamespace, &conf)
+		// create deployment
+		dp, err := r.generateDataplane(c)
 		if err != nil {
 			return err
 		}
-		c.update.UpsertQueue.ConfigMaps.Upsert(cm.DeepCopy())
+		if isManagedDataplaneDisabled(gw) {
+			if dep, ok := dp.(*appv1.Deployment); ok {
+				c.update.DeleteQueue.Deployments.Upsert(dep.DeepCopy())
+			} else if ds, ok := dp.(*appv1.DaemonSet); ok {
+				c.update.DeleteQueue.DaemonSets.Upsert(ds.DeepCopy())
+			}
+			log.V(1).Info("Removing STUNner dataplane resource for Gateway",
+				"gateway", store.DumpObject(gw),
+				"disable-dataplane-annotation", true)
+		} else {
+			if dep, ok := dp.(*appv1.Deployment); ok {
+				c.update.UpsertQueue.Deployments.Upsert(dep.DeepCopy())
+				// delete lingering DeamonSets
+				ds := &appv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
+					Namespace: dep.GetNamespace(),
+					Name:      dep.GetName(),
+				}}
+				c.update.DeleteQueue.DaemonSets.Upsert(ds)
+			} else if ds, ok := dp.(*appv1.DaemonSet); ok {
+				c.update.UpsertQueue.DaemonSets.Upsert(ds.DeepCopy())
+				// delete lingering Deployments
+				dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+					Namespace: ds.GetNamespace(),
+					Name:      ds.GetName(),
+				}}
+				c.update.DeleteQueue.Deployments.Upsert(dep)
+			}
+			log.Info("STUNner dataplane resource rendering ready",
+				"generation", r.gen, "resource", store.DumpObject(dp))
+		}
 	}
 
 	log.Info("STUNner dataplane configuration ready", "generation", r.gen, "config",
@@ -485,27 +393,6 @@ func (r *renderer) invalidateGatewayClass(c *RenderContext, reason error) {
 
 	log.Info("Invalidating configuration", "gateway-class", store.GetObjectKey(gc),
 		"reason", reason.Error())
-
-	if config.DataplaneMode == config.DataplaneModeLegacy {
-		if c.gwConf != nil {
-			// remove the configmap
-			targetNamespace := c.gwConf.GetNamespace()
-			targetName := opdefault.DefaultConfigMapName
-			if cm, err := r.renderConfig(c, targetName, targetNamespace, nil); err != nil {
-				log.Error(err, "Error invalidating ConfigMap", "target",
-					fmt.Sprintf("%s/%s", targetNamespace, targetName))
-			} else {
-				c.update.UpsertQueue.ConfigMaps.Upsert(cm.DeepCopy())
-			}
-		} else {
-			// this is the killer case: we have most probably lost our gatewayconfig
-			// and we don't know which stunner config to invalidate; for now warn,
-			// later eliminate such cases by putting a finalizer/owner-ref to
-			// GatewayConfigs once we have started using them
-			log.Info("No gateway-config: active STUNNer configuration may remain stale",
-				"gateway-class", gc.GetName())
-		}
-	}
 
 	setGatewayClassStatusAccepted(gc, reason)
 	c.update.UpsertQueue.GatewayClasses.Upsert(gc.DeepCopy())
@@ -540,39 +427,27 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		// schedule for update
 		c.update.UpsertQueue.Gateways.Upsert(gw.DeepCopy())
 
-		// delete dataplane configmaps, services and deployments for invalidated gateways
+		// delete dataplane services and deployments for invalidated gateways
 		// we do not update the client via CDS: the deployment is going away anyway
-		if config.DataplaneMode == config.DataplaneModeManaged {
-			cm := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      gw.GetName(),
-					Namespace: gw.GetNamespace(),
-				},
-			}
-			c.update.DeleteQueue.ConfigMaps.Upsert(cm)
-			log.V(2).Info("Deleting dataplane ConfigMap", "generation", r.gen,
-				"configmap", store.DumpObject(cm))
-
-			svc := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      gw.GetName(),
-					Namespace: gw.GetNamespace(),
-				},
-			}
-			c.update.DeleteQueue.Services.Upsert(svc)
-			log.V(2).Info("Deleting dataplane Service", "generation", r.gen,
-				"service", store.DumpObject(svc))
-
-			dp := &appv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      gw.GetName(),
-					Namespace: gw.GetNamespace(),
-				},
-			}
-			c.update.DeleteQueue.Deployments.Upsert(dp)
-			log.V(2).Info("Deleting dataplane Deployment", "generation", r.gen,
-				"deployment", store.DumpObject(dp))
+		svc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gw.GetName(),
+				Namespace: gw.GetNamespace(),
+			},
 		}
+		c.update.DeleteQueue.Services.Upsert(svc)
+		log.V(2).Info("Deleting dataplane Service", "generation", r.gen,
+			"service", store.DumpObject(svc))
+
+		dp := &appv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gw.GetName(),
+				Namespace: gw.GetNamespace(),
+			},
+		}
+		c.update.DeleteQueue.Deployments.Upsert(dp)
+		log.V(2).Info("Deleting dataplane Deployment", "generation", r.gen,
+			"deployment", store.DumpObject(dp))
 	}
 
 	log.V(1).Info("Processing routes")
@@ -600,24 +475,4 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 
 		queueRouteStatusUpdate(c, ro)
 	}
-}
-
-func getTarget(c *RenderContext) (string, string) {
-	// gw-config.StunnerConfig may override this
-	targetName, targetNamespace := "", ""
-	switch config.DataplaneMode {
-	case config.DataplaneModeLegacy:
-		targetName = opdefault.DefaultConfigMapName
-		targetNamespace = c.gwConf.GetNamespace()
-	case config.DataplaneModeManaged:
-		// assume it exists
-		gw := c.gws.GetFirst()
-		if gw == nil {
-			return "", ""
-		}
-		targetName = gw.GetName()
-		targetNamespace = gw.GetNamespace()
-	}
-
-	return targetName, targetNamespace
 }

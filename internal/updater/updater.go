@@ -178,14 +178,6 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 		}
 	}
 
-	for _, o := range q.ConfigMaps.Objects() {
-		if op, err := u.upsertResourceObject(ctx, o, gen); err != nil {
-			u.log.Error(err, "Cannot upsert ConfigMap", "operation", op,
-				"config-map", store.DumpObject(o))
-			continue
-		}
-	}
-
 	for _, o := range q.Deployments.Objects() {
 		if op, err := u.upsertResourceObject(ctx, o, gen); err != nil {
 			u.log.Error(err, "Cannot upsert Deployment", "operation", op,
@@ -264,14 +256,6 @@ func (u *Updater) ProcessUpdate(ctx context.Context, e *event.EventUpdate) error
 		if err := u.deleteObject(ctx, svc, gen); err != nil && !apierrors.IsNotFound(err) {
 			u.log.V(1).Info("Cannot delete Service", "service",
 				store.DumpObject(svc), "error", err)
-			continue
-		}
-	}
-
-	for _, cm := range q.ConfigMaps.Objects() {
-		if err := u.deleteObject(ctx, cm, gen); err != nil && !apierrors.IsNotFound(err) {
-			u.log.V(1).Info("Cannot delete config-map", "config-map",
-				store.DumpObject(cm), "error", err)
 			continue
 		}
 	}

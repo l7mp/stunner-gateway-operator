@@ -5,7 +5,6 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
@@ -27,18 +26,18 @@ func (r *adminRenderer) render(c *RenderContext, _ ...any) (stnrapiv2.Config, er
 	}
 
 	var me string
-	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.EnableMetricsEndpoint {
+	if c.dp != nil && c.dp.Spec.EnableMetricsEndpoint {
 		me = opdefault.DefaultMetricsEndpoint
 	}
 
 	he := opdefault.DefaultHealthCheckEndpoint
-	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil && c.dp.Spec.DisableHealthCheck {
+	if c.dp != nil && c.dp.Spec.DisableHealthCheck {
 		he = ""
 	}
 
 	offload := ""
 	var offloadIntfs []string
-	if config.DataplaneMode == config.DataplaneModeManaged && c.dp != nil {
+	if c.dp != nil {
 		offload = c.dp.Spec.OffloadEngine
 		offloadIntfs = c.dp.Spec.OffloadInterfaces
 	}

@@ -116,8 +116,7 @@ func BenchmarkRenderPipeline(b *testing.B) {
 			// Setup: prepare stores with N resources.
 			benchmarkSetup(n)
 
-			// Configure managed mode with relay-to-ClusterIP (like the reference test).
-			config.DataplaneMode = config.DataplaneModeManaged
+			// Configure relay-to-ClusterIP (like the reference test).
 			config.EnableRelayToClusterIP = true
 
 			// Create the renderer.
@@ -174,7 +173,6 @@ func BenchmarkRenderPipeline(b *testing.B) {
 
 			// Restore default config.
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
-			config.DataplaneMode = config.NewDataplaneMode(opdefault.DefaultDataplaneMode)
 		})
 	}
 }

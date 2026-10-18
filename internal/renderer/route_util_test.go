@@ -121,9 +121,9 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			rsGwAPI: []stnrgwv1.UDPRoute{},
 			svcs:    []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udpv1a2 := testutils.TestUDPRoute.DeepCopy()
-				udpv1a2.SetName("udproute-ok-v1a2")
-				c.rsGwAPI = []stnrgwv1.UDPRoute{*udpv1a2}
+				udpGwAPI := testutils.TestUDPRoute.DeepCopy()
+				udpGwAPI.SetName("udproute-ok-gwapi")
+				c.rsGwAPI = []stnrgwv1.UDPRoute{*udpGwAPI}
 			},
 			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
@@ -145,7 +145,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNsName,
 					"udproute-ok"), "route name found")
 				assert.Contains(t, keys, fmt.Sprintf("%s/%s", testutils.TestNsName,
-					"udproute-ok-v1a2"), "route name found")
+					"udproute-ok-gwapi"), "route name found")
 			},
 		},
 		{
@@ -157,9 +157,9 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			rsGwAPI: []stnrgwv1.UDPRoute{},
 			svcs:    []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
-				udpv1a2 := testutils.TestUDPRoute.DeepCopy()
-				udpv1a2.SetName("udproute-ok")
-				c.rsGwAPI = []stnrgwv1.UDPRoute{*udpv1a2}
+				udpGwAPI := testutils.TestUDPRoute.DeepCopy()
+				udpGwAPI.SetName("udproute-ok")
+				c.rsGwAPI = []stnrgwv1.UDPRoute{*udpGwAPI}
 			},
 			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()

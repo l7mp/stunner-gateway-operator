@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
@@ -41,7 +40,6 @@ type App struct {
 func NewScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme)) //nolint:staticcheck
-	utilruntime.Must(gwapiv1a2.AddToScheme(scheme))      //nolint:staticcheck
 	utilruntime.Must(gwapiv1.AddToScheme(scheme))        //nolint:staticcheck
 	utilruntime.Must(stnrgwv1a1.AddToScheme(scheme))     //nolint:staticcheck
 	utilruntime.Must(stnrgwv1.AddToScheme(scheme))       //nolint:staticcheck
@@ -55,7 +53,6 @@ func New(cfg Config, restConfig *rest.Config, scheme *runtime.Scheme, logger log
 	log := logger.WithName("setup")
 
 	config.EnableFinalizer = cfg.EnableFinalizer
-	config.DataplaneMode = config.NewDataplaneMode(cfg.DataplaneMode)
 	config.ConfigDiscoveryAddress = cfg.CDSAdvertisedAddress
 	config.LabelFilter = append([]string(nil), cfg.LabelFilter...)
 	config.ThrottleTimeout = cfg.ThrottleTimeout

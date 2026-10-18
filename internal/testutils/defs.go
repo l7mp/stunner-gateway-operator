@@ -10,12 +10,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 )
 
 var (
@@ -306,19 +304,19 @@ var TestAuthSecret = corev1.Secret{
 }
 
 // TURNRoute
-var TestTURNRoute = stnrgwv1a1.TURNRoute{
+var TestTURNRoute = stnrgwv1.TURNRoute{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "turnroute-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: stnrgwv1a1.TURNRouteSpec{
+	Spec: stnrgwv1.TURNRouteSpec{
 		CommonRouteSpec: gwapiv1.CommonRouteSpec{
 			ParentRefs: []gwapiv1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
-		Tunnel: stnrgwv1a1.TURNTunnel{
+		Tunnel: stnrgwv1.TURNTunnel{
 			URI:      "turns:turn.example.com:443?transport=tcp",
 			AuthRef:  &gwapiv1.SecretObjectReference{Name: "testtunnelsecret-ok"},
 			Insecure: true,
@@ -395,22 +393,22 @@ var TestTCPRouteV1 = gwapiv1.TCPRoute{
 	},
 }
 
-// For backward compatibility
-var TestUDPRouteV1A2 = gwapiv1a2.UDPRoute{
+// TestUDPRouteV1 is an official Gateway API v1 UDPRoute mirroring TestUDPRoute.
+var TestUDPRouteV1 = gwapiv1.UDPRoute{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "udproute-ok",
 		Namespace: "testnamespace",
 	},
-	Spec: gwapiv1a2.UDPRouteSpec{
+	Spec: gwapiv1.UDPRouteSpec{
 		CommonRouteSpec: gwapiv1.CommonRouteSpec{
 			ParentRefs: []gwapiv1.ParentReference{{
 				Name:        "gateway-1",
 				SectionName: &TestSectionName,
 			}},
 		},
-		Rules: []gwapiv1a2.UDPRouteRule{{
-			BackendRefs: []gwapiv1a2.BackendRef{{
-				BackendObjectReference: gwapiv1a2.BackendObjectReference{
+		Rules: []gwapiv1.UDPRouteRule{{
+			BackendRefs: []gwapiv1.BackendRef{{
+				BackendObjectReference: gwapiv1.BackendObjectReference{
 					Name: gwapiv1.ObjectName("testservice-ok"),
 					// port is mandatory
 					Port: &TestPort,

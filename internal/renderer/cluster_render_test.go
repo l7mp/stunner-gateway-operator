@@ -48,7 +48,7 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
-			name:    "backend found for V1A2 route",
+			name:    "backend found for Gateway API route",
 			cls:     []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:     []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:     []gwapiv1.Gateway{testutils.TestGw},
@@ -380,7 +380,7 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
-			name:    "cluster for UDPRouteV1A2 and ClusterIP ok",
+			name:    "cluster for Gateway API UDPRoute and ClusterIP ok",
 			cls:     []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:     []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:     []gwapiv1.Gateway{testutils.TestGw},
@@ -723,7 +723,7 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple backends for UDPRoute V1A2 ok",
+			name: "multiple backends for Gateway API UDPRoute ok",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},

@@ -44,7 +44,6 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
@@ -1889,7 +1888,7 @@ func testManagedMode() {
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
 		})
 
-		It("should survive converting the route to v1a2 route", func() {
+		It("should survive converting the route to a Gateway API v1 route", func() {
 			ctrl.Log.Info("reseting gateway")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
@@ -1918,8 +1917,8 @@ func testManagedMode() {
 			ctrl.Log.Info("deleting stunnerv1 UDPRoute")
 			Expect(k8sClient.Delete(ctx, testUDPRoute)).Should(Succeed())
 
-			ctrl.Log.Info("adding v1alpha2 UDPRoute")
-			Expect(k8sClient.Create(ctx, testUDPRouteV1A2)).Should(Succeed())
+			ctrl.Log.Info("adding Gateway API v1 UDPRoute")
+			Expect(k8sClient.Create(ctx, testUDPRouteGwAPI)).Should(Succeed())
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
@@ -2061,19 +2060,19 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionFalse))
 			Expect(s.Reason).Should(Equal(string(gwapiv1.ListenerReasonNoConflicts)))
 
-			roV1A2 := &gwapiv1a2.UDPRoute{}
+			roGwAPI := &gwapiv1.UDPRoute{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), roV1A2)
-				if err != nil || len(roV1A2.Status.Parents) != 1 {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute), roGwAPI)
+				if err != nil || len(roGwAPI.Status.Parents) != 1 {
 					return false
 				}
-				s := meta.FindStatusCondition(roV1A2.Status.Parents[0].Conditions,
+				s := meta.FindStatusCondition(roGwAPI.Status.Parents[0].Conditions,
 					string(gwapiv1.RouteConditionAccepted))
 				return s != nil && s.Status == metav1.ConditionTrue
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(roV1A2.Status.Parents).To(HaveLen(1))
-			ps := roV1A2.Status.Parents[0]
+			Expect(roGwAPI.Status.Parents).To(HaveLen(1))
+			ps := roGwAPI.Status.Parents[0]
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
@@ -2096,7 +2095,7 @@ func testManagedMode() {
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 		})
 
-		It("should survive masking the v1a2 route with a stunner.v1 route", func() {
+		It("should survive masking the Gateway API v1 route with a stunner.v1 route", func() {
 			ctrl.Log.Info("reseting gateway")
 			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
 				mode := gwapiv1.TLSModeTerminate
@@ -2125,15 +2124,15 @@ func testManagedMode() {
 			ctrl.Log.Info("loading UDPRoute")
 			createOrUpdateUDPRoute(ctx, k8sClient, testUDPRoute, nil)
 
-			// wait until v1a2 route gets invalidated
+			// wait until the Gateway API route gets invalidated
 			Eventually(func() bool {
-				roV1A2 := &gwapiv1a2.UDPRoute{}
-				err := k8sClient.Get(ctx, store.GetNamespacedName(testUDPRouteV1A2), roV1A2)
+				roGwAPI := &gwapiv1.UDPRoute{}
+				err := k8sClient.Get(ctx, store.GetNamespacedName(testUDPRouteGwAPI), roGwAPI)
 				if err != nil {
 					return false
 				}
 
-				for _, s := range roV1A2.Status.Parents {
+				for _, s := range roGwAPI.Status.Parents {
 					cond := meta.FindStatusCondition(s.Conditions,
 						string(gwapiv1.RouteConditionAccepted))
 					if cond != nil {
@@ -2315,12 +2314,12 @@ func testManagedMode() {
 				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			roV1A2 := &gwapiv1a2.UDPRoute{}
+			roGwAPI := &gwapiv1.UDPRoute{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestUDPRoute),
-				roV1A2)).Should(Succeed())
+				roGwAPI)).Should(Succeed())
 
-			Expect(roV1A2.Status.Parents).To(HaveLen(1))
-			ps = roV1A2.Status.Parents[0]
+			Expect(roGwAPI.Status.Parents).To(HaveLen(1))
+			ps = roGwAPI.Status.Parents[0]
 			Expect(ps.ParentRef.Group).To(HaveValue(Equal(gwapiv1.Group("gateway.networking.k8s.io"))))
 			Expect(ps.ParentRef.Kind).To(HaveValue(Equal(gwapiv1.Kind("Gateway"))))
 			Expect(ps.ParentRef.Namespace).To(BeNil())
@@ -2343,8 +2342,8 @@ func testManagedMode() {
 				Equal(string(gwapiv1.RouteConditionResolvedRefs)))
 			Expect(s.Status).Should(Equal(metav1.ConditionTrue))
 
-			ctrl.Log.Info("deleting v1a2 UDPRoute")
-			Expect(k8sClient.Delete(ctx, testUDPRouteV1A2)).Should(Succeed())
+			ctrl.Log.Info("deleting Gateway API v1 UDPRoute")
+			Expect(k8sClient.Delete(ctx, testUDPRouteGwAPI)).Should(Succeed())
 		})
 
 		It("should stabilize", func() {

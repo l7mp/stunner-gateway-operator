@@ -33,11 +33,6 @@ var (
 	// render until every controller reported one reconcile, or until this much time passed.
 	StartupRenderTimeout = opdefault.DefaultStartupRenderTimeout
 
-	// DataplaneMode is the "managed dataplane" mode. When set to "managed", the operator takes
-	// care of providing the stunnerd pods for each Gateway. In "legacy" mode, the dataplanes
-	// must be provided by the user.
-	DataplaneMode = NewDataplaneMode(opdefault.DefaultDataplaneMode)
-
 	// ConfigDiscoveryAddress is the default URI at which config discovery requests are served.
 	ConfigDiscoveryAddress = stnrapiv2.DefaultConfigDiscoveryAddress
 
@@ -53,27 +48,6 @@ var (
 	// the env-var is set, it replaces the default rather than extending it.
 	LabelFilter = append([]string(nil), opdefault.DefaultLabelFilter...)
 
-	// GwAPIUDPRouteVersion is the API version at which the cluster serves the official
-	// Gateway API UDPRoute resource: the graduated "v1" version is preferred over the
-	// deprecated "v1alpha2". The route controller detects the served version at startup;
-	// an empty value means the CRD is not installed. Route statuses are written back at
-	// this version.
-	GwAPIUDPRouteVersion = GwAPIVersionUnavailable
-
-	// GwAPITCPRouteVersion is the API version at which the cluster serves the official
-	// Gateway API TCPRoute resource (see GwAPIUDPRouteVersion).
-	GwAPITCPRouteVersion = GwAPIVersionUnavailable
-
 	// TURNRouteServed is true if the cluster serves the optional TURNRoute CRD.
 	TURNRouteServed = false
-)
-
-// Gateway API route resource version markers.
-const (
-	// GwAPIVersionUnavailable means the resource is not served by the cluster.
-	GwAPIVersionUnavailable = ""
-	// GwAPIVersionV1 is the graduated v1 version.
-	GwAPIVersionV1 = "v1"
-	// GwAPIVersionV1A2 is the deprecated v1alpha2 version.
-	GwAPIVersionV1A2 = "v1alpha2"
 )

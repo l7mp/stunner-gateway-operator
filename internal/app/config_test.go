@@ -36,7 +36,6 @@ var _ = Describe("Config", func() {
 		BeforeEach(func() {
 			env = envOf(map[string]string{
 				EnvVarControllerName: "example.com/op",
-				EnvVarMode:           "legacy",
 				EnvVarAddress:        "10.0.0.5",
 				EnvVarLabelFilter:    " a , ,b",
 				EnvVarCustomerKey:    "key",
@@ -51,7 +50,6 @@ var _ = Describe("Config", func() {
 			Expect(fs.Parse([]string{"--config-discovery-address=:1234"})).To(Succeed())
 			Expect(cfg.Complete(env)).To(Succeed())
 			Expect(cfg.ControllerName).To(Equal("example.com/op"), "the env var is the flag default")
-			Expect(cfg.DataplaneMode).To(Equal("legacy"))
 			Expect(cfg.CDSAdvertisedAddress).To(Equal("10.0.0.5:1234"), "env host, configured port")
 			Expect(cfg.LabelFilter).To(Equal([]string{"a", "b"}))
 			Expect(cfg.CustomerKey).To(Equal("key"))
@@ -62,9 +60,9 @@ var _ = Describe("Config", func() {
 			cfg := NewConfig()
 			fs := flag.NewFlagSet("t", flag.ContinueOnError)
 			cfg.BindFlags(fs, env)
-			Expect(fs.Parse([]string{"--dataplane-mode=managed", "--leader-elect"})).To(Succeed())
+			Expect(fs.Parse([]string{"--controller-name=example.com/flag", "--leader-elect"})).To(Succeed())
 			Expect(cfg.Complete(env)).To(Succeed())
-			Expect(cfg.DataplaneMode).To(Equal("managed"))
+			Expect(cfg.ControllerName).To(Equal("example.com/flag"))
 			Expect(cfg.LeaderElection).To(BeTrue())
 		})
 	})

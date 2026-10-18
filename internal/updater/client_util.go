@@ -13,10 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/lens"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -139,8 +137,6 @@ func emptyObjectFor(o client.Object) (client.Object, error) {
 	meta := metav1.ObjectMeta{Name: o.GetName(), Namespace: o.GetNamespace()}
 
 	switch o.(type) {
-	case *corev1.ConfigMap:
-		return &corev1.ConfigMap{ObjectMeta: meta}, nil
 	case *corev1.Service:
 		return &corev1.Service{ObjectMeta: meta}, nil
 	case *appv1.Deployment:
@@ -153,18 +149,14 @@ func emptyObjectFor(o client.Object) (client.Object, error) {
 		return &gwapiv1.Gateway{ObjectMeta: meta}, nil
 	case *stnrgwv1.UDPRoute:
 		return &stnrgwv1.UDPRoute{ObjectMeta: meta}, nil
-	case *gwapiv1a2.UDPRoute:
-		return &gwapiv1a2.UDPRoute{ObjectMeta: meta}, nil
 	case *gwapiv1.UDPRoute:
 		return &gwapiv1.UDPRoute{ObjectMeta: meta}, nil
 	case *stnrgwv1.TCPRoute:
 		return &stnrgwv1.TCPRoute{ObjectMeta: meta}, nil
 	case *gwapiv1.TCPRoute:
 		return &gwapiv1.TCPRoute{ObjectMeta: meta}, nil
-	case *gwapiv1a2.TCPRoute:
-		return &gwapiv1a2.TCPRoute{ObjectMeta: meta}, nil
-	case *stnrgwv1a1.TURNRoute:
-		return &stnrgwv1a1.TURNRoute{ObjectMeta: meta}, nil
+	case *stnrgwv1.TURNRoute:
+		return &stnrgwv1.TURNRoute{ObjectMeta: meta}, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type %T", o)
 	}

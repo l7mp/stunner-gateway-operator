@@ -13,12 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func GetObjectKey(object client.Object) string {
@@ -47,23 +43,6 @@ func compareObjects(o1, o2 client.Object) bool {
 		o1.GetGeneration() == o2.GetGeneration()
 }
 
-// unpacks a stunner config
-func UnpackConfigMap(cm *corev1.ConfigMap) (stnrapiv2.StunnerConfig, error) {
-	conf := stnrapiv2.StunnerConfig{}
-
-	jsonConf, found := cm.Data[opdefault.DefaultStunnerdConfigfileName]
-	if !found {
-		return conf, fmt.Errorf("Error unpacking configmap data: %s not found",
-			opdefault.DefaultStunnerdConfigfileName)
-	}
-
-	if err := json.Unmarshal([]byte(jsonConf), &conf); err != nil {
-		return conf, err
-	}
-
-	return conf, nil
-}
-
 // DumpObject convers an object into a human-readable form for logging.
 func DumpObject(o client.Object) string {
 	// default dump
@@ -86,12 +65,6 @@ func DumpObject(o client.Object) string {
 			output = string(json)
 		}
 	case *stnrgwv1.UDPRoute:
-		if json, err := json.Marshal(strip(ro)); err != nil {
-			fmt.Printf("---------------ERROR-----------: %s\n", err)
-		} else {
-			output = string(json)
-		}
-	case *gwapiv1a2.UDPRoute:
 		if json, err := json.Marshal(strip(ro)); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
@@ -123,12 +96,6 @@ func DumpObject(o client.Object) string {
 		}
 	case *stnrgwv1.Dataplane:
 		if json, err := json.Marshal(strip(ro)); err != nil {
-			fmt.Printf("---------------ERROR-----------: %s\n", err)
-		} else {
-			output = string(json)
-		}
-	case *corev1.ConfigMap:
-		if json, err := json.Marshal(strip(stripCM(ro))); err != nil {
 			fmt.Printf("---------------ERROR-----------: %s\n", err)
 		} else {
 			output = string(json)
@@ -190,44 +157,6 @@ func strip(o client.Object) client.Object {
 	}
 	o.SetManagedFields([]metav1.ManagedFieldsEntry{})
 	return o
-}
-
-func stripCM(cm *corev1.ConfigMap) *corev1.ConfigMap {
-	// remove keys from the config
-	conf, err := UnpackConfigMap(cm)
-	if err != nil {
-		return cm
-	}
-
-	for i := range conf.Auths {
-		for _, k := range []string{"username", "password", "secret"} {
-			if _, ok := conf.Auths[i].Credentials[k]; ok {
-				conf.Auths[i].Credentials[k] = "-SECRET-"
-			}
-		}
-	}
-
-	for i := range conf.Listeners {
-		if t := conf.Listeners[i].TLS; t != nil {
-			if t.Cert != "" {
-				t.Cert = "-SECRET-"
-			}
-			if t.Key != "" {
-				t.Key = "-SECRET-"
-			}
-		}
-	}
-
-	sc, err := json.Marshal(conf)
-	if err != nil {
-		return cm
-	}
-
-	cm.Data = map[string]string{
-		opdefault.DefaultStunnerdConfigfileName: string(sc),
-	}
-
-	return cm
 }
 
 // IsReferenceService returns true of the provided BackendRef points to a Service.

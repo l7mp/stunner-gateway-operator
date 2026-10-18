@@ -29,9 +29,6 @@ func init() {
 	})
 }
 
-// Hub marks GatewayConfig.v1 as a conversion hub.
-func (*GatewayConfig) Hub() {}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=stunner,shortName=gwconf
 // +kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`
@@ -67,31 +64,33 @@ type GatewayConfigSpec struct {
 	// +kubebuilder:default:="stunner.l7mp.io"
 	Realm *string `json:"realm,omitempty"`
 
-	// AuthType is the type of the STUN/TURN authentication mechanism.
+	// AuthType is the type of the STUN/TURN authentication mechanism: "static" for a fixed
+	// username/password pair, "ephemeral" for time-windowed credentials derived from a shared
+	// secret, or "none" for no authentication.
 	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^plaintext|static|longterm|ephemeral|timewindowed$`
-	// +kubebuilder:default:="plaintext"
+	// +kubebuilder:validation:Pattern=`^(static|ephemeral|none)$`
+	// +kubebuilder:default:="static"
 	AuthType *string `json:"authType,omitempty"`
 
-	// Username defines the `username` credential for "plaintext" authentication.
+	// Username defines the `username` credential for "static" authentication.
 	//
 	// +optional
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
 	Username *string `json:"userName,omitempty"`
 
-	// Password defines the `password` credential for "plaintext" authentication.
+	// Password defines the `password` credential for "static" authentication.
 	//
 	// +optional
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
 	Password *string `json:"password,omitempty"`
 
-	// SharedSecret defines the shared secret to be used for "longterm" authentication.
+	// SharedSecret defines the shared secret to be used for "ephemeral" authentication.
 	//
 	// +optional
 	SharedSecret *string `json:"sharedSecret,omitempty"`
 
-	// AuthLifetime defines the lifetime of "longterm" authentication credentials in seconds.
+	// AuthLifetime defines the lifetime of "ephemeral" authentication credentials in seconds.
 	//
 	// +optional
 	AuthLifetime *int32 `json:"authLifetime,omitempty"`
@@ -106,12 +105,11 @@ type GatewayConfigSpec struct {
 
 	// The referenced Secret MUST be of type Opaque and the following conditions MUST hold:
 	// - the Secret MUST contain a "type" field that MUST be set to either
-	//   "plaintext" or "longterm" (but see
-	//   https://github.com/l7mp/stunner-gateway-operator/issues/7),
-	// - if type is "plaintext" then the Secret MUST contain a "username" and a
+	//   "static", "ephemeral" or "none",
+	// - if type is "static" then the Secret MUST contain a "username" and a
 	//   "password" field that together specify the username/password pair clients can use to
 	//   authenticate with Stunner,
-	// - if type is "lonterm" then the Secret MUST contain a single field named
+	// - if type is "ephemeral" then the Secret MUST contain a single field named
 	//   "sharedSecret" or "secret" that is used to check the authenticity of time-windowed
 	//   TURN credentials.
 

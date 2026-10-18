@@ -44,30 +44,21 @@ resources:
   path: github.com/l7mp/stunner-gateway-operator/api/v1
   version: v1
 - api:
-    crdVersion: v1alpha1
+    crdVersion: v1
     namespaced: true
   controller: true
   domain: l7mp.io
   group: stunner
-  kind: GatewayConfig
+  kind: TCPRoute
   path: github.com/l7mp/stunner-gateway-operator/api/v1
   version: v1
 - api:
-    crdVersion: v1alpha1
+    crdVersion: v1
     namespaced: true
   controller: true
   domain: l7mp.io
   group: stunner
-  kind: StaticService
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
-  version: v1
-- api:
-    crdVersion: v1alpha1
-    namespaced: true
-  controller: true
-  domain: l7mp.io
-  group: stunner
-  kind: Dataplane
+  kind: TURNRoute
   path: github.com/l7mp/stunner-gateway-operator/api/v1
   version: v1
 version: "3"

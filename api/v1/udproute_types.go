@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func init() {
@@ -83,24 +82,6 @@ type UDPRouteList struct {
 // representation, dropping the unsupported upstream backend-reference fields (see
 // convertBackendRefs).
 func ConvertV1UDPRouteToStnrV1(src *gwapiv1.UDPRoute) *UDPRoute {
-	if src == nil {
-		return nil
-	}
-	dst := new(UDPRoute)
-	src.ObjectMeta.DeepCopyInto(&dst.ObjectMeta)
-	src.Spec.CommonRouteSpec.DeepCopyInto(&dst.Spec.CommonRouteSpec)
-	src.Status.RouteStatus.DeepCopyInto(&dst.Status.RouteStatus)
-
-	dst.Spec.Rules = make([]RouteRule, len(src.Spec.Rules))
-	for i := range src.Spec.Rules {
-		dst.Spec.Rules[i].BackendRefs = convertBackendRefs(src.Spec.Rules[i].BackendRefs)
-	}
-	return dst
-}
-
-// ConvertV1A2UDPRouteToStnrV1 converts a deprecated Gateway API v1alpha2 UDPRoute to the
-// STUNner-native representation (see ConvertV1UDPRouteToStnrV1).
-func ConvertV1A2UDPRouteToStnrV1(src *gwapiv1a2.UDPRoute) *UDPRoute {
 	if src == nil {
 		return nil
 	}

@@ -72,7 +72,7 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // - updater: copied from projected desired.
 //
 // * Service.Spec.Selector
-// - renderer: set according to dataplane mode (legacy: app=stunner, managed: related-gateway labels).
+// - renderer: set to the app and related-gateway labels of the dataplane pods.
 // - updater: copied from projected desired.
 //
 // * Service.Spec.SessionAffinity

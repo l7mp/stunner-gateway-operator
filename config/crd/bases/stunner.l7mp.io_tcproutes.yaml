@@ -32,10 +32,6 @@ spec:
             - port-ranges are correctly handled ([port, endPort])
             - port is not mandatory
             - backend weight is not supported
-
-          Rendering a TCPRoute into a dataplane cluster is supported only in the premium tier. Without a
-          license the route is still accepted and its status maintained, but no cluster is rendered for
-          it and the ResolvedRefs condition reports the reason.
         properties:
           apiVersion:
             description: |-

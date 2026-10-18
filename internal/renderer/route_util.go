@@ -10,10 +10,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 )
@@ -217,7 +215,7 @@ func routeKind(ro store.Route) gwapiv1.Kind {
 		return gwapiv1.Kind("UDPRoute")
 	case *stnrgwv1.TCPRoute:
 		return gwapiv1.Kind("TCPRoute")
-	case *stnrgwv1a1.TURNRoute:
+	case *stnrgwv1.TURNRoute:
 		return gwapiv1.Kind("TURNRoute")
 	default:
 		return gwapiv1.Kind("")
@@ -373,44 +371,28 @@ func (r *renderer) invalidateMaskedRoutes(c *RenderContext) {
 func queueRouteStatusUpdate(c *RenderContext, ro store.Route) {
 	switch ro := ro.(type) {
 	case *stnrgwv1.UDPRoute:
-		switch {
-		case !isRouteGwAPIUDP(ro):
-			c.update.UpsertQueue.UDPRoutes.Upsert(ro.DeepCopy())
-		case config.GwAPIUDPRouteVersion == config.GwAPIVersionV1A2:
-			c.update.UpsertQueue.UDPRoutesGwAPI.Upsert(statusTargetV1A2UDPRoute(ro))
-		default:
+		if isRouteGwAPIUDP(ro) {
 			c.update.UpsertQueue.UDPRoutesGwAPI.Upsert(statusTargetV1UDPRoute(ro))
+		} else {
+			c.update.UpsertQueue.UDPRoutes.Upsert(ro.DeepCopy())
 		}
 	case *stnrgwv1.TCPRoute:
-		switch {
-		case !isRouteGwAPITCP(ro):
-			c.update.UpsertQueue.TCPRoutes.Upsert(ro.DeepCopy())
-		case config.GwAPITCPRouteVersion == config.GwAPIVersionV1A2:
-			c.update.UpsertQueue.TCPRoutesGwAPI.Upsert(statusTargetV1A2TCPRoute(ro))
-		default:
+		if isRouteGwAPITCP(ro) {
 			c.update.UpsertQueue.TCPRoutesGwAPI.Upsert(statusTargetV1TCPRoute(ro))
+		} else {
+			c.update.UpsertQueue.TCPRoutes.Upsert(ro.DeepCopy())
 		}
-	case *stnrgwv1a1.TURNRoute:
+	case *stnrgwv1.TURNRoute:
 		c.update.UpsertQueue.TURNRoutes.Upsert(ro.DeepCopy())
 	}
 }
 
-// statusTargetV1A2UDPRoute builds a v1alpha2 bearer object for status updates.
+// statusTargetV1UDPRoute builds a Gateway API v1 bearer object for UDPRoute status updates.
 //
-// Rendering uses STUNner v1 routes as the canonical in-memory representation,
-// including routes converted from the official Gateway API versions. The updater, however, must
-// call Status().Update on the concrete API object type that exists in the
-// cluster. This adapter converts canonical route status to that bearer type.
-func statusTargetV1A2UDPRoute(ro *stnrgwv1.UDPRoute) *gwapiv1a2.UDPRoute {
-	ret := &gwapiv1a2.UDPRoute{}
-	ret.SetName(ro.GetName())
-	ret.SetNamespace(ro.GetNamespace())
-	ro.Status.RouteStatus.DeepCopyInto(&ret.Status.RouteStatus)
-	return ret
-}
-
-// statusTargetV1UDPRoute builds a graduated Gateway API v1 bearer object for UDPRoute status
-// updates (see statusTargetV1A2UDPRoute).
+// Rendering uses STUNner v1 routes as the canonical in-memory representation, including routes
+// converted from the official Gateway API routes. The updater, however, must call
+// Status().Update on the concrete API object type that exists in the cluster. This adapter
+// converts canonical route status to that bearer type.
 func statusTargetV1UDPRoute(ro *stnrgwv1.UDPRoute) *gwapiv1.UDPRoute {
 	ret := &gwapiv1.UDPRoute{}
 	ret.SetName(ro.GetName())
@@ -419,18 +401,8 @@ func statusTargetV1UDPRoute(ro *stnrgwv1.UDPRoute) *gwapiv1.UDPRoute {
 	return ret
 }
 
-// statusTargetV1A2TCPRoute builds a deprecated Gateway API v1alpha2 bearer object for TCPRoute
-// status updates (see statusTargetV1A2UDPRoute).
-func statusTargetV1A2TCPRoute(ro *stnrgwv1.TCPRoute) *gwapiv1a2.TCPRoute {
-	ret := &gwapiv1a2.TCPRoute{}
-	ret.SetName(ro.GetName())
-	ret.SetNamespace(ro.GetNamespace())
-	ro.Status.RouteStatus.DeepCopyInto(&ret.Status.RouteStatus)
-	return ret
-}
-
 // statusTargetV1TCPRoute builds a Gateway API v1 bearer object for TCPRoute status updates (see
-// statusTargetV1A2UDPRoute).
+// statusTargetV1UDPRoute).
 func statusTargetV1TCPRoute(ro *stnrgwv1.TCPRoute) *gwapiv1.TCPRoute {
 	ret := &gwapiv1.TCPRoute{}
 	ret.SetName(ro.GetName())

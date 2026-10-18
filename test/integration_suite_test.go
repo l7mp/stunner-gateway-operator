@@ -43,10 +43,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/app"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
@@ -80,10 +78,10 @@ var (
 	testGwClass       *gwapiv1.GatewayClass
 	testGwConfig      *stnrgwv1.GatewayConfig
 	testGw            *gwapiv1.Gateway
-	testUDPRouteV1A2  *gwapiv1a2.UDPRoute
+	testUDPRouteGwAPI *gwapiv1.UDPRoute
 	testUDPRoute      *stnrgwv1.UDPRoute
 	testTCPRoute      *stnrgwv1.TCPRoute
-	testTURNRoute     *stnrgwv1a1.TURNRoute
+	testTURNRoute     *stnrgwv1.TURNRoute
 	testTunnelSecret  *corev1.Secret
 	testSvc           *corev1.Service
 	testEndpointSlice *discoveryv1.EndpointSlice
@@ -148,8 +146,6 @@ var _ = BeforeSuite(func() {
 	// Gateway API schemes
 	err = gwapiv1.AddToScheme(scheme) //nolint:staticcheck
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1a2.AddToScheme(scheme) //nolint:staticcheck
-	Expect(err).NotTo(HaveOccurred())
 
 	// STUNner CRD scheme
 	err = stnrgwv1.AddToScheme(scheme) //nolint:staticcheck
@@ -177,12 +173,11 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-// initOperator assembles and starts a fresh operator instance on the current global mode
-// settings, the way main does through the app package. tweak may adjust the configuration
+// initOperator assembles and starts a fresh operator instance on the current global settings,
+// the way main does through the app package. tweak may adjust the configuration
 // before assembly.
 func initOperator(ctx context.Context, tweak ...func(*app.Config)) {
 	appCfg := app.NewConfig()
-	appCfg.DataplaneMode = config.DataplaneMode.String()
 	// make rendering fast, and do not hold the first render for controllers with nothing to
 	// reconcile
 	appCfg.ThrottleTimeout = 10 * time.Millisecond
@@ -233,7 +228,7 @@ func InitResources() {
 	testAuthSecret = testutils.TestAuthSecret.DeepCopy()
 	testStaticSvc = testutils.TestStaticSvc.DeepCopy()
 	testDataplane = testutils.TestDataplane.DeepCopy()
-	testUDPRouteV1A2 = testutils.TestUDPRouteV1A2.DeepCopy()
+	testUDPRouteGwAPI = testutils.TestUDPRouteV1.DeepCopy()
 	testTCPRoute = testutils.TestTCPRoute.DeepCopy()
 	testTURNRoute = testutils.TestTURNRoute.DeepCopy()
 	testTunnelSecret = testutils.TestTunnelSecret.DeepCopy()
@@ -260,7 +255,7 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-// managed mode test helper
+// ConfigChecker checks a config served over CDS.
 type ConfigChecker func(conf *stnrapiv2.StunnerConfig) bool
 
 func checkConfig(ch chan *stnrapiv2.StunnerConfig, checker ConfigChecker) bool {
@@ -287,10 +282,7 @@ func checkConfig(ch chan *stnrapiv2.StunnerConfig, checker ConfigChecker) bool {
 // Test cases
 // -----------------------
 var _ = Describe("Integration test:", Ordered, func() {
-	// LEGACY
-	legacyModeTest()
-
-	// MANAGED
+	// RENDERING AND MANAGED DATAPLANES
 	managedModeTest()
 
 	// HA: standby and restart
@@ -304,31 +296,9 @@ var _ = Describe("Integration test:", Ordered, func() {
 	finalizerTest()
 })
 
-func legacyModeTest() {
-	Context(`When using the "legacy" dataplane mode`, func() {
-		It(`should be possible to initialize the operator`, func() {
-			config.DataplaneMode = config.DataplaneModeLegacy
-			ctx, cancel = context.WithCancel(context.Background())
-			initOperator(ctx)
-			op.SetFinalizer(false) // we call the finalizer manually
-			InitResources()
-		})
-	})
-
-	testLegacyMode()
-
-	Context(`When terminating the operator after the legacy-mode test`, Ordered, func() {
-		It("should stabilize", func() {
-			op.Stabilize()
-			cancel()
-		})
-	})
-}
-
 func managedModeTest() {
-	Context(`When using the "managed" dataplane mode`, func() {
-		It(`should be possible to set the dataplane mode to "managed"`, func() {
-			config.DataplaneMode = config.DataplaneModeManaged
+	Context(`When starting the operator`, func() {
+		It(`should be possible to initialize the operator`, func() {
 			ctx, cancel = context.WithCancel(context.Background())
 			initOperator(ctx)
 			op.SetFinalizer(false) // we call the finalizer manually
@@ -336,6 +306,7 @@ func managedModeTest() {
 		})
 	})
 
+	testRendering()
 	testManagedMode()
 
 	Context(`When terminating the operator after the managed-mode test`, Ordered, func() {
@@ -349,7 +320,6 @@ func managedModeTest() {
 func finalizerTest() {
 	Context(`When trying to finalize the operator`, Ordered, func() {
 		It(`should be possible to set up a new operator`, func() {
-			config.DataplaneMode = config.DataplaneModeManaged
 			ctx, cancel = context.WithCancel(context.Background())
 			// the operator gets its own context: stopping it runs the finalizer on the way
 			// out, while the checks keep using ctx for their API calls
