@@ -21,6 +21,19 @@ func newAuthRenderer() configRenderer {
 }
 
 func (r *authRenderer) render(c *RenderContext, _ ...any) (stnrapiv2.Config, error) {
+	// STUN-server mode: no TURN allocations, whatever credentials the GatewayConfig holds
+	if c.gwConf.Spec.STUNMode {
+		realm := stnrapiv2.DefaultRealm
+		if c.gwConf.Spec.Realm != nil {
+			realm = *c.gwConf.Spec.Realm
+		}
+		auth := stnrapiv2.AuthConfig{Name: stnrapiv2.DefaultAuthName, Realm: realm, Type: "none"}
+		if err := auth.Validate(); err != nil {
+			return nil, NewCriticalError(InvalidAuthConfig)
+		}
+		return &auth, nil
+	}
+
 	// external auth ref overrides inline refs
 	if c.gwConf.Spec.AuthRef != nil {
 		return r.renderExternalAuth(c)

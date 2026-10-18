@@ -21,7 +21,7 @@ import (
 func TestRenderTCPRoute(t *testing.T) {
 	renderTester(t, []renderTestConfig{
 		{
-			name: "TCPRoute cluster rendering requires a license",
+			name: "TCPRoute renders a TCP cluster",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -44,16 +44,15 @@ func TestRenderTCPRoute(t *testing.T) {
 				assert.True(t, exists, "route exists")
 				assert.True(t, accepted, "route accepted")
 
-				// the route is accepted, but the open-source renderer does not
-				// render a TCP cluster for it
 				rc, _, err := r.renderCluster(nil, ro)
-				assert.Nil(t, rc, "no cluster rendered")
-				assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
-					"feature-not-licensed error")
+				assert.NoError(t, err, "renderCluster")
+				assert.Equal(t, "testnamespace/tcproute-ok/tcp", rc.Name, "cluster name")
+				assert.Equal(t, "TCP", rc.Protocol, "cluster protocol")
+				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint")
 			},
 		},
 		{
-			name: "mixed UDPRoute and TCPRoute: only the UDP cluster renders",
+			name: "mixed UDPRoute and TCPRoute",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -73,16 +72,11 @@ func TestRenderTCPRoute(t *testing.T) {
 				protos := map[string]string{}
 				for _, ro := range rs {
 					rc, _, err := r.renderCluster(nil, ro)
-					if _, ok := ro.(*stnrgwv1.TCPRoute); ok {
-						assert.True(t, IsNonCriticalError(err, FeatureNotLicensed),
-							"TCP cluster needs a license")
-						continue
-					}
 					assert.NoError(t, err, "renderCluster")
 					protos[rc.Name] = rc.Protocol
 				}
 				assert.Equal(t, "UDP", protos["testnamespace/udproute-ok/udp"], "UDP cluster")
-				assert.NotContains(t, protos, "testnamespace/tcproute-ok/tcp", "no TCP cluster")
+				assert.Equal(t, "TCP", protos["testnamespace/tcproute-ok/tcp"], "TCP cluster")
 
 				// the TCPRoute attaches to the TCP listener via its sectionName
 				gw := store.Gateways.GetFirst()
@@ -168,7 +162,7 @@ func TestRenderTCPRoute(t *testing.T) {
 			},
 		},
 		{
-			name: "TCPRoute status reports the missing license on ResolvedRefs",
+			name: "TCPRoute status resolves its refs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -200,14 +194,10 @@ func TestRenderTCPRoute(t *testing.T) {
 				assert.NotNil(t, d, "accepted cond")
 				assert.Equal(t, metav1.ConditionTrue, d.Status, "accepted true")
 
-				// the parent accepts the route, but the open-source renderer
-				// cannot resolve it into a cluster
 				d = meta.FindStatusCondition(parents[0].Conditions,
 					string(gwapiv1.RouteConditionResolvedRefs))
 				assert.NotNil(t, d, "resolved-refs cond")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "resolved false")
-				assert.Equal(t, string(gwapiv1.RouteReasonUnsupportedValue), d.Reason,
-					"unsupported-value reason")
+				assert.Equal(t, metav1.ConditionTrue, d.Status, "resolved true")
 			},
 		},
 	})

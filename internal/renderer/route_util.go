@@ -499,11 +499,6 @@ func setRouteConditionStatus(ro store.Route, p *gwapiv1.ParentReference, control
 			// one of the Route's rules has a reference to an unknown or unsupported
 			// Group and/or Kind.
 			reason = gwapiv1.RouteReasonInvalidKind
-		case IsNonCriticalError(backendErr, FeatureNotLicensed):
-			// the route kind itself is unavailable in the current license tier, so no
-			// cluster is rendered for it at all
-			reason = gwapiv1.RouteReasonUnsupportedValue
-			message = "route kind not available in the current license tier"
 		default:
 			reason = gwapiv1.RouteReasonBackendNotFound
 		}

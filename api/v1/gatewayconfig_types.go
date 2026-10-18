@@ -155,8 +155,7 @@ type GatewayConfigSpec struct {
 	// vector when STUNner is deployed as a user-facing STUN server, where a client creates and
 	// removes empty allocations in a fast loop to overload the TURN server. When STUN-mode is
 	// enabled TURN credentials are optional and ignored even if provided, otherwise TURN
-	// credentials are mandatory. Default is false, which disables pure-STUN mode. Not
-	// supported in the free tier.
+	// credentials are mandatory. Default is false, which disables pure-STUN mode.
 	//
 	// +optional
 	STUNMode bool `json:"stunMode,omitempty"`

@@ -11,6 +11,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -515,6 +516,57 @@ func TestRenderAuthRender(t *testing.T) {
 
 				_, err = r.renderAuth(c)
 				assert.Error(t, err, "mixed inline/external auth")
+			},
+		},
+	})
+}
+
+func TestRenderAuthSTUNMode(t *testing.T) {
+	renderTester(t, []renderTestConfig{
+		{
+			name: "STUN mode renders no credentials",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			prep: func(c *renderTestConfig) {
+				gwc := testutils.TestGwConfig.DeepCopy()
+				gwc.Spec.STUNMode = true
+				empty := ""
+				gwc.Spec.Realm = &empty
+				gwc.Spec.AuthType = &empty
+				gwc.Spec.Username = &empty
+				gwc.Spec.Password = &empty
+				c.cfs = []stnrgwv1.GatewayConfig{*gwc}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+				assert.Equal(t, stnrapiv2.DefaultRealm, auth.Realm, "realm")
+				assert.Equal(t, "none", auth.Type, "auth-type")
+				assert.Empty(t, auth.Credentials, "no credentials")
+			},
+		},
+		{
+			name: "STUN mode off renders the TURN credentials",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+				assert.Equal(t, "static", auth.Type, "auth-type")
+				assert.Equal(t, testutils.TestUsername, auth.Credentials["username"], "username")
 			},
 		},
 	})

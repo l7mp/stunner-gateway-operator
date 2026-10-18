@@ -48,14 +48,12 @@ func clusterName(ro store.Route) string {
 
 // renderCluster renders a stunnerd cluster config for a route. The route kind determines the
 // cluster protocol and the rendering strategy.
-// Rendering a TCPRoute into a TCP cluster is a premium feature: here it fails non-critically, so
-// that the route is still accepted and the reason surfaces on its ResolvedRefs condition.
 func (r *defaultClusterRenderer) renderCluster(_ *RenderContext, ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error) {
 	switch ro := ro.(type) {
 	case *stnrgwv1.UDPRoute:
 		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolUDP)
 	case *stnrgwv1.TCPRoute:
-		return nil, nil, NewNonCriticalError(FeatureNotLicensed)
+		return r.renderServiceCluster(ro, ro.Spec.Rules, stnrapiv2.ProtocolTCP)
 	case *stnrgwv1a1.TURNRoute:
 		return r.renderTunnelCluster(ro)
 	default:

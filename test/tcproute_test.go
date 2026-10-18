@@ -96,7 +96,7 @@ func testTCPRouteLegacy() {
 			createOrUpdateTCPRoute(ctx, k8sClient, testTCPRoute, nil)
 		})
 
-		It("should render no TCP cluster without a license", func() {
+		It("should render a TCP cluster", func() {
 			lookupKey := types.NamespacedName{
 				Name:      opdefault.DefaultConfigMapName,
 				Namespace: string(testutils.TestNsName),
@@ -112,8 +112,6 @@ func testTCPRouteLegacy() {
 				if err != nil {
 					return false
 				}
-				// the route attaches to the listener even though no cluster is
-				// rendered for it
 				if !listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
 					"testnamespace/tcproute-ok/tcp") {
 					return false
@@ -122,8 +120,9 @@ func testTCPRouteLegacy() {
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(findCluster(conf, "testnamespace/tcproute-ok/tcp")).To(BeNil(),
-				"no TCP cluster rendered")
+			rc := findCluster(conf, "testnamespace/tcproute-ok/tcp")
+			Expect(rc).NotTo(BeNil(), "TCP cluster rendered")
+			Expect(rc.Protocol).Should(Equal("TCP"), "TCP cluster")
 		})
 
 		It("should attach the TCPRoute to the TCP listener", func() {
@@ -157,12 +156,9 @@ func testTCPRouteLegacy() {
 			Expect(d).NotTo(BeNil(), "accepted condition")
 			Expect(d.Status).Should(Equal(metav1.ConditionTrue), "accepted")
 
-			// the route is accepted, but the open-source renderer cannot resolve it
-			// into a cluster
 			d = meta.FindStatusCondition(ps.Conditions, string(gwapiv1.RouteConditionResolvedRefs))
 			Expect(d).NotTo(BeNil(), "resolved-refs condition")
-			Expect(d.Status).Should(Equal(metav1.ConditionFalse), "resolved-refs")
-			Expect(d.Reason).Should(Equal(string(gwapiv1.RouteReasonUnsupportedValue)), "reason")
+			Expect(d.Status).Should(Equal(metav1.ConditionTrue), "resolved-refs")
 		})
 
 		It("should render an official Gateway API TCPRoute", func() {
@@ -181,10 +177,9 @@ func testTCPRouteLegacy() {
 				if err != nil {
 					return false
 				}
-				// no cluster without a license, but the route still attaches
 				return listenerHasCluster(&c, "testnamespace/gateway-1/gateway-1-listener-tcp",
 					"testnamespace/tcproute-gwapi/tcp") &&
-					findCluster(&c, "testnamespace/tcproute-gwapi/tcp") == nil
+					findCluster(&c, "testnamespace/tcproute-gwapi/tcp") != nil
 			}, timeout, interval).Should(BeTrue())
 		})
 
@@ -296,13 +291,11 @@ func testTCPRouteManaged() {
 			Expect(err).Should(Succeed())
 		})
 
-		It("should render no TCP cluster without a license", func() {
+		It("should render a TCP cluster", func() {
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
-				// the route attaches to the listener even though no cluster is
-				// rendered for it
 				return listenerHasCluster(c, "testnamespace/gateway-1/gateway-1-listener-tcp",
 					"testnamespace/tcproute-ok/tcp") &&
-					findCluster(c, "testnamespace/tcproute-ok/tcp") == nil
+					findCluster(c, "testnamespace/tcproute-ok/tcp") != nil
 			}), timeout, interval).Should(BeTrue())
 		})
 
@@ -317,13 +310,10 @@ func testTCPRouteManaged() {
 				return d != nil && d.Status == metav1.ConditionTrue
 			}, timeout, interval).Should(BeTrue())
 
-			// the route is accepted, but the open-source renderer cannot resolve it
-			// into a cluster
 			d := meta.FindStatusCondition(ro.Status.Parents[0].Conditions,
 				string(gwapiv1.RouteConditionResolvedRefs))
 			Expect(d).NotTo(BeNil(), "resolved-refs condition")
-			Expect(d.Status).Should(Equal(metav1.ConditionFalse), "resolved-refs")
-			Expect(d.Reason).Should(Equal(string(gwapiv1.RouteReasonUnsupportedValue)), "reason")
+			Expect(d.Status).Should(Equal(metav1.ConditionTrue), "resolved-refs")
 		})
 
 		It("should survive deleting the TCPRoute resources", func() {
