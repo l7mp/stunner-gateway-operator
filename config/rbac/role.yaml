@@ -101,6 +101,14 @@ rules:
 - apiGroups:
   - stunner.l7mp.io
   resources:
+  - siptrunks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - stunner.l7mp.io
+  resources:
   - staticservices/finalizers
   - tcproutes/finalizers
   - tcproutes/status

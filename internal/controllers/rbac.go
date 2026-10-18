@@ -23,3 +23,4 @@ package controllers
 // stunner.l7mp.io
 // +kubebuilder:rbac:groups="stunner.l7mp.io",resources=gatewayconfigs;staticservices;dataplanes;udproutes;tcproutes;turnroutes,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="stunner.l7mp.io",resources=staticservices/finalizers;udproutes/finalizers;udproutes/status;tcproutes/finalizers;tcproutes/status;turnroutes/finalizers;turnroutes/status,verbs=update;patch
+// +kubebuilder:rbac:groups="stunner.l7mp.io",resources=siptrunks,verbs=get;list;watch
