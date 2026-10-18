@@ -20,6 +20,15 @@ import (
 
 type controllerConstructor = func(manager.Manager, chan<- event.Event, logr.Logger) (controllers.Controller, error)
 
+// controllerConstructors are the controllers the operator registers, in order.
+var controllerConstructors = []controllerConstructor{
+	controllers.NewGatewayConfigController,
+	controllers.NewDataplaneController,
+	controllers.NewGatewayController,
+	controllers.NewRouteController,
+	controllers.NewNodeController,
+}
+
 const (
 	channelBufferSize = 200
 	// finalizeTimeout bounds the finalizer's Kubernetes writes on shutdown.
@@ -79,13 +88,7 @@ func NewOperator(cfg OperatorConfig) (*Operator, error) {
 	cfg.Renderer.SetOperatorChannel(o.operatorCh)
 	cfg.Updater.SetAckChannel(o.operatorCh)
 
-	for _, ctor := range []controllerConstructor{
-		controllers.NewGatewayConfigController,
-		controllers.NewDataplaneController,
-		controllers.NewGatewayController,
-		controllers.NewRouteController,
-		controllers.NewNodeController,
-	} {
+	for _, ctor := range controllerConstructors {
 		c, err := ctor(o.mgr, o.operatorCh, cfg.Logger)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot register controller: %w", err)
