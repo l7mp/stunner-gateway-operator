@@ -12,8 +12,6 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
-
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 func stnrListenerName(gw *gwapiv1.Gateway, l *gwapiv1.Listener) string {
@@ -74,22 +72,6 @@ func (r *defaultListenerRenderer) renderListener(c *RenderContext, l *gwapiv1.Li
 
 	if ok {
 		lc.TLS = &stnrapiv2.TLSConfig{Cert: cert, Key: key}
-	}
-
-	// the PQC mode is a per-Gateway policy of the TLS listeners
-	if proto == stnrapiv2.ProtocolTLS {
-		if v, ok := gw.GetAnnotations()[opdefault.PQCModeAnnotationKey]; ok {
-			mode, err := stnrapiv2.NewPQCMode(v)
-			if err != nil {
-				r.log.Info("Ignoring invalid PQC mode annotation", "gateway", store.GetObjectKey(gw),
-					"key", opdefault.PQCModeAnnotationKey, "value", v, "error", err.Error())
-			} else if mode != stnrapiv2.PQCModeDefault {
-				if lc.TLS == nil {
-					lc.TLS = &stnrapiv2.TLSConfig{}
-				}
-				lc.TLS.PQCMode = mode.String()
-			}
-		}
 	}
 
 	// remove cert/key from dump

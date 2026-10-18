@@ -266,7 +266,7 @@ func TestRenderListenerRender(t *testing.T) {
 			},
 		},
 		{
-			name:  "TLS/DTLS listener - pqc-mode annotation",
+			name:  "TLS/DTLS listener - pqc-mode annotation ignored",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
@@ -319,29 +319,11 @@ func TestRenderListenerRender(t *testing.T) {
 				rs := []store.Route{}
 				addr := gwAddrPort{addr: "1.2.3.4", port: 1234}
 
-				// the mode reaches the TLS listener, normalized
+				// the PQC mode is a premium feature: the default renderer ignores it
 				lc, err := r.renderListener(c, &ls[1], rs, addr, nil)
 				assert.NoError(t, err, "renderListener")
 				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "enforced", tlsOf(lc).PQCMode, "pqc mode")
-
-				// the other protocols are left alone
-				lc, err = r.renderListener(c, &ls[0], rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "", tlsOf(lc).PQCMode, "no pqc mode on a udp listener")
-				lc, err = r.renderListener(c, &ls[2], rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "", tlsOf(lc).PQCMode, "no pqc mode on a dtls listener")
-
-				// the default mode and an invalid mode render nothing
-				gw.SetAnnotations(map[string]string{opdefault.PQCModeAnnotationKey: "default"})
-				lc, err = r.renderListener(c, &ls[1], rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "", tlsOf(lc).PQCMode, "default mode")
-				gw.SetAnnotations(map[string]string{opdefault.PQCModeAnnotationKey: "quantum"})
-				lc, err = r.renderListener(c, &ls[1], rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "", tlsOf(lc).PQCMode, "invalid mode ignored")
+				assert.Equal(t, "", tlsOf(lc).PQCMode, "no pqc mode")
 			},
 		},
 		{
