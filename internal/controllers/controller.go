@@ -18,7 +18,12 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,4 +43,20 @@ const (
 type Controller interface {
 	Name() ControllerName
 	Reconcile(context.Context, reconcile.Request) (reconcile.Result, error)
+}
+
+// isServed tells whether the API server serves the kind of obj, for the controllers whose CRDs
+// are optional.
+func isServed(mgr manager.Manager, obj client.Object) (bool, error) {
+	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
+	if err != nil {
+		return false, fmt.Errorf("failed to get GVK for %T: %w", obj, err)
+	}
+	if _, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
+		if meta.IsNoMatchError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to map %s: %w", gvk, err)
+	}
+	return true, nil
 }

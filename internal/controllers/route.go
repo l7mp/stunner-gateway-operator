@@ -12,9 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -100,7 +98,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch TCPRoute objects when the cluster serves the CRD
-	r.tcpRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1.TCPRoute{}, "tcproutes")
+	r.tcpRouteServed, err = isServed(mgr, &stnrgwv1.TCPRoute{})
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +130,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch TURNRoute objects, and the Secrets they reference, when the cluster serves the CRD
-	r.turnRouteServed, err = r.isRouteResourceServed(mgr, &stnrgwv1.TURNRoute{}, "turnroutes")
+	r.turnRouteServed, err = isServed(mgr, &stnrgwv1.TURNRoute{})
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +177,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch the official Gateway API UDPRoute objects when the cluster serves them at v1
-	r.gwAPIUDPRouteServed, err = r.isRouteResourceServed(mgr, &gwapiv1.UDPRoute{}, "udproutes")
+	r.gwAPIUDPRouteServed, err = isServed(mgr, &gwapiv1.UDPRoute{})
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +206,7 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 	}
 
 	// watch the official Gateway API TCPRoute objects when the cluster serves them at v1
-	r.gwAPITCPRouteServed, err = r.isRouteResourceServed(mgr, &gwapiv1.TCPRoute{}, "tcproutes")
+	r.gwAPITCPRouteServed, err = isServed(mgr, &gwapiv1.TCPRoute{})
 	if err != nil {
 		return nil, err
 	}
@@ -696,39 +694,6 @@ func (r *routeReconciler) getStaticServiceForBackend(ctx context.Context, ro cli
 	}
 
 	return &svc
-}
-
-// isRouteResourceServed checks whether the API server serves the given route resource at the
-// group/version of the object.
-func (r *routeReconciler) isRouteResourceServed(mgr manager.Manager, obj client.Object, resourceName string) (bool, error) {
-	// Build a discovery client
-	d, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
-	if err != nil {
-		return false, fmt.Errorf("failed to obtain a discovery client: %w", err)
-	}
-
-	// Get the Groupversion
-	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
-	if err != nil {
-		return false, fmt.Errorf("failed to get GVK for %T: %w", obj, err)
-	}
-	gvStr := gvk.GroupVersion().String()
-
-	resList, err := d.ServerResourcesForGroupVersion(gvStr)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to get server resources for %s: %w", gvStr, err)
-	}
-
-	for _, r := range resList.APIResources {
-		if r.Name == resourceName {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 // canonicalRoute converts any supported route object into the canonical STUNner-native
