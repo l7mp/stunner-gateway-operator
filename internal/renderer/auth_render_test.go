@@ -145,7 +145,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "auth type alias: plaintext - ok",
+			name: "auth type alias: plaintext errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -165,12 +165,9 @@ func TestRenderAuthRender(t *testing.T) {
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				auth, err := r.renderAuth(c)
-				assert.NoError(t, err, "renderAuth")
-
-				assert.Equal(t, "static", auth.Type, "auth-type")
-				assert.Equal(t, "testuser", auth.Credentials["username"], "username")
-				assert.Equal(t, "testpasswd", auth.Credentials["password"], "password")
+				_, err = r.renderAuth(c)
+				assert.Error(t, err, "auth-type")
+				assert.True(t, IsCritical(err), "critical err")
 			},
 		},
 		{
@@ -198,7 +195,7 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
-			name: "auth type alias: timewindowed - ok",
+			name: "auth type alias: timewindowed errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -218,17 +215,13 @@ func TestRenderAuthRender(t *testing.T) {
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				auth, err := r.renderAuth(c)
-				assert.NoError(t, err, "renderAuth")
-
-				assert.Equal(t, "dummy", auth.Realm, "realm")
-				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
-				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
-
+				_, err = r.renderAuth(c)
+				assert.Error(t, err, "auth-type")
+				assert.True(t, IsCritical(err), "critical err")
 			},
 		},
 		{
-			name: "auth type alias: longterm - ok",
+			name: "auth type alias: longterm errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{},
@@ -248,13 +241,9 @@ func TestRenderAuthRender(t *testing.T) {
 				c.gwConf, err = r.getGatewayConfig4Class(c)
 				assert.NoError(t, err, "gw-conf found")
 
-				auth, err := r.renderAuth(c)
-				assert.NoError(t, err, "renderAuth")
-
-				assert.Equal(t, "dummy", auth.Realm, "realm")
-				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
-				assert.Equal(t, "dummy", auth.Credentials["secret"], "secret")
-
+				_, err = r.renderAuth(c)
+				assert.Error(t, err, "auth-type")
+				assert.True(t, IsCritical(err), "critical err")
 			},
 		},
 		// external auth tests

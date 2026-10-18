@@ -3053,7 +3053,7 @@ func testLegacyMode() {
 			ctrl.Log.Info("re-loading gateway-config")
 			namespace := gwapiv1.Namespace("testnamespace")
 			createOrUpdateGatewayConfig(ctx, k8sClient, &testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
-				atype := "timewindowed" // use alias -> ephemeral
+				atype := "ephemeral"
 				current.Spec.AuthType = &atype
 				current.Spec.Username = nil
 				current.Spec.Password = nil
@@ -3257,7 +3257,7 @@ func testLegacyMode() {
 		It("fallback to inline auth defs", func() {
 			ctrl.Log.Info("re-loading gateway-config with inline auth")
 			createOrUpdateGatewayConfig(ctx, k8sClient, &testutils.TestGwConfig, func(current *stnrgwv1.GatewayConfig) {
-				atype := "timewindowed" // use alias -> ephemeral
+				atype := "ephemeral"
 				secret := "dummy"
 				current.Spec.AuthType = &atype
 				current.Spec.SharedSecret = &secret

@@ -167,11 +167,6 @@ func getAuthType(hint *string) (stnrapiv2.AuthType, error) {
 		authType = *hint
 	}
 
-	// NewAuthType knows the other aliases ("plaintext", "longterm")
-	if authType == "timewindowed" {
-		authType = stnrapiv2.AuthTypeEphemeral.String()
-	}
-
 	atype, err := stnrapiv2.NewAuthType(authType)
 	if err != nil {
 		return stnrapiv2.AuthTypeNone, NewCriticalError(InvalidAuthType)
