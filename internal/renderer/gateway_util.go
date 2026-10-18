@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -79,12 +80,16 @@ func initGatewayStatus(gw *gwapiv1.Gateway, reason error) {
 				config.ControllerName),
 		})
 	} else {
+		cause := gwapiv1.GatewayReasonPending
+		if pe := (*ParametersError)(nil); errors.As(reason, &pe) {
+			cause = pe.Reason
+		}
 		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
 			Type:               string(gwapiv1.GatewayConditionAccepted),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gw.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1.GatewayReasonPending),
+			Reason:             string(cause),
 			Message:            reason.Error(),
 		})
 	}

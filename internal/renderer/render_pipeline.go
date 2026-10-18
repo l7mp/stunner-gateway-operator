@@ -254,6 +254,10 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
 
+		if err := r.parametersRenderer.check(c, gw); err != nil {
+			return err
+		}
+
 		// create a private shallow copy of the render context for the listener renderer
 		// this is not safe for modifying the render context
 		gwCtx := *c
@@ -398,6 +402,12 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		for _, f := range r.renderPermissionFilters(s, peers) {
 			conf.Filters = append(conf.Filters, f)
 			s.TURN.PermissionFilters = append(s.TURN.PermissionFilters, f.Name)
+		}
+	}
+
+	if gw := c.gws.GetFirst(); gw != nil {
+		if err := r.parametersRenderer.finalize(c, gw, &conf); err != nil {
+			return err
 		}
 	}
 

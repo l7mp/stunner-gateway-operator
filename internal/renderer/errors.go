@@ -1,5 +1,11 @@
 package renderer
 
+import (
+	"fmt"
+
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // ErrorType specifies the type of a rendering error.
 type ErrorType int
 
@@ -126,6 +132,21 @@ func (e *NonCriticalError) Error() string {
 	}
 	return "Unknown error"
 }
+
+// ParametersError is why a Gateway is not accepted for its parameters, with the reason of its
+// Accepted status condition.
+type ParametersError struct {
+	Reason  gwapiv1.GatewayConditionReason
+	message string
+}
+
+// NewParametersError creates a new parameters error.
+func NewParametersError(reason gwapiv1.GatewayConditionReason, format string, args ...any) error {
+	return &ParametersError{Reason: reason, message: fmt.Sprintf(format, args...)}
+}
+
+// Error returns an error message.
+func (e *ParametersError) Error() string { return e.message }
 
 // IsCritical returns true if an error is critical.
 func IsCritical(e error) bool {
