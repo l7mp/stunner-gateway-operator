@@ -32,6 +32,13 @@ var reconcileTimeBuckets = []float64{
 }
 
 var (
+	// BuildInfo is the Prometheus build info convention: a constant 1 labeled with the version of
+	// the binary, set once at startup.
+	BuildInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "stunner_gateway_operator_build_info",
+		Help: "The version of the binary, as labels; always 1.",
+	}, []string{"version", "commit", "build_date"})
+
 	// RenderTotal is the total number of render cycles executed by the renderer thread.
 	RenderTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "stunner_gateway_operator_render_total",
@@ -176,6 +183,7 @@ func loopAge(a *atomic.Int64) time.Duration {
 
 func init() {
 	ctrlmetrics.Registry.MustRegister(
+		BuildInfo,
 		RenderTotal,
 		RenderDuration,
 		UpdateTotal,

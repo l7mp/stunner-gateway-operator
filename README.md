@@ -87,6 +87,7 @@ Prometheus metrics are served at `--metrics-bind-address` (default `:8080/metric
 
 | Metric                                            | Type      | Description                                                                                                                                                                |
 |---------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `build_info{version,commit,build_date}`           | Gauge     | The version of the operator binary, as labels; always 1. Quote it in an issue report.                                                                                      |
 | `render_total`                                    | Counter   | Render cycles completed by the renderer thread.                                                                                                                            |
 | `render_time_seconds`                             | Histogram | Duration of a full render cycle.                                                                                                                                           |
 | `update_total{result}`                            | Counter   | Update cycles completed by the updater thread (`success` / `error`).                                                                                                       |

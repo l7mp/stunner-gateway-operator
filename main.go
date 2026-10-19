@@ -32,6 +32,7 @@ import (
 	"github.com/l7mp/stunner/v2/pkg/buildinfo"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/app"
+	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
 )
 
 var (
@@ -59,6 +60,7 @@ func main() {
 
 	buildInfo := buildinfo.BuildInfo{Version: version, CommitHash: commitHash, BuildDate: buildDate}
 	setupLog.Info(fmt.Sprintf("starting STUNner gateway operator %s", buildInfo.String()))
+	metrics.BuildInfo.WithLabelValues(version, commitHash, buildDate).Set(1)
 
 	if err := cfg.Complete(app.OSLookupEnv); err != nil {
 		setupLog.Error(err, "invalid configuration")
