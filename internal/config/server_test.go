@@ -34,6 +34,10 @@ var testerLogLevel = zapcore.ErrorLevel
 // const stunnerTestLoglevel = "all:TRACE"
 const stunnerTestLoglevel = "all:ERROR"
 
+// settle bounds every wait for something that must happen: a starved CI runner may take seconds,
+// a fast machine returns at once.
+const settle = 5 * time.Second
+
 // Steps:
 // - starting CDS server
 // - creating CDS client instance for testing Load()
@@ -80,10 +84,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		zlogger := zapr.NewLogger(z)
 		log = zlogger.WithName("tester")
 
-		// setup a fast pinger so that we get a timely error notification
-		cdsclient.PingPeriod = 200 * time.Millisecond
-		cdsclient.PongWait = 300 * time.Millisecond
-		cdsclient.WriteWait = 400 * time.Millisecond
+		// reconnect fast after a dropped connection; the pinger keeps its defaults, since a tight
+		// pong deadline drops healthy connections on a slow machine and re-serves their configs
 		cdsclient.RetryPeriod = 400 * time.Millisecond
 
 		nodeStore := store.NewNodeStore()
@@ -120,7 +122,6 @@ var _ = Describe("Config discovery", Ordered, func() {
 		go func() { Expect(srv.Start(ctx)).To(Succeed(), "cds server start") }()
 		ch = srv.GetConfigUpdateChannel()
 
-		time.Sleep(50 * time.Millisecond)
 		loggerFactory = logger.NewLoggerFactory(stunnerTestLoglevel)
 
 		id1 := "ns/gw1"
@@ -141,17 +142,14 @@ var _ = Describe("Config discovery", Ordered, func() {
 		Expect(err).To(Succeed(), "watcher setup 1")
 		err = cdsc2.Watch(ctx, ch2, true)
 		Expect(err).To(Succeed(), "watcher setup 2")
-
-		time.Sleep(50 * time.Millisecond)
-
 	})
+
+	// connCount is the number of client connections the server tracks.
+	connCount := func() int { return len(srv.GetConnTrack().Snapshot()) }
 
 	It("should track both client connections and serve no config yet", func() {
 		// we should now have 2 client connections
-		conns := srv.GetConnTrack()
-		Expect(conns).NotTo(BeNil())
-		snapshot := conns.Snapshot()
-		Expect(snapshot).To(HaveLen(2))
+		Eventually(connCount).WithTimeout(settle).Should(Equal(2))
 
 		// loading empty client config errs
 		_, err := cdsc1.Load()
@@ -174,7 +172,12 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok}
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
+		// the watcher receiving the update shows that the server took the config
+		c1 := watchConfig(ch1, settle)
+		Expect(c1).NotTo(BeNil())
+		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
+		c1.Auths[0].Realm = "realm1" // reset
+		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -186,13 +189,6 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c2, err := cdsc2.Load()
 		Expect(err).To(HaveOccurred(), "load")
 		Expect(c2).To(BeNil())
-
-		// we should have received a config update
-		c1 = watchConfig(ch1, 1500*time.Millisecond)
-		Expect(c1).NotTo(BeNil())
-		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
-		c1.Auths[0].Realm = "realm1" // reset
-		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 
 		// no config update from client 2
 		c2 = watchConfig(ch2, 150*time.Millisecond)
@@ -228,7 +224,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.LicenseStatus = licenseStatus
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
+		// the watcher receiving the update shows that the server took the config
+		c2 := watchConfig(ch2, settle)
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		// license status client should return the new license status
 		status, err := lc.LicenseStatus(ctx)
@@ -241,16 +240,13 @@ var _ = Describe("Config discovery", Ordered, func() {
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
-		c2, err := cdsc2.Load()
+		c2, err = cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client 2 config ok")
 		Expect(c2).NotTo(BeNil())
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		c1 = watchConfig(ch1, 150*time.Millisecond)
 		Expect(c1).To(BeNil())
-		c2 = watchConfig(ch2, 1500*time.Millisecond)
-		Expect(c2).NotTo(BeNil())
-		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		// we should have 2 configs in the store
 		cStore := srv.GetConfigStore()
@@ -273,7 +269,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c2Ok}
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
+		// the watcher receiving the update shows that the server took the config
+		c2 := watchConfig(ch2, settle)
+		Expect(c2).NotTo(BeNil())
+		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -281,17 +280,13 @@ var _ = Describe("Config discovery", Ordered, func() {
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
-		c2, err := cdsc2.Load()
+		c2, err = cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c2).NotTo(BeNil())
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		c1 = watchConfig(ch1, 150*time.Millisecond)
 		Expect(c1).To(BeNil())
-		c2 = watchConfig(ch2, 1500*time.Millisecond)
-		Expect(c2).NotTo(BeNil())
-		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
-
 	})
 
 	It("should accept a third watcher without disturbing the others", func() {
@@ -307,15 +302,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 		err = cdsc3.Watch(ctx2, ch3, false)
 		Expect(err).To(Succeed(), "watcher setup")
 
-		time.Sleep(50 * time.Millisecond)
-
 		// we should now have 3 client connections: store IDs for later use
-		conns := srv.GetConnTrack()
-		Expect(conns).NotTo(BeNil())
-		snapshot := conns.Snapshot()
-		Expect(snapshot).To(HaveLen(3))
+		Eventually(connCount).WithTimeout(settle).Should(Equal(3))
 		connIds = []string{}
-		for _, conn := range snapshot {
+		for _, conn := range srv.GetConnTrack().Snapshot() {
 			connIds = append(connIds, conn.Id())
 		}
 
@@ -335,7 +325,10 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c2Ok, c3Ok}
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
+		// the watcher receiving the update shows that the server took the config
+		c3 := watchConfig(ch3, settle)
+		Expect(c3).NotTo(BeNil())
+		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
 
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -347,7 +340,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c2).NotTo(BeNil())
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
-		c3, err := cdsc3.Load()
+		c3, err = cdsc3.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c3).NotTo(BeNil())
 		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
@@ -355,11 +348,6 @@ var _ = Describe("Config discovery", Ordered, func() {
 		// watcher1 shouldn't receive an update
 		c1 = watchConfig(ch1, 1500*time.Millisecond)
 		Expect(c1).To(BeNil())
-		c1 = watchConfig(ch1, 1500*time.Millisecond)
-		Expect(c1).To(BeNil())
-		c3 = watchConfig(ch3, 150*time.Millisecond)
-		Expect(c3).NotTo(BeNil())
-		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
 
 		// we should have 3 configs in the store
 		cStore := srv.GetConfigStore()
@@ -385,7 +373,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.ConfigQueue = []*stnrapiv2.StunnerConfig{c1Ok, c3Ok}
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
+		// a removed config is pushed to nobody: wait for the server to stop serving it
+		Eventually(func() error { _, err := cdsc2.Load(); return err }).WithTimeout(settle).Should(HaveOccurred())
 
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
@@ -432,17 +421,16 @@ var _ = Describe("Config discovery", Ordered, func() {
 	It("should re-serve the config when a watcher reconnects", func() {
 		log.Info("closing the 3rd watcher", "id", "nw/gw3")
 		cancel2()
-		time.Sleep(50 * time.Millisecond)
+		Eventually(connCount).WithTimeout(settle).Should(Equal(2))
 
 		log.Info("reinstalling the 2nd watcher", "id", "nw/gw3")
 		ch3 = make(chan *stnrapiv2.StunnerConfig, 10)
 		ctx2, cancel2 = context.WithCancel(context.Background())
 		err := cdsc3.Watch(ctx2, ch3, false)
 		Expect(err).To(Succeed(), "watcher setup")
-		time.Sleep(50 * time.Millisecond)
 
 		// we should have received a valid config
-		c3 := watchConfig(ch3, 1500*time.Millisecond)
+		c3 := watchConfig(ch3, settle)
 		Expect(c3).NotTo(BeNil())
 		Expect(c3.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
 
@@ -460,12 +448,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 			}
 		}
 
-		// after 2 pong-waits, clients should have reconnected
-		time.Sleep(cdsclient.RetryPeriod)
-		time.Sleep(cdsclient.RetryPeriod)
-
-		// 3rd watcher should receive its config
-		c3 := watchConfig(ch3, 150*time.Millisecond)
+		// the 3rd watcher reconnects after a retry period and receives its config
+		c3 := watchConfig(ch3, settle)
 		Expect(c3).NotTo(BeNil())
 		Expect(c3.DeepEqual(c3Ok)).To(BeTrue(), "config ok")
 
@@ -477,10 +461,8 @@ var _ = Describe("Config discovery", Ordered, func() {
 		e.ConfigQueue = []*stnrapiv2.StunnerConfig{}
 		ch <- e
 
-		time.Sleep(50 * time.Millisecond)
-
-		_, err := cdsc1.Load()
-		Expect(err).To(HaveOccurred(), "loading client config errs")
+		// removed configs are pushed to nobody: wait for the server to stop serving them
+		Eventually(func() error { _, err := cdsc1.Load(); return err }).WithTimeout(settle).Should(HaveOccurred())
 
 		// watcher2 should have received nothing
 		c2 := watchConfig(ch2, 150*time.Millisecond)
