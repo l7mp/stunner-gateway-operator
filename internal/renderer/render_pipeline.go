@@ -170,7 +170,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 		log.V(2).Info("Considering", "gateway", store.GetObjectKey(gw), "listener-num",
 			len(gw.Spec.Listeners))
 
-		if err := r.parametersRenderer.check(c, gw); err != nil {
+		if err := r.gatewayRenderer.check(c, gw); err != nil {
 			return err
 		}
 
@@ -322,7 +322,7 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 
 	if gw := c.gws.GetFirst(); gw != nil {
-		if err := r.parametersRenderer.finalize(c, gw, &conf); err != nil {
+		if err := r.gatewayRenderer.finalize(c, gw, &conf); err != nil {
 			return err
 		}
 	}

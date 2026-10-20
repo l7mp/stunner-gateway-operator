@@ -67,10 +67,8 @@ type clusterRenderer interface {
 	renderCluster(c *RenderContext, ro store.Route) (*stnrapiv2.ClusterConfig, []stnrapiv2.FilterRule, error)
 }
 
-// parametersRenderer is the interface for the component that applies the parameters a Gateway
-// names in spec.infrastructure.parametersRef: check validates them before the config of the
-// Gateway is rendered, finalize completes the rendered config of a Gateway in managed mode.
-type parametersRenderer interface {
+// gatewayRenderer is the interface for the component that renders what concerns a Gateway.
+type gatewayRenderer interface {
 	check(c *RenderContext, gw *gwapiv1.Gateway) error
 	finalize(c *RenderContext, gw *gwapiv1.Gateway, conf *stnrapiv2.StunnerConfig) error
 }
@@ -96,7 +94,7 @@ type renderer struct {
 	serverRenderer              serverRenderer
 	clusterRenderer             clusterRenderer
 	filterRenderer              filterRenderer
-	parametersRenderer          parametersRenderer
+	gatewayRenderer             gatewayRenderer
 	dataplaneGenerator          resourceGenerator
 	gen                         int
 	renderCh                    chan event.Event
@@ -116,7 +114,7 @@ func NewDefaultRenderer(cfg RendererConfig) Renderer {
 		serverRenderer:     newServerRenderer(cfg.Logger.WithName("server-renderer")),
 		clusterRenderer:    newClusterRenderer(cfg.Logger.WithName("cluster-renderer")),
 		filterRenderer:     newFilterRenderer(cfg.Logger.WithName("filter-renderer")),
-		parametersRenderer: newParametersRenderer(),
+		gatewayRenderer:    newGatewayRenderer(),
 		dataplaneGenerator: newDataplaneGenerator(cfg.Scheme),
 		renderCh:           make(chan event.Event, 10),
 		gen:                0,

@@ -11,8 +11,8 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
 )
 
-func TestRenderParameters(t *testing.T) {
-	r := newParametersRenderer()
+func TestRenderGateway(t *testing.T) {
+	r := newGatewayRenderer()
 
 	gw := testutils.TestGw.DeepCopy()
 	assert.NoError(t, r.check(nil, gw), "a Gateway with no parameters is accepted")
