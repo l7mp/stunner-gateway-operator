@@ -65,6 +65,11 @@ func TestRenderServerRender(t *testing.T) {
 				assert.Nil(t, sc.TURN, "no TURN block")
 				assert.Equal(t, "default", sc.L4.Auth, "auth policy")
 				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, sc.Clusters, "clusters")
+
+				// an SRT listener renders no server
+				l.Protocol = gwapiv1.ProtocolType("SRT")
+				_, err = r.renderServer(c, &l, r.getRoutes4Listener(gw, &l))
+				assert.True(t, IsNonCriticalError(err, UnsupportedSRT), "SRT is not supported")
 			},
 		},
 	})

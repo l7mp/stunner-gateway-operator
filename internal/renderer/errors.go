@@ -40,6 +40,7 @@ const (
 	InvalidPortRange
 	PublicAddressNotFound
 	PublicListenerAddressNotFound
+	UnsupportedSRT
 )
 
 type TypedError struct {
@@ -129,6 +130,8 @@ func (e *NonCriticalError) Error() string {
 		return "no public address found for gateway"
 	case PublicListenerAddressNotFound:
 		return "no public address found for one or more listeners"
+	case UnsupportedSRT:
+		return "SRT listeners are not supported"
 	}
 	return "Unknown error"
 }

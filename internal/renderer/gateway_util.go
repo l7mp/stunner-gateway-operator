@@ -14,6 +14,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 )
 
 // maxGwayStatusConds is the maximum number of conditions stored in a Gateway status.
@@ -51,18 +52,18 @@ func pruneGatewayStatusConds(gw *gwapiv1.Gateway) *gwapiv1.Gateway {
 }
 
 func isListenerConflicted(l *gwapiv1.Listener, udpPorts portMap, tcpPorts portMap) bool {
-	switch l.Protocol {
-	case "UDP", "DTLS", "TURN-UDP", "TURN-DTLS":
-		_, ok := udpPorts[int(l.Port)]
-		udpPorts[int(l.Port)] = true
-		return ok
-	case "TCP", "TLS", "TURN-TCP", "TURN-TLS":
-		_, ok := tcpPorts[int(l.Port)]
-		tcpPorts[int(l.Port)] = true
-		return ok
+	proto, _, err := getProtocol(l.Protocol)
+	if err != nil {
+		// unknown protocol
+		return false
 	}
-	// unknown protocol
-	return false
+	ports := tcpPorts
+	if proto == stnrapiv2.ProtocolUDP || proto == stnrapiv2.ProtocolDTLS {
+		ports = udpPorts
+	}
+	_, ok := ports[int(l.Port)]
+	ports[int(l.Port)] = true
+	return ok
 }
 
 // gateway status: set accepted to true and programmed to pending
@@ -238,6 +239,15 @@ func setListenerStatusAccepted(gw *gwapiv1.Gateway, s *gwapiv1.ListenerStatus, r
 			LastTransitionTime: metav1.Now(),
 			Reason:             string(gwapiv1.ListenerReasonUnsupportedProtocol),
 			Message:            "unsupported protocol",
+		})
+	case IsNonCriticalError(reason, UnsupportedSRT):
+		meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+			Type:               string(gwapiv1.ListenerConditionAccepted),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gw.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gwapiv1.ListenerReasonUnsupportedProtocol),
+			Message:            reason.Error(),
 		})
 	case IsNonCriticalError(reason, InvalidCertificateRef):
 		meta.SetStatusCondition(&s.Conditions, metav1.Condition{

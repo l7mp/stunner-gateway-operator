@@ -925,7 +925,8 @@ func TestRenderListenerRender(t *testing.T) {
 }
 
 // TestGetProtocol pins the Gateway listener protocols: TURN-* feeds a TURN server over the transport
-// underneath, a plain protocol an L4 server.
+// underneath, a plain protocol an L4 server, SRT an SRT server over UDP; the Service and the port
+// conflict check follow the dataplane protocol.
 func TestGetProtocol(t *testing.T) {
 	for proto, want := range map[string]struct {
 		lproto stnrapiv2.Protocol
@@ -939,6 +940,7 @@ func TestGetProtocol(t *testing.T) {
 		"TCP":       {stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeL4},
 		"TLS":       {stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeL4},
 		"DTLS":      {stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeL4},
+		"SRT":       {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeSRT},
 	} {
 		lproto, stype, err := getProtocol(gwapiv1.ProtocolType(proto))
 		assert.NoError(t, err, proto)
@@ -949,6 +951,15 @@ func TestGetProtocol(t *testing.T) {
 		_, _, err := getProtocol(gwapiv1.ProtocolType(proto))
 		assert.True(t, IsNonCriticalError(err, InvalidProtocol), proto)
 	}
+
+	r := &renderer{}
+	proto, err := r.getServiceProtocol("SRT")
+	assert.NoError(t, err)
+	assert.Equal(t, "UDP", proto, "an SRT listener is a UDP Service port")
+	udp, tcp := portMap{}, portMap{}
+	assert.False(t, isListenerConflicted(&gwapiv1.Listener{Protocol: "SRT", Port: 9000}, udp, tcp))
+	assert.True(t, isListenerConflicted(&gwapiv1.Listener{Protocol: "UDP", Port: 9000}, udp, tcp),
+		"an SRT listener takes its UDP port")
 }
 
 // tlsOf returns the TLS of a listener, empty for none.

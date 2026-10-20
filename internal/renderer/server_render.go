@@ -20,8 +20,8 @@ func newServerRenderer(log logr.Logger) serverRenderer {
 }
 
 // renderServer renders the server a Gateway listener feeds, named after the listener: a TURN server
-// for a TURN-* listener, an L4 server for a plain one. It names the clusters of the routes of the
-// listener, in order, and the default auth policy. The permission filters
+// for a TURN-* listener, an L4 server for a plain one; an SRT listener is not supported. It names
+// the clusters of the routes of the listener, in order, and the default auth policy. The permission filters
 // of a TURN server are rendered once the clusters are known.
 func (r *defaultServerRenderer) renderServer(c *RenderContext, l *gwapiv1.Listener, rs []store.Route) (*stnrapiv2.ServerConfig, error) {
 	if c.gws.Len() != 1 {
@@ -32,6 +32,9 @@ func (r *defaultServerRenderer) renderServer(c *RenderContext, l *gwapiv1.Listen
 	_, stype, err := getProtocol(l.Protocol)
 	if err != nil {
 		return nil, err
+	}
+	if stype == stnrapiv2.ServerTypeSRT {
+		return nil, NewNonCriticalError(UnsupportedSRT)
 	}
 
 	server := stnrapiv2.ServerConfig{

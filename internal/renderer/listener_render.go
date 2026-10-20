@@ -165,7 +165,7 @@ func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 
 // getProtocol parses the protocol of a Gateway listener into the protocol of its dataplane listener
 // and the type of the server the listener feeds: TURN-* is a TURN server over the transport
-// underneath, a plain UDP, TCP, TLS or DTLS an L4 server.
+// underneath, a plain UDP, TCP, TLS or DTLS an L4 server, and SRT an SRT server over UDP.
 func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv2.Protocol, stnrapiv2.ServerType, error) {
 	p, err := stnrapiv2.NewProtocol(string(proto))
 	if err != nil {
@@ -183,6 +183,8 @@ func getProtocol(proto gwapiv1.ProtocolType) (stnrapiv2.Protocol, stnrapiv2.Serv
 		return stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeTURN, nil
 	case stnrapiv2.ProtocolTURNDTLS:
 		return stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeTURN, nil
+	case stnrapiv2.ProtocolSRT:
+		return stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeSRT, nil
 	}
 
 	return stnrapiv2.ProtocolUnknown, stnrapiv2.ServerTypeUnknown, NewNonCriticalError(InvalidProtocol)

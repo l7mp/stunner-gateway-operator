@@ -327,6 +327,15 @@ func TestRenderGatewayUtil(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, string(gwapiv1.ListenerReasonInvalidCertificateRef),
 					d.Reason, "reason")
+
+				// an SRT listener is not accepted, for an unsupported protocol
+				setListenerStatus(gw, &l, NewNonCriticalError(UnsupportedSRT), false, 0)
+				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
+					string(gwapiv1.ListenerConditionAccepted))
+				assert.NotNil(t, d, "accepted found")
+				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
+				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol), d.Reason, "reason")
+				assert.Equal(t, "SRT listeners are not supported", d.Message, "message")
 			},
 		},
 		{
