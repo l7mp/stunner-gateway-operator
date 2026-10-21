@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
@@ -36,6 +37,14 @@ func (l *ServiceLens) ApplyToResource(target client.Object) error {
 	svc, ok := target.(*corev1.Service)
 	if !ok {
 		return fmt.Errorf("service lens: invalid target type %T", target)
+	}
+
+	// prune the labels the operator added earlier and no longer adds; a desired Service without
+	// the managed-labels annotation prunes nothing
+	if managed, ok := l.Service.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]; ok {
+		labels := maps.Clone(svc.GetLabels())
+		store.PruneManagedLabels(labels, svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey], managed)
+		svc.SetLabels(labels)
 	}
 
 	if err := setMetadata(svc, &l.Service); err != nil {
@@ -64,8 +73,9 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 
 // * Service.ObjectMeta.Labels / Service.ObjectMeta.Annotations / Service.ObjectMeta.OwnerReferences
 // - renderer: starts from existing Service (if present), enforces operator mandatory metadata,
-//   merges Gateway/GatewayConfig annotations, and sets Gateway owner reference.
-// - updater: merges top-level labels/annotations and updates owner reference via setMetadata/addOwnerRef.
+//   merges GatewayConfig labels and Gateway/GatewayConfig annotations, and sets Gateway owner reference.
+// - updater: prunes stale managed labels, merges top-level labels/annotations and updates owner
+//   reference via setMetadata/addOwnerRef.
 //
 // * Service.Spec.Type
 // - renderer: derived from service-type annotations with fallback to operator default.

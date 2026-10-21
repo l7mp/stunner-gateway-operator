@@ -295,3 +295,28 @@ func TestStoreObjectsResetNoDeadlock(t *testing.T) {
 		t.Fatal("deadlock: concurrent Objects()/Reset() did not complete; Objects() likely re-acquires the read lock it already holds")
 	}
 }
+
+func TestFormatManagedLabels(t *testing.T) {
+	assert.Equal(t, "", FormatManagedLabels(nil), "nil")
+	assert.Equal(t, "", FormatManagedLabels(map[string]string{}), "empty")
+	assert.Equal(t, "a,b,example.com/c", FormatManagedLabels(map[string]string{
+		"example.com/c": "3", "b": "2", "a": "1",
+	}), "sorted keys")
+}
+
+func TestPruneManagedLabels(t *testing.T) {
+	labels := map[string]string{"keep": "v", "stale": "v", "external": "v"}
+	PruneManagedLabels(labels, "keep,stale", "keep")
+	assert.Equal(t, map[string]string{"keep": "v", "external": "v"}, labels, "stale label removed")
+
+	labels = map[string]string{"stale": "v", "external": "v"}
+	PruneManagedLabels(labels, "stale", "")
+	assert.Equal(t, map[string]string{"external": "v"}, labels, "all managed labels removed")
+
+	labels = map[string]string{"external": "v"}
+	PruneManagedLabels(labels, "", "new")
+	assert.Equal(t, map[string]string{"external": "v"}, labels, "untracked")
+
+	var nilLabels map[string]string
+	assert.NotPanics(t, func() { PruneManagedLabels(nilLabels, "a", "") }, "nil map")
+}
