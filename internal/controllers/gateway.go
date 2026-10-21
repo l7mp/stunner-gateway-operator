@@ -14,6 +14,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,9 +105,9 @@ func NewGatewayController(mgr manager.Manager, ch chan<- event.Event, log logr.L
 
 	// watch Secret objects referenced by one of our Gateways
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Secret{},
-			&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
-			predicate.NewTypedPredicateFuncs[*corev1.Secret](r.validateSecretForReconcile)),
+		source.Kind(mgr.GetCache(), secretMetadata(),
+			&handler.TypedEnqueueRequestForObject[*metav1.PartialObjectMetadata]{},
+			predicate.NewTypedPredicateFuncs[*metav1.PartialObjectMetadata](r.validateSecretForReconcile)),
 	); err != nil {
 		return nil, err
 	}
@@ -296,7 +297,7 @@ func (r *gatewayReconciler) validateGatewayForReconcile(gw *gwapiv1.Gateway) boo
 }
 
 // validateSecretForReconcile checks whether the Secret belongs to a valid Gateway.
-func (r *gatewayReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
+func (r *gatewayReconciler) validateSecretForReconcile(secret *metav1.PartialObjectMetadata) bool {
 	gwList := &gwapiv1.GatewayList{}
 	secretName := store.GetNamespacedName(secret).String()
 	if err := r.List(context.Background(), gwList, &client.ListOptions{

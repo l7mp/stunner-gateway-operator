@@ -163,9 +163,9 @@ func NewRouteController(mgr manager.Manager, ch chan<- event.Event, log logr.Log
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &corev1.Secret{},
-				&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
-				predicate.NewTypedPredicateFuncs[*corev1.Secret](r.validateSecretForReconcile)),
+			source.Kind(mgr.GetCache(), secretMetadata(),
+				&handler.TypedEnqueueRequestForObject[*metav1.PartialObjectMetadata]{},
+				predicate.NewTypedPredicateFuncs[*metav1.PartialObjectMetadata](r.validateSecretForReconcile)),
 		); err != nil {
 			return nil, err
 		}
@@ -487,7 +487,7 @@ func (r *routeReconciler) validateStaticServiceForReconcile(staticSvc *stnrgwv1.
 }
 
 // validateSecretForReconcile checks whether a Secret is the auth Secret of a TURNRoute.
-func (r *routeReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
+func (r *routeReconciler) validateSecretForReconcile(secret *metav1.PartialObjectMetadata) bool {
 	turnRouteList := &stnrgwv1.TURNRouteList{}
 	if err := r.List(context.Background(), turnRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretTURNRouteIndex, store.GetObjectKey(secret)),

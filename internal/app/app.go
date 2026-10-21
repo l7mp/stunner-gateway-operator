@@ -5,11 +5,16 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,6 +28,7 @@ import (
 	"github.com/l7mp/stunner-gateway-operator/internal/operator"
 	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
 	"github.com/l7mp/stunner-gateway-operator/internal/updater"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 )
 
 // App is the assembled operator: the manager and the subsystems registered with it.
@@ -59,6 +65,7 @@ func New(cfg Config, restConfig *rest.Config, scheme *runtime.Scheme, logger log
 	config.StartupRenderTimeout = cfg.StartupRenderTimeout
 
 	log.Info("setting up Kubernetes controller manager")
+	ownedBy := labels.SelectorFromSet(labels.Set{opdefault.OwnedByLabelKey: opdefault.OwnedByLabelValue})
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -74,6 +81,16 @@ func New(cfg Config, restConfig *rest.Config, scheme *runtime.Scheme, logger log
 		RenewDeadline:                 cfg.RenewDeadline,
 		RetryPeriod:                   cfg.RetryPeriod,
 		Controller:                    ctrlcfg.Controller{SkipNameValidation: &cfg.SkipNameValidation},
+		// the cache holds no managed fields and only the Deployments and DaemonSets the
+		// operator owns; Secrets are watched by their metadata only and read from the API server
+		Cache: cache.Options{
+			DefaultTransform: cache.TransformStripManagedFields(),
+			ByObject: map[client.Object]cache.ByObject{
+				&appv1.Deployment{}: {Label: ownedBy},
+				&appv1.DaemonSet{}:  {Label: ownedBy},
+			},
+		},
+		Client: client.Options{Cache: &client.CacheOptions{DisableFor: []client.Object{&corev1.Secret{}}}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to set up Kubernetes controller manager: %w", err)

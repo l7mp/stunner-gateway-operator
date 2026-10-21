@@ -21,11 +21,18 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// secretMetadata is the object the Secret watches take: the operator watches Secrets by their
+// metadata only and reads the ones it references from the API server.
+func secretMetadata() *metav1.PartialObjectMetadata {
+	return &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}}
+}
 
 // ControllerName identifies a controller in the reconcile events it sends to the operator.
 type ControllerName string
