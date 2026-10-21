@@ -182,6 +182,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
+		Expect(c1.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
@@ -237,12 +238,14 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client 1 config ok")
 		Expect(c1).NotTo(BeNil())
+		Expect(c1.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err = cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client 2 config ok")
 		Expect(c2).NotTo(BeNil())
+		Expect(c2.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		c1 = watchConfig(ch1, 150*time.Millisecond)
@@ -277,12 +280,14 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
+		Expect(c1.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err = cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c2).NotTo(BeNil())
+		Expect(c2.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 
 		c1 = watchConfig(ch1, 150*time.Millisecond)
@@ -333,16 +338,19 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
+		Expect(c1.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
 		c2, err := cdsc2.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c2).NotTo(BeNil())
+		Expect(c2.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c2Ok.DeepEqual(c2)).To(BeTrue(), "config ok")
 		c3, err = cdsc3.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c3).NotTo(BeNil())
+		Expect(c3.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
 
 		// watcher1 shouldn't receive an update
@@ -379,6 +387,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c1, err := cdsc1.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c1).NotTo(BeNil())
+		Expect(c1.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c1.Auths[0].Realm).To(Equal("1.2.3.4"), "node name ok")
 		c1.Auths[0].Realm = "realm1" // reset
 		Expect(c1Ok.DeepEqual(c1)).To(BeTrue(), "config ok")
@@ -388,6 +397,7 @@ var _ = Describe("Config discovery", Ordered, func() {
 		c3, err := cdsc3.Load()
 		Expect(err).To(Succeed(), "loading client config ok")
 		Expect(c3).NotTo(BeNil())
+		Expect(c3.Validate()).To(Succeed(), "the client does not validate")
 		Expect(c3Ok.DeepEqual(c3)).To(BeTrue(), "config ok")
 
 		// watcher2 should have received nothing (deleted configs are not updated)
@@ -715,7 +725,7 @@ var _ = Describe("getNodeAddress", func() {
 func watchConfig(ch chan *stnrapiv2.StunnerConfig, d time.Duration) *stnrapiv2.StunnerConfig {
 	select {
 	case c := <-ch:
-		// fmt.Println("++++++++++++ got config ++++++++++++: ", c.String())
+		_ = c.Validate() // the client does not validate, compare only validated configs
 		return c
 	case <-time.After(d):
 		// fmt.Println("++++++++++++ timeout ++++++++++++")
