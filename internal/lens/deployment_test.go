@@ -213,6 +213,14 @@ func unownedPodSpecCases() []podSpecFieldCase {
 			},
 		},
 		{
+			name:   "PriorityClassName",
+			mutate: func(s *corev1.PodSpec) { s.PriorityClassName = "high-priority" },
+			check: func(t *testing.T, s *corev1.PodSpec) {
+				assert.Equal(t, "high-priority", s.PriorityClassName,
+					"priority class should be preserved when not owned")
+			},
+		},
+		{
 			name:   "SecurityContext",
 			mutate: func(s *corev1.PodSpec) { s.SecurityContext = &corev1.PodSecurityContext{} },
 			check: func(t *testing.T, s *corev1.PodSpec) {
@@ -264,6 +272,7 @@ func clearOwnedPodSpecOptionals(s *corev1.PodSpec) {
 	s.TerminationGracePeriodSeconds = nil
 	s.Affinity = nil
 	s.Tolerations = nil
+	s.PriorityClassName = ""
 	s.SecurityContext = nil
 	s.Containers[0].SecurityContext = nil
 	s.ImagePullSecrets = nil
@@ -366,4 +375,17 @@ func testDeploymentWithDNSPolicy(p corev1.DNSPolicy) *appv1.Deployment {
 	d := testDeployment()
 	d.Spec.Template.Spec.DNSPolicy = p
 	return d
+}
+
+func TestDeploymentOwnsPriorityClassName(t *testing.T) {
+	current := testDeployment()
+	desired := testDeployment()
+	desired.Spec.Template.Spec.PriorityClassName = "stunner-critical"
+
+	v := NewDeploymentLens(desired)
+	assert.False(t, v.EqualResource(current), "a new priority class should be detected")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+	assert.Equal(t, "stunner-critical", current.Spec.Template.Spec.PriorityClassName,
+		"the priority class should be applied")
+	assert.True(t, v.EqualResource(current), "the applied deployment should match the lens")
 }

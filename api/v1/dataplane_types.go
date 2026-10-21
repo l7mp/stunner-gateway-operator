@@ -167,6 +167,13 @@ type DataplaneSpec struct {
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
+	// PriorityClassName is the PriorityClass of the stunnerd pods, so that they are not among the
+	// first evicted or preempted under capacity pressure. The PriorityClass must exist: a pod
+	// naming a missing one is rejected at admission.
+	//
+	// +optional
+	PriorityClassName string `json:"priorityClassName,omitempty"`
+
 	// TopologySpreadConstraints describes how stunnerd pods ought to spread across topology
 	// domains.
 	//

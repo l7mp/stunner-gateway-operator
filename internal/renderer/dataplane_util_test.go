@@ -226,6 +226,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				dp.Spec.DisableHealthCheck = true
 				dp.Spec.EnableMetricsEndpoint = true
 				dp.Spec.HostNetwork = false
+				dp.Spec.PriorityClassName = "stunner-critical"
 				dp.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{
 					Name: "testpullsecret1",
 				}, {
@@ -372,6 +373,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Len(t, podSpec.ImagePullSecrets, 2, "image pull secrets len")
 				assert.Equal(t, "testpullsecret1", podSpec.ImagePullSecrets[0].Name, "image pull secret 1")
 				assert.Equal(t, "testpullsecret2", podSpec.ImagePullSecrets[1].Name, "image pull secret 2")
+				assert.Equal(t, "stunner-critical", podSpec.PriorityClassName, "priority class")
 				assert.Len(t, podSpec.TopologySpreadConstraints, 2, "topopology spread constraints len")
 				assert.Equal(t, int32(12), podSpec.TopologySpreadConstraints[0].MaxSkew, "topopology spread constraints 1")
 				assert.Equal(t, int32(21), podSpec.TopologySpreadConstraints[1].MaxSkew, "topopology spread constraints 2")

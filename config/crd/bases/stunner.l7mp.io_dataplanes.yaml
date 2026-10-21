@@ -1457,6 +1457,12 @@ spec:
                 items:
                   type: string
                 type: array
+              priorityClassName:
+                description: |-
+                  PriorityClassName is the PriorityClass of the stunnerd pods, so that they are not among the
+                  first evicted or preempted under capacity pressure. The PriorityClass must exist: a pod
+                  naming a missing one is rejected at admission.
+                type: string
               replicas:
                 description: |-
                   Number of desired pods. If empty or set to 1, use whatever is in the target Deployment,

@@ -105,6 +105,10 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * - renderer: set from Dataplane.Spec.Tolerations when non-nil.
 // * - updater: deep-copies when non-nil.
 // *
+// * * Deployment.Spec.Template.Spec.PriorityClassName
+// * - renderer: set from Dataplane.Spec.PriorityClassName.
+// * - updater: copies when non-empty.
+// *
 // * * Deployment.Spec.Template.Spec.SecurityContext
 // * - renderer: set from Dataplane.Spec.SecurityContext when non-nil.
 // * - updater: deep-copies when non-nil.
@@ -153,6 +157,9 @@ func applyPodTemplateSpec(current, desired *corev1.PodTemplateSpec) {
 	applyOwnedPtr(&currentspec.Affinity, dpspec.Affinity)
 	applyOwnedPtr(&currentspec.SecurityContext, dpspec.SecurityContext)
 	applyOwnedSlice(&currentspec.Tolerations, dpspec.Tolerations)
+	if dpspec.PriorityClassName != "" {
+		currentspec.PriorityClassName = dpspec.PriorityClassName
+	}
 	applyOwnedSlice(&currentspec.ImagePullSecrets, dpspec.ImagePullSecrets)
 	applyOwnedSlice(&currentspec.TopologySpreadConstraints, dpspec.TopologySpreadConstraints)
 }
@@ -208,6 +215,9 @@ func projectPodSpec(s, owned *corev1.PodSpec) corev1.PodSpec {
 		ImagePullSecrets:              projectOwnedSlice(s.ImagePullSecrets, owned.ImagePullSecrets),
 		TopologySpreadConstraints:     projectOwnedSlice(s.TopologySpreadConstraints, owned.TopologySpreadConstraints),
 		Containers:                    make([]corev1.Container, 0, len(s.Containers)),
+	}
+	if owned.PriorityClassName != "" {
+		ret.PriorityClassName = s.PriorityClassName
 	}
 
 	// SecurityContext has an "empty struct becomes nil" normalization that does

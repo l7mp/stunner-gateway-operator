@@ -255,6 +255,8 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 		podSpec.Tolerations = dataplane.Spec.Tolerations
 	}
 
+	podSpec.PriorityClassName = dataplane.Spec.PriorityClassName
+
 	// security context
 	if dataplane.Spec.SecurityContext != nil {
 		podSpec.SecurityContext = dataplane.Spec.SecurityContext.DeepCopy()
