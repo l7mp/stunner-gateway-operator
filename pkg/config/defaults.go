@@ -121,6 +121,11 @@ const (
 	// https://github.com/l7mp/stunner/issues/137.
 	NodePortAnnotationKey = "stunner.l7mp.io/nodeport"
 
+	// ManagedLabelsAnnotationKey is the name of the LoadBalancer service annotation that lists
+	// the labels added by the operator from the GatewayConfig, so that these can be removed when
+	// they are deleted from the GatewayConfig.
+	ManagedLabelsAnnotationKey = "stunner.l7mp.io/managed-labels"
+
 	// TargetPortAnnotationKey is the name(key) of the Gateway annotation that is used to select
 	// particular targetports per listener for the LB service, see
 	// https://github.com/l7mp/stunner/issues/137.

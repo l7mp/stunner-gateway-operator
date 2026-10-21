@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -294,6 +296,26 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		opdefault.RelatedGatewayNamespace: gw.GetNamespace(),
 		opdefault.RelatedGatewayKey:       gw.GetName(),
 	}
+
+	// labels from the GatewayConfig: mandatory labels cannot be overridden, and an invalid label
+	// would make the API server reject the whole Service
+	userLabels := make(map[string]string, len(c.gwConf.Spec.LoadBalancerServiceLabels))
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceLabels {
+		if _, ok := mandatoryLabels[k]; ok {
+			r.log.V(2).Info("Ignoring reserved LoadBalancer service label", "gateway-config",
+				store.GetObjectKey(c.gwConf), "label", k)
+			continue
+		}
+		if errs := append(validation.IsQualifiedName(k), validation.IsValidLabelValue(v)...); len(errs) > 0 {
+			r.log.V(2).Info("Ignoring invalid LoadBalancer service label", "gateway-config",
+				store.GetObjectKey(c.gwConf), "label", k, "errors", errs)
+			continue
+		}
+		userLabels[k] = v
+	}
+	requestedLabels := mergeMaps(userLabels, mandatoryLabels)
+	managed := store.FormatManagedLabels(userLabels)
+
 	requestedAnnotations := mergeMaps(
 		// base: GatewayConfig.Spec.LBServiceAnnotations
 		c.gwConf.Spec.LoadBalancerServiceAnnotations,
@@ -307,11 +329,16 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
 	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
 	if svc == nil {
+		// remember the labels we add so that we can remove them later
+		if managed != "" {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managed
+		}
+
 		svc = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:   gw.GetNamespace(),
 				Name:        gw.GetName(),
-				Labels:      mandatoryLabels,
+				Labels:      requestedLabels,
 				Annotations: requestedAnnotations,
 			},
 			Spec: corev1.ServiceSpec{
@@ -321,8 +348,19 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			},
 		}
 	} else {
+		// remove the labels we added earlier but no longer need
+		labels := maps.Clone(svc.GetLabels())
+		prev := svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+		store.PruneManagedLabels(labels, prev, managed)
+
+		// keep the annotation (even if empty) while there is something to remove, the updater
+		// needs it to prune the live object
+		if managed != "" || prev != "" {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managed
+		}
+
 		// mandatory labels and annotations must always be there
-		svc.SetLabels(mergeMaps(svc.GetLabels(), mandatoryLabels))
+		svc.SetLabels(mergeMaps(labels, requestedLabels))
 		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(), requestedAnnotations))
 	}
 
