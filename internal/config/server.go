@@ -94,13 +94,14 @@ func (c *Server) ProcessUpdate(e *event.EventUpdate) error {
 		}
 	}
 
+	// the license status first: a client that sees the new config reads the matching status
+	c.UpdateLicenseStatus(e.LicenseStatus)
+
 	if err := c.UpdateConfig(configs); err != nil {
 		return err
 	}
 	// a render follows every Node change: refresh what the patcher gives each pod
 	c.Refresh()
-
-	c.UpdateLicenseStatus(e.LicenseStatus)
 
 	return nil
 }
