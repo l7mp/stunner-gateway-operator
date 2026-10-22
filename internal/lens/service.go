@@ -41,7 +41,7 @@ func (l *ServiceLens) ApplyToResource(target client.Object) error {
 
 	// prune the labels the operator added earlier and no longer adds; a desired Service without
 	// the managed-labels annotation prunes nothing
-	if managed, ok := l.Service.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]; ok {
+	if managed, ok := l.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]; ok {
 		labels := maps.Clone(svc.GetLabels())
 		store.PruneManagedLabels(labels, svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey], managed)
 		svc.SetLabels(labels)
