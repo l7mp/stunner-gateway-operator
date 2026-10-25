@@ -297,8 +297,9 @@ spec:
                           a request to a Kubernetes resource.
                         properties:
                           endPort:
-                            description: EndPort specifies the upper threshold of
-                              the port-range. Only considered of port is also specified.
+                            description: |-
+                              EndPort is the end of the port range [port, endPort] the dataplane admits the peers of the
+                              backend at. Only considered if port is also specified.
                             format: int32
                             type: integer
                           group:
@@ -333,10 +334,10 @@ spec:
                             type: string
                           port:
                             description: |-
-                              Port specifies the destination port number to use for this resource. If port is not
-                              specified, all ports are allowed. If port is defined but endPort is not, allow only
-                              access to the given port. If both are specified, allows access in the port-range [port,
-                              endPort] inclusive.
+                              Port is the port a listener other than TURN dials the backend at: a port of a Service is
+                              dialed at its target port on the pods (a port the Service does not have is dialed as is), a
+                              StaticService at the port itself. TURN listeners ignore it. With endPort, port is also the
+                              start of the port range of the backend; a port alone restricts nothing.
                             format: int32
                             type: integer
                         required:

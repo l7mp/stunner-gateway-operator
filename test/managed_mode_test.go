@@ -1960,11 +1960,12 @@ func testManagedMode() {
 			c := conf.Clusters[0]
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
+			// the endpoints at the mandatory backend port of the Gateway API route
 			Expect(c.Endpoints).To(HaveLen(4))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.4:1"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.5:1"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.6:1"))
+			Expect(c.Endpoints).Should(ContainElement("1.2.3.7:1"))
 
 			gc := &gwapiv1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),

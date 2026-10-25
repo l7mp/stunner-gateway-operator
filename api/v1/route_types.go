@@ -72,15 +72,16 @@ type BackendObjectReference struct {
 	// +optional
 	Namespace *gwapiv1.Namespace `json:"namespace,omitempty"`
 
-	// Port specifies the destination port number to use for this resource. If port is not
-	// specified, all ports are allowed. If port is defined but endPort is not, allow only
-	// access to the given port. If both are specified, allows access in the port-range [port,
-	// endPort] inclusive.
+	// Port is the port a listener other than TURN dials the backend at: a port of a Service is
+	// dialed at its target port on the pods (a port the Service does not have is dialed as is), a
+	// StaticService at the port itself. TURN listeners ignore it. With endPort, port is also the
+	// start of the port range of the backend; a port alone restricts nothing.
 	//
 	// +optional
 	Port *gwapiv1.PortNumber `json:"port,omitempty"`
 
-	// EndPort specifies the upper threshold of the port-range. Only considered of port is also specified.
+	// EndPort is the end of the port range [port, endPort] the dataplane admits the peers of the
+	// backend at. Only considered if port is also specified.
 	//
 	// +optional
 	EndPort *gwapiv1.PortNumber `json:"endPort,omitempty"`
@@ -88,9 +89,7 @@ type BackendObjectReference struct {
 
 // convertBackendRefs converts the backend references of an upstream Gateway API route rule to the
 // native representation. Every upstream route rule carries its refs as []gwapiv1.BackendRef, so
-// this is the single place where the unsupported upstream fields are dropped: the backend port
-// (the native optional port/endPort pair is a peer port-range filter, which has no official
-// counterpart) and the weight.
+// this is the single place where the unsupported upstream weight is dropped.
 func convertBackendRefs(refs []gwapiv1.BackendRef) []BackendRef {
 	ret := make([]BackendRef, len(refs))
 	for i := range refs {
@@ -100,6 +99,7 @@ func convertBackendRefs(refs []gwapiv1.BackendRef) []BackendRef {
 			Kind:      b.Kind,
 			Name:      b.Name,
 			Namespace: b.Namespace,
+			Port:      b.Port,
 		}
 	}
 	return ret

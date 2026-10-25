@@ -79,7 +79,7 @@ type UDPRouteList struct {
 }
 
 // ConvertV1UDPRouteToStnrV1 converts a graduated Gateway API v1 UDPRoute to the STUNner-native
-// representation, dropping the unsupported upstream backend-reference fields (see
+// representation, dropping the unsupported upstream backend weight (see
 // convertBackendRefs).
 func ConvertV1UDPRouteToStnrV1(src *gwapiv1.UDPRoute) *UDPRoute {
 	if src == nil {

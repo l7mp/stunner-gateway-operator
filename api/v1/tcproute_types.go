@@ -79,7 +79,7 @@ type TCPRouteList struct {
 }
 
 // ConvertV1TCPRouteToStnrV1 converts a graduated Gateway API v1 TCPRoute to the STUNner-native
-// representation, dropping the unsupported upstream backend-reference fields (see
+// representation, dropping the unsupported upstream backend weight (see
 // convertBackendRefs).
 func ConvertV1TCPRouteToStnrV1(src *gwapiv1.TCPRoute) *TCPRoute {
 	if src == nil {
