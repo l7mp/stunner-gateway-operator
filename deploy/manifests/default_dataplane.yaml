@@ -6,10 +6,10 @@ spec:
   replicas: 1
   resources:
     limits:
-      cpu: 250m
-      memory: 120Mi
+      cpu: 1000m
+      memory: 512Mi
     requests:
       cpu: 250m
-      memory: 120Mi
+      memory: 128Mi
   terminationGracePeriodSeconds: 60
   enableMetricsEndpoint: true

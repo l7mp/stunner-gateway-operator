@@ -29,12 +29,12 @@ var (
 		ProbeHandler:  corev1.ProbeHandler{HTTPGet: &ReadinessProbeAction},
 		PeriodSeconds: 15, SuccessThreshold: 1, FailureThreshold: 3, TimeoutSeconds: 1,
 	}
-	CPURequest      = resource.MustParse("250m")
-	MemoryLimit     = resource.MustParse("20M")
 	ResourceRequest = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceCPU: CPURequest,
+		corev1.ResourceCPU:    resource.MustParse("250m"),
+		corev1.ResourceMemory: resource.MustParse("128Mi"),
 	})
 	ResourceLimit = corev1.ResourceList(map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceMemory: MemoryLimit,
+		corev1.ResourceCPU:    resource.MustParse("1000m"),
+		corev1.ResourceMemory: resource.MustParse("512Mi"),
 	})
 )
