@@ -623,8 +623,9 @@ func mergeServicePorts(existingSp, stnrSp []corev1.ServicePort) []corev1.Service
 		sp := existingSp[spIdx].DeepCopy()
 		sp.Protocol = stnrSp[i].Protocol
 		sp.Port = stnrSp[i].Port
-		// do not touch nodeport and targetport: if requested in an annotation then we will
-		// update these later, otherwise leave them as chosen by K8s
+		// keep the nodeport chosen by K8s, but not the targetport: K8s defaulted it to the old
+		// port, so it follows the listener port; an annotation sets either later
+		sp.TargetPort = stnrSp[i].TargetPort
 		ret = append(ret, *sp)
 	}
 

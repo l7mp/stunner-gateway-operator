@@ -2466,7 +2466,7 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - service nodeport/targetport retained",
+			name: "lb service - service nodeport retained, targetport follows the listener",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
@@ -2489,7 +2489,7 @@ func TestRenderServiceUtil(t *testing.T) {
 						Protocol:   corev1.ProtocolUDP,
 						Port:       1,
 						NodePort:   30001,
-						TargetPort: intstr.FromInt(1),
+						TargetPort: intstr.FromInt(7001), // defaulted to an old listener port
 					},
 					{
 						Name:       "dummy",
@@ -2525,8 +2525,8 @@ func TestRenderServiceUtil(t *testing.T) {
 				ports := s.Spec.Ports
 				assert.Len(t, ports, 2, "service-port len")
 				assert.Equal(t, "gateway-1-listener-udp", ports[0].Name, "port 1 name")
-				assert.Equal(t, int32(30001), ports[0].NodePort, "port 1 np")        // default
-				assert.Equal(t, intstr.FromInt(1), ports[0].TargetPort, "port 1 tp") // default
+				assert.Equal(t, int32(30001), ports[0].NodePort, "port 1 np") // default
+				assert.Equal(t, intstr.IntOrString{}, ports[0].TargetPort, "port 1 tp")
 				assert.Equal(t, "gateway-1-listener-tcp", ports[1].Name, "port 1 name")
 				assert.Equal(t, int32(0), ports[1].NodePort, "port 2 np")
 				assert.Equal(t, intstr.IntOrString{}, ports[1].TargetPort, "port 2 tp")

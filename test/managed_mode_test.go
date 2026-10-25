@@ -1059,6 +1059,32 @@ func testManagedMode() {
 			Expect(l.Port).Should(Equal(targetPort))
 		})
 
+		It("should follow the listener port with the target port once the annotation is gone", func() {
+			ctrl.Log.Info("re-loading gateway without the targetport annotation and a new port")
+			createOrUpdateGateway(ctx, k8sClient, testGw, func(current *gwapiv1.Gateway) {
+				current.SetAnnotations(map[string]string{})
+				current.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-random-udp"),
+					Port:     gwapiv1.PortNumber(1),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}, {
+					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
+					Port:     gwapiv1.PortNumber(4),
+					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
+				}}
+			})
+
+			lookupKey := store.GetNamespacedName(testGw)
+			svc := &corev1.Service{}
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, lookupKey, svc); err != nil {
+					return false
+				}
+				return len(svc.Spec.Ports) == 2 && svc.Spec.Ports[1].Port == 4 &&
+					svc.Spec.Ports[1].TargetPort == intstr.FromInt(4)
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("should report missing TLS secret refs", func() {
 			ctrl.Log.Info("ensuring TLS Secret is absent")
 			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, testSecret))).Should(Succeed())
