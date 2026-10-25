@@ -69,6 +69,10 @@ type clusterRenderer interface {
 // gatewayRenderer is the interface for the component that renders what concerns a Gateway.
 type gatewayRenderer interface {
 	check(c *RenderContext, gw *gwapiv1.Gateway) error
+	// sections are the parts of a Gateway beyond its listeners that routes attach to by
+	// sectionName, as listeners; their routes render into a server named after them, with no
+	// listener, for finalize to use.
+	sections(gw *gwapiv1.Gateway) []gwapiv1.Listener
 	finalize(c *RenderContext, gw *gwapiv1.Gateway, conf *stnrapiv2.StunnerConfig) error
 }
 

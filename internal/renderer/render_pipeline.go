@@ -244,6 +244,16 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 			setListenerStatus(gw, &l, nil, false, len(rs))
 		}
 
+		for _, l := range r.gatewayRenderer.sections(gw) {
+			sc, err := r.renderServer(&gwCtx, &l, r.getRoutes4Listener(gw, &l))
+			if err != nil {
+				log.Info("Error rendering server configuration for section", "gateway",
+					store.GetObjectKey(gw), "section", l.Name, "error", err.Error())
+				continue
+			}
+			conf.Servers = append(conf.Servers, *sc)
+		}
+
 		setGatewayStatusProgrammed(gw, nil, pubGwAddrs)
 		gw = pruneGatewayStatusConds(gw)
 

@@ -24,6 +24,10 @@ func (r *defaultGatewayRenderer) check(_ *RenderContext, gw *gwapiv1.Gateway) er
 		"unsupported parametersRef kind %s/%s", ref.Group, ref.Kind)
 }
 
+func (r *defaultGatewayRenderer) sections(_ *gwapiv1.Gateway) []gwapiv1.Listener {
+	return nil
+}
+
 func (r *defaultGatewayRenderer) finalize(_ *RenderContext, _ *gwapiv1.Gateway, _ *stnrapiv2.StunnerConfig) error {
 	return nil
 }

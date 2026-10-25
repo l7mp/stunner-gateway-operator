@@ -99,8 +99,13 @@ spec:
                         asks for.
                       type: string
                     name:
-                      description: Name of the registration, unique in the SIPTrunk.
+                      description: |-
+                        Name of the registration, unique in the SIPTrunk and distinct from the listener names of
+                        the Gateway. A route attaches to the registration by this name as its sectionName: its
+                        backends take the calls of the registration, so the name is a valid sectionName.
+                      maxLength: 253
                       minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     registrar:
                       description: |-

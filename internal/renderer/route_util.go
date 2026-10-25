@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"slices"
 
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -302,9 +303,10 @@ func (r *renderer) isParentAcceptingRoute(ro store.Route, p *gwapiv1.ParentRefer
 		return false, false
 	}
 
-	// is there a listener that accepts us?
-	for i := range gw.Spec.Listeners {
-		l := gw.Spec.Listeners[i]
+	// is there a listener, or a section beyond the listeners, that accepts us?
+	ls := append(slices.Clone(gw.Spec.Listeners), r.gatewayRenderer.sections(gw)...)
+	for i := range ls {
+		l := ls[i]
 
 		found, msg := resolveParentRef(ro, p, gw, &l)
 		if found {

@@ -66,9 +66,13 @@ type SIPTrunkSpec struct {
 
 // SIPRegistration is a registration of an address of record with a carrier's registrar.
 type SIPRegistration struct {
-	// Name of the registration, unique in the SIPTrunk.
+	// Name of the registration, unique in the SIPTrunk and distinct from the listener names of
+	// the Gateway. A route attaches to the registration by this name as its sectionName: its
+	// backends take the calls of the registration, so the name is a valid sectionName.
 	//
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Name string `json:"name"`
 
 	// Registrar is the SIP URI of the carrier's registrar, as Kamailio or Asterisk names one:
