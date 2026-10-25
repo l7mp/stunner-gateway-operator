@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	appv1 "k8s.io/api/apps/v1"
@@ -29,8 +30,8 @@ var (
 	TestLabelValue       = "testvalue"
 	TestSectionName      = gwapiv1.SectionName("gateway-1-listener-udp")
 	TestSectionNameTCP   = gwapiv1.SectionName("gateway-1-listener-tcp")
-	TestCert64           = "dGVzdGNlcnQ=" // "testcert"
-	TestKey64            = "dGVzdGtleQ==" // "testkey"
+	TestCert64           = base64.StdEncoding.EncodeToString([]byte(TestCertPEM))
+	TestKey64            = base64.StdEncoding.EncodeToString([]byte(TestKeyPEM))
 	TestReplicas         = int32(3)
 	TestTerminationGrace = int64(60)
 	TestImagePullPolicy  = corev1.PullAlways
@@ -276,6 +277,28 @@ var TestEndpointSlice = discoveryv1.EndpointSlice{
 	}},
 }
 
+// TestCertPEM and TestKeyPEM are a self-signed P-256 key pair for TLS tests.
+const (
+	TestCertPEM = `-----BEGIN CERTIFICATE-----
+MIIBhjCCASugAwIBAgIUQHr4eTQPbJIaPt4FPB8FbA0WsOQwCgYIKoZIzj0EAwIw
+FzEVMBMGA1UEAwwMc3R1bm5lci50ZXN0MCAXDTI2MTAyNTE4MjY1NloYDzIxMjYx
+MDAxMTgyNjU2WjAXMRUwEwYDVQQDDAxzdHVubmVyLnRlc3QwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAARYXRAPRZAsZSfnJlh/XWzMCiGIw5Isqhc1YjrylRuNlGGr
+r8I5keSUj5lyYErhZrU/XvPKLQvArTr4Bkdhq4RWo1MwUTAdBgNVHQ4EFgQUt5/L
+OZQyfI2vYUIfA/e4cHPFPO4wHwYDVR0jBBgwFoAUt5/LOZQyfI2vYUIfA/e4cHPF
+PO4wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNJADBGAiEAxa5eLc3Wqy3h
+tpqbPgbdVC14IMz4Iihoh/wRK1483WQCIQDn3rriB9z9RB8eaxpNvVW58f6MBRM4
+zGGFhwihglIe5Q==
+-----END CERTIFICATE-----
+`
+	TestKeyPEM = `-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQglQXKcucX7qrmQjY9
+847+urPw30V/AnyDI/ObwaNE8RmhRANCAARYXRAPRZAsZSfnJlh/XWzMCiGIw5Is
+qhc1YjrylRuNlGGrr8I5keSUj5lyYErhZrU/XvPKLQvArTr4Bkdhq4RW
+-----END PRIVATE KEY-----
+`
+)
+
 // TestSecret for TLS tests
 var TestSecret = corev1.Secret{
 	ObjectMeta: metav1.ObjectMeta{
@@ -284,8 +307,8 @@ var TestSecret = corev1.Secret{
 	},
 	Type: corev1.SecretTypeTLS,
 	Data: map[string][]byte{
-		"tls.crt": []byte("testcert"),
-		"tls.key": []byte("testkey"),
+		"tls.crt": []byte(TestCertPEM),
+		"tls.key": []byte(TestKeyPEM),
 	},
 }
 

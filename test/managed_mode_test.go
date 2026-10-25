@@ -1245,7 +1245,7 @@ func testManagedMode() {
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
 			createOrUpdateSecret(ctx, k8sClient, testSecret, func(current *corev1.Secret) {
-				current.Data["tls.crt"] = []byte("newcert")
+				current.Data["tls.crt"] = []byte(newCertPEM)
 			})
 
 			ctrl.Log.Info("trying to load STUNner config")

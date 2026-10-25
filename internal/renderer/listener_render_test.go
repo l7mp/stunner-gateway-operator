@@ -703,7 +703,7 @@ func TestRenderListenerRender(t *testing.T) {
 				c.gws = []gwapiv1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
-				s.Data = map[string][]byte{"tls.crt": []byte("testcert")}
+				s.Data = map[string][]byte{"tls.crt": []byte(testutils.TestCertPEM)}
 				c.scrts = []corev1.Secret{*s}
 			},
 			tester: func(t *testing.T, r *renderer) {
@@ -761,7 +761,65 @@ func TestRenderListenerRender(t *testing.T) {
 				c.gws = []gwapiv1.Gateway{*gw}
 
 				s := testutils.TestSecret.DeepCopy()
-				s.Data = map[string][]byte{"tls.key": []byte("testkey")}
+				s.Data = map[string][]byte{"tls.key": []byte(testutils.TestKeyPEM)}
+				c.scrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				gw := gws[0]
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
+
+				ls := gw.Spec.Listeners
+				l := ls[0]
+
+				rs := []store.Route{}
+				addr := gwAddrPort{
+					addr: "1.2.3.4",
+					port: 1234,
+				}
+
+				_, err = r.renderListener(c, &l, rs, addr, nil)
+				assert.Error(t, err, "renderListener")
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef), "invalid cert ref")
+			},
+		},
+		{
+			name:  "TLS/DTLS listener - unparsable cert/key pair invalid",
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
+			rs:    []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs:  []corev1.Service{testutils.TestSvc},
+			scrts: []corev1.Secret{testutils.TestSecret},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				mode := gwapiv1.TLSModeTerminate
+				ns := gwapiv1.Namespace("testnamespace")
+				tls := gwapiv1.ListenerTLSConfig{
+					Mode: &mode,
+					CertificateRefs: []gwapiv1.SecretObjectReference{{
+						Namespace: &ns,
+						Name:      gwapiv1.ObjectName("testsecret-ok"),
+					}},
+				}
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1.ProtocolType("TURN-TLS"),
+					Port:     gwapiv1.PortNumber(1),
+					TLS:      &tls,
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				s := testutils.TestSecret.DeepCopy()
+				s.Data = map[string][]byte{"tls.crt": []byte("testcert"), "tls.key": []byte("testkey")}
 				c.scrts = []corev1.Secret{*s}
 			},
 			tester: func(t *testing.T, r *renderer) {
@@ -820,8 +878,8 @@ func TestRenderListenerRender(t *testing.T) {
 
 				s := testutils.TestSecret.DeepCopy()
 				s.Data = map[string][]byte{
-					"cert": []byte("testcert"),
-					"key":  []byte("testkey"),
+					"cert": []byte(testutils.TestCertPEM),
+					"key":  []byte(testutils.TestKeyPEM),
 				}
 				c.scrts = []corev1.Secret{*s}
 			},

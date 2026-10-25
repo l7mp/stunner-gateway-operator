@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 
@@ -153,6 +154,13 @@ func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 		if !certOk || !keyOk {
 			r.log.Info("Cannot find cert and/or key in Secret", "gateway",
 				store.GetObjectKey(gw), "listener", l.Name, "secret", n.String())
+			continue
+		}
+
+		// stunnerd refuses a pair that does not parse
+		if _, err := tls.X509KeyPair(cert, key); err != nil {
+			r.log.Info("Invalid cert/key pair in Secret", "gateway", store.GetObjectKey(gw),
+				"listener", l.Name, "secret", n.String(), "error", err.Error())
 			continue
 		}
 

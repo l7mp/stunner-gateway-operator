@@ -724,7 +724,7 @@ func testRendering() {
 		It("should update TLS cert when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
 			createOrUpdateSecret(ctx, k8sClient, testSecret, func(current *corev1.Secret) {
-				current.Data["tls.crt"] = []byte("newcert")
+				current.Data["tls.crt"] = []byte(newCertPEM)
 			})
 
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
@@ -756,7 +756,7 @@ func testRendering() {
 		It("should update TLS key when Secret changes", func() {
 			ctrl.Log.Info("re-loading TLS Secret")
 			createOrUpdateSecret(ctx, k8sClient, testSecret, func(current *corev1.Secret) {
-				current.Data["tls.key"] = []byte("newkey")
+				current.Data["tls.key"] = []byte(newKeyPEM)
 			})
 
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {

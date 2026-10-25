@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -59,11 +60,37 @@ var auxiliaryTest = func() {}
 // Empty customer key for testing
 var customerTestKey string
 
+// newCertPEM is another certificate for the key of testutils.TestKeyPEM, newKeyPEM that key in
+// another encoding: each makes a valid pair with the other half of the test Secret.
+const (
+	newCertPEM = `-----BEGIN CERTIFICATE-----
+MIIBjjCCATOgAwIBAgIUZHZvdmK+nyYsv6TqRECcshGb0Y8wCgYIKoZIzj0EAwIw
+GzEZMBcGA1UEAwwQbmV3LnN0dW5uZXIudGVzdDAgFw0yNjEwMjUxODMzMjNaGA8y
+MTI2MTAwMTE4MzMyM1owGzEZMBcGA1UEAwwQbmV3LnN0dW5uZXIudGVzdDBZMBMG
+ByqGSM49AgEGCCqGSM49AwEHA0IABFhdEA9FkCxlJ+cmWH9dbMwKIYjDkiyqFzVi
+OvKVG42UYauvwjmR5JSPmXJgSuFmtT9e88otC8CtOvgGR2GrhFajUzBRMB0GA1Ud
+DgQWBBS3n8s5lDJ8ja9hQh8D97hwc8U87jAfBgNVHSMEGDAWgBS3n8s5lDJ8ja9h
+Qh8D97hwc8U87jAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0kAMEYCIQCG
+c+O2y9VidZ6oktAqvJ8TQn6nWfXsw5AbOOtjbG2LKgIhAOJAr4qmeWHXeitDQF/f
+sQr0KW+OWTDOJBZZP0yVxgyD
+-----END CERTIFICATE-----
+`
+	newKeyPEM = `-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIJUFynLnF+6q5kI2PfOO/rqz8N9FfwJ8gyPzm8GjRPEZoAoGCCqGSM49
+AwEHoUQDQgAEWF0QD0WQLGUn5yZYf11szAohiMOSLKoXNWI68pUbjZRhq6/COZHk
+lI+ZcmBK4Wa1P17zyi0LwK06+AZHYauEVg==
+-----END EC PRIVATE KEY-----
+`
+)
+
+var (
+	newCert64 = base64.StdEncoding.EncodeToString([]byte(newCertPEM))
+	newKey64  = base64.StdEncoding.EncodeToString([]byte(newKeyPEM))
+)
+
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	newCert64 = "bmV3Y2VydA==" // newcert
-	newKey64  = "bmV3a2V5"     // newkey
-	timeout   = time.Second * 10
+	timeout = time.Second * 10
 	// duration = time.Second * 10
 	interval = time.Millisecond * 250
 	loglevel = -4
