@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -141,17 +143,26 @@ func initGatewayStatus(gw *gwapiv1.Gateway, reason error) {
 	}
 }
 
+// setGatewayStatusProgrammed sets the addresses and the Programmed condition of a Gateway: False
+// (Invalid) on an error, False (AddressNotAssigned) while a listener has no public address, False
+// (Pending) when the rollout of the dataplane Deployment, as last seen by the watch, got stuck,
+// True otherwise. A stuck rollout is one whose new pods never became available within the
+// progress deadline (unschedulable, image pull, crash loop, failing readiness: the pods tell which)
+// or cannot even be created: the old pods keep serving with the previous settings, so the change
+// of the pod template never takes effect. A rollout in progress is "ready soon" and a DaemonSet
+// does not report a stuck rollout, so neither turns the condition False.
 func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, pubAddrs []gwAddrPort) {
+	cond := metav1.Condition{
+		Type:               string(gwapiv1.GatewayConditionProgrammed),
+		Status:             metav1.ConditionFalse,
+		ObservedGeneration: gw.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
 	if err != nil {
-		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1.GatewayConditionProgrammed),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: gw.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1.GatewayReasonInvalid),
-			Message: fmt.Sprintf("error processing gateway by controller %s: %s",
-				config.ControllerName, err.Error()),
-		})
+		cond.Reason = string(gwapiv1.GatewayReasonInvalid)
+		cond.Message = fmt.Sprintf("error processing gateway by controller %s: %s",
+			config.ControllerName, err.Error())
+		meta.SetStatusCondition(&gw.Status.Conditions, cond)
 		return
 	}
 
@@ -174,25 +185,32 @@ func setGatewayStatusProgrammed(gw *gwapiv1.Gateway, err error, pubAddrs []gwAdd
 		}}
 	}
 
-	if progd {
-		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1.GatewayConditionProgrammed),
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: gw.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1.GatewayConditionProgrammed),
-			Message:            "dataplane configuration successfully rendered",
-		})
-	} else {
-		meta.SetStatusCondition(&gw.Status.Conditions, metav1.Condition{
-			Type:               string(gwapiv1.GatewayConditionProgrammed),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: gw.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gwapiv1.GatewayReasonAddressNotAssigned),
-			Message:            "no public address found for at least one listener",
-		})
+	stuck := ""
+	if dep := store.Deployments.GetObject(store.GetNamespacedName(gw)); dep != nil && !isManagedDataplaneDisabled(gw) {
+		for _, c := range dep.Status.Conditions {
+			switch {
+			case c.Type == appv1.DeploymentReplicaFailure && c.Status == corev1.ConditionTrue:
+				stuck = "the dataplane pods cannot be created: " + c.Message
+			case c.Type == appv1.DeploymentProgressing && c.Status == corev1.ConditionFalse && stuck == "":
+				stuck = "the new dataplane pods did not become available within the progress " +
+					"deadline, the old pods keep serving with the previous settings (the pods tell why)"
+			}
+		}
 	}
+
+	switch {
+	case !progd:
+		cond.Reason = string(gwapiv1.GatewayReasonAddressNotAssigned)
+		cond.Message = "no public address found for at least one listener"
+	case stuck != "":
+		cond.Reason = string(gwapiv1.GatewayReasonPending)
+		cond.Message = stuck
+	default:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = string(gwapiv1.GatewayConditionProgrammed)
+		cond.Message = "dataplane configuration successfully rendered"
+	}
+	meta.SetStatusCondition(&gw.Status.Conditions, cond)
 }
 
 // listener status

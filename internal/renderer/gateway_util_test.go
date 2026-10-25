@@ -8,15 +8,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/internal/config"
 	"github.com/l7mp/stunner-gateway-operator/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
 )
@@ -509,4 +512,40 @@ func TestListenerSupportedKinds(t *testing.T) {
 	assert.NotContains(t, kinds(), "TURNRoute", "CRD not served")
 	config.TURNRouteServed = true
 	assert.Contains(t, kinds(), "TURNRoute", "CRD served")
+}
+
+func TestGatewayStatusProgrammedRollout(t *testing.T) {
+	defer store.Deployments.Flush()
+	gw := testutils.TestGw.DeepCopy()
+	programmed := func() *metav1.Condition {
+		setGatewayStatusProgrammed(gw, nil, []gwAddrPort{{addr: "1.2.3.4", port: 1}})
+		return meta.FindStatusCondition(gw.Status.Conditions, string(gwapiv1.GatewayConditionProgrammed))
+	}
+
+	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "no Deployment yet")
+
+	one := int32(1)
+	dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: gw.GetNamespace(), Name: gw.GetName()},
+		Spec: appv1.DeploymentSpec{Replicas: &one}}
+	dep.Status.Conditions = []appv1.DeploymentCondition{{Type: appv1.DeploymentProgressing,
+		Status: corev1.ConditionTrue, Reason: "ReplicaSetUpdated"}}
+	store.Deployments.Reset([]client.Object{dep})
+	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "a rollout in progress is ready soon")
+
+	dep.Status.Conditions[0] = appv1.DeploymentCondition{Type: appv1.DeploymentProgressing,
+		Status: corev1.ConditionFalse, Reason: "ProgressDeadlineExceeded"}
+	store.Deployments.Reset([]client.Object{dep})
+	c := programmed()
+	assert.Equal(t, metav1.ConditionFalse, c.Status, "a stalled rollout")
+	assert.Equal(t, string(gwapiv1.GatewayReasonPending), c.Reason)
+
+	dep.Status.Conditions = []appv1.DeploymentCondition{{Type: appv1.DeploymentReplicaFailure,
+		Status: corev1.ConditionTrue, Message: "exceeded quota"}}
+	store.Deployments.Reset([]client.Object{dep})
+	c = programmed()
+	assert.Equal(t, metav1.ConditionFalse, c.Status, "pods cannot be created")
+	assert.Contains(t, c.Message, "exceeded quota")
+
+	gw.SetAnnotations(map[string]string{opdefault.ManagedDataplaneDisabledAnnotationKey: opdefault.ManagedDataplaneDisabledAnnotationValue})
+	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "no managed dataplane")
 }
