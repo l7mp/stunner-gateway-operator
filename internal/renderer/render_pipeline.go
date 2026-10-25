@@ -305,25 +305,19 @@ func (r *renderer) renderForGateways(c *RenderContext) error {
 	}
 	r.invalidateMaskedRoutes(c)
 
-	log.V(1).Info("Rendering filters")
-	for i := range conf.Clusters {
-		rc := &conf.Clusters[i]
-		if f := r.renderClusterFilter(rc, peers[rc.Name]); f != nil {
-			conf.Filters = append(conf.Filters, *f)
-			rc.Filters = []string{f.Name}
-		}
-	}
-	for i := range conf.Servers {
-		s := &conf.Servers[i]
-		for _, f := range r.renderPermissionFilters(s, peers) {
-			conf.Filters = append(conf.Filters, f)
-			s.TURN.PermissionFilters = append(s.TURN.PermissionFilters, f.Name)
-		}
-	}
-
 	if gw := c.gws.GetFirst(); gw != nil {
 		if err := r.gatewayRenderer.finalize(c, gw, &conf); err != nil {
 			return err
+		}
+	}
+
+	// the filters of the servers as they stand once the Gateway is finalized
+	log.V(1).Info("Rendering filters")
+	for i := range conf.Servers {
+		s := &conf.Servers[i]
+		for _, f := range r.renderServerFilters(s, peers) {
+			conf.Filters = append(conf.Filters, f)
+			s.Filters = append(s.Filters, f.Name)
 		}
 	}
 

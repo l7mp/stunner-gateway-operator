@@ -109,8 +109,10 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "relay address")
-				assert.Equal(t, []string{"1.2.3.4:100", "1.2.3.5:100", "1.2.3.6:100", "1.2.3.7:100"},
-					rc.Endpoints, "endpoints at the backend port, no ClusterIP")
+				assert.Equal(t, []string{"1.2.3.4:100", "1.2.3.5:100"},
+					rc.Endpoints, "the ready endpoints at the backend port, no ClusterIP")
+				assert.Contains(t, peerBlocks(peers), "1.2.3.6/32", "an unready pod: a peer, not dialed")
+				assert.Contains(t, peerBlocks(peers), "1.2.3.7/32", "an unready pod: a peer, not dialed")
 
 				// the port range goes to the peers, never to the endpoints
 				assert.Len(t, peers, 5, "peers len")
@@ -182,13 +184,49 @@ func TestRenderClusterRender(t *testing.T) {
 				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
-				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000", "1.2.3.6:5000", "1.2.3.7:5000"},
+				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000"},
 					rc.Endpoints, "endpoints, no ClusterIP")
 				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "relay address")
 				assert.Len(t, peers, 5, "peers len")
 				for _, p := range peers {
 					assert.Equal(t, []stnrapiv2.FilterPort{{Port: 5000, EndPort: 6000}}, p.Ports, "peer ports")
 				}
+			},
+		},
+		{
+			name: "the endpoints at the target port of the Service port",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			prep: func(c *renderTestConfig) {
+				udp := testutils.TestUDPRoute.DeepCopy()
+				port := gwapiv1.PortNumber(1) // the Service port "udp-ok"
+				udp.Spec.Rules[0].BackendRefs[0].Port = &port
+				c.rs = []stnrgwv1.UDPRoute{*udp}
+				// a named target port may resolve to another port in each slice
+				name, p1, p2 := "udp-ok", int32(9001), int32(9101)
+				esl1 := testutils.TestEndpointSlice.DeepCopy()
+				esl1.Ports = []discoveryv1.EndpointPort{{Name: &name, Protocol: &testutils.TestProtocolUDP, Port: &p1}}
+				esl2 := testutils.TestEndpointSlice.DeepCopy()
+				esl2.SetName("testendpointslice-2")
+				esl2.Endpoints = esl2.Endpoints[:1]
+				esl2.Endpoints[0].Addresses = []string{"5.6.7.8"}
+				esl2.Ports = []discoveryv1.EndpointPort{{Name: &name, Protocol: &testutils.TestProtocolUDP, Port: &p2}}
+				c.esls = []discoveryv1.EndpointSlice{*esl1, *esl2}
+				svc := testutils.TestSvc.DeepCopy()
+				svc.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*svc}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				rs := r.allRoutes()
+				assert.Len(t, rs, 1, "route len")
+
+				rc, _, err := r.renderCluster(nil, rs[0])
+				assert.NoError(t, err, "render cluster")
+				assert.ElementsMatch(t, []string{"1.2.3.4:9001", "1.2.3.5:9001", "5.6.7.8:9101"}, rc.Endpoints, "endpoints")
 			},
 		},
 		{
@@ -286,11 +324,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.NotContains(t, peerBlocks(peers), "4.3.2.1/32", "cluster-ip: not a peer")
 
 				// restore
@@ -327,11 +365,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -368,11 +406,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Contains(t, peerBlocks(peers), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// restore
@@ -410,11 +448,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Contains(t, peerBlocks(peers), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// restore
@@ -455,11 +493,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -626,11 +664,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				// and the clusterIP
 				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip: a peer, no endpoint")
 
@@ -707,11 +745,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Contains(t, rc.Endpoints, "1.2.3.8", "endpoint ip-5")
 				// plus the clusterIPs
 				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
@@ -790,11 +828,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Contains(t, rc.Endpoints, "1.2.3.8", "endpoint ip-5")
 				// plus the clusterIPs
 				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
@@ -873,11 +911,11 @@ func TestRenderClusterRender(t *testing.T) {
 
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				// plus the clusterIP
 				assert.Contains(t, peerBlocks(peers), "1.1.1.1/32", "cluster-ip-1: a peer, no endpoint")
 
@@ -1084,7 +1122,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				// a prefix is a peer block but no endpoint
-				assert.Len(t, rc.Endpoints, 7, "endpoints len")
+				assert.Len(t, rc.Endpoints, 5, "endpoints len")
 				assert.Len(t, peers, 9, "peers len")
 				// static svc
 				assert.Contains(t, rc.Endpoints, "10.11.12.13", "StaticService 1 endpoint ip-1")
@@ -1099,8 +1137,8 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.Contains(t, blocks, "128.0.0.0/1", "StaticService 2 block-2")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "Service endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "Service endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "Service endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "Service endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "Service endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "Service endpoint ip-4: not ready, not dialed")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP

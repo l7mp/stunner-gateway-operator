@@ -117,12 +117,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
-				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
+				assert.Contains(t, serverFilterBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -212,12 +212,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
-				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
+				assert.Contains(t, serverFilterBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -346,12 +346,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
-				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
+				assert.Contains(t, serverFilterBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -593,18 +593,13 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				// at the backend port
 				assert.Contains(t, rc.Endpoints, "1.2.3.4:10", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5:10", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6:10", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7:10", "endpoint ip-4")
-				assert.Equal(t, []string{rc.Name}, rc.Filters, "port range filter")
-				f, err := conf.GetFilterConfig(rc.Name)
-				assert.NoError(t, err, "port range filter")
-				assert.Contains(t, f.Rules, stnrapiv2.FilterRule{Action: "ALLOW",
-					IPBlock: &stnrapiv2.IPBlock{CIDR: "1.2.3.4/32", Except: []string{}},
-					Ports:   []stnrapiv2.FilterPort{{Port: 10, EndPort: 100}}}, "ip-1 ports")
+				assert.NotContains(t, rc.Endpoints, "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "endpoint ip-4: not ready, not dialed")
+				assert.Empty(t, rc.Filters, "a cluster has no filter")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-5") // this one comes from another backendRef
 
 				// gateway status
@@ -823,18 +818,13 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc = conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 5, "endpoints len")
+				assert.Len(t, rc.Endpoints, 3, "endpoints len")
 				// at the backend port
 				assert.Contains(t, rc.Endpoints, "1.2.3.4:10", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5:10", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6:10", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7:10", "endpoint ip-4")
-				assert.Equal(t, []string{rc.Name}, rc.Filters, "port range filter")
-				f, err = conf.GetFilterConfig(rc.Name)
-				assert.NoError(t, err, "port range filter")
-				assert.Contains(t, f.Rules, stnrapiv2.FilterRule{Action: "ALLOW",
-					IPBlock: &stnrapiv2.IPBlock{CIDR: "1.2.3.4/32", Except: []string{}},
-					Ports:   []stnrapiv2.FilterPort{{Port: 10, EndPort: 100}}}, "ip-1 ports")
+				assert.NotContains(t, rc.Endpoints, "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "endpoint ip-4: not ready, not dialed")
+				assert.Empty(t, rc.Filters, "a cluster has no filter")
 				assert.Contains(t, rc.Endpoints, "4.4.4.4", "endpoint ip-5")
 
 				// gateway status
@@ -1065,11 +1055,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 
 				// deployment
 				dps := c.update.UpsertQueue.Deployments.Objects()
@@ -1708,11 +1698,11 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
 				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "the relay address, resolved in the pod")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Empty(t, rc.Filters, "no port filter")
 
 				// the listener binds every address, its server is named after it
@@ -1724,22 +1714,22 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
 				assert.Equal(t, "default", conf.Auths[0].Name, "auth policy name")
 
-				// a permission filter per cluster, admitting its peers; a server without clusters
+				// a server filter per cluster, admitting its peers; a server without clusters
 				// has none, denying every peer
 				udpSrv := "testnamespace/gateway-1/gateway-1-listener-udp"
 				assert.Equal(t, []string{udpSrv + "/testnamespace/udproute-ok/udp"},
-					sc.TURN.PermissionFilters, "permission filters")
+					sc.Filters, "server filters")
 				sc = serverOf(conf, conf.Listeners[1])
 				require.NotNil(t, sc.TURN, "TURN server")
-				assert.Empty(t, sc.TURN.PermissionFilters, "permission filters")
+				assert.Empty(t, sc.Filters, "server filters")
 
 				assert.Len(t, conf.Filters, 1, "filter num")
 				f, err := conf.GetFilterConfig(udpSrv + "/testnamespace/udproute-ok/udp")
-				assert.NoError(t, err, "permission filter found")
-				assert.Len(t, f.Rules, 4, "permission filter rules")
+				assert.NoError(t, err, "server filter found")
+				assert.Len(t, f.Rules, 4, "server filter rules")
 				for _, r := range f.Rules {
-					assert.Equal(t, "ALLOW", r.Action, "permission filter action")
-					assert.Empty(t, r.Ports, "permission filter ports")
+					assert.Equal(t, "ALLOW", r.Action, "server filter action")
+					assert.Empty(t, r.Ports, "server filter ports")
 				}
 
 				// restore
@@ -1794,23 +1784,14 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Len(t, conf.Clusters, 2, "cluster num")
 				c1, err := conf.GetClusterConfig("testnamespace/udproute-ok/udp")
 				assert.NoError(t, err, "cluster 1 found")
-				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, c1.Filters, "port filter")
+				assert.Empty(t, c1.Filters, "a cluster has no filter")
 				c2, err := conf.GetClusterConfig("testnamespace/route-2/udp")
 				assert.NoError(t, err, "cluster 2 found")
-				assert.Empty(t, c2.Filters, "no port filter")
+				assert.Empty(t, c2.Filters, "a cluster has no filter")
 				assert.Equal(t, []string{"10.11.12.13", "10.11.12.14", "10.11.12.15"}, c2.Endpoints, "endpoints")
 
-				// the port filter of cluster 1: its peers on the backend ports, then a deny
-				f, err := conf.GetFilterConfig("testnamespace/udproute-ok/udp")
-				assert.NoError(t, err, "port filter found")
-				assert.Len(t, f.Rules, 5, "port filter rules")
-				for _, r := range f.Rules[:4] {
-					assert.Equal(t, "ALLOW", r.Action, "port filter action")
-					assert.Equal(t, []stnrapiv2.FilterPort{{Port: 100, EndPort: 200}}, r.Ports, "port filter ports")
-				}
-				assert.Equal(t, "DENY", f.Rules[4].Action, "port filter deny")
-
-				// the permission filters of the UDP listener: per cluster in order
+				// the filters of the server of the UDP listener: per cluster in order, the peers on
+				// the port range of their backend
 				lc, err := conf.GetListenerConfig("testnamespace/gateway-1/gateway-1-listener-udp")
 				assert.NoError(t, err, "listener found")
 				sc := serverOf(conf, lc)
@@ -1819,18 +1800,21 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				for _, cn := range sc.Clusters {
 					pfs = append(pfs, sc.Name+"/"+cn)
 				}
-				assert.Equal(t, pfs, sc.TURN.PermissionFilters, "permission filters")
+				assert.Equal(t, pfs, sc.Filters, "server filters")
 
-				f, err = conf.GetFilterConfig(sc.Name + "/testnamespace/udproute-ok/udp")
-				assert.NoError(t, err, "permission filter 1 found")
-				assert.Len(t, f.Rules, 4, "permission filter 1 rules")
+				f, err := conf.GetFilterConfig(sc.Name + "/testnamespace/udproute-ok/udp")
+				assert.NoError(t, err, "server filter 1 found")
+				assert.Len(t, f.Rules, 4, "server filter 1 rules")
 				for _, r := range f.Rules {
-					assert.Equal(t, "ALLOW", r.Action, "permission filter action")
-					assert.Empty(t, r.Ports, "permission filter ports")
+					assert.Equal(t, "ALLOW", r.Action, "server filter action")
+					assert.Equal(t, []stnrapiv2.FilterPort{{Port: 100, EndPort: 200}}, r.Ports, "server filter ports")
 				}
 				f, err = conf.GetFilterConfig(sc.Name + "/testnamespace/route-2/udp")
-				assert.NoError(t, err, "permission filter 2 found")
-				assert.Len(t, f.Rules, 3, "permission filter 2 rules")
+				assert.NoError(t, err, "server filter 2 found")
+				assert.Len(t, f.Rules, 3, "server filter 2 rules")
+				for _, r := range f.Rules {
+					assert.Empty(t, r.Ports, "no port range, no ports")
+				}
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
@@ -1886,7 +1870,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc, err := conf.GetClusterConfig("testnamespace/udproute-ok/udp")
 				assert.NoError(t, err, "cluster")
 				assert.Equal(t, []string{"$STUNNER_ADDR"}, rc.Addrs, "relay address")
-				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000", "1.2.3.6:5000", "1.2.3.7:5000"},
+				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000"},
 					rc.Endpoints, "endpoints at the backend port")
 
 				turn, err := conf.GetListenerConfig("testnamespace/gateway-1/turn")
@@ -1895,7 +1879,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "TURN", ts.Type, "TURN server")
 				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, ts.Clusters, "TURN clusters")
 				assert.Equal(t, []string{ts.Name + "/testnamespace/udproute-ok/udp"},
-					ts.TURN.PermissionFilters, "permission filters")
+					ts.Filters, "server filters")
 
 				l4, err := conf.GetListenerConfig("testnamespace/gateway-1/l4")
 				assert.NoError(t, err, "L4 listener")
@@ -2052,12 +2036,12 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				rc := conf.Clusters[0]
 				assert.Equal(t, "testnamespace/udproute-ok/udp", rc.Name, "cluster name")
 				assert.Equal(t, "STATIC", rc.Type, "cluster type")
-				assert.Len(t, rc.Endpoints, 4, "endpoints len")
+				assert.Len(t, rc.Endpoints, 2, "endpoints len")
 				assert.Contains(t, rc.Endpoints, "1.2.3.4", "endpoint ip-1")
 				assert.Contains(t, rc.Endpoints, "1.2.3.5", "endpoint ip-2")
-				assert.Contains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3")
-				assert.Contains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4")
-				assert.Contains(t, permissionBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
+				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
+				assert.Contains(t, serverFilterBlocks(conf, rc.Name), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
 
 				// config for the modified gateway-class
 				gc = gcs[1]

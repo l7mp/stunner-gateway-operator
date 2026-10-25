@@ -88,7 +88,7 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				rc, peers, err := r.renderCluster(nil, rs[0])
 				assert.NoError(t, err, "render cluster")
 				assert.Equal(t, "testnamespace/turnroute-ok/turn", rc.Name, "cluster name")
-				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000", "1.2.3.6:5000", "1.2.3.7:5000"},
+				assert.Equal(t, []string{"1.2.3.4:5000", "1.2.3.5:5000"},
 					rc.Endpoints, "endpoints")
 				assert.NotNil(t, rc.Tunnel, "tunnel")
 				assert.Equal(t, []stnrapiv2.FilterRule{{Action: "ALLOW"}}, peers, "peers")
@@ -190,10 +190,10 @@ func TestRenderTURNRouteRender(t *testing.T) {
 				assert.ElementsMatch(t, []string{"testnamespace/udproute-ok/udp",
 					"testnamespace/turnroute-ok/turn"}, sc.Clusters, "clusters")
 
-				// the tunnel's permission filter admits every peer
+				// the tunnel's server filter admits every peer
 				f, err := conf.GetFilterConfig(sc.Name + "/testnamespace/turnroute-ok/turn")
-				assert.NoError(t, err, "tunnel permission filter")
-				assert.Len(t, f.Rules, 1, "tunnel permission filter rules")
+				assert.NoError(t, err, "tunnel server filter")
+				assert.Len(t, f.Rules, 1, "tunnel server filter rules")
 				assert.Equal(t, "ALLOW", f.Rules[0].Action, "allow")
 				assert.Nil(t, f.Rules[0].IPBlock, "every address")
 

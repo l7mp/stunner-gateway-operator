@@ -356,9 +356,9 @@ func serverOf(conf *stnrapiv2.StunnerConfig, l stnrapiv2.ListenerConfig) stnrapi
 	return s
 }
 
-// permissionBlocks returns the address blocks of the permission filters of a cluster, of every
+// serverFilterBlocks returns the address blocks of the server filters of a cluster, of every
 // server of a config.
-func permissionBlocks(conf *stnrapiv2.StunnerConfig, cluster string) []string {
+func serverFilterBlocks(conf *stnrapiv2.StunnerConfig, cluster string) []string {
 	ret := []string{}
 	for _, f := range conf.Filters {
 		if !strings.HasSuffix(f.Name, "/"+cluster) {

@@ -51,11 +51,10 @@ type serverRenderer interface {
 	renderServer(c *RenderContext, l *gwapiv1.Listener, rs []store.Route) (*stnrapiv2.ServerConfig, error)
 }
 
-// filterRenderer is the interface for the component that renders the filters: the port filter of
-// a cluster and the permission filters of a server, from the peers of the rendered clusters.
+// filterRenderer is the interface for the component that renders the filters of a server from the
+// peers of the rendered clusters.
 type filterRenderer interface {
-	renderClusterFilter(cluster *stnrapiv2.ClusterConfig, peers []stnrapiv2.FilterRule) *stnrapiv2.FilterConfig
-	renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig
+	renderServerFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig
 }
 
 // clusterRenderer is the interface for the component that renders the dataplane cluster config of
@@ -201,14 +200,9 @@ func (r *renderer) renderCluster(c *RenderContext, ro store.Route) (*stnrapiv2.C
 	return r.clusterRenderer.renderCluster(c, ro)
 }
 
-// renderClusterFilter is a wrapper for filterRenderer.renderClusterFilter()
-func (r *renderer) renderClusterFilter(cluster *stnrapiv2.ClusterConfig, peers []stnrapiv2.FilterRule) *stnrapiv2.FilterConfig {
-	return r.filterRenderer.renderClusterFilter(cluster, peers)
-}
-
-// renderPermissionFilters is a wrapper for filterRenderer.renderPermissionFilters()
-func (r *renderer) renderPermissionFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig {
-	return r.filterRenderer.renderPermissionFilters(server, peers)
+// renderServerFilters is a wrapper for filterRenderer.renderServerFilters()
+func (r *renderer) renderServerFilters(server *stnrapiv2.ServerConfig, peers map[string][]stnrapiv2.FilterRule) []stnrapiv2.FilterConfig {
+	return r.filterRenderer.renderServerFilters(server, peers)
 }
 
 // generateDataplane is a wrapper for dataplaneGenerator.generate()

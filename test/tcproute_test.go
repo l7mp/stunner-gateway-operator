@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -179,10 +180,11 @@ func testTCPRouteManaged() {
 			createOrUpdateTCPRouteV1(ctx, k8sClient, tcpRouteGwAPI, nil)
 
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
+				cl := findCluster(c, "testnamespace/tcproute-gwapi/tcp")
 				return listenerHasCluster(c, "testnamespace/gateway-1/gateway-1-listener-tcp",
 					"testnamespace/tcproute-gwapi/tcp") &&
-					findCluster(c, "testnamespace/tcproute-gwapi/tcp") != nil
-			}), timeout, interval).Should(BeTrue())
+					cl != nil && len(cl.Endpoints) > 0 && strings.HasSuffix(cl.Endpoints[0], ":1")
+			}), timeout, interval).Should(BeTrue(), "the endpoints at the backend port")
 		})
 
 		It("should set the official Gateway API TCPRoute status at v1", func() {

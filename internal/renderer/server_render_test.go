@@ -46,7 +46,7 @@ func TestRenderServerRender(t *testing.T) {
 				assert.Equal(t, "TURN", sc.Type, "server type")
 				assert.Equal(t, "default", sc.TURN.Auth, "auth policy")
 				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, sc.Clusters, "clusters")
-				assert.Empty(t, sc.TURN.PermissionFilters, "permission filters are rendered later")
+				assert.Empty(t, sc.Filters, "the filters are rendered later")
 
 				l = gw.Spec.Listeners[1]
 				rs = r.getRoutes4Listener(gw, &l)

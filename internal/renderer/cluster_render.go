@@ -174,16 +174,27 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 
 		addrs := []string{}
 		clusterIPs := []string{} // admitted as peers but no endpoint: kube-proxy balances them
+		var dial map[string]bool // the Service addresses to dial; nil dials every address
+		targetPorts := map[string]int{}
 		switch ref := &b; {
 		case store.IsReferenceService(ref):
-			epAddrs, errEps := getEndpointAddrs(n, false)
+			// the Service port the backend names, if any: its target port is dialed
+			var svcPort *corev1.ServicePort
+			if svc := store.Services.GetObject(n); svc != nil && b.Port != nil {
+				for i, p := range svc.Spec.Ports {
+					if p.Port == int32(*b.Port) && string(p.Protocol) == proto.String() {
+						svcPort = &svc.Spec.Ports[i]
+					}
+				}
+			}
+			epAddrs, epDial, epPorts, errEps := getEndpointAddrs(n, svcPort)
 			if errEps != nil {
 				r.log.V(1).Info("Cluster rendering error: could not find the EndpointSlices of "+
 					"Service backend", "route", store.GetObjectKey(ro), "backendRef",
 					store.DumpBackendRef(ref), "error", errEps)
 				routeError = errEps
 			} else {
-				addrs = append(addrs, epAddrs...)
+				addrs, dial, targetPorts = append(addrs, epAddrs...), epDial, epPorts
 			}
 
 			// the ClusterIP, if relaying to it is enabled
@@ -266,11 +277,14 @@ func (r *defaultClusterRenderer) renderServiceCluster(ro store.Route, rs []stnrg
 			}
 			prefix = prefix.Masked()
 
-			// a prefix and the ClusterIP are peer blocks only, an address is an endpoint too, at
-			// the port of the backend if it has one: the port a server dialing the backend uses
-			if prefix.IsSingleIP() && i < len(addrs) {
+			// a prefix, the ClusterIP and a pod not to dial are peer blocks only, an address is an
+			// endpoint too, at the target port of the backend's Service port, else at the port of
+			// the backend if it has one: the port a server dialing the backend uses
+			if prefix.IsSingleIP() && i < len(addrs) && (dial == nil || dial[a]) {
 				ep := prefix.Addr().String()
-				if b.Port != nil && *b.Port > 0 {
+				if p, ok := targetPorts[a]; ok {
+					ep = net.JoinHostPort(ep, strconv.Itoa(p))
+				} else if b.Port != nil && *b.Port > 0 {
 					ep = net.JoinHostPort(ep, strconv.Itoa(int(*b.Port)))
 				}
 				eps = append(eps, ep)

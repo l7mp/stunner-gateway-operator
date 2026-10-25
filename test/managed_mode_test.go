@@ -290,7 +290,7 @@ func testManagedMode() {
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
-				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 2 {
 					conf = c
 					return true
 				}
@@ -331,11 +331,11 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the Route status", func() {
@@ -1688,14 +1688,14 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(7))
+			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.14"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.15"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the status correctly", func() {
@@ -1878,14 +1878,14 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(7))
+			Expect(c.Endpoints).To(HaveLen(5))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.13"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.14"))
 			Expect(c.Endpoints).Should(ContainElement("10.11.12.16"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should survive converting the route to a Gateway API v1 route", func() {
@@ -1956,16 +1956,16 @@ func testManagedMode() {
 			Expect(l.Port).Should(Equal(2))
 			Expect(serverOf(conf, l).Clusters).To(HaveLen(0))
 
+			// the endpoints at the mandatory backend port of the Gateway API route
 			Expect(conf.Clusters).To(HaveLen(1))
 			c := conf.Clusters[0]
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			// the endpoints at the mandatory backend port of the Gateway API route
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4:1"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5:1"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6:1"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7:1"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6:1"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7:1"))
 
 			gc := &gwapiv1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
@@ -2192,11 +2192,11 @@ func testManagedMode() {
 			c := conf.Clusters[0]
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 
 			gc := &gwapiv1.GatewayClass{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&testutils.TestGwClass),
@@ -2462,11 +2462,11 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should render a STUNner config for Gateway 2", func() {
@@ -2494,11 +2494,11 @@ func testManagedMode() {
 			c := conf.Clusters[0]
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the GatewayClass status", func() {
@@ -3266,11 +3266,11 @@ func testManagedMode() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should render a STUNner config for Gateway 2", func() {
@@ -3298,11 +3298,11 @@ func testManagedMode() {
 			c := conf.Clusters[0]
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the status of GatewayClass 1", func() {

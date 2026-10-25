@@ -35,8 +35,8 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Name:      svcs[0].GetName(),
 				}
 
-				// include not-ready addresses (default)
-				addrs, err := getEndpointAddrs(n, false)
+				// every address, ready or not
+				addrs, _, _, err := getEndpointAddrs(n, nil)
 
 				assert.Nil(t, err, "no error")
 				assert.NotEmpty(t, addrs, "endpoint addrs found")
@@ -62,15 +62,40 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Name:      svcs[0].GetName(),
 				}
 
-				// exclude not-ready addresses
-				addrs, err := getEndpointAddrs(n, true)
+				// dial the ready addresses only
+				_, dial, _, err := getEndpointAddrs(n, nil)
 
 				assert.Nil(t, err, "no error")
-				assert.NotEmpty(t, addrs, "endpoint addrs found")
-				assert.Len(t, addrs, 3, "endpoint addrs len ok")
-				assert.Contains(t, addrs, "1.2.3.4", "addr-1 ok")
-				assert.Contains(t, addrs, "1.2.3.5", "addr-2 ok")
-				assert.Contains(t, addrs, "1.2.3.7", "addr-4 ok")
+				assert.Equal(t, map[string]bool{"1.2.3.4": true, "1.2.3.5": true}, dial, "ready addrs dialed")
+			},
+		},
+		{
+			name: "endpointslice: serving terminating endpoint-ips dialed when none is ready",
+			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			prep: func(c *renderTestConfig) {
+				e := testutils.TestEndpointSlice.DeepCopy()
+				e.Endpoints = []discoveryv1.Endpoint{{
+					Addresses: []string{"1.2.3.4"},
+					Conditions: discoveryv1.EndpointConditions{
+						Ready: &testutils.TestFalse, Serving: &testutils.TestTrue, Terminating: &testutils.TestTrue,
+					},
+				}, {
+					Addresses: []string{"1.2.3.5"},
+					Conditions: discoveryv1.EndpointConditions{
+						Ready: &testutils.TestFalse, Serving: &testutils.TestFalse, Terminating: &testutils.TestTrue,
+					},
+				}}
+				c.esls = []discoveryv1.EndpointSlice{*e}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				n := types.NamespacedName{Namespace: testutils.TestSvc.GetNamespace(), Name: testutils.TestSvc.GetName()}
+				addrs, dial, _, err := getEndpointAddrs(n, nil)
+
+				assert.Nil(t, err, "no error")
+				assert.Len(t, addrs, 2, "every addr")
+				assert.True(t, dial["1.2.3.4"], "the serving terminating addr dialed")
+				assert.False(t, dial["1.2.3.5"], "the unready terminating addr not dialed")
 			},
 		},
 		{
@@ -91,7 +116,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs, err := getEndpointAddrs(n, false)
+				addrs, _, _, err := getEndpointAddrs(n, nil)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -117,7 +142,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs, err := getEndpointAddrs(n, false)
+				addrs, _, _, err := getEndpointAddrs(n, nil)
 
 				assert.NotNil(t, err, "error")
 				assert.True(t, IsNonCritical(err), "non-critical error")
@@ -150,7 +175,7 @@ func TestRenderEndpointUtil(t *testing.T) {
 					Namespace: svcs[0].GetNamespace(),
 					Name:      svcs[0].GetName(),
 				}
-				addrs, err := getEndpointAddrs(n, false)
+				addrs, _, _, err := getEndpointAddrs(n, nil)
 
 				assert.Nil(t, err, "no error")
 				assert.NotEmpty(t, addrs, "endpoint addrs found")

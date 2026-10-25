@@ -215,7 +215,7 @@ func testFinalizer() {
 
 			ctrl.Log.Info("trying to load STUNner config")
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
-				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+				if len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 2 {
 					conf = c
 					return true
 				}
@@ -256,11 +256,11 @@ func testFinalizer() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 		})
 
 		It("should set the Route status", func() {

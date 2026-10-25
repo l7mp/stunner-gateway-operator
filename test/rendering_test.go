@@ -301,7 +301,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 		})
 
 		It("should set the Route status", func() {
@@ -1352,7 +1352,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 		})
 
 		It("should reset status on all resources", func() {
@@ -1527,7 +1527,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 		})
 
 		It("should reset status on all resources", func() {
@@ -1733,7 +1733,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 		})
 
 		It("should reset Gateway statuses", func() {
@@ -1967,7 +1967,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 
 			c = conf.Clusters[1]
 			if c.Name != "dummy-namespace/dummy-namespace-route/udp" {
@@ -2257,7 +2257,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 
 			c = conf.Clusters[1]
 			if c.Name != "dummy-namespace/dummy-namespace-route/udp" {
@@ -2918,7 +2918,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 
 			c = conf.Clusters[1]
 			if c.Name != "testnamespace/route-2/udp" {
@@ -3078,7 +3078,7 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7"))
+			Expect(c.Endpoints).To(ConsistOf("1.2.3.4", "1.2.3.5"))
 
 			c = conf.Clusters[1]
 			if c.Name != "testnamespace/route-2/udp" {
@@ -3185,7 +3185,7 @@ func testRendering() {
 
 			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
 				if len(c.Listeners) == 2 && len(serverOf(c, c.Listeners[0]).Clusters) == 1 &&
-					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 4 {
+					len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 2 {
 					conf = c
 					return true
 				}
@@ -3227,16 +3227,16 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 
 			svc := store.Services.GetObject(types.NamespacedName{
 				Namespace: "testnamespace", Name: "testservice-ok"})
 			Expect(svc).NotTo(BeNil())
-			Expect(permissionBlocks(conf, c.Name)).ShouldNot(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is not a peer")
+			Expect(serverFilterBlocks(conf, c.Name)).ShouldNot(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is not a peer")
 		})
 
 		It("should set the Route status", func() {
@@ -3329,8 +3329,8 @@ func testRendering() {
 
 				if len(c.Listeners) == 1 && len(c.Clusters) == 1 &&
 					c.Clusters[0].Type == "STATIC" &&
-					len(c.Clusters[0].Endpoints) == 4 &&
-					slices.Contains(permissionBlocks(c, c.Clusters[0].Name), svc.Spec.ClusterIP+"/32") {
+					len(c.Clusters[0].Endpoints) == 2 &&
+					slices.Contains(serverFilterBlocks(c, c.Clusters[0].Name), svc.Spec.ClusterIP+"/32") {
 					conf = c
 					return true
 				}
@@ -3361,15 +3361,15 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 
 			svc := store.Services.GetObject(types.NamespacedName{
 				Namespace: "testnamespace", Name: "testservice-ok"})
-			Expect(permissionBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
+			Expect(serverFilterBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
 
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
@@ -3444,15 +3444,15 @@ func testRendering() {
 
 			Expect(c.Name).Should(Equal("testnamespace/udproute-ok/udp"))
 			Expect(c.Type).Should(Equal("STATIC"))
-			Expect(c.Endpoints).To(HaveLen(4))
+			Expect(c.Endpoints).To(HaveLen(2))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.4"))
 			Expect(c.Endpoints).Should(ContainElement("1.2.3.5"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.6"))
-			Expect(c.Endpoints).Should(ContainElement("1.2.3.7"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.6"))
+			Expect(c.Endpoints).ShouldNot(ContainElement("1.2.3.7"))
 
 			svc := store.Services.GetObject(types.NamespacedName{
 				Namespace: "testnamespace", Name: "testservice-ok"})
-			Expect(permissionBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
+			Expect(serverFilterBlocks(conf, c.Name)).Should(ContainElement(svc.Spec.ClusterIP+"/32"), "the ClusterIP is a peer, no endpoint")
 		})
 
 		It("should reset status on all resources", func() {
