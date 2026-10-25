@@ -571,32 +571,19 @@ func (r *routeReconciler) validateBackendForReconcile(key, udpIndex, udpIndexGwA
 	return routeNum != 0
 }
 
-// validateEndpointSliceForReconcile checks whether an EndpointSlice belongs to a Service that
-// belongs to a valid route.
+// validateEndpointSliceForReconcile checks whether an EndpointSlice belongs to a Service that a
+// valid route references, whether or not the Service still exists: the slices of a deleted Service
+// go after the Service.
 func (r *routeReconciler) validateEndpointSliceForReconcile(esl *discoveryv1.EndpointSlice) bool {
-	// find the Service corresponding to this EndpointSlice
-	// TODO: also check ownership
 	svcName, ok := esl.GetLabels()[discoveryv1.LabelServiceName]
 	if !ok {
 		r.log.Info("EndpointSlice has no service-name label", "endpointslice", store.GetObjectKey(esl))
 		return false
 	}
 
-	svc := &corev1.Service{}
-	if err := r.Get(context.Background(), types.NamespacedName{
-		Namespace: esl.GetNamespace(),
-		Name:      svcName,
-	}, svc); err != nil {
-		// not fatal
-		if !apierrors.IsNotFound(err) {
-			r.log.Error(err, "Error getting Service for EndpointSlice",
-				"namespace", esl.GetNamespace(),
-				"name", svcName)
-		}
-		return false
-	}
-
-	return r.validateBackendServiceForReconcile(svc)
+	key := types.NamespacedName{Namespace: esl.GetNamespace(), Name: svcName}.String()
+	return r.validateBackendForReconcile(key, serviceUDPRouteIndex, serviceUDPRouteIndexGwAPI,
+		serviceTCPRouteIndex, serviceTCPRouteIndexGwAPI, serviceTURNRouteIndex)
 }
 
 // getServiceForBackend finds the Service associated with a backendRef

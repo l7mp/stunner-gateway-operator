@@ -3273,6 +3273,21 @@ func testRendering() {
 			// restore
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 		})
+
+		It("should drop the endpoints of a deleted Service", func() {
+			// the EndpointSlices of a Service go after the Service
+			ctrl.Log.Info("deleting the Service, then its EndpointSlice")
+			Expect(k8sClient.Delete(ctx, testSvc)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, testEndpointSlice)).Should(Succeed())
+
+			Eventually(checkConfig(ch, func(c *stnrapiv2.StunnerConfig) bool {
+				return len(c.Clusters) == 1 && len(c.Clusters[0].Endpoints) == 0
+			}), timeout, interval).Should(BeTrue())
+
+			ctrl.Log.Info("restoring the Service and its EndpointSlice")
+			createOrUpdateService(ctx, k8sClient, testSvc, nil)
+			createOrUpdateEndpointSlice(ctx, k8sClient, testEndpointSlice, nil)
+		})
 	})
 
 	// WITH RELAY-TO-CLUSTER-IP
