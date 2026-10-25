@@ -866,7 +866,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.RouteReasonNotAllowedByListeners), d.Reason, "reason")
+				assert.Equal(t, string(gwapiv1.RouteReasonNoMatchingParent), d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
 					string(gwapiv1.RouteConditionResolvedRefs))
@@ -935,7 +935,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				initRouteStatus(ro)
 				p := ro.GetParentRefs()[0]
 				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
+				assert.False(t, exists)
 				assert.False(t, accepted)
 				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
@@ -951,7 +951,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 					"type")
 				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
 				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, "NotAllowedByListeners", d.Reason, "reason")
+				assert.Equal(t, "NoMatchingParent", d.Reason, "reason")
 
 				d = meta.FindStatusCondition(parentStatus.Conditions,
 					string(gwapiv1.RouteConditionResolvedRefs))

@@ -280,8 +280,9 @@ func (r *renderer) isParentOutContext(gws *store.GatewayStore, ro store.Route, p
 
 // isParentAcceptingRoute decides whether a parent accepts a route:
 //
-// - returns (exists, accepted)=(bool,bool) indicating whether the parent exists and if it is,
-// whether it accepts the route
+// - returns (exists, accepted)=(bool,bool) indicating whether the parent exists (the Gateway and,
+// for a parent with a section name, its listener or section of that name) and if it is, whether
+// it accepts the route
 //
 // - arg className == "" means "do not consider classness of parent", this is useful for generating
 // a route status that is consistent across rendering contexts
@@ -305,6 +306,12 @@ func (r *renderer) isParentAcceptingRoute(ro store.Route, p *gwapiv1.ParentRefer
 
 	// is there a listener, or a section beyond the listeners, that accepts us?
 	ls := append(slices.Clone(gw.Spec.Listeners), r.gatewayRenderer.sections(gw)...)
+	if p.SectionName != nil &&
+		!slices.ContainsFunc(ls, func(l gwapiv1.Listener) bool { return l.Name == *p.SectionName }) {
+		r.log.V(4).Info("No listener or section found for parent", "route",
+			store.GetObjectKey(ro), "parent", store.DumpParentRef(p))
+		return false, false
+	}
 	for i := range ls {
 		l := ls[i]
 
@@ -449,6 +456,9 @@ func setRouteConditionStatus(ro store.Route, p *gwapiv1.ParentReference, control
 			namespace = string(*p.Namespace)
 		}
 		id := fmt.Sprintf("%s/%s", namespace, string(p.Name))
+		if p.SectionName != nil {
+			id += "/" + string(*p.SectionName)
+		}
 		if exists {
 			if accepted {
 				setRouteAcceptedCondition(ro, &s.Conditions, gwapiv1.RouteReasonAccepted,
