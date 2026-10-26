@@ -986,7 +986,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, gw.GetNamespace(), lab, "label ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1197,6 +1197,193 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "lb service - invalid lb annotations ignored",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					"valid": "val",
+					// case does not matter for annotation keys
+					"Example.COM/Key": "val",
+					// invalid annotations are ignored
+					"invalid key": "val",
+					"a/b/c":       "val",
+					// STUNner-specific annotations are validated too
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+				}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc create")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 5, "annotations len")
+				assert.Equal(t, "val", as["valid"], "valid annotation ok")
+				assert.Equal(t, "val", as["Example.COM/Key"], "mixed-case annotation ok")
+				assert.NotContains(t, as, "invalid key", "invalid key ignored")
+				assert.NotContains(t, as, "a/b/c", "invalid prefix ignored")
+				assert.Equal(t, "NodePort", as[opdefault.ServiceTypeAnnotationKey], "stunner annotation ok")
+				assert.Equal(t, "Example.COM/Key,valid", as[opdefault.ManagedAnnotationsAnnotationKey],
+					"invalid annotations not tracked")
+				assert.Equal(t, corev1.ServiceTypeNodePort, s.Spec.Type, "service type")
+			},
+		},
+		{
+			name: "lb service - lb annotations pruned on update",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				w.Spec.LoadBalancerServiceAnnotations = map[string]string{
+					"keep": "newval",
+					// STUNner-specific annotations are not tracked
+					opdefault.ServiceTypeAnnotationKey: "NodePort",
+				}
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{"from-gw": "val"})
+				c.gws = []gwapiv1.Gateway{*gw}
+
+				// existing LB service from a previous reconcile
+				s := testutils.TestSvc.DeepCopy()
+				s.SetName(testutils.TestGw.GetName())
+				s.SetAnnotations(map[string]string{
+					opdefault.RelatedGatewayKey:               store.GetObjectKey(&testutils.TestGw),
+					opdefault.ManagedAnnotationsAnnotationKey: "keep,stale,stale-gw",
+					"keep":     "oldval",
+					"stale":    "val",
+					"stale-gw": "val",
+					// e.g., set by the cloud provider
+					"external": "val",
+				})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc update")
+
+				as := s.GetAnnotations()
+				assert.Len(t, as, 6, "annotations len")
+				assert.Equal(t, "newval", as["keep"], "managed annotation updated")
+				assert.Equal(t, "val", as["from-gw"], "gw annotation added")
+				assert.NotContains(t, as, "stale", "removed gw-config annotation pruned")
+				assert.NotContains(t, as, "stale-gw", "removed gw annotation pruned")
+				assert.Equal(t, "val", as["external"], "external annotation preserved")
+				assert.Equal(t, "NodePort", as[opdefault.ServiceTypeAnnotationKey],
+					"stunner annotation kept")
+				assert.Equal(t, "from-gw,keep", as[opdefault.ManagedAnnotationsAnnotationKey],
+					"managed-annotations annotation updated")
+				assert.Equal(t, corev1.ServiceTypeNodePort, s.Spec.Type, "service type")
+			},
+		},
+		{
+			name: "lb service - all lb annotations removed",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.SetName(testutils.TestGw.GetName())
+				s.SetAnnotations(map[string]string{
+					opdefault.RelatedGatewayKey:               store.GetObjectKey(&testutils.TestGw),
+					opdefault.ManagedAnnotationsAnnotationKey: "stale",
+					"stale":    "val",
+					"external": "val",
+				})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc update")
+
+				as := s.GetAnnotations()
+				assert.NotContains(t, as, "stale", "removed managed annotation pruned")
+				assert.Equal(t, "val", as["external"], "external annotation preserved")
+
+				a, found := as[opdefault.ManagedAnnotationsAnnotationKey]
+				assert.True(t, found, "managed-annotations annotation kept for the updater")
+				assert.Equal(t, "", a, "managed-annotations annotation empty")
+			},
+		},
+		{
+			name: "lb service - untracked lb annotations not pruned",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				// a Service created before the operator started tracking annotations
+				s := testutils.TestSvc.DeepCopy()
+				s.SetName(testutils.TestGw.GetName())
+				s.SetAnnotations(map[string]string{
+					opdefault.RelatedGatewayKey: store.GetObjectKey(&testutils.TestGw),
+					"legacy":                    "val",
+				})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				s, _ := r.createLbService4Gateway(c, gw)
+				assert.NotNil(t, s, "svc update")
+
+				as := s.GetAnnotations()
+				assert.Equal(t, "val", as["legacy"], "untracked annotation preserved")
+				assert.NotContains(t, as, opdefault.ManagedAnnotationsAnnotationKey,
+					"nothing to track")
+			},
+		},
+		{
 			name: "lb service - lb health check annotations (aws)",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
@@ -1233,7 +1420,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1338,7 +1525,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1404,7 +1591,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1467,7 +1654,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, opdefault.OwnedByLabelValue, lab, "label ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1531,7 +1718,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 4, "annotations len")
+				assert.Len(t, as, 5, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -1548,6 +1735,10 @@ func TestRenderServiceUtil(t *testing.T) {
 				a, found = as["extra"]
 				assert.True(t, found, "annotation 4 found")
 				assert.Equal(t, "extraval", a, "annotation 4 ok")
+
+				a, found = as[opdefault.ManagedAnnotationsAnnotationKey]
+				assert.True(t, found, "managed-annotations annotation found")
+				assert.Equal(t, "dummy,extra,test", a, "gw-config and gw annotations tracked")
 
 				spec := s.Spec
 				assert.Equal(t, corev1.ServiceTypeLoadBalancer, spec.Type, "lb type")
@@ -1597,7 +1788,7 @@ func TestRenderServiceUtil(t *testing.T) {
 				assert.Equal(t, c.gwConf.GetNamespace(), s.GetNamespace(), "namespace ok")
 
 				as := s.GetAnnotations()
-				assert.Len(t, as, 3, "annotations len")
+				assert.Len(t, as, 4, "annotations len")
 
 				a, found := as[opdefault.RelatedGatewayKey]
 				assert.True(t, found, "annotation 1 found")
@@ -2603,4 +2794,12 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestIsStunnerAnnotation(t *testing.T) {
+	assert.True(t, isStunnerAnnotation(opdefault.ServiceTypeAnnotationKey), "stunner annotation")
+	assert.True(t, isStunnerAnnotation("Stunner.L7mp.io/Service-Type"), "case insensitive")
+	assert.False(t, isStunnerAnnotation("stunner.l7mp.io.example.com/foo"), "lookalike domain")
+	assert.False(t, isStunnerAnnotation("stunner.l7mp.io-foo/bar"), "lookalike prefix")
+	assert.False(t, isStunnerAnnotation("example.com/foo"), "other annotation")
 }

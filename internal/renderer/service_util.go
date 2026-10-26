@@ -314,11 +314,23 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		userLabels[k] = v
 	}
 	requestedLabels := mergeMaps(userLabels, mandatoryLabels)
-	managed := store.FormatManagedLabels(userLabels)
+	managedLabels := store.FormatManagedKeys(userLabels)
+
+	// annotations from the GatewayConfig: an invalid annotation would make the API server reject
+	// the whole Service, Gateway annotations have already been validated by the API server
+	gwConfAnnotations := make(map[string]string, len(c.gwConf.Spec.LoadBalancerServiceAnnotations))
+	for k, v := range c.gwConf.Spec.LoadBalancerServiceAnnotations {
+		if errs := validation.IsQualifiedName(strings.ToLower(k)); len(errs) > 0 {
+			r.log.V(2).Info("Ignoring invalid LoadBalancer service annotation", "gateway-config",
+				store.GetObjectKey(c.gwConf), "annotation", k, "errors", errs)
+			continue
+		}
+		gwConfAnnotations[k] = v
+	}
 
 	requestedAnnotations := mergeMaps(
 		// base: GatewayConfig.Spec.LBServiceAnnotations
-		c.gwConf.Spec.LoadBalancerServiceAnnotations,
+		gwConfAnnotations,
 		// Gateway annotations override base
 		gw.Annotations,
 		// related gateway is always included!
@@ -326,12 +338,29 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			opdefault.RelatedGatewayKey: store.GetObjectKey(gw),
 		})
 
+	// Tightens potential footgun (these annotations should not be edited by users)
+	delete(requestedAnnotations, opdefault.ManagedAnnotationsAnnotationKey)
+	delete(requestedAnnotations, opdefault.ManagedLabelsAnnotationKey)
+
+	// track the annotations we add, except the STUNner-specific ones: mergeAnnotations already
+	// takes care of those
+	userAnnotations := make(map[string]string, len(requestedAnnotations))
+	for k, v := range requestedAnnotations {
+		if !isStunnerAnnotation(k) {
+			userAnnotations[k] = v
+		}
+	}
+	managedAnnotations := store.FormatManagedKeys(userAnnotations)
+
 	// Fetch the service as it exists in the store, this should prevent changing fields we shouldn't
 	svc := store.Services.GetObject(types.NamespacedName{Namespace: gw.GetNamespace(), Name: gw.GetName()})
 	if svc == nil {
-		// remember the labels we add so that we can remove them later
-		if managed != "" {
-			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managed
+		// remember the labels and annotations we add so that we can remove them later
+		if managedLabels != "" {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managedLabels
+		}
+		if managedAnnotations != "" {
+			requestedAnnotations[opdefault.ManagedAnnotationsAnnotationKey] = managedAnnotations
 		}
 
 		svc = &corev1.Service{
@@ -348,20 +377,27 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 			},
 		}
 	} else {
-		// remove the labels we added earlier but no longer need
+		// remove the labels and annotations we added earlier but no longer need
 		labels := maps.Clone(svc.GetLabels())
-		prev := svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
-		store.PruneManagedLabels(labels, prev, managed)
+		prevLabels := svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]
+		store.PruneManagedKeys(labels, prevLabels, managedLabels)
 
-		// keep the annotation (even if empty) while there is something to remove, the updater
-		// needs it to prune the live object
-		if managed != "" || prev != "" {
-			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managed
+		annotations := maps.Clone(svc.GetAnnotations())
+		prevAnnotations := annotations[opdefault.ManagedAnnotationsAnnotationKey]
+		store.PruneManagedKeys(annotations, prevAnnotations, managedAnnotations)
+
+		// keep the annotations (even if empty) while there is something to remove, the updater
+		// needs them to prune the live object
+		if managedLabels != "" || prevLabels != "" {
+			requestedAnnotations[opdefault.ManagedLabelsAnnotationKey] = managedLabels
+		}
+		if managedAnnotations != "" || prevAnnotations != "" {
+			requestedAnnotations[opdefault.ManagedAnnotationsAnnotationKey] = managedAnnotations
 		}
 
 		// mandatory labels and annotations must always be there
 		svc.SetLabels(mergeMaps(labels, requestedLabels))
-		svc.SetAnnotations(mergeAnnotations(svc.GetAnnotations(), requestedAnnotations))
+		svc.SetAnnotations(mergeAnnotations(annotations, requestedAnnotations))
 	}
 
 	// set selectors
@@ -724,7 +760,7 @@ func mergeAnnotations(svcA, gwA map[string]string) map[string]string {
 	for k := range svcA {
 		// only STUNner-specific annotations are special-cased, everything else are free to
 		// be set by the user
-		if !strings.HasPrefix(strings.ToLower(k), stnrgwv1.GroupVersion.Group) {
+		if !isStunnerAnnotation(k) {
 			continue
 		}
 
@@ -734,6 +770,11 @@ func mergeAnnotations(svcA, gwA map[string]string) map[string]string {
 	}
 
 	return mergedMap
+}
+
+// isStunnerAnnotation reports whether an annotation key is STUNner-specific.
+func isStunnerAnnotation(k string) bool {
+	return strings.HasPrefix(strings.ToLower(k), stnrgwv1.GroupVersion.Group+"/")
 }
 
 // find the ClusterIP associated with a service
