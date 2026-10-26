@@ -39,12 +39,17 @@ func (l *ServiceLens) ApplyToResource(target client.Object) error {
 		return fmt.Errorf("service lens: invalid target type %T", target)
 	}
 
-	// prune the labels the operator added earlier and no longer adds; a desired Service without
-	// the managed-labels annotation prunes nothing
+	// prune the labels and annotations the operator added earlier and no longer adds; a desired
+	// Service without the managed-labels or managed-annotations annotation prunes nothing
 	if managed, ok := l.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey]; ok {
 		labels := maps.Clone(svc.GetLabels())
-		store.PruneManagedLabels(labels, svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey], managed)
+		store.PruneManagedKeys(labels, svc.GetAnnotations()[opdefault.ManagedLabelsAnnotationKey], managed)
 		svc.SetLabels(labels)
+	}
+	if managed, ok := l.GetAnnotations()[opdefault.ManagedAnnotationsAnnotationKey]; ok {
+		annotations := maps.Clone(svc.GetAnnotations())
+		store.PruneManagedKeys(annotations, annotations[opdefault.ManagedAnnotationsAnnotationKey], managed)
+		svc.SetAnnotations(annotations)
 	}
 
 	if err := setMetadata(svc, &l.Service); err != nil {
@@ -74,7 +79,7 @@ func (l *ServiceLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * Service.ObjectMeta.Labels / Service.ObjectMeta.Annotations / Service.ObjectMeta.OwnerReferences
 // - renderer: starts from existing Service (if present), enforces operator mandatory metadata,
 //   merges GatewayConfig labels and Gateway/GatewayConfig annotations, and sets Gateway owner reference.
-// - updater: prunes stale managed labels, merges top-level labels/annotations and updates owner
+// - updater: prunes stale managed labels/annotations, merges top-level labels/annotations and updates owner
 //   reference via setMetadata/addOwnerRef.
 //
 // * Service.Spec.Type

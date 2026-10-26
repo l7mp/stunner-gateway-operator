@@ -453,3 +453,107 @@ func TestServiceApplyNoPruneWithoutTracking(t *testing.T) {
 	require.NoError(t, v.ApplyToResource(current), "apply failed")
 	assert.Equal(t, "val", current.Labels["stale"], "label preserved without tracking")
 }
+
+func TestServiceApplyPrunesManagedAnnotations(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Annotations: map[string]string{
+			"keep":     "oldval",
+			"stale":    "val",
+			"external": "val",
+			opdefault.ManagedAnnotationsAnnotationKey: "keep,stale",
+		},
+	}}
+
+	desired := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Annotations: map[string]string{
+			"keep": "newval",
+			opdefault.ManagedAnnotationsAnnotationKey: "keep",
+		},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Gateway",
+			Name:       "gw",
+		}},
+	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	v := NewServiceLens(desired)
+	assert.False(t, v.EqualResource(current), "managed-annotations change must be detected")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.Equal(t, "newval", current.Annotations["keep"], "managed annotation updated")
+	assert.NotContains(t, current.Annotations, "stale", "stale managed annotation pruned")
+	assert.Equal(t, "val", current.Annotations["external"], "external annotation preserved")
+	assert.Equal(t, "keep", current.Annotations[opdefault.ManagedAnnotationsAnnotationKey],
+		"managed-annotations annotation updated")
+	assert.True(t, v.EqualResource(current), "applied service matches desired")
+}
+
+func TestServiceApplyPrunesAllManagedAnnotations(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Labels:    map[string]string{"stale": "val"},
+		Annotations: map[string]string{
+			"stale":                              "val",
+			"external":                           "val",
+			opdefault.ManagedLabelsAnnotationKey: "stale",
+			opdefault.ManagedAnnotationsAnnotationKey: "stale",
+		},
+	}}
+
+	desired := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Annotations: map[string]string{
+			opdefault.ManagedLabelsAnnotationKey:      "",
+			opdefault.ManagedAnnotationsAnnotationKey: "",
+		},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Gateway",
+			Name:       "gw",
+		}},
+	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	v := NewServiceLens(desired)
+	assert.False(t, v.EqualResource(current), "managed-annotations change must be detected")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+
+	assert.NotContains(t, current.Labels, "stale", "stale managed label pruned")
+	assert.NotContains(t, current.Annotations, "stale", "stale managed annotation pruned")
+	assert.Equal(t, "val", current.Annotations["external"], "external annotation preserved")
+	assert.Equal(t, "", current.Annotations[opdefault.ManagedLabelsAnnotationKey],
+		"managed-labels annotation emptied")
+	assert.Equal(t, "", current.Annotations[opdefault.ManagedAnnotationsAnnotationKey],
+		"managed-annotations annotation emptied")
+	assert.True(t, v.EqualResource(current), "applied service matches desired")
+}
+
+func TestServiceApplyNoAnnotationPruneWithoutTracking(t *testing.T) {
+	current := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		Annotations: map[string]string{
+			"stale": "val",
+			opdefault.ManagedAnnotationsAnnotationKey: "stale",
+		},
+	}}
+
+	desired := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc",
+		Namespace: "default",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Gateway",
+			Name:       "gw",
+		}},
+	}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	v := NewServiceLens(desired)
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+	assert.Equal(t, "val", current.Annotations["stale"], "annotation preserved without tracking")
+}

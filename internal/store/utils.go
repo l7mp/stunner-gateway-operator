@@ -215,20 +215,20 @@ func MergeMetadata(a, b map[string]string) map[string]string {
 	return ret
 }
 
-// FormatManagedLabels renders the keys of the labels the operator adds from the GatewayConfig
-// into the value of the managed-labels annotation: sorted and comma-separated.
-func FormatManagedLabels(labels map[string]string) string {
-	return strings.Join(slices.Sorted(maps.Keys(labels)), ",")
+// FormatManagedKeys renders the keys of the labels or annotations the operator adds into the
+// value of the managed-labels or managed-annotations annotation: sorted and comma-separated.
+func FormatManagedKeys(m map[string]string) string {
+	return strings.Join(slices.Sorted(maps.Keys(m)), ",")
 }
 
-// PruneManagedLabels deletes from labels the keys the managed-labels annotation value old lists
-// and new does not: the labels the operator added earlier and no longer adds. Labels set by
-// other actors are never listed, so they stay.
-func PruneManagedLabels(labels map[string]string, old, new string) {
+// PruneManagedKeys deletes from m the keys the managed-labels or managed-annotations annotation
+// value old lists and new does not: the keys the operator added earlier and no longer adds. Keys
+// set by other actors are never listed, so they stay.
+func PruneManagedKeys(m map[string]string, old, new string) {
 	keep := strings.Split(new, ",")
 	for _, k := range strings.Split(old, ",") {
 		if !slices.Contains(keep, k) {
-			delete(labels, k)
+			delete(m, k)
 		}
 	}
 }
