@@ -396,7 +396,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				})
 				gw.SetAnnotations(map[string]string{
 					"stunner.l7mp.io/related-gateway-name": "dummy-ns/dummy-name", // will be overwritten on the deployment/pod
-					"valid-gw-ann":                         "valid-gw-ann-value",  // will appear on the deployment/pod
+					"valid-gw-ann":                         "valid-gw-ann-value",  // will not appear on the deployment/pod
 				})
 				c.gws = []gwapiv1.Gateway{*gw}
 			},
@@ -448,7 +448,7 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				assert.Equal(t, "valid-gw-label-value", v, "copied gw label value")
 
 				as := deploy.GetAnnotations()
-				assert.Len(t, as, 2, "annotations len")
+				assert.Len(t, as, 1, "annotations len")
 
 				// mandatory annotations
 				gwName, ok := as[opdefault.RelatedGatewayKey]
@@ -456,10 +456,9 @@ func TestRenderDataplaneUtil(t *testing.T) {
 				// annotation is gw-namespace/gw-name
 				assert.Equal(t, store.GetObjectKey(gw), gwName, "related-gateway annotation")
 
-				// optional annotations
-				a, ok := as["valid-gw-ann"]
-				assert.True(t, ok, "annotations: valid gw ann")
-				assert.Equal(t, "valid-gw-ann-value", a, "valid gateway annotation value")
+				// gateway annotations are not copied
+				_, ok = as["valid-gw-ann"]
+				assert.False(t, ok, "annotations: valid gw ann")
 
 				// check the label selector
 				labelSelector := deploy.Spec.Selector

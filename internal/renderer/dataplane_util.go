@@ -35,8 +35,9 @@ var _ resourceGenerator = &dataplaneGenerator{}
 // (Name and namespace are different labels as '/' is not allowed in label values.)
 //
 // Deployment-level annotations:
-//   - copy of annotations from the related gateway
 //   - stunner.l7mp.io/related-gateway-name=<gateway-namespace/gateway-name>
+//
+// Gateway annotations are not copied to the Deployment: pod annotations come from the Dataplane.
 //
 // Pod-level labels:
 //   - app=stunner
@@ -90,14 +91,11 @@ func (r *dataplaneGenerator) generate(c *RenderContext) (client.Object, error) {
 		},
 	}
 
-	// copy deployment-level annotations and labels: overwrite whatever is set on the Gateway on conflict
+	// copy deployment-level labels: overwrite whatever is set on the Gateway on conflict
 	gwLabels := store.FilterLabels(gw.GetLabels(), config.LabelFilter,
 		c.log.WithValues("gateway", store.GetObjectKey(gw)))
 	labs := store.MergeMetadata(gwLabels, deployment.GetLabels())
 	deployment.SetLabels(labs)
-
-	annotations := store.MergeMetadata(gw.GetAnnotations(), deployment.GetAnnotations())
-	deployment.SetAnnotations(annotations)
 
 	deployment.Spec.Template.Spec, err = generateDataplanePodSpec(c, dataplane)
 	if err != nil {

@@ -58,8 +58,8 @@ func (l *DeploymentLens) DeepCopy() *DeploymentLens {
 func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 
 // * * Deployment.ObjectMeta.Labels / Deployment.ObjectMeta.Annotations / Deployment.ObjectMeta.OwnerReferences
-// * - renderer: sets deployment-level labels/annotations from Gateway + mandatory operator labels,
-// *   and sets a singleton owner reference to the Gateway.
+// * - renderer: sets deployment-level labels from the Gateway + mandatory operator labels and
+// *   annotations, and sets a singleton owner reference to the Gateway.
 // * - updater: merges top-level labels/annotations and updates/creates the owner reference via
 // *   setMetadata/addOwnerRef.
 // *

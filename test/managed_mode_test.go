@@ -3770,7 +3770,7 @@ func testManagedMode() {
 			op.Stabilize()
 		})
 
-		It("should retain Deployment labels/annotations and propagate Gateway label/annotation updates to the Deployment", func() {
+		It("should retain Deployment labels/annotations and propagate Gateway label updates to the Deployment", func() {
 			// existing labels/annotations should not be overwritten unless in conflict
 			ctrl.Log.Info("updating metadata on Deployment 2")
 			deploy := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{
@@ -3883,9 +3883,9 @@ func testManagedMode() {
 			Expect(ok).Should(BeTrue(), "deploy label")
 			Expect(v).Should(Equal("valid-deploy-label-value"), "deploy label value")
 
-			// annotations: 1 mandatory + 1 ann from the gw + 1 ann from the deployment
+			// annotations: 1 mandatory + 1 ann from the deployment, gw annotations are not copied
 			as := deploy.GetAnnotations()
-			Expect(as).To(HaveLen(3))
+			Expect(as).To(HaveLen(2))
 
 			// mandatory
 			v, ok = as[opdefault.RelatedGatewayKey]
@@ -3893,9 +3893,8 @@ func testManagedMode() {
 			Expect(v).Should(Equal(store.GetObjectKey(gw2)), "related-gw annotation value")
 
 			// annotation from the gw
-			v, ok = as["valid-gw-ann"]
-			Expect(ok).Should(BeTrue(), "gw ann")
-			Expect(v).Should(Equal("valid-gw-ann-value"), "gw ann value")
+			_, ok = as["valid-gw-ann"]
+			Expect(ok).Should(BeFalse(), "gw ann")
 
 			// annotation from the deployment
 			v, ok = as["valid-deploy-ann"]
