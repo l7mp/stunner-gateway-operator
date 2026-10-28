@@ -21,10 +21,10 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
 )
 
 // var testerLogLevel = zapcore.Level(-10)

@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: stunner-gateway-operator
-repo: github.com/l7mp/stunner-gateway-operator
+repo: github.com/l7mp/stunner-gateway-operator/v2
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: GatewayConfig
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: StaticService
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -32,7 +32,7 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: Dataplane
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -41,7 +41,7 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: UDPRoute
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -50,7 +50,7 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: TCPRoute
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -59,6 +59,6 @@ resources:
   domain: l7mp.io
   group: stunner
   kind: TURNRoute
-  path: github.com/l7mp/stunner-gateway-operator/api/v1
+  path: github.com/l7mp/stunner-gateway-operator/v2/api/v1
   version: v1
 version: "3"

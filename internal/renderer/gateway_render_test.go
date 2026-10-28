@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 )
 
 func TestRenderGateway(t *testing.T) {

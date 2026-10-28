@@ -33,10 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
 )
 
 const secretGatewayConfigIndex = "secretGatewayConfigIndex"

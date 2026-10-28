@@ -21,10 +21,10 @@ import (
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 // var testerLogLevel = zapcore.Level(-4)

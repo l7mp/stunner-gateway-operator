@@ -14,7 +14,7 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/lens"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/lens"
 )
 
 func TestServiceNoopSuppress(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 var _ configRenderer = &adminRenderer{}

@@ -13,7 +13,7 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 // Environment variables that override the defaults or the flags.

@@ -12,8 +12,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 type ServiceLens struct {

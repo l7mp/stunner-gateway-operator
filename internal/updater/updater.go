@@ -10,10 +10,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/metrics"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 type UpdaterConfig struct {

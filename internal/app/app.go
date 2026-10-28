@@ -21,14 +21,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
-	"github.com/l7mp/stunner-gateway-operator/internal/updater"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1alpha1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/v2/internal/licensemanager"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/renderer"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/updater"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 // App is the assembled operator: the manager and the subsystems registered with it.

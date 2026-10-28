@@ -11,11 +11,11 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
-	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/v2/internal/licensemanager"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/metrics"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 var NewRenderer = NewDefaultRenderer

@@ -35,10 +35,10 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
 )
 
 // findCluster returns the named cluster from a config, or nil.

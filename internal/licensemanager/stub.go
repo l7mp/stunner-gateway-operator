@@ -7,7 +7,7 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	licensecfg "github.com/l7mp/stunner/v2/pkg/config/license"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
 )
 
 type stubMgr struct{ opCh chan<- event.Event }

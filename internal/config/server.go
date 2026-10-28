@@ -13,9 +13,9 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 	cdsserver "github.com/l7mp/stunner/v2/pkg/config/server"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 // Server is the config discovery server the dataplane pods watch. Starts only at the leader so CDS

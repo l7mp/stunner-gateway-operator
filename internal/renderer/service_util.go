@@ -21,10 +21,10 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/v2/internal/licensemanager"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 var annotationRegexProtocol *regexp.Regexp = regexp.MustCompile(`^service\.beta\.kubernetes\.io\/.*health.*protocol$`)

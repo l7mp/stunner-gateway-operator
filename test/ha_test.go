@@ -22,10 +22,10 @@ import (
 	cdsclient "github.com/l7mp/stunner/v2/pkg/config/client"
 	"github.com/l7mp/stunner/v2/pkg/logger"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/app"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/app"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 // resetStores empties the global stores, so that an operator instance started afterwards begins

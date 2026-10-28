@@ -14,9 +14,9 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/lens"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/lens"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 func (u *Updater) upsertResourceObject(ctx context.Context, desired client.Object, gen int) (ctrlutil.OperationResult, error) {

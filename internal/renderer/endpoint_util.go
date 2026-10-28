@@ -5,7 +5,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 // getEndpointAddrs finds the endpoint IP addresses of a Service from its EndpointSlices, ready or

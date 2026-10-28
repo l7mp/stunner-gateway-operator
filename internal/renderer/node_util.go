@@ -1,7 +1,7 @@
 package renderer
 
 import (
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 // find the first node that has a non-empty external address in the status and return it; this is

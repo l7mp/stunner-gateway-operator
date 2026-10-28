@@ -31,8 +31,8 @@ import (
 
 	"github.com/l7mp/stunner/v2/pkg/buildinfo"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/app"
-	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/app"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/metrics"
 )
 
 var (

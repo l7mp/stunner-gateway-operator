@@ -5,8 +5,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 func (r *renderer) getGatewayConfig4Class(c *RenderContext) (*stnrgwv1.GatewayConfig, error) {

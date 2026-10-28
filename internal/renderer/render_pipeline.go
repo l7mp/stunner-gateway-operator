@@ -10,9 +10,9 @@ import (
 
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 // Render generates and sets a STUNner daemon configuration from the Gateway API running-config

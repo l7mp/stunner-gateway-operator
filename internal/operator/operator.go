@@ -9,13 +9,13 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/controllers"
-	"github.com/l7mp/stunner-gateway-operator/internal/event"
-	licensemgr "github.com/l7mp/stunner-gateway-operator/internal/licensemanager"
-	"github.com/l7mp/stunner-gateway-operator/internal/metrics"
-	"github.com/l7mp/stunner-gateway-operator/internal/renderer"
-	"github.com/l7mp/stunner-gateway-operator/internal/updater"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/controllers"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
+	licensemgr "github.com/l7mp/stunner-gateway-operator/v2/internal/licensemanager"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/metrics"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/renderer"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/updater"
 )
 
 type controllerConstructor = func(manager.Manager, chan<- event.Event, logr.Logger) (controllers.Controller, error)

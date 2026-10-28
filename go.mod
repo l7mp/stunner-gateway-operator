@@ -1,4 +1,4 @@
-module github.com/l7mp/stunner-gateway-operator
+module github.com/l7mp/stunner-gateway-operator/v2
 
 go 1.27.0
 

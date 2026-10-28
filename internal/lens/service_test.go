@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
 
 func TestServiceEqualNormalizesDefaults(t *testing.T) {

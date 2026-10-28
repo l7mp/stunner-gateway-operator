@@ -12,9 +12,9 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	opdefault "github.com/l7mp/stunner-gateway-operator/pkg/config"
+	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
 )
 
 var (

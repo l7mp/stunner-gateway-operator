@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/store"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 )
 
 // allRoutes returns all routes of all route kinds, skipping the Gateway API routes that are

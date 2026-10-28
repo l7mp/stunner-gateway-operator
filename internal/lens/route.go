@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
 )
 
 // RouteLens is the lens for every route kind (STUNner UDPRoute, TCPRoute and TURNRoute, Gateway API

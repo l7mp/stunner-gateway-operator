@@ -28,13 +28,13 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/api/v1"
-	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/api/v1alpha1"
-	"github.com/l7mp/stunner-gateway-operator/internal/app"
-	"github.com/l7mp/stunner-gateway-operator/internal/config"
-	"github.com/l7mp/stunner-gateway-operator/internal/operator"
-	"github.com/l7mp/stunner-gateway-operator/internal/testutils"
-	"github.com/l7mp/stunner-gateway-operator/internal/updater"
+	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	stnrgwv1a1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1alpha1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/app"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/operator"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/updater"
 )
 
 const (
