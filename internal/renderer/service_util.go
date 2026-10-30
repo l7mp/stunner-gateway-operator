@@ -508,6 +508,7 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 	// copy all listener ports/protocols from the gateway
 	ports := []corev1.ServicePort{}
 	serviceProto := ""
+	usedPorts := map[string]bool{}
 	for _, l := range gw.Spec.Listeners {
 		proto, err := r.getServiceProtocol(l.Protocol)
 		if err != nil {
@@ -527,6 +528,16 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 				"service-protocol", serviceProto)
 			continue
 		}
+
+		// a conflicted listener gets no port: the API server refuses duplicate ports
+		key := fmt.Sprintf("%s/%d", serviceProto, l.Port)
+		if usedPorts[key] {
+			c.log.V(1).Info("createLbService4Gateway: refusing to add listener to service as "+
+				"another listener already uses the port", "gateway", store.GetObjectKey(gw),
+				"listener", l.Name, "port", key)
+			continue
+		}
+		usedPorts[key] = true
 
 		ports = append(ports, corev1.ServicePort{
 			Name:     string(l.Name),

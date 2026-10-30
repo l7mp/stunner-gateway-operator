@@ -2157,6 +2157,38 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "conflicting listeners share no Service port",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{
+					{Name: "udp-1", Port: 3478, Protocol: "TURN-UDP"},
+					{Name: "udp-2", Port: 3478, Protocol: "TURN-UDP"},
+					{Name: "dtls", Port: 3478, Protocol: "TURN-DTLS"},
+				}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+
+				s, _ := r.createLbService4Gateway(c, gws[0])
+				assert.NotNil(t, s, "svc create")
+				assert.Equal(t, []corev1.ServicePort{{Name: "udp-1", Protocol: corev1.ProtocolUDP, Port: 3478}},
+					s.Spec.Ports, "the first listener gets the port")
+			},
+		},
+		{
 			name: "lb service - ext traffic policy set gwConf ",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
