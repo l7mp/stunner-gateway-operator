@@ -431,8 +431,8 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		// schedule for update
 		c.update.UpsertQueue.Gateways.Upsert(gw.DeepCopy())
 
-		// delete dataplane services and deployments for invalidated gateways
-		// we do not update the client via CDS: the deployment is going away anyway
+		// delete the dataplane Service and the Deployment or DaemonSet of invalidated gateways;
+		// we do not update the client via CDS: the dataplane is going away anyway
 		svc := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gw.GetName(),
@@ -452,6 +452,16 @@ func (r *renderer) invalidateGateways(c *RenderContext, reason error) {
 		c.update.DeleteQueue.Deployments.Upsert(dp)
 		log.V(2).Info("Deleting dataplane Deployment", "generation", r.gen,
 			"deployment", store.DumpObject(dp))
+
+		ds := &appv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gw.GetName(),
+				Namespace: gw.GetNamespace(),
+			},
+		}
+		c.update.DeleteQueue.DaemonSets.Upsert(ds)
+		log.V(2).Info("Deleting dataplane DaemonSet", "generation", r.gen,
+			"daemonset", store.DumpObject(ds))
 	}
 
 	log.V(1).Info("Processing routes")
