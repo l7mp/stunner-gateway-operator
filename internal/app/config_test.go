@@ -67,6 +67,48 @@ var _ = Describe("Config", func() {
 		})
 	})
 
+	Context("When every flag is set", func() {
+		It("should take each of them", func() {
+			cfg := NewConfig()
+			fs := flag.NewFlagSet("t", flag.ContinueOnError)
+			cfg.BindFlags(fs, envOf(nil))
+			Expect(fs.Parse([]string{
+				"--controller-name=example.com/flag",
+				"--throttle-timeout=3s",
+				"--startup-render-timeout=7s",
+				"--config-discovery-address=:2345",
+				"--metrics-bind-address=:9080",
+				"--health-probe-bind-address=:9081",
+				"--pprof-bind-address=:9082",
+				"--leader-elect",
+				"--leader-election-id=example-lease",
+				"--leader-election-namespace=example-ns",
+			})).To(Succeed())
+			Expect(cfg.Complete(envOf(map[string]string{EnvVarPprofAddr: ":6060"}))).To(Succeed())
+			Expect(cfg.ControllerName).To(Equal("example.com/flag"))
+			Expect(cfg.ThrottleTimeout.String()).To(Equal("3s"))
+			Expect(cfg.StartupRenderTimeout.String()).To(Equal("7s"))
+			Expect(cfg.CDSAddress).To(Equal(":2345"))
+			Expect(cfg.CDSAdvertisedAddress).To(Equal(":2345"))
+			Expect(cfg.MetricsAddr).To(Equal(":9080"))
+			Expect(cfg.ProbeAddr).To(Equal(":9081"))
+			Expect(cfg.PprofAddr).To(Equal(":9082"), "an explicit pprof flag wins over the env var")
+			Expect(cfg.LeaderElection).To(BeTrue())
+			Expect(cfg.LeaderElectionID).To(Equal("example-lease"))
+			Expect(cfg.LeaderElectionNamespace).To(Equal("example-ns"))
+			Expect(cfg.Summary()).NotTo(BeEmpty())
+		})
+
+		It("should enable the finalizer", func() {
+			cfg := NewConfig()
+			fs := flag.NewFlagSet("t", flag.ContinueOnError)
+			cfg.BindFlags(fs, envOf(nil))
+			Expect(fs.Parse([]string{"--enable-finalizer"})).To(Succeed())
+			Expect(cfg.Complete(envOf(nil))).To(Succeed())
+			Expect(cfg.EnableFinalizer).To(BeTrue())
+		})
+	})
+
 	Context("When the configuration contradicts itself", func() {
 		It("should reject the finalizer together with leader election", func() {
 			cfg := NewConfig()

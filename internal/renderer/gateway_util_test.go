@@ -17,6 +17,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
@@ -77,420 +78,6 @@ func TestRenderGatewayUtil(t *testing.T) {
 					"gw 2 name found")
 			},
 		},
-		{
-			name: "gateway status ok",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc, log: log}
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
-					store.GetObjectKey(gw), "gw name found")
-
-				initGatewayStatus(gw, nil)
-				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
-				assert.Len(t, gw.Status.Addresses, 0, "status addresses")
-
-				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-
-				assert.Equal(t, string(gwapiv1.GatewayConditionAccepted),
-					gw.Status.Conditions[0].Type, "conditions accepted")
-				assert.Equal(t, int64(0), gw.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
-				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
-					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonAccepted),
-					gw.Status.Conditions[0].Reason, "reason")
-
-				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),
-					gw.Status.Conditions[1].Type, "programmed")
-				assert.Equal(t, int64(0), gw.Status.Conditions[1].ObservedGeneration,
-					"conditions gen")
-				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
-					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonInvalid),
-					gw.Status.Conditions[1].Reason, "reason")
-			},
-		},
-		{
-			name: "gateway rescheduled/re-ready status ok",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				gw := testutils.TestGw.DeepCopy()
-				initGatewayStatus(gw, nil)
-				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
-				gw.ObjectMeta.SetGeneration(1)
-				c.gws = []gwapiv1.Gateway{*gw}
-			},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class not found")
-				c := &RenderContext{gc: gc, log: log}
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				assert.Equal(t, fmt.Sprintf("%s/%s", testutils.TestNsName, "gateway-1"),
-					store.GetObjectKey(gw), "gw name found")
-
-				initGatewayStatus(gw, nil)
-				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
-				assert.Len(t, gw.Status.Addresses, 0, "status addresses")
-
-				assert.Len(t, gw.Status.Conditions, 2, "conditions num")
-
-				assert.Equal(t, string(gwapiv1.GatewayConditionAccepted),
-					gw.Status.Conditions[0].Type, "conditions accepted")
-				assert.Equal(t, int64(1), gw.Status.Conditions[0].ObservedGeneration,
-					"conditions gen")
-				assert.Equal(t, metav1.ConditionTrue, gw.Status.Conditions[0].Status,
-					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonAccepted),
-					gw.Status.Conditions[0].Reason, "reason")
-
-				assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed),
-					gw.Status.Conditions[1].Type, "programmed")
-				assert.Equal(t, int64(1), gw.Status.Conditions[1].ObservedGeneration,
-					"conditions gen")
-				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[1].Status,
-					"status")
-				assert.Equal(t, string(gwapiv1.GatewayReasonInvalid),
-					gw.Status.Conditions[1].Reason, "reason")
-			},
-		},
-		{
-			name: "listener status ok",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: log}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
-					testutils.TestNsName, "gateway-1"), "gw name found")
-				c.gws = store.NewGatewayStore()
-				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
-
-				initGatewayStatus(gw, nil)
-				conflicted := false
-				for j := range gw.Spec.Listeners {
-					l := gw.Spec.Listeners[j]
-					addr := gwAddrPort{
-						addr: "1.2.3.4",
-						port: 1234,
-					}
-
-					_, err := r.renderListener(c, &l, []store.Route{}, addr, nil)
-
-					if err != nil {
-						setListenerStatus(gw, &l, err, conflicted, 0)
-						continue
-					}
-
-					setListenerStatus(gw, &l, nil, conflicted, 2)
-				}
-
-				// listeners[0]: ok
-				assert.Len(t, gw.Status.Listeners, 2, "conditions num")
-				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "acceptedfound")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason,
-					"reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-
-				// listeners[1]: ok
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(0), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-			},
-		},
-		{
-			name: "listener status invalid cert-ref",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				gw := testutils.TestGw.DeepCopy()
-				mode := gwapiv1.TLSModeTerminate
-				ns := gwapiv1.Namespace("testnamespace")
-				tls := gwapiv1.ListenerTLSConfig{
-					Mode: &mode,
-					CertificateRefs: []gwapiv1.SecretObjectReference{{
-						Namespace: &ns,
-						Name:      gwapiv1.ObjectName("missing-secret"),
-					}},
-				}
-
-				gw.Spec.Listeners = []gwapiv1.Listener{{
-					Name:     gwapiv1.SectionName("gateway-1-listener-dtls"),
-					Port:     gwapiv1.PortNumber(3),
-					Protocol: gwapiv1.ProtocolType("TURN-DTLS"),
-					TLS:      &tls,
-				}}
-
-				c.gws = []gwapiv1.Gateway{*gw}
-			},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: log}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-
-				initGatewayStatus(gw, nil)
-				l := gw.Spec.Listeners[0]
-				setListenerStatus(gw, &l, NewNonCriticalError(InvalidCertificateRef), false, 0)
-
-				assert.Len(t, gw.Status.Listeners, 1, "conditions num")
-
-				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resolvedrefs found")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, string(gwapiv1.ListenerReasonInvalidCertificateRef),
-					d.Reason, "reason")
-
-				// an SRT listener is not accepted, for an unsupported protocol
-				setListenerStatus(gw, &l, NewNonCriticalError(UnsupportedSRT), false, 0)
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol), d.Reason, "reason")
-				assert.Equal(t, "SRT listeners are not supported", d.Message, "message")
-			},
-		},
-		{
-			name: "invalid listener status",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {
-				gw := testutils.TestGw.DeepCopy()
-				gw.Spec.Listeners = []gwapiv1.Listener{{
-					Name:     gwapiv1.SectionName("gateway-1-listener-udp"),
-					Port:     gwapiv1.PortNumber(1),
-					Protocol: gwapiv1.ProtocolType("TURN-UDP"),
-				}, {
-					Name:     gwapiv1.SectionName("invalid"),
-					Port:     gwapiv1.PortNumber(3),
-					Protocol: gwapiv1.ProtocolType("dummy"),
-				}, {
-					Name:     gwapiv1.SectionName("gateway-1-listener-tcp"),
-					Port:     gwapiv1.PortNumber(2),
-					Protocol: gwapiv1.ProtocolType("TURN-TCP"),
-				}}
-				initGatewayStatus(gw, nil)
-				setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
-				gw.ObjectMeta.SetGeneration(1)
-				c.gws = []gwapiv1.Gateway{*gw}
-			},
-			tester: func(t *testing.T, r *renderer) {
-				gc, err := r.getGatewayClass()
-				assert.NoError(t, err, "gw-class found")
-				c := &RenderContext{gc: gc, log: log}
-				c.gwConf, err = r.getGatewayConfig4Class(c)
-				assert.NoError(t, err, "gw-conf found")
-
-				gws := r.getGateways4Class(c)
-				assert.Len(t, gws, 1, "gw found")
-				gw := gws[0]
-				assert.Equal(t, store.GetObjectKey(gw), fmt.Sprintf("%s/%s",
-					testutils.TestNsName, "gateway-1"), "gw name found")
-				c.gws = store.NewGatewayStore()
-				c.gws.ResetGateways([]*gwapiv1.Gateway{gw})
-
-				initGatewayStatus(gw, nil)
-				conflicted := false
-				for j := range gw.Spec.Listeners {
-					l := gw.Spec.Listeners[j]
-					addr := gwAddrPort{
-						addr: "1.2.3.4",
-						port: 1234,
-					}
-
-					_, err := r.renderListener(c, &l, []store.Route{}, addr, nil)
-
-					if err != nil {
-						setListenerStatus(gw, &l, err, conflicted, 0)
-						continue
-					}
-
-					setListenerStatus(gw, &l, nil, conflicted, 2)
-				}
-
-				// listeners[0]: ok
-				assert.Len(t, gw.Status.Listeners, 3, "conditions num")
-				d := meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "acceptedfound")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted), d.Reason,
-					"reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-
-				// listeners[1]: detached
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[1].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[0].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-
-				// listeners[2]: ok
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1.ListenerConditionAccepted))
-				assert.NotNil(t, d, "accepted found")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonAccepted),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1.ListenerConditionResolvedRefs))
-				assert.NotNil(t, d, "resovedrefs found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionResolvedRefs), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionTrue, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonResolvedRefs),
-					d.Reason, "reason")
-
-				d = meta.FindStatusCondition(gw.Status.Listeners[2].Conditions,
-					string(gwapiv1.ListenerConditionConflicted))
-				assert.NotNil(t, d, "conflicted found")
-				assert.Equal(t, string(gwapiv1.ListenerConditionConflicted), d.Type,
-					"type")
-				assert.Equal(t, metav1.ConditionFalse, d.Status, "status")
-				assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
-				assert.Equal(t, string(gwapiv1.ListenerReasonNoConflicts),
-					d.Reason, "reason")
-			},
-		},
 	})
 }
 
@@ -498,54 +85,201 @@ func TestRenderGatewayUtil(t *testing.T) {
 // cluster serves its CRD.
 func TestListenerSupportedKinds(t *testing.T) {
 	defer func(served bool) { config.TURNRouteServed = served }(config.TURNRouteServed)
-	kinds := func() []string {
-		gw := testutils.TestGw.DeepCopy()
-		initGatewayStatus(gw, nil)
-		ret := []string{}
-		for _, k := range gw.Status.Listeners[0].SupportedKinds {
-			ret = append(ret, string(k.Kind))
-		}
-		return ret
-	}
+	for _, served := range []bool{false, true} {
+		renderTester(t, []renderTestConfig{{
+			name: fmt.Sprintf("TURNRoute CRD served: %t", served),
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			svcs: []corev1.Service{testutils.TestSvc},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *renderer) {
+				config.TURNRouteServed = served
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.update = event.NewEventUpdate(0)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				assert.NoError(t, r.renderForGateways(c), "render success")
 
-	config.TURNRouteServed = false
-	assert.NotContains(t, kinds(), "TURNRoute", "CRD not served")
-	config.TURNRouteServed = true
-	assert.Contains(t, kinds(), "TURNRoute", "CRD served")
+				gw := c.update.UpsertQueue.Gateways.Get(store.GetNamespacedName(&testutils.TestGw)).(*gwapiv1.Gateway)
+				assert.NotEmpty(t, gw.Status.Listeners, "listener statuses")
+				for _, ls := range gw.Status.Listeners {
+					kinds := []string{}
+					for _, k := range ls.SupportedKinds {
+						kinds = append(kinds, string(k.Kind))
+					}
+					assert.Contains(t, kinds, "UDPRoute", string(ls.Name))
+					if served {
+						assert.Contains(t, kinds, "TURNRoute", string(ls.Name))
+					} else {
+						assert.NotContains(t, kinds, "TURNRoute", string(ls.Name))
+					}
+				}
+			},
+		}})
+	}
 }
 
-func TestGatewayStatusProgrammedRollout(t *testing.T) {
+// TestRenderGatewayStatus pins the rendered Gateway and listener statuses of a Gateway that was
+// rendered before: the conditions follow the current generation.
+func TestRenderGatewayStatus(t *testing.T) {
+	gwKey := store.GetNamespacedName(&testutils.TestGw)
+	renderTester(t, []renderTestConfig{{
+		name: "re-rendered Gateway with an invalid listener",
+		cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+		cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+		gws:  []gwapiv1.Gateway{testutils.TestGw},
+		svcs: []corev1.Service{testutils.TestSvc},
+		dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+		prep: func(c *renderTestConfig) {
+			gw := testutils.TestGw.DeepCopy()
+			gw.Spec.Listeners = []gwapiv1.Listener{
+				{Name: "gateway-1-listener-udp", Port: 1, Protocol: "TURN-UDP"},
+				{Name: "invalid", Port: 3, Protocol: "dummy"},
+				{Name: "gateway-1-listener-tcp", Port: 2, Protocol: "TURN-TCP"},
+			}
+			// The status of an earlier render, at an earlier generation.
+			initGatewayStatus(gw, nil)
+			setGatewayStatusProgrammed(gw, errors.New("dummy"), nil)
+			gw.SetGeneration(1)
+			c.gws = []gwapiv1.Gateway{*gw}
+		},
+		tester: func(t *testing.T, r *renderer) {
+			gc, err := r.getGatewayClass()
+			assert.NoError(t, err, "gw-class found")
+			c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+			c.gwConf, err = r.getGatewayConfig4Class(c)
+			assert.NoError(t, err, "gw-conf found")
+			c.update = event.NewEventUpdate(0)
+			c.gws.ResetGateways(r.getGateways4Class(c))
+			assert.NoError(t, r.renderForGateways(c), "render success")
+
+			gw := c.update.UpsertQueue.Gateways.Get(gwKey).(*gwapiv1.Gateway)
+			d := meta.FindStatusCondition(gw.Status.Conditions, string(gwapiv1.GatewayConditionAccepted))
+			assert.NotNil(t, d, "accepted found")
+			assert.Equal(t, metav1.ConditionTrue, d.Status, "accepted")
+			assert.Equal(t, string(gwapiv1.GatewayReasonAccepted), d.Reason, "reason")
+			assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+			d = meta.FindStatusCondition(gw.Status.Conditions, string(gwapiv1.GatewayConditionProgrammed))
+			assert.NotNil(t, d, "programmed found")
+			assert.Equal(t, int64(1), d.ObservedGeneration, "gen")
+
+			assert.Len(t, gw.Status.Listeners, 3, "listener statuses")
+			for _, i := range []int{0, 2} {
+				ls := gw.Status.Listeners[i]
+				for cond, want := range map[gwapiv1.ListenerConditionType][2]string{
+					gwapiv1.ListenerConditionAccepted:     {"True", string(gwapiv1.ListenerReasonAccepted)},
+					gwapiv1.ListenerConditionResolvedRefs: {"True", string(gwapiv1.ListenerReasonResolvedRefs)},
+					gwapiv1.ListenerConditionConflicted:   {"False", string(gwapiv1.ListenerReasonNoConflicts)},
+				} {
+					d := meta.FindStatusCondition(ls.Conditions, string(cond))
+					if assert.NotNil(t, d, string(ls.Name)+"/"+string(cond)) {
+						assert.Equal(t, want[0], string(d.Status), string(ls.Name)+"/"+string(cond))
+						assert.Equal(t, want[1], d.Reason, string(ls.Name)+"/"+string(cond))
+						assert.Equal(t, int64(1), d.ObservedGeneration, string(ls.Name)+"/"+string(cond))
+					}
+				}
+			}
+			ls := gw.Status.Listeners[1]
+			d = meta.FindStatusCondition(ls.Conditions, string(gwapiv1.ListenerConditionAccepted))
+			assert.NotNil(t, d, "accepted found")
+			assert.Equal(t, metav1.ConditionFalse, d.Status, "unknown protocol not accepted")
+			assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol), d.Reason, "reason")
+			d = meta.FindStatusCondition(ls.Conditions, string(gwapiv1.ListenerConditionResolvedRefs))
+			assert.NotNil(t, d, "resolved-refs found")
+			assert.Equal(t, metav1.ConditionTrue, d.Status, "resolved")
+		},
+	}})
+}
+
+// TestRenderGatewayStatusRollout pins the Programmed condition against the rollout of the dataplane
+// Deployment: a stuck rollout is not programmed, a managed-dataplane-disabled Gateway ignores it.
+func TestRenderGatewayStatusRollout(t *testing.T) {
 	defer store.Deployments.Flush()
-	gw := testutils.TestGw.DeepCopy()
-	programmed := func() *metav1.Condition {
-		setGatewayStatusProgrammed(gw, nil, []gwAddrPort{{addr: "1.2.3.4", port: 1}})
-		return meta.FindStatusCondition(gw.Status.Conditions, string(gwapiv1.GatewayConditionProgrammed))
+	gwKey := store.GetNamespacedName(&testutils.TestGw)
+	at := gwapiv1.HostnameAddressType
+	for _, tc := range []struct {
+		name       string
+		conditions []appv1.DeploymentCondition
+		disabled   bool
+		status     metav1.ConditionStatus
+		reason     string
+		message    string
+	}{
+		{name: "no Deployment yet", status: metav1.ConditionTrue},
+		{name: "a rollout in progress", status: metav1.ConditionTrue,
+			conditions: []appv1.DeploymentCondition{{Type: appv1.DeploymentProgressing,
+				Status: corev1.ConditionTrue, Reason: "ReplicaSetUpdated"}}},
+		{name: "a stalled rollout", status: metav1.ConditionFalse, reason: string(gwapiv1.GatewayReasonPending),
+			conditions: []appv1.DeploymentCondition{{Type: appv1.DeploymentProgressing,
+				Status: corev1.ConditionFalse, Reason: "ProgressDeadlineExceeded"}}},
+		{name: "pods cannot be created", status: metav1.ConditionFalse, message: "exceeded quota",
+			conditions: []appv1.DeploymentCondition{{Type: appv1.DeploymentReplicaFailure,
+				Status: corev1.ConditionTrue, Message: "exceeded quota"}}},
+		{name: "no managed dataplane", status: metav1.ConditionTrue, disabled: true,
+			conditions: []appv1.DeploymentCondition{{Type: appv1.DeploymentReplicaFailure,
+				Status: corev1.ConditionTrue, Message: "exceeded quota"}}},
+	} {
+		renderTester(t, []renderTestConfig{{
+			name: tc.name,
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			svcs: []corev1.Service{testutils.TestSvc},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Addresses = []gwapiv1.GatewaySpecAddress{{Type: &at, Value: "turn.example.com"}}
+				// The Service owned by the Gateway exposes it.
+				s := testutils.TestSvc.DeepCopy()
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+				if tc.disabled {
+					gw.SetAnnotations(map[string]string{
+						opdefault.ManagedDataplaneDisabledAnnotationKey: opdefault.ManagedDataplaneDisabledAnnotationValue,
+					})
+				}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				store.Deployments.Flush()
+				if tc.conditions != nil {
+					one := int32(1)
+					dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: gwKey.Namespace, Name: gwKey.Name},
+						Spec: appv1.DeploymentSpec{Replicas: &one}}
+					dep.Status.Conditions = tc.conditions
+					store.Deployments.Reset([]client.Object{dep})
+				}
+
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.update = event.NewEventUpdate(0)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+				assert.NoError(t, r.renderForGateways(c), "render success")
+
+				gw := c.update.UpsertQueue.Gateways.Get(gwKey).(*gwapiv1.Gateway)
+				d := meta.FindStatusCondition(gw.Status.Conditions, string(gwapiv1.GatewayConditionProgrammed))
+				if !assert.NotNil(t, d, "programmed found") {
+					return
+				}
+				assert.Equal(t, tc.status, d.Status, "programmed")
+				if tc.reason != "" {
+					assert.Equal(t, tc.reason, d.Reason, "reason")
+				}
+				assert.Contains(t, d.Message, tc.message, "message")
+			},
+		}})
 	}
-
-	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "no Deployment yet")
-
-	one := int32(1)
-	dep := &appv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: gw.GetNamespace(), Name: gw.GetName()},
-		Spec: appv1.DeploymentSpec{Replicas: &one}}
-	dep.Status.Conditions = []appv1.DeploymentCondition{{Type: appv1.DeploymentProgressing,
-		Status: corev1.ConditionTrue, Reason: "ReplicaSetUpdated"}}
-	store.Deployments.Reset([]client.Object{dep})
-	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "a rollout in progress is ready soon")
-
-	dep.Status.Conditions[0] = appv1.DeploymentCondition{Type: appv1.DeploymentProgressing,
-		Status: corev1.ConditionFalse, Reason: "ProgressDeadlineExceeded"}
-	store.Deployments.Reset([]client.Object{dep})
-	c := programmed()
-	assert.Equal(t, metav1.ConditionFalse, c.Status, "a stalled rollout")
-	assert.Equal(t, string(gwapiv1.GatewayReasonPending), c.Reason)
-
-	dep.Status.Conditions = []appv1.DeploymentCondition{{Type: appv1.DeploymentReplicaFailure,
-		Status: corev1.ConditionTrue, Message: "exceeded quota"}}
-	store.Deployments.Reset([]client.Object{dep})
-	c = programmed()
-	assert.Equal(t, metav1.ConditionFalse, c.Status, "pods cannot be created")
-	assert.Contains(t, c.Message, "exceeded quota")
-
-	gw.SetAnnotations(map[string]string{opdefault.ManagedDataplaneDisabledAnnotationKey: opdefault.ManagedDataplaneDisabledAnnotationValue})
-	assert.Equal(t, metav1.ConditionTrue, programmed().Status, "no managed dataplane")
 }

@@ -230,6 +230,37 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
+			name: "a backend port the Service lacks is dialed as is",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			prep: func(c *renderTestConfig) {
+				udp := testutils.TestUDPRoute.DeepCopy()
+				port := gwapiv1.PortNumber(7777) // no such Service port
+				udp.Spec.Rules[0].BackendRefs[0].Port = &port
+				c.rs = []stnrgwv1.UDPRoute{*udp}
+				// The slice resolves the Service port "udp-ok" only.
+				name, p1 := "udp-ok", int32(9001)
+				esl := testutils.TestEndpointSlice.DeepCopy()
+				esl.Ports = []discoveryv1.EndpointPort{{Name: &name, Protocol: &testutils.TestProtocolUDP, Port: &p1}}
+				c.esls = []discoveryv1.EndpointSlice{*esl}
+				svc := testutils.TestSvc.DeepCopy()
+				svc.Spec.ClusterIP = "4.3.2.1"
+				c.svcs = []corev1.Service{*svc}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				rs := r.allRoutes()
+				assert.Len(t, rs, 1, "route len")
+
+				rc, _, err := r.renderCluster(nil, rs[0])
+				assert.NoError(t, err, "render cluster")
+				assert.ElementsMatch(t, []string{"1.2.3.4:7777", "1.2.3.5:7777"}, rc.Endpoints, "endpoints")
+			},
+		},
+		{
 			name:  "StaticService endpoints at the backend port",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
@@ -1145,4 +1176,99 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestRenderClusterEndpointSlices(t *testing.T) {
+	port := gwapiv1.PortNumber(100)
+	udp := testutils.TestUDPRoute.DeepCopy()
+	udp.Spec.Rules[0].BackendRefs = []stnrgwv1.BackendRef{{
+		BackendObjectReference: stnrgwv1.BackendObjectReference{
+			Name:      gwapiv1.ObjectName(testutils.TestSvc.GetName()),
+			Namespace: &testutils.TestNsName,
+			Port:      &port,
+		},
+	}}
+
+	svc := testutils.TestSvc.DeepCopy()
+	svc.Spec.ClusterIP = "4.3.2.1"
+
+	terminating := testutils.TestEndpointSlice.DeepCopy()
+	terminating.Endpoints = []discoveryv1.Endpoint{{
+		Addresses: []string{"1.2.3.4"},
+		Conditions: discoveryv1.EndpointConditions{
+			Ready: &testutils.TestFalse, Serving: &testutils.TestTrue, Terminating: &testutils.TestTrue,
+		},
+	}, {
+		Addresses: []string{"1.2.3.5"},
+		Conditions: discoveryv1.EndpointConditions{
+			Ready: &testutils.TestFalse, Serving: &testutils.TestFalse, Terminating: &testutils.TestTrue,
+		},
+	}}
+	wrongLabel := testutils.TestEndpointSlice.DeepCopy()
+	wrongLabel.SetLabels(map[string]string{"kubernetes.io/service-name": "dummy"})
+	wrongNamespace := testutils.TestEndpointSlice.DeepCopy()
+	wrongNamespace.SetNamespace("dummy")
+	second := testutils.TestEndpointSlice.DeepCopy()
+	second.SetName("testendpointslice-ok-2")
+	second.Endpoints = []discoveryv1.Endpoint{{
+		Addresses:  []string{"1.2.3.8"},
+		Conditions: discoveryv1.EndpointConditions{Ready: &testutils.TestTrue, Serving: &testutils.TestTrue},
+	}}
+
+	for _, tc := range []struct {
+		name      string
+		esls      []discoveryv1.EndpointSlice
+		endpoints []string
+		peers     []string
+		notFound  bool
+	}{
+		{
+			name:      "serving terminating endpoints dialed when none is ready",
+			esls:      []discoveryv1.EndpointSlice{*terminating},
+			endpoints: []string{"1.2.3.4:100"},
+			peers:     []string{"1.2.3.4/32", "1.2.3.5/32", "4.3.2.1/32"},
+		},
+		{
+			name:     "an EndpointSlice of another Service is ignored",
+			esls:     []discoveryv1.EndpointSlice{*wrongLabel},
+			peers:    []string{"4.3.2.1/32"},
+			notFound: true,
+		},
+		{
+			name:     "an EndpointSlice in another namespace is ignored",
+			esls:     []discoveryv1.EndpointSlice{*wrongNamespace},
+			peers:    []string{"4.3.2.1/32"},
+			notFound: true,
+		},
+		{
+			name:      "the endpoints of every EndpointSlice of the Service",
+			esls:      []discoveryv1.EndpointSlice{testutils.TestEndpointSlice, *second},
+			endpoints: []string{"1.2.3.4:100", "1.2.3.5:100", "1.2.3.8:100"},
+			peers:     []string{"1.2.3.4/32", "1.2.3.5/32", "1.2.3.6/32", "1.2.3.7/32", "1.2.3.8/32", "4.3.2.1/32"},
+		},
+	} {
+		renderTester(t, []renderTestConfig{{
+			name: tc.name,
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{*udp},
+			svcs: []corev1.Service{*svc},
+			esls: tc.esls,
+			prep: func(c *renderTestConfig) {},
+			tester: func(t *testing.T, r *renderer) {
+				rs := r.allRoutes()
+				assert.Len(t, rs, 1, "route len")
+
+				rc, peers, err := r.renderCluster(nil, rs[0])
+				if tc.notFound {
+					assert.True(t, IsNonCriticalError(err, EndpointNotFound), "endpoint not found")
+				} else {
+					assert.NoError(t, err, "render cluster")
+				}
+				assert.ElementsMatch(t, tc.endpoints, rc.Endpoints, "dialed endpoints")
+				assert.ElementsMatch(t, tc.peers, peerBlocks(peers), "peers")
+			},
+		}})
+	}
 }

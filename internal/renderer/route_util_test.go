@@ -8,11 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 
@@ -710,10 +711,17 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "valid routes - status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			prep: func(c *renderTestConfig) {
+				// a resolvable backend
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s}
+			},
 			tester: func(t *testing.T, r *renderer) {
 				gc, err := r.getGatewayClass()
 				assert.NoError(t, err, "gw-class found")
@@ -730,12 +738,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
-				assert.True(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]
@@ -772,10 +786,16 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "missing parent in route - errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
+				// a resolvable backend
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s}
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-no-parent")
 				dummySectionName := gwapiv1.SectionName("dummy")
@@ -806,11 +826,16 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				initRouteStatus(ro)
-				for i := range ro.GetParentRefs() {
-					p := ro.GetParentRefs()[i]
-					parentExists, parentAccept := r.isParentAcceptingRoute(ro, &p, "")
-					setRouteConditionStatus(ro, &p, config.ControllerName, parentExists, parentAccept, nil)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
 				}
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 3, "parent status len")
@@ -913,10 +938,16 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "invalid routes - status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
+				// a resolvable backend
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s}
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-wrong-listener-name")
 				sn := gwapiv1.SectionName("dummy")
@@ -932,12 +963,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.False(t, exists)
-				assert.False(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]
@@ -967,10 +1004,16 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "valid cross-namespace route - status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
+				// a resolvable backend
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s}
 				gw := testutils.TestGw.DeepCopy()
 				// allow from only one namespace
 				fromNamespaces := gwapiv1.NamespacesFromAll
@@ -990,6 +1033,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-cross-namespace")
 				udp1.SetNamespace("dummy-namespace")
+				udp1.Spec.Rules[0].BackendRefs[0].Namespace = &testutils.TestNsName
 				sn := gwapiv1.Namespace("testnamespace")
 				udp1.Spec.ParentRefs[0] = gwapiv1.ParentReference{
 					Name:      "gateway-1",
@@ -1005,12 +1049,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
-				assert.True(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]
@@ -1040,13 +1090,20 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "invalid cross-namespace route - status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
 			prep: func(c *renderTestConfig) {
+				// a resolvable backend
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.ClusterIP = "1.1.1.1"
+				c.svcs = []corev1.Service{*s}
 				udp1 := testutils.TestUDPRoute.DeepCopy()
 				udp1.SetName("udproute-cross-namespace")
 				udp1.SetNamespace("dummy-namespace")
+				udp1.Spec.Rules[0].BackendRefs[0].Namespace = &testutils.TestNsName
 				sn := gwapiv1.Namespace("testnamespace")
 				udp1.Spec.ParentRefs[0] = gwapiv1.ParentReference{
 					Name:      "gateway-1",
@@ -1062,12 +1119,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.Len(t, rs, 1, "route found")
 				ro := rs[0]
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
-				assert.False(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, nil)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]
@@ -1097,6 +1160,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name: "missing Service backend - status",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			svcs: []corev1.Service{testutils.TestSvc},
 			prep: func(c *renderTestConfig) {
@@ -1122,12 +1186,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
-				assert.True(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, err)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]
@@ -1164,6 +1234,7 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 			name:  "missing StaticService backend - status",
 			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:   []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:   []gwapiv1.Gateway{testutils.TestGw},
 			svcs:  []corev1.Service{testutils.TestSvc},
 			ssvcs: []stnrgwv1.StaticService{testutils.TestStaticSvc},
@@ -1201,12 +1272,18 @@ func TestRenderUDPRouteUtil(t *testing.T) {
 				assert.True(t, IsNonCritical(err), "non-critical error")
 				assert.True(t, IsNonCriticalError(err, BackendNotFound), "backend not found")
 
-				initRouteStatus(ro)
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.UDPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, gc.GetName())
-				assert.True(t, exists)
-				assert.True(t, accepted)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, err)
 
 				assert.Len(t, ro.GetRouteStatus().Parents, 1, "parent status len")
 				parentStatus := ro.GetRouteStatus().Parents[0]

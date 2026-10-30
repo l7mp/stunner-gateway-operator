@@ -326,6 +326,184 @@ func TestRenderAuthRender(t *testing.T) {
 			},
 		},
 		{
+			name:   "ephemeral external auth with the sharedSecret key ok",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			ascrts: []corev1.Secret{testutils.TestAuthSecret},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				namespace := gwapiv1.Namespace("testnamespace")
+				w.Spec.AuthRef = &gwapiv1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1.ObjectName("testauthsecret-ok"),
+				}
+				w.Spec.AuthType = nil
+				w.Spec.Username = nil
+				w.Spec.Password = nil
+				w.Spec.SharedSecret = nil
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				s := testutils.TestAuthSecret.DeepCopy()
+				s.Data["type"] = []byte("ephemeral")
+				delete(s.Data, "secret")
+				s.Data["sharedSecret"] = []byte("ext-shared-secret")
+				c.ascrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+				assert.Equal(t, "ephemeral", auth.Type, "auth-type")
+				assert.Equal(t, "ext-shared-secret", auth.Credentials["secret"], "secret")
+			},
+		},
+		{
+			name:   "external auth Secret of a non-Opaque type is used anyway",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			ascrts: []corev1.Secret{testutils.TestAuthSecret},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				namespace := gwapiv1.Namespace("testnamespace")
+				w.Spec.AuthRef = &gwapiv1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1.ObjectName("testauthsecret-ok"),
+				}
+				w.Spec.AuthType = nil
+				w.Spec.Username = nil
+				w.Spec.Password = nil
+				w.Spec.SharedSecret = nil
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				s := testutils.TestAuthSecret.DeepCopy()
+				s.Type = corev1.SecretTypeTLS
+				c.ascrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.NoError(t, err, "renderAuth")
+				assert.Equal(t, "static", auth.Type, "auth-type")
+				assert.Equal(t, "ext-testuser", auth.Credentials["username"], "username")
+			},
+		},
+		{
+			name:   "external auth Secret with an invalid type errs",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			ascrts: []corev1.Secret{testutils.TestAuthSecret},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				namespace := gwapiv1.Namespace("testnamespace")
+				w.Spec.AuthRef = &gwapiv1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1.ObjectName("testauthsecret-ok"),
+				}
+				w.Spec.AuthType = nil
+				w.Spec.Username = nil
+				w.Spec.Password = nil
+				w.Spec.SharedSecret = nil
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				s := testutils.TestAuthSecret.DeepCopy()
+				s.Data["type"] = []byte("dummy")
+				c.ascrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.Nil(t, auth, "no auth")
+				assert.True(t, IsCritical(err), "critical err")
+				assert.Equal(t, "invalid authentication type", err.Error(), "message")
+			},
+		},
+		{
+			name:   "static external auth Secret without a password errs",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			ascrts: []corev1.Secret{testutils.TestAuthSecret},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				namespace := gwapiv1.Namespace("testnamespace")
+				w.Spec.AuthRef = &gwapiv1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1.ObjectName("testauthsecret-ok"),
+				}
+				w.Spec.AuthType = nil
+				w.Spec.Username = nil
+				w.Spec.Password = nil
+				w.Spec.SharedSecret = nil
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				s := testutils.TestAuthSecret.DeepCopy()
+				delete(s.Data, "password")
+				c.ascrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.Nil(t, auth, "no auth")
+				assert.True(t, IsCritical(err), "critical err")
+				assert.Equal(t, "missing username and/or password for static authentication", err.Error(), "message")
+			},
+		},
+		{
+			name:   "ephemeral external auth Secret without a secret errs",
+			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			ascrts: []corev1.Secret{testutils.TestAuthSecret},
+			prep: func(c *renderTestConfig) {
+				w := testutils.TestGwConfig.DeepCopy()
+				namespace := gwapiv1.Namespace("testnamespace")
+				w.Spec.AuthRef = &gwapiv1.SecretObjectReference{
+					Namespace: &namespace,
+					Name:      gwapiv1.ObjectName("testauthsecret-ok"),
+				}
+				w.Spec.AuthType = nil
+				w.Spec.Username = nil
+				w.Spec.Password = nil
+				w.Spec.SharedSecret = nil
+				c.cfs = []stnrgwv1.GatewayConfig{*w}
+
+				s := testutils.TestAuthSecret.DeepCopy()
+				s.Data["type"] = []byte("ephemeral")
+				delete(s.Data, "secret")
+				c.ascrts = []corev1.Secret{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+
+				auth, err := r.renderAuth(c)
+				assert.Nil(t, auth, "no auth")
+				assert.True(t, IsCritical(err), "critical err")
+				assert.Equal(t, "missing shared-secret for ephemeral authentication", err.Error(), "message")
+			},
+		},
+		{
 			name:   "wrong secret group errs",
 			cls:    []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:    []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
@@ -414,6 +592,7 @@ func TestRenderAuthRender(t *testing.T) {
 
 				_, err = r.renderAuth(c)
 				assert.Error(t, err, "missing secret")
+				assert.Equal(t, "missing or invalid external authentication credentials", err.Error(), "message")
 			},
 		},
 		{

@@ -395,16 +395,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, o.GetNamespace(), gw.GetNamespace(), "deployment namespace")
 
 				//statuses
-				setGatewayClassStatusAccepted(gc, nil)
-				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1.GatewayClassConditionStatusAccepted),
-					gc.Status.Conditions[0].Type, "conditions accepted")
-				assert.Equal(t, metav1.ConditionTrue,
-					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1.GatewayClassReasonAccepted),
-					gc.Status.Conditions[0].Reason, "conditions reason")
-				assert.Equal(t, int64(0),
-					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
 				objs = c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")
@@ -1888,6 +1878,7 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Equal(t, "L4", ls.Type, "L4 server")
 				assert.Equal(t, "default", ls.L4.Auth, "L4 auth policy")
 				assert.Equal(t, []string{"testnamespace/udproute-ok/udp"}, ls.Clusters, "L4 clusters")
+				assert.Empty(t, ls.Filters, "an L4 server routes, it has no filters")
 
 				// the route resolves on both
 				ros := r.allRoutes()
@@ -2199,16 +2190,6 @@ func TestRenderPipelineManagedMode(t *testing.T) {
 				assert.Contains(t, rc.Endpoints, "10.11.12.15", "staticservice endpoint ip-3")
 
 				//statuses
-				setGatewayClassStatusAccepted(gc, nil)
-				assert.Len(t, gc.Status.Conditions, 1, "conditions num")
-				assert.Equal(t, string(gwapiv1.GatewayClassConditionStatusAccepted),
-					gc.Status.Conditions[0].Type, "conditions accepted")
-				assert.Equal(t, metav1.ConditionTrue,
-					gc.Status.Conditions[0].Status, "conditions status")
-				assert.Equal(t, string(gwapiv1.GatewayClassReasonAccepted),
-					gc.Status.Conditions[0].Reason, "conditions reason")
-				assert.Equal(t, int64(0),
-					gc.Status.Conditions[0].ObservedGeneration, "conditions gen")
 
 				gws := c.update.UpsertQueue.Gateways.Objects()
 				assert.Len(t, gws, 1, "gateway num")

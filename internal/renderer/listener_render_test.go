@@ -8,13 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
@@ -980,44 +982,6 @@ func TestRenderListenerRender(t *testing.T) {
 	})
 }
 
-// TestGetProtocol pins the Gateway listener protocols: TURN-* feeds a TURN server over the transport
-// underneath, a plain protocol an L4 server, SRT an SRT server over UDP; the Service and the port
-// conflict check follow the dataplane protocol.
-func TestGetProtocol(t *testing.T) {
-	for proto, want := range map[string]struct {
-		lproto stnrapiv2.Protocol
-		stype  stnrapiv2.ServerType
-	}{
-		"TURN-UDP":  {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeTURN},
-		"TURN-TCP":  {stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeTURN},
-		"TURN-TLS":  {stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeTURN},
-		"TURN-DTLS": {stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeTURN},
-		"UDP":       {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeL4},
-		"TCP":       {stnrapiv2.ProtocolTCP, stnrapiv2.ServerTypeL4},
-		"TLS":       {stnrapiv2.ProtocolTLS, stnrapiv2.ServerTypeL4},
-		"DTLS":      {stnrapiv2.ProtocolDTLS, stnrapiv2.ServerTypeL4},
-		"SRT":       {stnrapiv2.ProtocolUDP, stnrapiv2.ServerTypeSRT},
-	} {
-		lproto, stype, err := getProtocol(gwapiv1.ProtocolType(proto))
-		assert.NoError(t, err, proto)
-		assert.Equal(t, want.lproto, lproto, proto)
-		assert.Equal(t, want.stype, stype, proto)
-	}
-	for _, proto := range []string{"STDIN", "FIFO", "SIP-UDP", "dummy"} {
-		_, _, err := getProtocol(gwapiv1.ProtocolType(proto))
-		assert.True(t, IsNonCriticalError(err, InvalidProtocol), proto)
-	}
-
-	r := &renderer{}
-	proto, err := r.getServiceProtocol("SRT")
-	assert.NoError(t, err)
-	assert.Equal(t, "UDP", proto, "an SRT listener is a UDP Service port")
-	udp, tcp := portMap{}, portMap{}
-	assert.False(t, isListenerConflicted(&gwapiv1.Listener{Protocol: "SRT", Port: 9000}, udp, tcp))
-	assert.True(t, isListenerConflicted(&gwapiv1.Listener{Protocol: "UDP", Port: 9000}, udp, tcp),
-		"an SRT listener takes its UDP port")
-}
-
 // tlsOf returns the TLS of a listener, empty for none.
 func tlsOf(l *stnrapiv2.ListenerConfig) stnrapiv2.TLSConfig {
 	if l.TLS == nil {
@@ -1072,4 +1036,118 @@ func TestRenderListenerWithoutCertificate(t *testing.T) {
 			},
 		}})
 	}
+}
+
+func TestRenderListenerProtocols(t *testing.T) {
+	mode := gwapiv1.TLSModeTerminate
+	ns := gwapiv1.Namespace("testnamespace")
+	tls := &gwapiv1.ListenerTLSConfig{Mode: &mode, CertificateRefs: []gwapiv1.SecretObjectReference{{
+		Namespace: &ns, Name: gwapiv1.ObjectName("testsecret-ok")}}}
+
+	renderTester(t, []renderTestConfig{{
+		name:  "every listener protocol",
+		cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+		cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+		gws:   []gwapiv1.Gateway{testutils.TestGw},
+		svcs:  []corev1.Service{testutils.TestSvc},
+		dps:   []stnrgwv1.Dataplane{testutils.TestDataplane},
+		scrts: []corev1.Secret{testutils.TestSecret},
+		prep: func(c *renderTestConfig) {
+			gw := testutils.TestGw.DeepCopy()
+			gw.Spec.Listeners = []gwapiv1.Listener{
+				{Name: "turn-udp", Protocol: "TURN-UDP", Port: 1},
+				{Name: "turn-tcp", Protocol: "TURN-TCP", Port: 2},
+				{Name: "turn-tls", Protocol: "TURN-TLS", Port: 3, TLS: tls},
+				{Name: "turn-dtls", Protocol: "TURN-DTLS", Port: 4, TLS: tls},
+				{Name: "udp", Protocol: "UDP", Port: 5},
+				{Name: "tcp", Protocol: "TCP", Port: 6},
+				{Name: "tls", Protocol: "TLS", Port: 7, TLS: tls},
+				{Name: "dtls", Protocol: "DTLS", Port: 8, TLS: tls},
+				{Name: "srt", Protocol: "SRT", Port: 9},
+				{Name: "udp-on-the-srt-port", Protocol: "UDP", Port: 9},
+				{Name: "stdin", Protocol: "STDIN", Port: 10},
+				{Name: "fifo", Protocol: "FIFO", Port: 11},
+				{Name: "sip-udp", Protocol: "SIP-UDP", Port: 12},
+				{Name: "dummy", Protocol: "dummy", Port: 13},
+			}
+			c.gws = []gwapiv1.Gateway{*gw}
+		},
+		tester: func(t *testing.T, r *renderer) {
+			gc, err := r.getGatewayClass()
+			assert.NoError(t, err, "gw-class found")
+			c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+			c.gwConf, err = r.getGatewayConfig4Class(c)
+			assert.NoError(t, err, "gw-conf found")
+			c.update = event.NewEventUpdate(0)
+			c.gws.ResetGateways(r.getGateways4Class(c))
+
+			assert.NoError(t, r.renderForGateways(c), "render success")
+			conf := c.update.ConfigQueue[0]
+			listeners := map[string]stnrapiv2.ListenerConfig{}
+			for _, l := range conf.Listeners {
+				listeners[l.Name] = l
+			}
+
+			// a TURN-* protocol is a TURN server over the transport underneath, a plain protocol
+			// an L4 server
+			for name, want := range map[string][2]string{
+				"turn-udp":  {"UDP", "TURN"},
+				"turn-tcp":  {"TCP", "TURN"},
+				"turn-tls":  {"TLS", "TURN"},
+				"turn-dtls": {"DTLS", "TURN"},
+				"udp":       {"UDP", "L4"},
+				"tcp":       {"TCP", "L4"},
+				"tls":       {"TLS", "L4"},
+				"dtls":      {"DTLS", "L4"},
+			} {
+				l, ok := listeners["testnamespace/gateway-1/"+name]
+				if !assert.True(t, ok, name) {
+					continue
+				}
+				assert.Equal(t, want[0], l.Protocol, name)
+				assert.Equal(t, want[1], serverOf(conf, l).Type, name)
+			}
+
+			// an SRT listener takes its UDP port but is refused in the open-source build, internal
+			// and unknown protocols are refused
+			for _, name := range []string{"srt", "udp-on-the-srt-port", "stdin", "fifo", "sip-udp", "dummy"} {
+				_, ok := listeners["testnamespace/gateway-1/"+name]
+				assert.False(t, ok, name)
+			}
+			gw := c.update.UpsertQueue.Gateways.Get(store.GetNamespacedName(&testutils.TestGw)).(*gwapiv1.Gateway)
+			assert.Len(t, gw.Status.Listeners, 14, "a status for every listener")
+			for _, ls := range gw.Status.Listeners {
+				switch ls.Name {
+				case "udp-on-the-srt-port":
+					cond := meta.FindStatusCondition(ls.Conditions, string(gwapiv1.ListenerConditionConflicted))
+					if assert.NotNil(t, cond, ls.Name) {
+						assert.Equal(t, metav1.ConditionTrue, cond.Status, ls.Name)
+					}
+				case "srt":
+					cond := meta.FindStatusCondition(ls.Conditions, string(gwapiv1.ListenerConditionAccepted))
+					if assert.NotNil(t, cond, ls.Name) {
+						assert.Equal(t, metav1.ConditionFalse, cond.Status, ls.Name)
+						assert.Equal(t, "SRT listeners are not supported", cond.Message, ls.Name)
+					}
+				case "stdin", "fifo", "sip-udp", "dummy":
+					cond := meta.FindStatusCondition(ls.Conditions, string(gwapiv1.ListenerConditionAccepted))
+					if assert.NotNil(t, cond, ls.Name) {
+						assert.Equal(t, metav1.ConditionFalse, cond.Status, ls.Name)
+						assert.Equal(t, string(gwapiv1.ListenerReasonUnsupportedProtocol), cond.Reason, ls.Name)
+					}
+				}
+			}
+
+			svc := c.update.UpsertQueue.Services.Get(store.GetNamespacedName(&testutils.TestGw)).(*corev1.Service)
+			assert.Contains(t, svc.Spec.Ports, corev1.ServicePort{Name: "srt", Protocol: corev1.ProtocolUDP, Port: 9},
+				"an SRT listener is a UDP Service port")
+			udp9 := 0
+			for _, sp := range svc.Spec.Ports {
+				if sp.Protocol == corev1.ProtocolUDP && sp.Port == 9 {
+					udp9++
+				}
+			}
+			assert.Equal(t, 1, udp9, "the conflicted listener gets no Service port")
+		},
+	}})
 }

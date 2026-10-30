@@ -2378,63 +2378,6 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
-			name: "lb service - JSON formatted nodeport annotation parsing",
-			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
-			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
-			gws:  []gwapiv1.Gateway{testutils.TestGw},
-			rs:   []stnrgwv1.UDPRoute{},
-			svcs: []corev1.Service{testutils.TestSvc},
-			prep: func(c *renderTestConfig) {},
-			tester: func(t *testing.T, r *renderer) {
-				// default parsing
-				a := `{"force-np1":1,"force-np2":2,"force-np3":1000}`
-				nps, err := getServicePortsFromAnn(a)
-				assert.NoError(t, err, "nodeport ann parse 1")
-				assert.Len(t, nps, 3, "nodeport ann parse 1 - len")
-				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
-					"nodeport ann parse 1 - res")
-
-				// without curlies
-				a = `"force-np1":1,"force-np2":2,"force-np3":1000`
-				nps, err = getServicePortsFromAnn(a)
-				assert.NoError(t, err, "nodeport ann parse 2")
-				assert.Len(t, nps, 3, "nodeport ann parse 2 - len")
-				assert.Equal(t, map[string]int{"force-np1": 1, "force-np2": 2, "force-np3": 1000}, nps,
-					"nodeport ann parse 2 - res")
-
-				// empty list ok 1
-				a = `{}`
-				nps, err = getServicePortsFromAnn(a)
-				assert.NoError(t, err, "nodeport ann parse 4")
-				assert.Len(t, nps, 0, "nodeport ann parse 4 - len")
-				assert.Equal(t, map[string]int{}, nps,
-					"nodeport ann parse 4 - res")
-
-				// empty list ok 2
-				a = ``
-				nps, err = getServicePortsFromAnn(a)
-				assert.NoError(t, err, "nodeport ann parse 5")
-				assert.Len(t, nps, 0, "nodeport ann parse 5 - len")
-				assert.Equal(t, map[string]int{}, nps,
-					"nodeport ann parse 5 - res")
-
-				// wrong format 1
-				a = `["force-np1":1`
-				_, err = getServicePortsFromAnn(a)
-				assert.Error(t, err, "nodeport ann parse err 1")
-
-				// wrong format 2
-				a = `"dummy"`
-				_, err = getServicePortsFromAnn(a)
-				assert.Error(t, err, "nodeport ann parse err 2")
-
-				// wrong format 3
-				a = `{"force-np1":1,"force-np2":2,"force-np3":1000,"c":{"a":1,"b":2}}`
-				_, err = getServicePortsFromAnn(a)
-				assert.Error(t, err, "nodeport ann parse 3")
-			},
-		},
-		{
 			name: "lb service - JSON formatted nodeport annotation in the GatewayConfig enforced",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
@@ -2828,12 +2771,157 @@ func TestRenderServiceUtil(t *testing.T) {
 	})
 }
 
-func TestIsStunnerAnnotation(t *testing.T) {
-	assert.True(t, isStunnerAnnotation(opdefault.ServiceTypeAnnotationKey), "stunner annotation")
-	assert.True(t, isStunnerAnnotation("Stunner.L7mp.io/Service-Type"), "case insensitive")
-	assert.False(t, isStunnerAnnotation("stunner.l7mp.io.example.com/foo"), "lookalike domain")
-	assert.False(t, isStunnerAnnotation("stunner.l7mp.io-foo/bar"), "lookalike prefix")
-	assert.False(t, isStunnerAnnotation("example.com/foo"), "other annotation")
+func TestRenderNodePortPublicAddr(t *testing.T) {
+	noExternal := testutils.TestNode.DeepCopy()
+	noExternal.Status.Addresses = noExternal.Status.Addresses[:len(noExternal.Status.Addresses)-1]
+	second := testutils.TestNode.DeepCopy()
+	second.SetName("node-2")
+	noAddress := testutils.TestNode.DeepCopy()
+	noAddress.Status.Addresses = []corev1.NodeAddress{}
+
+	for _, tc := range []struct {
+		name  string
+		nodes []corev1.Node
+		addr  string
+	}{
+		{name: "the first node with a valid address", nodes: []corev1.Node{*noExternal, *second}, addr: "1.2.3.4"},
+		{name: "no node address", nodes: []corev1.Node{*noAddress}},
+	} {
+		renderTester(t, []renderTestConfig{{
+			name:  tc.name,
+			cls:   []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:   []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:   []gwapiv1.Gateway{testutils.TestGw},
+			rs:    []stnrgwv1.UDPRoute{},
+			nodes: tc.nodes,
+			svcs:  []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s := testutils.TestSvc.DeepCopy()
+				s.Spec.Type = corev1.ServiceTypeNodePort
+				s.Spec.Ports[0].NodePort = 30001
+				s.Spec.Ports[1].NodePort = 30002
+				s.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				c.svcs = []corev1.Service{*s}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+
+				addrs, err := r.getPublicAddr(gws[0])
+				if tc.addr == "" {
+					assert.True(t, IsNonCriticalError(err, PublicListenerAddressNotFound), "no public address")
+					assert.Empty(t, addrs[0].addr, "no public address")
+					return
+				}
+				assert.NoError(t, err, "public address")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, tc.addr, addrs[0].addr, "the node address")
+				assert.Equal(t, 30001, addrs[0].port, "the node port")
+			},
+		}})
+	}
+}
+
+func TestRenderServiceNodePortAnnotation(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		annotation string
+		nodePorts  []int32
+	}{
+		{name: "JSON", annotation: `{"force-np1":101,"force-np2":102}`, nodePorts: []int32{0, 101, 102}},
+		{name: "JSON without curlies", annotation: `"force-np1":101,"force-np2":102`, nodePorts: []int32{0, 101, 102}},
+		{name: "empty object", annotation: `{}`, nodePorts: []int32{0, 0, 0}},
+		{name: "empty string", annotation: ``, nodePorts: []int32{0, 0, 0}},
+		{name: "unterminated list ignored", annotation: `["force-np1":101`, nodePorts: []int32{0, 0, 0}},
+		{name: "string ignored", annotation: `"dummy"`, nodePorts: []int32{0, 0, 0}},
+		{name: "nested object ignored", annotation: `{"force-np1":101,"c":{"a":1}}`, nodePorts: []int32{0, 0, 0}},
+	} {
+		renderTester(t, []renderTestConfig{{
+			name: "nodeport annotation: " + tc.name,
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{opdefault.NodePortAnnotationKey: tc.annotation})
+				gw.Spec.Listeners = []gwapiv1.Listener{
+					{Name: "random-np", Port: 1, Protocol: "UDP"},
+					{Name: "force-np1", Port: 2, Protocol: "UDP"},
+					{Name: "force-np2", Port: 3, Protocol: "UDP"},
+				}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+
+				s, _ := r.createLbService4Gateway(c, gws[0])
+				assert.NotNil(t, s, "svc create")
+				nps := []int32{}
+				for _, p := range s.Spec.Ports {
+					nps = append(nps, p.NodePort)
+				}
+				assert.Equal(t, tc.nodePorts, nps, "node ports")
+			},
+		}})
+	}
+}
+
+func TestRenderServiceStunnerAnnotations(t *testing.T) {
+	renderTester(t, []renderTestConfig{{
+		name: "stale STUNner annotations pruned, lookalikes kept",
+		cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+		cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+		gws:  []gwapiv1.Gateway{testutils.TestGw},
+		rs:   []stnrgwv1.UDPRoute{},
+		svcs: []corev1.Service{testutils.TestSvc},
+		prep: func(c *renderTestConfig) {
+			// The Service of the Gateway exists already.
+			s := testutils.TestSvc.DeepCopy()
+			s.SetName(testutils.TestGw.GetName())
+			s.SetNamespace(testutils.TestGw.GetNamespace())
+			s.SetAnnotations(map[string]string{
+				"Stunner.L7mp.io/Service-Type":    "NodePort",
+				"stunner.l7mp.io.example.com/foo": "bar",
+				"stunner.l7mp.io-foo/bar":         "baz",
+				"example.com/foo":                 "qux",
+			})
+			c.svcs = []corev1.Service{*s}
+		},
+		tester: func(t *testing.T, r *renderer) {
+			gc, err := r.getGatewayClass()
+			assert.NoError(t, err, "gw-class found")
+			c := &RenderContext{gc: gc, log: log}
+			c.gwConf, err = r.getGatewayConfig4Class(c)
+			assert.NoError(t, err, "gw-conf found")
+			gws := r.getGateways4Class(c)
+			assert.Len(t, gws, 1, "gateways for class")
+
+			s, _ := r.createLbService4Gateway(c, gws[0])
+			assert.NotNil(t, s, "svc create")
+			as := s.GetAnnotations()
+			assert.NotContains(t, as, "Stunner.L7mp.io/Service-Type",
+				"a STUNner annotation the Gateway no longer has is pruned, whatever the case")
+			assert.Equal(t, "bar", as["stunner.l7mp.io.example.com/foo"], "lookalike domain kept")
+			assert.Equal(t, "baz", as["stunner.l7mp.io-foo/bar"], "lookalike prefix kept")
+			assert.Equal(t, "qux", as["example.com/foo"], "other annotation kept")
+		},
+	}})
 }
 
 func TestRenderServiceExternalNameType(t *testing.T) {

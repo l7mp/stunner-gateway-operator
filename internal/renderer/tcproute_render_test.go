@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/l7mp/stunner-gateway-operator/v2/internal/config"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/event"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 
@@ -90,12 +90,15 @@ func TestRenderTCPRoute(t *testing.T) {
 			name:     "gwapiv1 TCPRoute masked by a stunner TCPRoute",
 			cls:      []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:      []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:      []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:      []gwapiv1.Gateway{testutils.TestGw},
 			trs:      []stnrgwv1.TCPRoute{testutils.TestTCPRoute},
 			trsGwAPI: []stnrgwv1.TCPRoute{testutils.TestTCPRoute},
 			svcs:     []corev1.Service{testutils.TestSvc},
 			prep:     func(c *renderTestConfig) {},
 			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
 				// the masked gwapiv1 route is skipped by allRoutes
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
@@ -105,12 +108,18 @@ func TestRenderTCPRoute(t *testing.T) {
 				masked := store.TCPRoutesGwAPI.GetAll()[0]
 				assert.True(t, isRouteMasked(masked), "masked")
 
-				// masked routes get a Pending status
-				initRouteStatus(masked)
-				p := masked.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(masked, &p, "")
-				setRouteConditionStatus(masked, &p, config.ControllerName, exists, accepted, nil)
-				parents := masked.GetRouteStatus().Parents
+				// a masked route gets a Pending status
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				status, ok := rc.update.UpsertQueue.TCPRoutesGwAPI.Get(store.GetNamespacedName(masked)).(*gwapiv1.TCPRoute)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
+				parents := status.Status.Parents
 				assert.Len(t, parents, 1, "parent status len")
 				cond := parents[0].Conditions[0]
 				assert.Equal(t, string(gwapiv1.RouteConditionAccepted), cond.Type, "accepted cond")
@@ -165,6 +174,7 @@ func TestRenderTCPRoute(t *testing.T) {
 			name: "TCPRoute status resolves its refs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
 			gws:  []gwapiv1.Gateway{testutils.TestGw},
 			trs:  []stnrgwv1.TCPRoute{testutils.TestTCPRoute},
 			svcs: []corev1.Service{testutils.TestSvc},
@@ -175,16 +185,23 @@ func TestRenderTCPRoute(t *testing.T) {
 				c.svcs = []corev1.Service{*s1}
 			},
 			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
 				rs := r.allRoutes()
 				assert.Len(t, rs, 1, "route len")
 				ro := rs[0]
 
-				initRouteStatus(ro)
-				p := ro.GetParentRefs()[0]
-				exists, accepted := r.isParentAcceptingRoute(ro, &p, "")
-				_, _, backendErr := r.renderCluster(nil, ro)
-				setRouteConditionStatus(ro, &p, config.ControllerName, exists, accepted, backendErr)
-
+				// render and read the status of the route
+				rc := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				rc.gwConf, err = r.getGatewayConfig4Class(rc)
+				assert.NoError(t, err, "gw-conf found")
+				rc.update = event.NewEventUpdate(0)
+				rc.gws.ResetGateways(r.getGateways4Class(rc))
+				assert.NoError(t, r.renderForGateways(rc), "render success")
+				ro, ok := rc.update.UpsertQueue.TCPRoutes.Get(store.GetNamespacedName(ro)).(store.Route)
+				if !assert.True(t, ok, "route status rendered") {
+					return
+				}
 				parents := ro.GetRouteStatus().Parents
 				assert.Len(t, parents, 1, "parent status len")
 				assert.Equal(t, "gateway-1", string(parents[0].ParentRef.Name), "parent name")
