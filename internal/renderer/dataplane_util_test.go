@@ -507,3 +507,38 @@ func TestRenderDataplaneUtil(t *testing.T) {
 		},
 	})
 }
+
+func TestRenderDataplaneContainerEnv(t *testing.T) {
+	renderTester(t, []renderTestConfig{
+		{
+			name: "the default pull policy",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				dp := testutils.TestDataplane.DeepCopy()
+				dp.Spec.ImagePullPolicy = nil
+				c.dps = []stnrgwv1.Dataplane{*dp}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.update = event.NewEventUpdate(0)
+				c.gws.ResetGateways(r.getGateways4Class(c))
+
+				obj, err := r.generateDataplane(c)
+				assert.NoError(t, err, "create deployment")
+				deploy, ok := obj.(*appv1.Deployment)
+				assert.True(t, ok, "deployment cast")
+
+				container := deploy.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, corev1.PullPolicy(""), container.ImagePullPolicy,
+					"pull policy left to the API default")
+			},
+		},
+	})
+}

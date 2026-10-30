@@ -79,7 +79,8 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // *
 // * * Deployment.Spec.Template.Spec.Containers
 // * - renderer: initializes a stunner container and mutates image/command/args/env/resources/
-// *   container-security-context/ports/liveness/readiness/imagePullPolicy from Dataplane policy.
+// *   container-security-context/ports/liveness/readiness/imagePullPolicy from Dataplane policy;
+// *   an unset imagePullPolicy is left to the API default.
 // * - updater: copies owned per-container fields; preserves container security context when
 // *   the desired container does not request one.
 // *
