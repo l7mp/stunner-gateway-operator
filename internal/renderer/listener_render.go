@@ -96,15 +96,16 @@ func (r *defaultListenerRenderer) getTLS(gw *gwapiv1.Gateway, l *gwapiv1.Listene
 		return "", "", false, nil
 	}
 
-	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
-		(proto != stnrapiv2.ProtocolTLS && proto != stnrapiv2.ProtocolDTLS) {
+	if proto != stnrapiv2.ProtocolTLS && proto != stnrapiv2.ProtocolDTLS {
 		return "", "", false, nil
 	}
 
-	if len(l.TLS.CertificateRefs) == 0 {
-		r.log.Info("No certificate reference found in Gateway listener", "gateway", store.GetObjectKey(gw),
-			"listener", l.Name)
-		return "", "", false, nil
+	// a TLS or DTLS listener terminates TLS, so it needs a certificate
+	if l.TLS == nil || (l.TLS.Mode != nil && *l.TLS.Mode != gwapiv1.TLSModeTerminate) ||
+		len(l.TLS.CertificateRefs) == 0 {
+		r.log.Info("No certificate reference found in a TLS mode Terminate Gateway listener",
+			"gateway", store.GetObjectKey(gw), "listener", l.Name)
+		return "", "", false, NewNonCriticalError(InvalidCertificateRef)
 	}
 
 	if len(l.TLS.CertificateRefs) > 1 {

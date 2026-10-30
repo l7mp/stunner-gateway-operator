@@ -545,12 +545,10 @@ func TestRenderListenerRender(t *testing.T) {
 					port: 1234,
 				}
 
-				lc, err := r.renderListener(c, &l, rs, addr, nil)
-				assert.NoError(t, err, "renderListener")
-				assert.Equal(t, "testnamespace/gateway-1/gateway-1-listener-tls", lc.Name, "name")
-				assert.Equal(t, "TLS", lc.Protocol, "proto")
-				assert.Equal(t, "", tlsOf(lc).Cert, "cert")
-				assert.Equal(t, "", tlsOf(lc).Key, "key")
+				_, err = r.renderListener(c, &l, rs, addr, nil)
+				assert.Error(t, err, "renderListener")
+				assert.False(t, IsCritical(err), "non-critical error")
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef), "invalid certificate ref")
 			},
 		},
 		{
@@ -1026,4 +1024,52 @@ func tlsOf(l *stnrapiv2.ListenerConfig) stnrapiv2.TLSConfig {
 		return stnrapiv2.TLSConfig{}
 	}
 	return *l.TLS
+}
+
+func TestRenderListenerWithoutCertificate(t *testing.T) {
+	mode := gwapiv1.TLSModeTerminate
+	for _, tc := range []struct {
+		name     string
+		protocol string
+		tls      *gwapiv1.ListenerTLSConfig
+	}{
+		{name: "TURN-TLS without a TLS block", protocol: "TURN-TLS"},
+		{name: "TURN-DTLS without a TLS block", protocol: "TURN-DTLS"},
+		{name: "TLS without a TLS block", protocol: "TLS"},
+		{name: "TURN-TLS without certificate refs", protocol: "TURN-TLS",
+			tls: &gwapiv1.ListenerTLSConfig{Mode: &mode}},
+	} {
+		renderTester(t, []renderTestConfig{{
+			name: tc.name,
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.Spec.Listeners = []gwapiv1.Listener{{
+					Name:     gwapiv1.SectionName("gateway-1-listener-tls"),
+					Protocol: gwapiv1.ProtocolType(tc.protocol),
+					Port:     gwapiv1.PortNumber(1),
+					TLS:      tc.tls,
+				}}
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gw found")
+				c.gws = store.NewGatewayStore()
+				c.gws.ResetGateways(gws)
+
+				l := gws[0].Spec.Listeners[0]
+				_, err = r.renderListener(c, &l, []store.Route{}, gwAddrPort{addr: "1.2.3.4", port: 1234}, nil)
+				assert.True(t, IsNonCriticalError(err, InvalidCertificateRef),
+					"a listener terminating TLS needs a certificate")
+			},
+		}})
+	}
 }
