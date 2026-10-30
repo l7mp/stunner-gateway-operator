@@ -2835,3 +2835,33 @@ func TestIsStunnerAnnotation(t *testing.T) {
 	assert.False(t, isStunnerAnnotation("stunner.l7mp.io-foo/bar"), "lookalike prefix")
 	assert.False(t, isStunnerAnnotation("example.com/foo"), "other annotation")
 }
+
+func TestRenderServiceExternalNameType(t *testing.T) {
+	renderTester(t, []renderTestConfig{{
+		name: "an ExternalName service type falls back to the default",
+		cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+		cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+		gws:  []gwapiv1.Gateway{testutils.TestGw},
+		rs:   []stnrgwv1.UDPRoute{},
+		svcs: []corev1.Service{testutils.TestSvc},
+		prep: func(c *renderTestConfig) {
+			gw := testutils.TestGw.DeepCopy()
+			gw.SetAnnotations(map[string]string{opdefault.ServiceTypeAnnotationKey: "ExternalName"})
+			c.gws = []gwapiv1.Gateway{*gw}
+		},
+		tester: func(t *testing.T, r *renderer) {
+			gc, err := r.getGatewayClass()
+			assert.NoError(t, err, "gw-class found")
+			c := &RenderContext{gc: gc, log: log}
+			c.gwConf, err = r.getGatewayConfig4Class(c)
+			assert.NoError(t, err, "gw-conf found")
+
+			gws := r.getGateways4Class(c)
+			assert.Len(t, gws, 1, "gateways for class")
+
+			s, _ := r.createLbService4Gateway(c, gws[0])
+			assert.NotNil(t, s, "svc create")
+			assert.Equal(t, opdefault.DefaultServiceType, s.Spec.Type, "default service type")
+		},
+	}})
+}

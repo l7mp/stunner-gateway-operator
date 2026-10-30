@@ -53,8 +53,8 @@ const (
 	AppLabelValue = stnrapiv2.DefaultAppLabelValue
 
 	// ServiceTypeAnnotationKey defines the type of the service created to expose each Gateway
-	// to external clients. Can be either `None` (no service created), `ClusterIP`, `NodePort`,
-	// `ExternalName` or `LoadBalancer`. Default is `LoadBalancer`.
+	// to external clients. Can be either `ClusterIP`, `NodePort` or `LoadBalancer`. Default is
+	// `LoadBalancer`.
 	ServiceTypeAnnotationKey = "stunner.l7mp.io/service-type"
 
 	// DefaultServiceType defines the default type of services created to expose each Gateway

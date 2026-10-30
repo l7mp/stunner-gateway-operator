@@ -421,8 +421,6 @@ func (r *renderer) createLbService4Gateway(c *RenderContext, gw *gwapiv1.Gateway
 		svc.Spec.Type = corev1.ServiceTypeClusterIP
 	case "NodePort":
 		svc.Spec.Type = corev1.ServiceTypeNodePort
-	case "ExternalName":
-		svc.Spec.Type = corev1.ServiceTypeExternalName
 	case "LoadBalancer":
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	default:
