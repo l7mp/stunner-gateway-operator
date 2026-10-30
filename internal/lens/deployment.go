@@ -78,9 +78,9 @@ func (l *DeploymentLens) DeepCopyObject() runtime.Object { return l.DeepCopy() }
 // * - updater: overwrites pod-template labels/annotations from desired.
 // *
 // * * Deployment.Spec.Template.Spec.Containers
-// * - renderer: initializes a stunner container and mutates image/command/args/env/resources/
-// *   container-security-context/ports/liveness/readiness/imagePullPolicy from Dataplane policy;
-// *   an unset imagePullPolicy is left to the API default.
+// * - renderer: initializes a stunner container and mutates image/command/args/env/envFrom/
+// *   resources/container-security-context/ports/liveness/readiness/imagePullPolicy from Dataplane
+// *   policy; an unset imagePullPolicy is left to the API default.
 // * - updater: copies owned per-container fields; preserves container security context when
 // *   the desired container does not request one.
 // *
@@ -321,6 +321,7 @@ func projectContainerSpec(c corev1.Container, owned *corev1.Container) corev1.Co
 		Args:            append([]string(nil), c.Args...),
 		Ports:           projectContainerPorts(c.Ports),
 		Env:             projectEnvVars(c.Env),
+		EnvFrom:         cloneSlice(c.EnvFrom),
 		Resources:       *c.Resources.DeepCopy(),
 		LivenessProbe:   normalizeProbe(c.LivenessProbe),
 		ReadinessProbe:  normalizeProbe(c.ReadinessProbe),
@@ -346,6 +347,7 @@ func applyContainerSpec(current, desired *corev1.Container) corev1.Container {
 		Args:            append([]string(nil), desired.Args...),
 		Ports:           cloneSlice(desired.Ports),
 		Env:             cloneSlice(desired.Env),
+		EnvFrom:         cloneSlice(desired.EnvFrom),
 		Resources:       *desired.Resources.DeepCopy(),
 		LivenessProbe:   desired.LivenessProbe.DeepCopy(),
 		ReadinessProbe:  desired.ReadinessProbe.DeepCopy(),

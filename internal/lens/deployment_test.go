@@ -59,6 +59,23 @@ func TestDeploymentApply(t *testing.T) {
 	assert.True(t, v.EqualResource(current), "expected applied deployment to match desired owned lens")
 }
 
+func TestDeploymentEnvFrom(t *testing.T) {
+	current := testDeployment()
+	desired := testDeployment()
+	desired.Spec.Template.Spec.Containers[0].EnvFrom = []corev1.EnvFromSource{{
+		SecretRef: &corev1.SecretEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-env"},
+		},
+	}}
+
+	v := NewDeploymentLens(desired)
+	assert.False(t, v.EqualResource(current), "expected an envFrom change to be detected")
+	require.NoError(t, v.ApplyToResource(current), "apply failed")
+	assert.Equal(t, desired.Spec.Template.Spec.Containers[0].EnvFrom,
+		current.Spec.Template.Spec.Containers[0].EnvFrom, "envFrom applied")
+	assert.True(t, v.EqualResource(current), "expected applied deployment to match")
+}
+
 func TestDeploymentEqualDetectsStalePodTemplateMetadata(t *testing.T) {
 	// Pod-template labels and annotations are operator-authoritative per the
 	// Dataplane API contract: a key present on current but absent from desired

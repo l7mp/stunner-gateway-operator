@@ -216,6 +216,9 @@ func generateDataplanePodSpec(c *RenderContext, dataplane *stnrgwv1.Dataplane) (
 			}
 			c.Env = append(c.Env, dataplane.Spec.Env...)
 		}
+		if len(dataplane.Spec.EnvFrom) != 0 {
+			c.EnvFrom = append([]corev1.EnvFromSource(nil), dataplane.Spec.EnvFrom...)
+		}
 		if dataplane.Spec.Resources != nil {
 			dataplane.Spec.Resources.DeepCopyInto(&c.Resources)
 		}
