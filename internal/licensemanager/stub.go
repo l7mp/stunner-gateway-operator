@@ -31,8 +31,8 @@ func (*stubMgr) Validate(_ licensecfg.Feature) bool         { return false }
 func (*stubMgr) Status() stnrapiv2.LicenseStatus            { return stnrapiv2.NewEmptyLicenseStatus() }
 func (*stubMgr) LastError() error                           { return nil }
 func (m *stubMgr) SetOperatorChannel(ch chan<- event.Event) { m.opCh = ch }
-func (*stubMgr) GenerateLicenseConfig() (stnrapiv2.LicenseConfig, error) {
-	return stnrapiv2.LicenseConfig{}, nil
+func (*stubMgr) GenerateLicenseConfig() (*stnrapiv2.LicenseConfig, error) {
+	return nil, nil
 }
 func (*stubMgr) SubscriptionType() licensecfg.SubscriptionType {
 	return licensecfg.NewNilSubscriptionType()

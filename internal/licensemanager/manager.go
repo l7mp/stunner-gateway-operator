@@ -27,8 +27,9 @@ type Manager interface {
 	Validate(feature licensecfg.Feature) bool
 	// SubscriptionType returns the current subscription type (e.g., free, member, enterprise).
 	SubscriptionType() licensecfg.SubscriptionType
-	// Generate a license configuration for the dataplane.
-	GenerateLicenseConfig() (stnrapiv2.LicenseConfig, error)
+	// GenerateLicenseConfig generates the license configuration of the dataplane, nil without a
+	// license.
+	GenerateLicenseConfig() (*stnrapiv2.LicenseConfig, error)
 	// SetOperatorChannel sets up the operator channel where the manager sends its license
 	// status events. Send-only on purpose: the manager is one of many producers there, so it
 	// must never coalesce that channel.
