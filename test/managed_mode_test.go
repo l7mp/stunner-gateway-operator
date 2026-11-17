@@ -83,7 +83,8 @@ func testManagedMode() {
 		AfterAll(func() {
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
-			close(ch)
+			// do not close ch: the watcher may deliver an in-flight config after the
+			// cancel and would panic on a closed channel
 		})
 
 		It("should survive loading a minimal config", func() {
@@ -2405,8 +2406,8 @@ func testManagedMode() {
 		AfterAll(func() {
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
-			close(ch1)
-			close(ch2)
+			// do not close the channels: the watcher may deliver an in-flight config after the
+			// cancel and would panic on a closed channel
 		})
 
 		It("should survive loading all resources", func() {
@@ -3164,8 +3165,8 @@ func testManagedMode() {
 		AfterAll(func() {
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
-			close(ch1)
-			close(ch2)
+			// do not close the channels: the watcher may deliver an in-flight config after the
+			// cancel and would panic on a closed channel
 		})
 
 		It("should survive loading all resources", func() {

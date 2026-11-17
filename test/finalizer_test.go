@@ -74,7 +74,8 @@ func testFinalizer() {
 		AfterAll(func() {
 			config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP
 			clientCancel()
-			close(ch)
+			// do not close ch: the watcher may deliver an in-flight config after the
+			// cancel and would panic on a closed channel
 		})
 
 		It("should survive loading a minimal config", func() {
