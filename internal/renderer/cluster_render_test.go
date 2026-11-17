@@ -451,6 +451,34 @@ func TestRenderClusterRender(t *testing.T) {
 			},
 		},
 		{
+			name: "cluster peers of several slices sorted",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{testutils.TestUDPRoute},
+			svcs: []corev1.Service{testutils.TestSvc},
+			esls: []discoveryv1.EndpointSlice{testutils.TestEndpointSlice},
+			prep: func(c *renderTestConfig) {
+				// the IPv6 slice of a dual-stack Service
+				v6 := testutils.TestEndpointSlice.DeepCopy()
+				v6.SetName(v6.GetName() + "-v6")
+				v6.AddressType = discoveryv1.AddressTypeIPv6
+				for i := range v6.Endpoints {
+					for j := range v6.Endpoints[i].Addresses {
+						v6.Endpoints[i].Addresses[j] = "fd00::" + v6.Endpoints[i].Addresses[j][len("1.2.3."):]
+					}
+				}
+				c.esls = []discoveryv1.EndpointSlice{*v6, testutils.TestEndpointSlice}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				_, peers, err := r.renderCluster(nil, r.allRoutes()[0])
+				assert.False(t, IsCritical(err), "render cluster")
+				assert.Equal(t, []string{"1.2.3.4/32", "1.2.3.5/32", "1.2.3.6/32", "1.2.3.7/32",
+					"fd00::4/128", "fd00::5/128", "fd00::6/128", "fd00::7/128"}, peerBlocks(peers),
+					"the peers of both slices, in a stable order")
+			},
+		},
+		{
 			name:    "cluster for Gateway API UDPRoute and ClusterIP ok",
 			cls:     []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:     []stnrgwv1.GatewayConfig{testutils.TestGwConfig},

@@ -1,6 +1,8 @@
 package renderer
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,6 +59,8 @@ func getEndpointAddrs(n types.NamespacedName, port *corev1.ServicePort) ([]strin
 	if len(ret) == 0 {
 		return ret, nil, targetPorts, NewNonCriticalError(EndpointNotFound)
 	}
+	// keep the rendered config stable
+	slices.Sort(ret)
 
 	dial := map[string]bool{}
 	for a, ok := range ready {
