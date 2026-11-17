@@ -417,6 +417,7 @@ func TestRenderClusterRender(t *testing.T) {
 			prep: func(c *renderTestConfig) {
 				s := testutils.TestSvc.DeepCopy()
 				s.Spec.ClusterIP = "4.3.2.1"
+				s.Spec.ClusterIPs = []string{"4.3.2.1", "fd00::4321"}
 				c.svcs = []corev1.Service{*s}
 			},
 			tester: func(t *testing.T, r *renderer) {
@@ -443,6 +444,7 @@ func TestRenderClusterRender(t *testing.T) {
 				assert.NotContains(t, rc.Endpoints, "1.2.3.6", "endpoint ip-3: not ready, not dialed")
 				assert.NotContains(t, rc.Endpoints, "1.2.3.7", "endpoint ip-4: not ready, not dialed")
 				assert.Contains(t, peerBlocks(peers), "4.3.2.1/32", "cluster-ip: a peer, no endpoint")
+				assert.Contains(t, peerBlocks(peers), "fd00::4321/128", "cluster-ip of the second family")
 
 				// restore
 				config.EnableRelayToClusterIP = opdefault.DefaultEnableRelayToClusterIP

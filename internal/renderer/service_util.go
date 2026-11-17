@@ -766,7 +766,7 @@ func isStunnerAnnotation(k string) bool {
 	return strings.HasPrefix(strings.ToLower(k), stnrgwv1.GroupVersion.Group+"/")
 }
 
-// find the ClusterIP associated with a service
+// find the ClusterIPs associated with a service, one per family
 func getClusterIP(n types.NamespacedName) ([]string, error) {
 	ret := []string{}
 
@@ -780,6 +780,11 @@ func getClusterIP(n types.NamespacedName) ([]string, error) {
 	}
 
 	ret = append(ret, s.Spec.ClusterIP)
+	for _, ip := range s.Spec.ClusterIPs {
+		if ip != s.Spec.ClusterIP {
+			ret = append(ret, ip)
+		}
+	}
 
 	return ret, nil
 }
