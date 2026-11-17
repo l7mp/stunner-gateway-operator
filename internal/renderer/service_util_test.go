@@ -152,6 +152,56 @@ func TestRenderServiceUtil(t *testing.T) {
 			},
 		},
 		{
+			name: "dual-stack load-balancer ok",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{testutils.TestSvc},
+			prep: func(c *renderTestConfig) {
+				s1 := testutils.TestSvc.DeepCopy()
+				s1.SetOwnerReferences([]metav1.OwnerReference{{
+					APIVersion: gwapiv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					UID:        testutils.TestGw.GetUID(),
+					Name:       testutils.TestGw.GetName(),
+				}})
+				// an IPv4 and an IPv6 ingress serving both ports, plus an ingress serving
+				// neither and one with no per-port status
+				udp := corev1.PortStatus{Port: 1, Protocol: corev1.ProtocolUDP}
+				tcp := corev1.PortStatus{Port: 2, Protocol: corev1.ProtocolTCP}
+				s1.Status = corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{IP: "1.2.3.4", Ports: []corev1.PortStatus{udp, tcp}},
+							{IP: "2001:db8::1", Ports: []corev1.PortStatus{udp, tcp}},
+							{IP: "5.6.7.8", Ports: []corev1.PortStatus{tcp, udp}},
+							{IP: "2001:db8::2"},
+						},
+					}}
+				c.svcs = []corev1.Service{*s1}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class found")
+				c := &RenderContext{gc: gc, log: log}
+
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "gateways for class")
+				gw := gws[0]
+
+				addrs, err := r.getPublicAddr(gw)
+				assert.NoError(t, err, "owner ref found")
+				assert.Len(t, addrs, 2, "public addr-port len")
+				assert.Equal(t, "1.2.3.4", addrs[0].addr, "public addr 1 ok")
+				assert.Equal(t, []string{"1.2.3.4", "2001:db8::1", "2001:db8::2"}, addrs[0].addrs,
+					"public addrs 1 ok")
+				assert.Equal(t, "1.2.3.4", addrs[1].addr, "public addr 2 ok")
+				assert.Equal(t, []string{"1.2.3.4", "2001:db8::1", "2001:db8::2"}, addrs[1].addrs,
+					"public addrs 2 ok")
+			},
+		},
+		{
 			name: "wrong annotation name errs",
 			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
 			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},

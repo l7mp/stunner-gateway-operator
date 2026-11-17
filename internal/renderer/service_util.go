@@ -34,6 +34,7 @@ type gwAddrPort struct {
 	aType gwapiv1.AddressType
 	addr  string
 	port  int
+	addrs []string
 }
 
 func (ap gwAddrPort) isEmpty() bool {
@@ -220,61 +221,40 @@ func (r *renderer) getPublicListenerAddr(svc *corev1.Service, gw *gwapiv1.Gatewa
 	return gwAddrPort{}, errors.New("Could not find usable public address for listener")
 }
 
-// first matching service-port and load-balancer service status
+// getLBAddr returns the load-balancer addresses of a service-port. IP is preferred over hostnames
+// (typical for AWS).
 func getLBAddr(svc *corev1.Service, spIndex int) *gwAddrPort {
-	for _, ingressStatus := range svc.Status.LoadBalancer.Ingress {
-		// if status contains per-service-port status
-		if len(ingressStatus.Ports) > 0 && spIndex < len(ingressStatus.Ports) {
-			// find the status for our service-port
-			spStatus := ingressStatus.Ports[spIndex]
-			if spStatus.Port != svc.Spec.Ports[spIndex].Port ||
-				spStatus.Protocol != svc.Spec.Ports[spIndex].Protocol {
-				continue
-			}
-
-			// if IP address is available, use it
-			if ingressStatus.IP != "" {
-				return &gwAddrPort{
-					aType: gwapiv1.IPAddressType,
-					addr:  ingressStatus.IP,
-					port:  int(spStatus.Port),
-				}
-			}
-
-			// fallback to Hostname (typically for AWS)
-			if ingressStatus.Hostname != "" {
-				return &gwAddrPort{
-					aType: gwapiv1.HostnameAddressType,
-					addr:  ingressStatus.Hostname,
-					port:  int(spStatus.Port),
-				}
-			}
-		}
+	sp := svc.Spec.Ports[spIndex]
+	ingresses := svc.Status.LoadBalancer.Ingress
+	portMatches := func(ing corev1.LoadBalancerIngress) bool {
+		return spIndex < len(ing.Ports) && ing.Ports[spIndex].Port == sp.Port &&
+			ing.Ports[spIndex].Protocol == sp.Protocol
 	}
 
-	// some load-balancer controllers do not include a status.Ingress[x].Ports substatus: we
-	// fall back to the first load-balancer IP we find and use the port from the service-port
-	// as a port
-	if len(svc.Status.LoadBalancer.Ingress) > 0 {
-		ingressStatus := svc.Status.LoadBalancer.Ingress[0]
+	i := slices.IndexFunc(ingresses, func(ing corev1.LoadBalancerIngress) bool {
+		return portMatches(ing) && (ing.IP != "" || ing.Hostname != "")
+	})
+	if i < 0 {
+		i = 0
+	}
+	if i >= len(ingresses) {
+		return nil
+	}
 
-		// if IP address is available, use it
-		if ingressStatus.IP != "" {
-			return &gwAddrPort{
-				aType: gwapiv1.IPAddressType,
-				addr:  ingressStatus.IP,
-				port:  int(svc.Spec.Ports[spIndex].Port),
+	ing := ingresses[i]
+	switch {
+	case ing.IP != "":
+		ap := &gwAddrPort{aType: gwapiv1.IPAddressType, addr: ing.IP, port: int(sp.Port),
+			addrs: []string{ing.IP}}
+		for _, other := range ingresses {
+			if other.IP != "" && !slices.Contains(ap.addrs, other.IP) &&
+				(spIndex >= len(other.Ports) || portMatches(other)) {
+				ap.addrs = append(ap.addrs, other.IP)
 			}
 		}
-
-		// fallback to Hostname (typically for AWS)
-		if ingressStatus.Hostname != "" {
-			return &gwAddrPort{
-				aType: gwapiv1.HostnameAddressType,
-				addr:  ingressStatus.Hostname,
-				port:  int(svc.Spec.Ports[spIndex].Port),
-			}
-		}
+		return ap
+	case ing.Hostname != "":
+		return &gwAddrPort{aType: gwapiv1.HostnameAddressType, addr: ing.Hostname, port: int(sp.Port)}
 	}
 
 	return nil
