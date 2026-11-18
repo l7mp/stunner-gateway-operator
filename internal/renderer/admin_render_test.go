@@ -14,6 +14,7 @@ import (
 	stnrapiv2 "github.com/l7mp/stunner/v2/pkg/apis/v2"
 
 	stnrgwv1 "github.com/l7mp/stunner-gateway-operator/v2/api/v1"
+	"github.com/l7mp/stunner-gateway-operator/v2/internal/store"
 	"github.com/l7mp/stunner-gateway-operator/v2/internal/testutils"
 	opdefault "github.com/l7mp/stunner-gateway-operator/v2/pkg/config"
 )
@@ -75,6 +76,36 @@ func TestRenderAdminRender(t *testing.T) {
 				// the admin-config validator sets the default
 				assert.Equal(t, "None", admin.OffloadEngine, "offload-engine")
 				assert.Len(t, admin.OffloadInterfaces, 0, "offload-intfs len")
+			},
+		},
+		{
+			name: "admin ok - relay address family is premium",
+			cls:  []gwapiv1.GatewayClass{testutils.TestGwClass},
+			cfs:  []stnrgwv1.GatewayConfig{testutils.TestGwConfig},
+			gws:  []gwapiv1.Gateway{testutils.TestGw},
+			rs:   []stnrgwv1.UDPRoute{},
+			svcs: []corev1.Service{},
+			dps:  []stnrgwv1.Dataplane{testutils.TestDataplane},
+			prep: func(c *renderTestConfig) {
+				gw := testutils.TestGw.DeepCopy()
+				gw.SetAnnotations(map[string]string{opdefault.RelayAddressFamilyAnnotationKey: "ipv4"})
+				c.gws = []gwapiv1.Gateway{*gw}
+			},
+			tester: func(t *testing.T, r *renderer) {
+				gc, err := r.getGatewayClass()
+				assert.NoError(t, err, "gw-class not found")
+				c := &RenderContext{gc: gc, gws: store.NewGatewayStore(), log: log}
+				c.gwConf, err = r.getGatewayConfig4Class(c)
+				assert.NoError(t, err, "gw-conf found")
+				c.dp, err = getDataplane(c)
+				assert.NoError(t, err, "dataplane found")
+				gws := r.getGateways4Class(c)
+				assert.Len(t, gws, 1, "the Gateway of the class")
+				c.gws.ResetGateways(gws)
+
+				admin, err := r.renderAdmin(c)
+				assert.NoError(t, err, "renderAdmin")
+				assert.Equal(t, "", admin.RelayAddressFamily, "the annotation is ignored")
 			},
 		},
 		{

@@ -185,6 +185,13 @@ const (
 	// legacy clients, and "enforced" forces it.
 	PQCModeAnnotationKey = "stunner.l7mp.io/pqc-mode"
 
+	// RelayAddressFamilyAnnotationKey is the Gateway annotation key that sets the address family
+	// of the relay the Gateway's TURN servers allocate for a client that requests none
+	// (premium): "auto" follows the family of the client's connection, "ipv4" allocates IPv4.
+	// Setting, changing or removing it restarts the TURN servers of the Gateway, which drops
+	// their sessions.
+	RelayAddressFamilyAnnotationKey = "stunner.l7mp.io/relay-address-family"
+
 	// DefaultSTUNnerAddressEnvVarName is the environment variable holding the pod's IP address,
 	// the relay address of the rendered clusters.
 	DefaultSTUNnerAddressEnvVarName string = "$" + stnrapiv2.DefaultEnvVarAddr
